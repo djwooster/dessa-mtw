@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import Curriculum from './pages/Curriculum'
 import LessonView from './pages/LessonView'
 import Ratings from './pages/Ratings'
+import BrandGuide from './pages/BrandGuide'
 
 function Placeholder({ title }) {
   return (
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/ratings" element={<Ratings />} />
           <Route path="/insights" element={<Placeholder title="Data & Insights" />} />
           <Route path="/strategies" element={<Placeholder title="Strategies" />} />
+          <Route path="/brand" element={<BrandGuide />} />
         </Routes>
       </div>
     </BrowserRouter>

@@ -9,6 +9,7 @@ const navItems = [
   { label: 'Data & Insights',to: '/insights' },
   { label: 'Strategies',     to: '/strategies' },
   { label: 'MTW',            to: '/mtw' },
+  { label: 'Brand Guide',   to: '/brand' },
 ]
 
 export default function Nav() {
