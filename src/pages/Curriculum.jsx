@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Play, ChevronRight, Sparkles, CheckCircle2 } from 'lucide-react'
@@ -10,6 +9,7 @@ import {
   CardContent,
   CardFooter,
 } from '../components/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 
 const stagger = (i) => ({
   initial: { opacity: 0, y: 8 },
@@ -17,7 +17,13 @@ const stagger = (i) => ({
   transition: { duration: 0.25, delay: i * 0.06 },
 })
 
-const filters = ['All', 'Early Elementary', 'Late Elementary', 'Middle School', 'High School']
+const filters = [
+  { value: 'all',              label: 'All' },
+  { value: 'Early Elementary', label: 'Early Elementary' },
+  { value: 'Late Elementary',  label: 'Late Elementary' },
+  { value: 'Middle School',    label: 'Middle School' },
+  { value: 'High School',      label: 'High School' },
+]
 
 const courses = [
   {
@@ -196,12 +202,7 @@ function CourseCard({ course, index, onClick }) {
 }
 
 export default function Curriculum() {
-  const [activeFilter, setActiveFilter] = useState('All')
   const navigate = useNavigate()
-
-  const filtered = activeFilter === 'All'
-    ? courses
-    : courses.filter((c) => c.level === activeFilter)
 
   return (
     <div className="max-w-screen-xl mx-auto px-6 py-8">
@@ -218,39 +219,39 @@ export default function Curriculum() {
         <h1 className="text-2xl font-semibold text-brand-text">Curriculum</h1>
       </motion.div>
 
-      {/* Filter tabs */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, delay: 0.05 }}
-        className="flex items-center gap-0 border-b border-brand-border mb-7"
       >
-        {filters.map((f) => (
-          <button
-            key={f}
-            onClick={() => setActiveFilter(f)}
-            className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
-              activeFilter === f
-                ? 'text-brand-text border-mtw-amber'
-                : 'text-brand-subtext border-transparent hover:text-brand-text'
-            }`}
-          >
-            {f}
-          </button>
-        ))}
-      </motion.div>
+        <Tabs defaultValue="all">
+          <TabsList>
+            {filters.map((f) => (
+              <TabsTrigger key={f.value} value={f.value}>{f.label}</TabsTrigger>
+            ))}
+          </TabsList>
 
-      {/* 3-col course grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filtered.map((course, i) => (
-          <CourseCard
-            key={course.id}
-            course={course}
-            index={i}
-            onClick={() => course.status !== 'upcoming' && navigate('/mtw/lesson')}
-          />
-        ))}
-      </div>
+          {filters.map((f) => {
+            const filtered = f.value === 'all'
+              ? courses
+              : courses.filter((c) => c.level === f.value)
+            return (
+              <TabsContent key={f.value} value={f.value}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {filtered.map((course, i) => (
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      index={i}
+                      onClick={() => course.status !== 'upcoming' && navigate('/mtw/lesson')}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
+            )
+          })}
+        </Tabs>
+      </motion.div>
     </div>
   )
 }
