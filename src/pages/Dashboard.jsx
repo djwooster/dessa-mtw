@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Play, Clock, ArrowRight } from 'lucide-react'
+import { Play, ArrowRight, ChevronRight } from 'lucide-react'
 import {
   Table,
   TableHeader,
@@ -74,37 +74,6 @@ const competencies = [
   { abbr: 'OT',  label: 'Optimistic Thinking',     strength: 6,  typical: 18, need: 6 },
   { abbr: 'GD',  label: 'Goal-Directed Behavior',  strength: 5,  typical: 21, need: 4 },
 ]
-
-// ─── CompetencyBar (kept for reference, not currently rendered) ───────────────
-/*
-function CompetencyBar({ row, index }) {
-  const total = row.strength + row.typical + row.need
-  const pS = (row.strength / total) * 100
-  const pT = (row.typical  / total) * 100
-  const pN = (row.need     / total) * 100
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -6 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.22, delay: index * 0.04 }}
-      className="flex items-center gap-3"
-    >
-      <span className="text-xs font-semibold text-brand-subtext w-8 text-right flex-shrink-0">
-        {row.abbr}
-      </span>
-      <div className="flex-1 flex h-6 rounded-lg overflow-hidden gap-px bg-brand-border">
-        <div className="h-full" style={{ width: `${pS}%`, background: '#5DB87A' }} title={`Strength: ${row.strength}`} />
-        <div className="h-full" style={{ width: `${pT}%`, background: '#A8C8E8' }} title={`Typical: ${row.typical}`} />
-        <div className="h-full" style={{ width: `${pN}%`, background: '#F08080' }} title={`Need: ${row.need}`} />
-      </div>
-      <span className="text-xs text-brand-subtext w-6 text-right flex-shrink-0">{total}</span>
-    </motion.div>
-  )
-}
-*/
-
-// ─── Competency data table ────────────────────────────────────────────────────
 
 function MiniBar({ strength, typical, need }) {
   const total = strength + typical + need
@@ -191,7 +160,7 @@ const strategies = [
   {
     competency: 'Responsible Decision-Making',
     title: 'What\u2019s Important to Me?',
-    duration: '15–20 min',
+    duration: '15\u201320 min',
     description:
       'Students consider their personal values and how they support and influence responsible decision-making.',
     emoji: '🎯',
@@ -210,13 +179,60 @@ const strategies = [
   },
 ]
 
+// ─── Weekly progress chart ────────────────────────────────────────────────────
+
+const weeklyData = [
+  { label: 'Wk 1',  lessons: 1 },
+  { label: 'Wk 2',  lessons: 2 },
+  { label: 'Wk 3',  lessons: 0 },
+  { label: 'Wk 4',  lessons: 2 },
+  { label: 'Wk 5',  lessons: 0 },
+  { label: 'Wk 6',  lessons: 0 },
+  { label: 'Wk 7',  lessons: 0 },
+  { label: 'Wk 8',  lessons: 0 },
+  { label: 'Wk 9',  lessons: 0 },
+  { label: 'Wk 10', lessons: 0 },
+]
+
+function WeeklyProgressChart() {
+  const maxLessons = 3
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-3">
+        Lessons Completed — by Week
+      </p>
+      <div className="flex items-end gap-1.5" style={{ height: '56px' }}>
+        {weeklyData.map((w) => (
+          <div key={w.label} className="flex-1 flex flex-col items-center justify-end gap-1">
+            <div
+              className="w-full rounded-t-sm"
+              style={{
+                height: `${Math.max(3, (w.lessons / maxLessons) * 44)}px`,
+                background: w.lessons > 0 ? '#F5A623' : '#E2E6EA',
+              }}
+            />
+            <span className="text-brand-subtext leading-none" style={{ fontSize: '9px' }}>
+              {w.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
-export default function Dashboard() {
+export default function Dashboard({ enrolledCourse }) {
   const navigate = useNavigate()
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric',
   })
+
+  const offset = enrolledCourse ? 1 : 0
+  const pct = enrolledCourse
+    ? Math.round((enrolledCourse.completed / enrolledCourse.lessons) * 100)
+    : 0
 
   return (
     <div className="max-w-screen-xl mx-auto px-6 py-7">
@@ -241,53 +257,128 @@ export default function Dashboard() {
         </button>
       </motion.div>
 
-      {/* ── Continue Today's Lesson (MTW CTA) ── */}
+      {/* ── MTW CTA ── */}
       <motion.div {...stagger(1)} className="mb-6">
         <div className="bg-dessa-navy rounded-2xl overflow-hidden shadow-md">
           <div className="flex items-center px-6 py-4 gap-5">
-            <div
-              className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
-              style={{ background: 'rgba(245,166,35,0.18)' }}
-            >
-              🌊
+
+            {/* MTW image */}
+            <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
+              <img src="/logo-png.png" alt="Move This World" className="w-full h-full object-contain" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white/50 text-xs font-medium mb-0.5">
-                Continue Today's Lesson · Grade 4 · Unit 7
-              </p>
-              <p className="text-white font-semibold text-base truncate">
-                Lesson 6 — Sharing Our Stories
-              </p>
-            </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <div className="flex items-center gap-1.5 text-white/40 text-xs">
-                <Clock size={12} />
-                7 min
-              </div>
-              <span
-                className="text-xs font-semibold px-2.5 py-1 rounded-full hidden sm:block"
-                style={{ background: 'rgba(245,166,35,0.2)', color: '#F5A623' }}
-              >
-                Self-Management
-              </span>
-              <button
-                onClick={() => navigate('/mtw/lesson')}
-                className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold text-dessa-navy transition-all hover:brightness-105 active:scale-95"
-                style={{ background: '#F5A623' }}
-              >
-                <Play size={12} fill="currentColor" />
-                Start Lesson
-              </button>
-            </div>
+
+            {enrolledCourse ? (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white/50 text-xs font-medium mb-0.5">
+                    Continue Today's Lesson · {enrolledCourse.grade} · {enrolledCourse.competency}
+                  </p>
+                  <p className="text-white font-semibold text-base truncate">
+                    {enrolledCourse.title}
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${pct}%`, background: '#F5A623' }}
+                      />
+                    </div>
+                    <span className="text-white/40 text-xs flex-shrink-0">
+                      {enrolledCourse.completed}/{enrolledCourse.lessons} lessons
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate('/mtw/lesson', { state: { course: enrolledCourse } })}
+                  className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold text-dessa-navy transition-all hover:brightness-105 active:scale-95 flex-shrink-0"
+                  style={{ background: '#F5A623' }}
+                >
+                  <Play size={12} fill="currentColor" />
+                  Continue Lesson
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white/50 text-xs font-medium mb-0.5">
+                    Move This World · Curriculum Ready
+                  </p>
+                  <p className="text-white font-semibold text-base">
+                    Choose a course to get started with your students
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/mtw')}
+                  className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold text-dessa-navy transition-all hover:brightness-105 active:scale-95 flex-shrink-0"
+                  style={{ background: '#F5A623' }}
+                >
+                  Browse Courses
+                  <ChevronRight size={14} />
+                </button>
+              </>
+            )}
           </div>
         </div>
       </motion.div>
+
+      {/* ── MTW Progress card ── (only when enrolled) */}
+      {enrolledCourse && (
+        <motion.div {...stagger(2)} className="mb-5">
+          <div className="bg-white rounded-2xl border border-brand-border shadow-sm overflow-hidden">
+            <div className="px-5 pt-5 pb-4 border-b border-brand-border flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-brand-text">MTW Progress</h3>
+                <p className="text-sm text-brand-subtext mt-0.5">
+                  {enrolledCourse.title} · {enrolledCourse.grade}
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/mtw')}
+                className="text-sm font-semibold hover:text-dessa-navy transition-colors"
+                style={{ color: '#F5A623' }}
+              >
+                View Course
+              </button>
+            </div>
+            <div className="px-5 py-4 flex gap-8 items-start">
+              {/* Overall progress */}
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-brand-subtext">Overall Progress</span>
+                  <span className="text-sm font-bold" style={{ color: '#F5A623' }}>{pct}%</span>
+                </div>
+                <div className="h-2 bg-brand-border rounded-full overflow-hidden mb-1.5">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${pct}%`, background: '#F5A623' }}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-brand-subtext">
+                    {enrolledCourse.completed} lessons completed
+                  </span>
+                  <span className="text-xs text-brand-subtext">
+                    {enrolledCourse.lessons - enrolledCourse.completed} remaining
+                  </span>
+                </div>
+              </div>
+
+              <div className="w-px bg-brand-border self-stretch" />
+
+              {/* Weekly chart */}
+              <div className="flex-1">
+                <WeeklyProgressChart />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* ── Two-column: Ratings + Strategies ── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5">
 
         {/* Left: DESSA Ratings */}
-        <motion.div {...stagger(2)} className="lg:col-span-2">
+        <motion.div {...stagger(2 + offset)} className="lg:col-span-2">
           <div className="bg-white rounded-2xl border border-brand-border shadow-sm h-full flex flex-col">
             <div className="px-5 pt-5 pb-4 border-b border-brand-border flex items-center justify-between">
               <div>
@@ -329,7 +420,7 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Right: Classroom Strategies */}
-        <motion.div {...stagger(3)} className="lg:col-span-3">
+        <motion.div {...stagger(3 + offset)} className="lg:col-span-3">
           <div className="bg-white rounded-2xl border border-brand-border shadow-sm h-full flex flex-col">
             <div className="px-5 pt-5 pb-4 border-b border-brand-border">
               <h3 className="text-base font-semibold text-brand-text">
@@ -392,7 +483,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Competencies — data table ── */}
-      <motion.div {...stagger(4)}>
+      <motion.div {...stagger(4 + offset)}>
         <div className="bg-white rounded-2xl border border-brand-border shadow-sm overflow-hidden">
           <div className="px-5 pt-5 pb-4 border-b border-brand-border flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -400,7 +491,6 @@ export default function Dashboard() {
               <span className="text-sm text-brand-subtext">25-26 Mid</span>
             </div>
             <div className="flex items-center gap-4">
-              {/* Legend */}
               {[
                 { label: 'Strength', color: '#5DB87A' },
                 { label: 'Typical',  color: '#A8C8E8' },
