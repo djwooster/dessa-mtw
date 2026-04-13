@@ -290,8 +290,8 @@ export default function Dashboard({ enrolledCourse }) {
                 </div>
                 <button
                   onClick={() => navigate('/mtw/lesson', { state: { course: enrolledCourse } })}
-                  className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold text-dessa-navy transition-all hover:brightness-105 active:scale-95 flex-shrink-0"
-                  style={{ background: '#F5A623' }}
+                  className="flex items-center gap-2 px-5 py-2 rounded-md text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-95 flex-shrink-0"
+                  style={{ background: '#2A7F8F' }}
                 >
                   <Play size={12} fill="currentColor" />
                   Continue Lesson
@@ -309,8 +309,8 @@ export default function Dashboard({ enrolledCourse }) {
                 </div>
                 <button
                   onClick={() => navigate('/mtw')}
-                  className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold text-dessa-navy transition-all hover:brightness-105 active:scale-95 flex-shrink-0"
-                  style={{ background: '#F5A623' }}
+                  className="flex items-center gap-2 px-5 py-2 rounded-md text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-95 flex-shrink-0"
+                  style={{ background: '#2A7F8F' }}
                 >
                   Browse Courses
                   <ChevronRight size={14} />

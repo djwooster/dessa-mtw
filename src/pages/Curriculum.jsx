@@ -90,31 +90,31 @@ const courses = [
 
 // ─── Course card ──────────────────────────────────────────────────────────────
 
-function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onContinue, index }) {
+function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onContinue, onUnenroll, index }) {
   const pct = isEnrolled ? Math.round((completedLessons / course.lessons) * 100) : 0
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   return (
-    <motion.div {...stagger(index)} whileHover={{ y: -2 }} className="h-full">
-      <Card className="h-full flex flex-col transition-shadow hover:shadow-md">
+    <>
+    <motion.div {...stagger(index)} className="h-full">
+      <Card className="h-full flex flex-col">
         <CardHeader>
-          {/* Active badge — only rendered when enrolled */}
-          {isEnrolled && (
-            <div className="flex items-center justify-end mb-4">
+          {/* Emoji + Active badge row */}
+          <div className="flex items-center justify-between mb-3">
+            <div
+              className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+              style={{ background: `${course.color}14` }}
+            >
+              {course.emoji}
+            </div>
+            {isEnrolled && (
               <span
                 className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
                 style={{ background: 'rgba(245,166,35,0.15)', color: '#F5A623' }}
               >
-                Active
+                Enrolled
               </span>
-            </div>
-          )}
-
-          {/* Emoji */}
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-xl mb-3 flex-shrink-0"
-            style={{ background: `${course.color}14` }}
-          >
-            {course.emoji}
+            )}
           </div>
 
           <CardTitle>{course.grade}</CardTitle>
@@ -153,11 +153,18 @@ function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onContinue
           </div>
         </CardContent>
 
-        <CardFooter className="border-t border-brand-border pt-4 justify-between">
-          <span className="text-sm text-brand-subtext">{course.lessons} lessons</span>
+        <CardFooter className={`border-t border-brand-border px-4 py-4 ${isEnrolled ? 'justify-between' : 'justify-end'}`}>
+          {isEnrolled && (
+            <button
+              className="text-sm font-medium text-brand-subtext px-3.5 py-1.5 rounded-md hover:bg-brand-bg hover:text-brand-text transition-colors"
+              onClick={() => setConfirmOpen(true)}
+            >
+              Unenroll
+            </button>
+          )}
           <button
-            className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all hover:brightness-95 text-white"
-            style={{ background: isEnrolled ? course.color : '#F5A623' }}
+            className="flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-md transition-all hover:brightness-95 text-white"
+            style={{ background: '#2A7F8F' }}
             onClick={() => (isEnrolled ? onContinue() : onEnroll(course))}
           >
             {isEnrolled ? (
@@ -173,6 +180,45 @@ function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onContinue
         </CardFooter>
       </Card>
     </motion.div>
+
+    {/* Unenroll confirmation modal */}
+    {confirmOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div
+          className="absolute inset-0 bg-brand-text/40 backdrop-blur-sm"
+          onClick={() => setConfirmOpen(false)}
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.15 }}
+          className="relative bg-white rounded-2xl border border-brand-border shadow-xl p-6 w-full max-w-sm mx-4 z-10"
+        >
+          <p className="text-base font-semibold text-brand-text mb-1">
+            Unenroll from {course.title}?
+          </p>
+          <p className="text-sm text-brand-subtext mb-5 leading-relaxed">
+            Your progress will be lost and you'll need to re-enroll to continue.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <button
+              className="px-4 py-2 rounded-md text-sm font-semibold border border-brand-border text-brand-subtext bg-white hover:bg-brand-bg transition-colors"
+              onClick={() => setConfirmOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 rounded-md text-sm font-semibold text-white transition-all hover:brightness-90"
+              style={{ background: '#C0392B' }}
+              onClick={() => { onUnenroll(); setConfirmOpen(false) }}
+            >
+              Unenroll
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    )}
+    </>
   )
 }
 
@@ -183,6 +229,7 @@ export default function Curriculum({
   hideUnenrolled,
   bookmarkedLessons = [],
   onEnroll,
+  onUnenroll,
   onToggleHideUnenrolled,
 }) {
   const navigate = useNavigate()
@@ -258,7 +305,7 @@ export default function Curriculum({
               {/* Bookmarks button */}
               <div className="relative" ref={bookmarksRef}>
                 <button
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text"
                   onClick={() => { setBookmarksOpen((o) => !o); setMenuOpen(false) }}
                 >
                   <Bookmark size={14} />
@@ -306,7 +353,7 @@ export default function Curriculum({
               {/* ⋯ options menu */}
               <div className="relative" ref={menuRef}>
                 <button
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-brand-subtext border border-brand-border bg-white hover:shadow-sm transition-all"
+                  className="w-9 h-9 rounded-md flex items-center justify-center text-brand-subtext border border-brand-border bg-white hover:shadow-sm transition-all"
                   onClick={() => { setMenuOpen((o) => !o); setBookmarksOpen(false) }}
                   aria-label="Course options"
                 >
@@ -375,6 +422,7 @@ export default function Curriculum({
                         }
                         onEnroll={handleEnroll}
                         onContinue={() => navigate('/mtw/lesson', { state: { course: enrolledCourse } })}
+                        onUnenroll={onUnenroll}
                         index={i}
                       />
                     ))}

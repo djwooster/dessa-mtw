@@ -3,8 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { CheckCircle2, Circle, ChevronLeft, ChevronDown, Play, Clock, Bookmark } from 'lucide-react'
 
-const CURRENT_LESSON = 'Welcome Video!'
-const CURRENT_UNIT = 'Unit 1 — Meet the Emogers'
 
 const units = [
   { id:  1, title: 'Unit 1 — Meet the Emogers',             active: true,  sub: ['Welcome Video!', 'Emotional Building Blocks', '10 Emogers', 'Power of Pause'] },
@@ -43,6 +41,28 @@ const units = [
   { id: 34, title: 'Unit 34 — Emotional First Aid',          active: false, sub: ['Welcome Video!', 'First Aid for Feelings', 'Support Toolkit', 'Partner Share', 'Reflection'] },
   { id: 35, title: 'Unit 35 — Looking Back, Moving Forward', active: false, sub: ['Welcome Video!', 'Growth Timeline', 'What I Know Now', 'Class Circle'] },
   { id: 36, title: 'Unit 36 — Celebration of Growth',        active: false, sub: ['Welcome Video!', 'My Growth Story', 'Strength Spotlight', 'Gratitude Garden', 'Celebration Ritual'] },
+]
+
+const lesson2Videos = [
+  { title: 'Introduction to Emotional Building Blocks', duration: '4:22' },
+  { title: 'The Five Core Emotions', duration: '6:15' },
+  { title: 'Labeling vs. Feeling', duration: '5:08' },
+]
+
+const lesson3Videos = [
+  { title: 'Meet All 10 Emogers', duration: '3:45' },
+  { title: 'The Joy Emogre', duration: '2:30' },
+  { title: 'The Anger Emogre', duration: '2:45' },
+  { title: 'The Sadness Emogre', duration: '2:20' },
+  { title: 'The Fear Emogre', duration: '2:55' },
+  { title: 'The Surprise Emogre', duration: '2:10' },
+]
+
+const lesson4Videos = [
+  { title: 'What Is the Power of Pause?', duration: '3:12', description: 'An introduction to the pause technique and why it works in the classroom.' },
+  { title: 'Recognizing Your Triggers', duration: '4:45', description: 'How to spot the moments when pausing is most needed — before reacting.' },
+  { title: 'The 3-Second Pause', duration: '2:58', description: 'A simple, repeatable technique students can use independently.' },
+  { title: 'Practice Round', duration: '5:20', description: 'Guided whole-class practice with real-time facilitation cues.' },
 ]
 
 const skills = ['Emotional Vocabulary', 'Self-Reflection', 'Community Building', 'Active Listening']
@@ -108,17 +128,33 @@ export default function LessonView({ onBookmark }) {
   const course = location.state?.course
 
   const [expandedUnit, setExpandedUnit] = useState(1)
+  const [selectedLesson, setSelectedLesson] = useState({ unitId: 1, lessonIndex: 0 })
+  const [activeVideo, setActiveVideo] = useState(0)
   const [bookmarked, setBookmarked] = useState(false)
   const [showToast, setShowToast] = useState(false)
 
   const grade = course?.grade ?? 'Grade 3'
   const competency = course?.competency ?? 'Self-Awareness'
 
+  const activeUnit = units.find((u) => u.id === selectedLesson.unitId)
+  const currentLessonTitle = activeUnit?.sub[selectedLesson.lessonIndex] ?? 'Welcome Video!'
+  const currentUnitTitle = activeUnit?.title ?? 'Unit 1 — Meet the Emogers'
+
+  const isLesson2 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 1
+  const isLesson3 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 2
+  const isLesson4 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 3
+
+  const handleSelectLesson = (unitId, lessonIndex) => {
+    setSelectedLesson({ unitId, lessonIndex })
+    setActiveVideo(0)
+    setBookmarked(false)
+  }
+
   const handleBookmark = () => {
     if (bookmarked) return
     setBookmarked(true)
     setShowToast(true)
-    onBookmark?.({ lesson: CURRENT_LESSON, unit: CURRENT_UNIT, grade, competency, course })
+    onBookmark?.({ lesson: currentLessonTitle, unit: currentUnitTitle, grade, competency, course })
     setTimeout(() => setShowToast(false), 3000)
   }
 
@@ -190,11 +226,12 @@ export default function LessonView({ onBookmark }) {
                     >
                       <div className="mr-3 mb-1">
                         {unit.sub.map((item, i) => {
-                          const isSelectedLesson = unit.active && i === 0
+                          const isSelectedLesson = selectedLesson.unitId === unit.id && selectedLesson.lessonIndex === i
                           return (
                             <div key={item}>
-                              <div
-                                className={`flex items-center justify-between py-2.5 ${isSelectedLesson ? 'bg-mtw-amberLight rounded-lg' : ''}`}
+                              <button
+                                onClick={() => handleSelectLesson(unit.id, i)}
+                                className={`w-full flex items-center justify-between py-2.5 text-left transition-colors ${isSelectedLesson ? 'bg-mtw-amberLight rounded-lg' : 'hover:bg-brand-bg'}`}
                                 style={{ paddingLeft: '56px', paddingRight: '8px' }}
                               >
                                 <span className={`text-sm ${isSelectedLesson ? 'font-semibold text-brand-text' : 'text-brand-text'}`}>
@@ -204,7 +241,7 @@ export default function LessonView({ onBookmark }) {
                                   size={18}
                                   className={`flex-shrink-0 ${isSelectedLesson ? 'text-mtw-amber' : 'text-brand-border'}`}
                                 />
-                              </div>
+                              </button>
                               {i < unit.sub.length - 1 && (
                                 <div className="border-t border-brand-border" />
                               )}
@@ -229,7 +266,7 @@ export default function LessonView({ onBookmark }) {
 
       {/* ── Main content ── */}
       <main className="flex-1 overflow-y-auto bg-brand-bg">
-        <div className="max-w-3xl mx-auto px-8 py-7">
+        <div className="max-w-[62rem] mx-auto px-8 py-7">
 
           {/* Lesson meta */}
           <motion.div
@@ -249,7 +286,7 @@ export default function LessonView({ onBookmark }) {
                   Back to Courses
                 </button>
                 <h1 className="text-2xl font-semibold text-brand-text">
-                  {CURRENT_LESSON}
+                  {currentLessonTitle}
                 </h1>
               </div>
 
@@ -285,42 +322,185 @@ export default function LessonView({ onBookmark }) {
 
           {/* ── Video ── */}
           <motion.div
+            key={`video-${selectedLesson.unitId}-${selectedLesson.lessonIndex}`}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, delay: 0.05 }}
             className="mb-7"
           >
-            <div
-              className="w-full rounded-2xl overflow-hidden relative"
-              style={{ aspectRatio: '16/9', background: '#1B2B4B' }}
-            >
-              <div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    'linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.8) 100%)',
-                }}
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <button
-                  className="w-14 h-14 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg"
-                  style={{ background: '#F5A623' }}
+
+            {/* Lesson 1 — single video */}
+            {!isLesson2 && !isLesson3 && !isLesson4 && (
+              <>
+                <div
+                  className="w-full rounded-2xl overflow-hidden relative"
+                  style={{ aspectRatio: '16/9', background: '#1B2B4B' }}
                 >
-                  <Play size={20} fill="white" className="text-white ml-0.5" />
-                </button>
-                <p className="text-white/70 text-sm">Unit 1 — Welcome Video</p>
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.8) 100%)' }} />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <button className="w-14 h-14 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: '#2A7F8F' }}>
+                      <Play size={20} fill="white" className="text-white ml-0.5" />
+                    </button>
+                    <p className="text-white/70 text-sm">Unit 1 — Welcome Video</p>
+                  </div>
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
+                    <Clock size={11} />6:48
+                  </div>
+                </div>
+                <p className="text-sm text-brand-subtext mt-2 px-1">
+                  Watch all the way through before pausing — the Emoger reveal at 5:10 lands best without interruption.
+                </p>
+              </>
+            )}
+
+            {/* Lesson 2 — active player + horizontal thumbnail strip */}
+            {isLesson2 && (
+              <>
+                <div
+                  className="w-full rounded-2xl overflow-hidden relative mb-3"
+                  style={{ aspectRatio: '16/9', background: '#1B2B4B' }}
+                >
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.8) 100%)' }} />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
+                    <button className="w-14 h-14 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: '#2A7F8F' }}>
+                      <Play size={20} fill="white" className="text-white ml-0.5" />
+                    </button>
+                    <p className="text-white font-semibold text-base leading-snug">{lesson2Videos[activeVideo].title}</p>
+                  </div>
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
+                    <Clock size={11} />{lesson2Videos[activeVideo].duration}
+                  </div>
+                  <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
+                    {activeVideo + 1} / {lesson2Videos.length}
+                  </div>
+                </div>
+
+                {/* Thumbnail strip */}
+                <div className="flex gap-3">
+                  {lesson2Videos.map((video, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveVideo(i)}
+                      className="flex-1 rounded-xl overflow-hidden text-left transition-all"
+                      style={{ outline: i === activeVideo ? '2px solid #2A7F8F' : '2px solid transparent', outlineOffset: '2px' }}
+                    >
+                      <div className="relative" style={{ aspectRatio: '16/9', background: '#1B2B4B' }}>
+                        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.2) 0%, rgba(27,43,75,0.85) 100%)' }} />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                            style={{ background: i === activeVideo ? '#2A7F8F' : 'rgba(255,255,255,0.2)' }}
+                          >
+                            <Play size={10} fill="white" className="text-white ml-0.5" />
+                          </div>
+                        </div>
+                        <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded text-white" style={{ background: 'rgba(0,0,0,0.5)', fontSize: '10px' }}>
+                          <Clock size={9} />{video.duration}
+                        </div>
+                      </div>
+                      <div className="px-2 py-1.5 bg-white border-x border-b border-brand-border rounded-b-xl">
+                        <p className="text-xs font-semibold leading-snug" style={{ color: i === activeVideo ? '#2A7F8F' : '#1B2B4B' }}>
+                          {video.title}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Lesson 3 — 2-column video grid (equal-weight cards) */}
+            {isLesson3 && (
+              <div className="grid grid-cols-2 gap-4">
+                {lesson3Videos.map((video, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveVideo(i)}
+                    className="rounded-2xl overflow-hidden text-left transition-all"
+                    style={{ outline: i === activeVideo ? '2px solid #2A7F8F' : '2px solid transparent', outlineOffset: '2px' }}
+                  >
+                    <div className="relative" style={{ aspectRatio: '16/9', background: '#1B2B4B' }}>
+                      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.25) 0%, rgba(27,43,75,0.85) 100%)' }} />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-colors"
+                          style={{ background: i === activeVideo ? '#2A7F8F' : 'rgba(255,255,255,0.2)' }}
+                        >
+                          <Play size={14} fill="white" className="text-white ml-0.5" />
+                        </div>
+                      </div>
+                      <div className="absolute top-3 left-3 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
+                        <span className="text-xs font-bold text-brand-text">{i + 1}</span>
+                      </div>
+                      <div className="absolute bottom-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full text-white text-xs" style={{ background: 'rgba(0,0,0,0.45)' }}>
+                        <Clock size={10} />{video.duration}
+                      </div>
+                    </div>
+                    <div className="px-3 py-2.5 bg-white border-x border-b border-brand-border rounded-b-2xl">
+                      <p className="text-sm font-semibold leading-snug" style={{ color: i === activeVideo ? '#2A7F8F' : '#1B2B4B' }}>
+                        {video.title}
+                      </p>
+                    </div>
+                  </button>
+                ))}
               </div>
-              <div
-                className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white"
-                style={{ background: 'rgba(0,0,0,0.45)' }}
-              >
-                <Clock size={11} />
-                6:48
+            )}
+
+            {/* Lesson 4 — split panel: player left, episode list right */}
+            {isLesson4 && (
+              <div className="flex rounded-2xl overflow-hidden border border-brand-border" style={{ height: '300px' }}>
+
+                {/* Player */}
+                <div className="flex-1 relative" style={{ background: '#1B2B4B' }}>
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)' }} />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+                    <button
+                      className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg"
+                      style={{ background: '#2A7F8F' }}
+                    >
+                      <Play size={16} fill="white" className="text-white ml-0.5" />
+                    </button>
+                    <p className="text-white font-semibold text-sm leading-snug mb-1">
+                      {lesson4Videos[activeVideo].title}
+                    </p>
+                    <p className="text-white/50 text-xs leading-relaxed">
+                      {lesson4Videos[activeVideo].description}
+                    </p>
+                  </div>
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
+                    <Clock size={11} />{lesson4Videos[activeVideo].duration}
+                  </div>
+                </div>
+
+                {/* Episode list */}
+                <div className="w-64 bg-white flex-shrink-0 border-l border-brand-border overflow-y-auto">
+                  <div className="px-4 py-2.5 border-b border-brand-border">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">In this lesson</p>
+                  </div>
+                  {lesson4Videos.map((video, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveVideo(i)}
+                      className={`w-full text-left px-4 py-3 border-b border-brand-border last:border-0 border-l-2 transition-colors ${
+                        i === activeVideo
+                          ? 'bg-dessa-tealLight border-l-dessa-teal'
+                          : 'border-l-transparent hover:bg-brand-bg'
+                      }`}
+                    >
+                      <p className="text-xs text-brand-subtext mb-0.5">Episode {i + 1}</p>
+                      <p className={`text-sm font-semibold leading-snug mb-1 ${i === activeVideo ? 'text-dessa-teal' : 'text-brand-text'}`}>
+                        {video.title}
+                      </p>
+                      <div className="flex items-center gap-1 text-xs text-brand-subtext">
+                        <Clock size={10} />{video.duration}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
               </div>
-            </div>
-            <p className="text-sm text-brand-subtext mt-2 px-1">
-              Watch all the way through before pausing — the Emoger reveal at 5:10 lands best without interruption.
-            </p>
+            )}
+
           </motion.div>
 
           <motion.div

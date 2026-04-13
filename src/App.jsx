@@ -25,6 +25,10 @@ export default function App() {
     setEnrolledCourse({ ...course, completed: 5 })
   }
 
+  const handleUnenroll = () => {
+    setEnrolledCourse(null)
+  }
+
   const handleToggleHideUnenrolled = () => {
     setHideUnenrolled((prev) => !prev)
   }
@@ -43,6 +47,7 @@ export default function App() {
     hideUnenrolled,
     bookmarkedLessons,
     onEnroll: handleEnroll,
+    onUnenroll: handleUnenroll,
     onToggleHideUnenrolled: handleToggleHideUnenrolled,
   }
 

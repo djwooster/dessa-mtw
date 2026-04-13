@@ -197,7 +197,7 @@ export default function BrandGuide() {
               hierarchy that matches the energy of a classroom.
             </p>
             <div className="space-y-1.5 text-sm text-brand-subtext">
-              <div className="flex items-center gap-2"><span className="text-brand-border">—</span> Buttons: <code className="text-xs bg-brand-bg px-1.5 py-0.5 rounded">rounded-full</code></div>
+              <div className="flex items-center gap-2"><span className="text-brand-border">—</span> Buttons: <code className="text-xs bg-brand-bg px-1.5 py-0.5 rounded">rounded-md</code></div>
               <div className="flex items-center gap-2"><span className="text-brand-border">—</span> Primary: <code className="text-xs bg-brand-bg px-1.5 py-0.5 rounded">#F5A623</code></div>
               <div className="flex items-center gap-2"><span className="text-brand-border">—</span> Accents: teal / coral / green</div>
             </div>
@@ -369,51 +369,28 @@ export default function BrandGuide() {
         <SectionLabel>Components</SectionLabel>
         <SectionHeading>Button Variants</SectionHeading>
         <p className="text-sm text-brand-subtext mb-5 max-w-2xl">
-          Button shape is the clearest signal of which brand you're in. DESSA uses <code className="text-xs bg-brand-bg px-1.5 py-0.5 rounded">rounded-md</code> (4px radius) for a structured, clinical feel. MTW uses <code className="text-xs bg-brand-bg px-1.5 py-0.5 rounded">rounded-full</code> for an approachable, playful feel.
+          All buttons across DESSA and MTW use <code className="text-xs bg-brand-bg px-1.5 py-0.5 rounded">rounded-md</code> (4px radius) — a consistent, structured shape that works across both brand contexts.
         </p>
-        <div className="grid grid-cols-2 gap-5 mb-5">
+        <div className="mb-5">
           <Card>
-            <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-4">DESSA — rounded-md</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-4">Unified — rounded-md</p>
             <div className="flex flex-wrap gap-3">
               <button
-                className="px-5 py-2.5 rounded-md text-sm font-semibold text-white"
+                className="px-5 py-2.5 rounded-md text-sm font-semibold text-white transition-all hover:brightness-90"
                 style={{ background: '#2A7F8F' }}
               >
-                Rate Students
+                Primary Action
               </button>
               <button
-                className="px-5 py-2.5 rounded-md text-sm font-semibold border border-brand-border text-brand-subtext bg-white"
-              >
-                Export Data
-              </button>
-              <button
-                className="px-5 py-2.5 rounded-md text-sm font-semibold border text-brand-subtext bg-white"
+                className="px-5 py-2.5 rounded-md text-sm font-semibold border bg-white hover:bg-dessa-tealLight transition-colors"
                 style={{ borderColor: '#2A7F8F', color: '#2A7F8F' }}
               >
-                View Details
-              </button>
-            </div>
-          </Card>
-          <Card>
-            <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-4">MTW — rounded-full</p>
-            <div className="flex flex-wrap gap-3">
-              <button
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold text-white"
-                style={{ background: '#F5A623' }}
-              >
-                <Play size={11} fill="currentColor" /> Continue
+                Secondary Action
               </button>
               <button
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold text-white"
-                style={{ background: '#5B9E4D' }}
+                className="px-5 py-2.5 rounded-md text-sm font-semibold border border-brand-border text-brand-subtext bg-white hover:bg-brand-bg transition-colors"
               >
-                Review <ChevronRight size={12} />
-              </button>
-              <button
-                className="px-4 py-2 rounded-full text-sm font-semibold text-white"
-                style={{ background: '#CBD5E0' }}
-              >
-                Start
+                Tertiary Action
               </button>
             </div>
           </Card>
@@ -588,8 +565,8 @@ wrapper: AnimatePresence`}</pre>
             },
             {
               num: '07',
-              title: 'Shape language signals brand context',
-              body: 'The most direct visual cue that you\'re in DESSA vs. MTW is button border-radius. rounded-md (DESSA) feels structured and institutional. rounded-full (MTW) feels warm and approachable. No explicit brand label needed.',
+              title: 'Unified button shape across both brands',
+              body: 'Buttons use rounded-md across the full application. Brand context is communicated through color (dessa-teal vs. mtw-amber) rather than shape — this simplifies engineering while keeping the visual distinction clear.',
             },
             {
               num: '08',
