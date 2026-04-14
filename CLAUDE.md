@@ -20,8 +20,10 @@ Fidelity bar: **confident design exploration** — not a wireframe, not producti
 |---|---|
 | `/` | Dashboard (Educator Home) |
 | `/ratings` | DESSA Ratings |
-| `/mtw` | MTW Curriculum (course library) |
-| `/mtw/lesson` | Individual Lesson View |
+| `/mtw` | MTW Curriculum — design proposal A (`Curriculum.jsx` + `LessonView.jsx`) |
+| `/mtw/lesson` | MTW Lesson View A |
+| `/mtw2` | MTW Curriculum — design proposal B (`CurriculumV2.jsx` + `LessonViewV2.jsx`) |
+| `/mtw2/lesson` | MTW Lesson View B |
 | `/insights` | Data & Insights (placeholder) |
 | `/strategies` | Strategies (placeholder) |
 
@@ -53,7 +55,7 @@ Two brand personalities sharing one card shell:
 ---
 
 ## Key product decisions (captured)
-- **MTW lives under its own "MTW" nav item** (last in nav, amber-tinted label) — not mixed into the main DESSA navigation
+- **MTW lives under its own "MTW" nav item** — not mixed into the main DESSA navigation. The nav item uses standard styling (same as all other nav items — no amber tinting on the label itself). Amber (`#F5A623` / `mtw-amber`) appears only as accent inside the MTW pages: enrolled badge, bookmark count badge, sidebar active-unit indicator, main activity left border.
 - **Dashboard = DESSA home** with a compact top strip for "Continue Today's Lesson" (MTW CTA), then DESSA ratings widget, classroom strategies, and competency breakdown
 - **Dashboard content mirrors the real DESSA dashboard**: My Student's DESSA Ratings (pie chart), Try These Classroom Strategies (two sample cards), Student Competency Breakdown (stacked bar per competency)
 - Ratings page = district-level (9,895 students). Dashboard pie = single class (30 students, Tara's).
@@ -69,8 +71,10 @@ src/
     Nav.jsx           — persistent top nav, sticky
   pages/
     Dashboard.jsx     — educator home (DESSA-forward + MTW CTA strip)
-    Curriculum.jsx    — MTW course library (accessed via /mtw)
-    LessonView.jsx    — individual lesson with sidebar + tabs
+    Curriculum.jsx    — MTW course library, proposal A (accessed via /mtw)
+    LessonView.jsx    — MTW lesson view, proposal A (accessed via /mtw/lesson)
+    CurriculumV2.jsx  — MTW course library, proposal B (accessed via /mtw2)
+    LessonViewV2.jsx  — MTW lesson view, proposal B (accessed via /mtw2/lesson)
     Ratings.jsx       — DESSA ratings, timeline, grade bar chart
   lib/
     utils.js          — cn() helper (clsx + tailwind-merge)
