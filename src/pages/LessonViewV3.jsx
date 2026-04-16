@@ -581,6 +581,8 @@ export default function LessonViewV3({ onBookmark }) {
 
             <Divider />
 
+            <h2 className="text-xl font-bold text-brand-text mb-6">Facilitation Guide</h2>
+
             {/* Main Activity */}
             <div className="mb-7">
               <SectionLabel>Main Activity</SectionLabel>

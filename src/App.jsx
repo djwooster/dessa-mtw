@@ -9,6 +9,8 @@ import BrandGuide from './pages/BrandGuide'
 import CurriculumV2 from './pages/CurriculumV2'
 import CurriculumV3 from './pages/CurriculumV3'
 import LessonViewV3 from './pages/LessonViewV3'
+import CurriculumV4 from './pages/CurriculumV4'
+import LessonViewV4 from './pages/LessonViewV4'
 import CourseOverviewV2 from './pages/CourseOverviewV2'
 import LessonViewV2 from './pages/LessonViewV2'
 
@@ -90,6 +92,23 @@ export default function App() {
     })
   }
 
+  // ── MTW 4 state (independent) ─────────────────────────────────────────────
+  const [enrolledCourseV4, setEnrolledCourseV4] = useState(null)
+  const [hideUnenrolledV4, setHideUnenrolledV4] = useState(false)
+  const [bookmarkedLessonsV4, setBookmarkedLessonsV4] = useState([])
+
+  const handleEnrollV4 = (course) => setEnrolledCourseV4({ ...course, completed: 5 })
+  const handleUnenrollV4 = () => setEnrolledCourseV4(null)
+  const handleToggleHideUnenrolledV4 = () => setHideUnenrolledV4((prev) => !prev)
+  const handleBookmarkV4 = (lessonData) => {
+    setBookmarkedLessonsV4((prev) => {
+      const alreadyBookmarked = prev.some(
+        (b) => b.lesson === lessonData.lesson && b.unit === lessonData.unit
+      )
+      return alreadyBookmarked ? prev : [...prev, lessonData]
+    })
+  }
+
   const curriculumPropsV3 = {
     enrolledCourse: enrolledCourseV3,
     hideUnenrolled: hideUnenrolledV3,
@@ -124,6 +143,8 @@ export default function App() {
           <Route path="/mtw2/lesson" element={<LessonViewV2 onBookmark={handleBookmarkV2} enrolledCourse={enrolledCourseV2} />} />
           <Route path="/mtw3" element={<CurriculumV3 {...curriculumPropsV3} />} />
           <Route path="/mtw3/lesson" element={<LessonViewV3 onBookmark={handleBookmarkV3} />} />
+          <Route path="/mtw4" element={<CurriculumV4 enrolledCourse={enrolledCourseV4} hideUnenrolled={hideUnenrolledV4} bookmarkedLessons={bookmarkedLessonsV4} onEnroll={handleEnrollV4} onUnenroll={handleUnenrollV4} onToggleHideUnenrolled={handleToggleHideUnenrolledV4} />} />
+          <Route path="/mtw4/lesson" element={<LessonViewV4 onBookmark={handleBookmarkV4} />} />
           <Route path="/ratings" element={<Ratings />} />
           <Route path="/insights" element={<Placeholder title="Data & Insights" />} />
           <Route path="/strategies" element={<Placeholder title="Strategies" />} />
