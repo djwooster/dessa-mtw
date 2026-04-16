@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { CheckCircle2, Circle, ChevronLeft, ChevronDown, Play, Clock, Bookmark } from 'lucide-react'
+import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Clock, Bookmark, Maximize2, Minimize2 } from 'lucide-react'
 
 
 const units = [
@@ -104,6 +104,256 @@ const discussionPrompts = [
   },
 ]
 
+// ── Slide deck data — Feelings Check-In (Unit 2, Lesson 1) ───────────────
+const feelingsCheckInSlides = [
+  {
+    type: 'title',
+    title: 'Feelings Check-In',
+    subtitle: 'Unit 2 — Naming What We Feel',
+  },
+  {
+    type: 'questions',
+    label: 'Continuing the Conversation',
+    questions: [
+      'What\'s one feeling you noticed in your body this week? Where did you feel it?',
+      'Did anything happen today that changed how you were feeling? What was it?',
+    ],
+  },
+  {
+    type: 'questions',
+    label: 'Continuing the Conversation',
+    questions: [
+      'When you feel something big, who or what helps you feel better?',
+      'If your feeling had a color right now, what color would it be — and why?',
+    ],
+  },
+  {
+    type: 'close',
+    title: 'Keep Checking In',
+    body: 'Noticing how we feel is the first step to understanding ourselves and each other.',
+  },
+]
+
+// ── Slide viewer sub-components ───────────────────────────────────────────
+function SlideBlob({ style }) {
+  return (
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        width: 260,
+        height: 260,
+        borderRadius: '40% 60% 70% 30% / 40% 50% 60% 50%',
+        background: 'rgba(0,0,0,0.09)',
+        ...style,
+      }}
+    />
+  )
+}
+
+function MtwWordmark() {
+  return (
+    <div className="flex flex-col items-center leading-none select-none">
+      <div className="flex items-baseline gap-[1px] font-extrabold text-lg tracking-tight">
+        <span style={{ color: '#E8653A' }}>m</span>
+        <span style={{ color: '#F5A623' }}>O</span>
+        <span style={{ color: '#5B9E4D' }}>V</span>
+        <span style={{ color: '#2A7F8F' }}>e</span>
+      </div>
+      <p className="text-[9px] font-bold uppercase" style={{ letterSpacing: '0.18em', color: '#E8653A' }}>
+        This World
+      </p>
+    </div>
+  )
+}
+
+function SlideContent({ slide }) {
+  if (slide.type === 'title') {
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden" style={{ background: '#E8653A' }}>
+        <SlideBlob style={{ top: -80, left: -80, transform: 'rotate(-20deg)' }} />
+        <SlideBlob style={{ bottom: -80, right: -80, transform: 'rotate(15deg)' }} />
+        <div className="relative z-10 bg-[#FDF8F0] rounded-3xl px-10 py-8 text-center mx-10 shadow-lg">
+          <h2 className="text-[2rem] font-black text-brand-text leading-tight tracking-tight mb-2">
+            {slide.title}
+          </h2>
+          <p className="text-sm font-medium text-brand-subtext">{slide.subtitle}</p>
+        </div>
+        <div className="absolute bottom-5 right-6 z-10">
+          <MtwWordmark />
+        </div>
+      </div>
+    )
+  }
+
+  if (slide.type === 'questions') {
+    return (
+      <div className="absolute inset-0 flex overflow-hidden" style={{ background: '#FDF8F0' }}>
+        <div className="flex-1 flex flex-col justify-center gap-4 px-8 py-8">
+          {slide.questions.map((q, i) => (
+            <div
+              key={i}
+              className="rounded-2xl px-5 py-4 text-sm font-medium leading-relaxed text-white"
+              style={{ background: '#E8653A' }}
+            >
+              {q}
+            </div>
+          ))}
+        </div>
+        <div className="w-48 flex flex-col items-center justify-center gap-3 px-5" style={{ borderLeft: '1px solid rgba(232,101,58,0.2)' }}>
+          <div
+            className="relative w-28 h-20 rounded-2xl flex items-center justify-center overflow-hidden"
+            style={{ background: '#FDF8F0', border: '3px solid #E8653A' }}
+          >
+            <SlideBlob style={{ top: -30, right: -30, width: 80, height: 80, transform: 'rotate(20deg)' }} />
+            <MtwWordmark />
+          </div>
+          <p className="text-xs font-bold text-center leading-snug" style={{ color: '#E8653A' }}>
+            {slide.label}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (slide.type === 'close') {
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden" style={{ background: '#E8653A' }}>
+        <SlideBlob style={{ top: -60, right: -60, transform: 'rotate(25deg)' }} />
+        <SlideBlob style={{ bottom: -80, left: -60, transform: 'rotate(-15deg)' }} />
+        <div className="relative z-10 bg-[#FDF8F0] rounded-3xl px-10 py-8 text-center mx-12 shadow-lg">
+          <h2 className="text-2xl font-black text-brand-text mb-3 tracking-tight">{slide.title}</h2>
+          <p className="text-sm text-brand-subtext leading-relaxed">{slide.body}</p>
+        </div>
+        <div className="absolute bottom-5 right-6 z-10">
+          <MtwWordmark />
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
+// fill=false → standalone with aspect ratio + dots below
+// fill=true  → fills parent container, dots overlaid inside
+function SlideViewer({ slides, fill = false }) {
+  const [current, setCurrent] = useState(0)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'ArrowLeft') setCurrent((c) => Math.max(0, c - 1))
+      if (e.key === 'ArrowRight') setCurrent((c) => Math.min(slides.length - 1, c + 1))
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [slides.length])
+
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', handler)
+    return () => document.removeEventListener('fullscreenchange', handler)
+  }, [])
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen()
+    } else {
+      document.exitFullscreen()
+    }
+  }
+
+  const inner = (
+    <div
+      ref={containerRef}
+      className={`relative w-full overflow-hidden ${fill ? 'h-full' : 'rounded-2xl shadow-md'}`}
+      style={fill ? undefined : { aspectRatio: '16/9' }}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={current}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="absolute inset-0"
+        >
+          <SlideContent slide={slides[current]} />
+        </motion.div>
+      </AnimatePresence>
+
+      {current > 0 && (
+        <button
+          onClick={() => setCurrent((c) => c - 1)}
+          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white/85 flex items-center justify-center shadow-md hover:bg-white transition-colors"
+        >
+          <ChevronLeft size={16} className="text-brand-text" />
+        </button>
+      )}
+
+      {current < slides.length - 1 && (
+        <button
+          onClick={() => setCurrent((c) => c + 1)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white/85 flex items-center justify-center shadow-md hover:bg-white transition-colors"
+        >
+          <ChevronRight size={16} className="text-brand-text" />
+        </button>
+      )}
+
+      {/* Fullscreen toggle */}
+      <button
+        onClick={toggleFullscreen}
+        className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-white/85 flex items-center justify-center shadow-md hover:bg-white transition-colors"
+        aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+      >
+        {isFullscreen
+          ? <Minimize2 size={13} className="text-brand-text" />
+          : <Maximize2 size={13} className="text-brand-text" />
+        }
+      </button>
+
+      {/* Dots — overlaid inside when fill mode, so they work at any height */}
+      {fill && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(0,0,0,0.28)' }}>
+          {slides.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrent(i)}
+              className="rounded-full transition-all duration-200"
+              style={{ width: i === current ? 18 : 6, height: 6, background: i === current ? 'white' : 'rgba(255,255,255,0.45)' }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+
+  if (fill) return inner
+
+  return (
+    <div>
+      {inner}
+      {/* Standalone: dots + caption below the slide */}
+      <div className="flex items-center justify-center gap-1.5 mt-3">
+        {slides.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrent(i)}
+            className="rounded-full transition-all duration-200"
+            style={{ width: i === current ? 18 : 6, height: 6, background: i === current ? '#E8653A' : '#E2E6EA' }}
+          />
+        ))}
+      </div>
+      <p className="text-sm text-brand-subtext text-center mt-1.5">
+        Use arrows or ← → keys to advance — display on your classroom screen after the video.
+      </p>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function SectionLabel({ children }) {
   return (
     <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-1.5">
@@ -130,6 +380,7 @@ export default function LessonView({ onBookmark }) {
   const [expandedUnit, setExpandedUnit] = useState(1)
   const [selectedLesson, setSelectedLesson] = useState({ unitId: 1, lessonIndex: 0 })
   const [activeVideo, setActiveVideo] = useState(0)
+  const [activeContent, setActiveContent] = useState('video')
   const [bookmarked, setBookmarked] = useState(false)
   const [showToast, setShowToast] = useState(false)
 
@@ -143,10 +394,12 @@ export default function LessonView({ onBookmark }) {
   const isLesson2 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 1
   const isLesson3 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 2
   const isLesson4 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 3
+  const isFeelingsChekin = selectedLesson.unitId === 2 && selectedLesson.lessonIndex === 1
 
   const handleSelectLesson = (unitId, lessonIndex) => {
     setSelectedLesson({ unitId, lessonIndex })
     setActiveVideo(0)
+    setActiveContent('video')
     setBookmarked(false)
   }
 
@@ -330,7 +583,7 @@ export default function LessonView({ onBookmark }) {
           >
 
             {/* Lesson 1 — single video */}
-            {!isLesson2 && !isLesson3 && !isLesson4 && (
+            {!isLesson2 && !isLesson3 && !isLesson4 && !isFeelingsChekin && (
               <>
                 <div
                   className="w-full rounded-2xl overflow-hidden relative"
@@ -443,6 +696,80 @@ export default function LessonView({ onBookmark }) {
                     </div>
                   </button>
                 ))}
+              </div>
+            )}
+
+            {/* Feelings Check-In — video + slide deck with content-type selector */}
+            {isFeelingsChekin && (
+              <div className="flex rounded-2xl overflow-hidden border border-brand-border" style={{ height: 360 }}>
+                {/* Left: active content */}
+                <div className="flex-1 relative overflow-hidden">
+                  {activeContent === 'video' && (
+                    <>
+                      <div className="absolute inset-0" style={{ background: '#1B2B4B' }} />
+                      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.8) 100%)' }} />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <button className="w-14 h-14 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: '#2A7F8F' }}>
+                          <Play size={20} fill="white" className="text-white ml-0.5" />
+                        </button>
+                        <p className="text-white/70 text-sm">Feelings Check-In — Introduction</p>
+                      </div>
+                      <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
+                        <Clock size={11} />5:14
+                      </div>
+                    </>
+                  )}
+                  {activeContent === 'slides' && (
+                    <SlideViewer slides={feelingsCheckInSlides} fill />
+                  )}
+                </div>
+
+                {/* Right: content-type selector */}
+                <div className="w-56 bg-white flex-shrink-0 border-l border-brand-border flex flex-col">
+                  <div className="px-4 py-2.5 border-b border-brand-border">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">In This Lesson</p>
+                  </div>
+
+                  {/* Video option */}
+                  <button
+                    onClick={() => setActiveContent('video')}
+                    className={`w-full text-left px-4 py-3.5 border-b border-brand-border border-l-2 transition-colors ${
+                      activeContent === 'video'
+                        ? 'bg-dessa-tealLight border-l-dessa-teal'
+                        : 'border-l-transparent hover:bg-brand-bg'
+                    }`}
+                  >
+                    <p className="text-xs text-brand-subtext mb-0.5">Video</p>
+                    <p className={`text-sm font-semibold leading-snug mb-1.5 ${activeContent === 'video' ? 'text-dessa-teal' : 'text-brand-text'}`}>
+                      Feelings Check-In — Introduction
+                    </p>
+                    <div className="flex items-center gap-1 text-xs text-brand-subtext">
+                      <Clock size={10} />5:14
+                    </div>
+                  </button>
+
+                  {/* Slide deck option */}
+                  <button
+                    onClick={() => setActiveContent('slides')}
+                    className={`w-full text-left px-4 py-3.5 border-l-2 transition-colors ${
+                      activeContent === 'slides'
+                        ? 'bg-dessa-tealLight border-l-dessa-teal'
+                        : 'border-l-transparent hover:bg-brand-bg'
+                    }`}
+                  >
+                    <p className="text-xs text-brand-subtext mb-0.5">Slide Deck</p>
+                    <p className={`text-sm font-semibold leading-snug mb-1.5 ${activeContent === 'slides' ? 'text-dessa-teal' : 'text-brand-text'}`}>
+                      Continuing the Conversation
+                    </p>
+                    <div className="flex items-center gap-1 text-xs text-brand-subtext">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" />
+                        <path d="M8 21h8M12 17v4" />
+                      </svg>
+                      4 slides
+                    </div>
+                  </button>
+                </div>
               </div>
             )}
 

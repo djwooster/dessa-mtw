@@ -22,8 +22,11 @@ Fidelity bar: **confident design exploration** — not a wireframe, not producti
 | `/ratings` | DESSA Ratings |
 | `/mtw` | MTW Curriculum — design proposal A (`Curriculum.jsx` + `LessonView.jsx`) |
 | `/mtw/lesson` | MTW Lesson View A |
-| `/mtw2` | MTW Curriculum — design proposal B (`CurriculumV2.jsx` + `LessonViewV2.jsx`) |
+| `/mtw2` | MTW Curriculum — design proposal B (`CurriculumV2.jsx` + `CourseOverviewV2.jsx` + `LessonViewV2.jsx`) |
+| `/mtw2/course` | MTW Course Overview B (intermediate screen between library and lesson) |
 | `/mtw2/lesson` | MTW Lesson View B |
+| `/mtw3` | MTW Curriculum — design proposal C (`CurriculumV3.jsx` + `LessonViewV3.jsx`) |
+| `/mtw3/lesson` | MTW Lesson View C |
 | `/insights` | Data & Insights (placeholder) |
 | `/strategies` | Strategies (placeholder) |
 
@@ -64,20 +67,37 @@ Two brand personalities sharing one card shell:
 
 ---
 
+## MTW design proposals — what each one explores
+
+All three proposals share the same course library card design (6 courses, grade-level tabs, Enroll/Continue/Unenroll flow). The primary difference being evaluated is **lesson view navigation architecture**:
+
+**Proposal A (`/mtw`)** — Flat: course library → lesson view directly. Sidebar shows current unit's lessons only. Active lesson uses `dessa-teal` left border. Back goes to `/mtw`.
+
+**Proposal B (`/mtw2`)** — Hierarchical: course library → **course overview page** → lesson view. The course overview (`CourseOverviewV2`) is a standalone screen: course header card, overall progress %, and a full unit accordion (all units collapsible, shows lesson completion). Sidebar in lesson view shows current unit's lessons only. Back goes to `/mtw2/course`.
+
+**Proposal C (`/mtw3`)** — Full sidebar: course library → lesson view directly, but the sidebar shows **all 36 units** in a collapsible accordion. Active unit has an amber left border and bold label; selected lesson highlighted with `bg-mtw-amberLight rounded-lg`. A **drawer overlay** ("Show all lessons / Hide lessons") slides over the lower units to keep focus on the active unit while still allowing full curriculum access. Back goes to `/mtw3`.
+
+---
+
 ## File structure
 ```
 src/
   components/
-    Nav.jsx           — persistent top nav, sticky
+    Nav.jsx             — persistent top nav, sticky
   pages/
-    Dashboard.jsx     — educator home (DESSA-forward + MTW CTA strip)
-    Curriculum.jsx    — MTW course library, proposal A (accessed via /mtw)
-    LessonView.jsx    — MTW lesson view, proposal A (accessed via /mtw/lesson)
-    CurriculumV2.jsx  — MTW course library, proposal B (accessed via /mtw2)
-    LessonViewV2.jsx  — MTW lesson view, proposal B (accessed via /mtw2/lesson)
-    Ratings.jsx       — DESSA ratings, timeline, grade bar chart
+    Dashboard.jsx       — educator home (DESSA-forward + MTW CTA strip)
+    Curriculum.jsx      — MTW course library, proposal A (accessed via /mtw)
+    LessonView.jsx      — MTW lesson view, proposal A (accessed via /mtw/lesson)
+    CurriculumV2.jsx    — MTW course library, proposal B (accessed via /mtw2)
+    CourseOverviewV2.jsx — MTW course overview, proposal B (accessed via /mtw2/course)
+    LessonViewV2.jsx    — MTW lesson view, proposal B (accessed via /mtw2/lesson)
+    CurriculumV3.jsx    — MTW course library, proposal C (accessed via /mtw3)
+    LessonViewV3.jsx    — MTW lesson view, proposal C (accessed via /mtw3/lesson)
+    Ratings.jsx         — DESSA ratings, timeline, grade bar chart
+    BrandGuide.jsx      — design system reference (accessed via /brand)
   lib/
-    utils.js          — cn() helper (clsx + tailwind-merge)
+    utils.js            — cn() helper (clsx + tailwind-merge)
+    mtwData.js          — shared units/lessons data (used by proposals A and B)
 ```
 
 ---
