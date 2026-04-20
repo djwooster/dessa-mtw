@@ -10,6 +10,7 @@ import CurriculumV2 from './pages/CurriculumV2'
 // import CurriculumV3 from './pages/CurriculumV3'
 // import LessonViewV3 from './pages/LessonViewV3'
 import CurriculumV4 from './pages/CurriculumV4'
+import Report1 from './pages/Report1'
 import LessonViewV4 from './pages/LessonViewV4'
 import CourseOverviewV2 from './pages/CourseOverviewV2'
 import LessonViewV2 from './pages/LessonViewV2'
@@ -129,6 +130,7 @@ export default function App() {
           <Route path="/mtw4" element={<CurriculumV4 enrolledCourse={enrolledCourseV4} hideUnenrolled={hideUnenrolledV4} bookmarkedLessons={bookmarkedLessonsV4} onEnroll={handleEnrollV4} onUnenroll={handleUnenrollV4} onToggleHideUnenrolled={handleToggleHideUnenrolledV4} />} />
           <Route path="/mtw4/lesson" element={<LessonViewV4 onBookmark={handleBookmarkV4} />} />
           <Route path="/ratings" element={<Ratings />} />
+          <Route path="/report1" element={<Report1 />} />
           <Route path="/insights" element={<Placeholder title="Data & Insights" />} />
           <Route path="/strategies" element={<Placeholder title="Strategies" />} />
           <Route path="/brand" element={<BrandGuide />} />

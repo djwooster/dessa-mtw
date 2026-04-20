@@ -25,8 +25,9 @@ Fidelity bar: **confident design exploration** — not a wireframe, not producti
 | `/mtw2` | MTW Curriculum — design proposal B (`CurriculumV2.jsx` + `CourseOverviewV2.jsx` + `LessonViewV2.jsx`) |
 | `/mtw2/course` | MTW Course Overview B (intermediate screen between library and lesson) |
 | `/mtw2/lesson` | MTW Lesson View B |
-| `/mtw3` | MTW Curriculum — design proposal C (`CurriculumV3.jsx` + `LessonViewV3.jsx`) |
-| `/mtw3/lesson` | MTW Lesson View C |
+| `/mtw4` | MTW Curriculum — design proposal D (`CurriculumV4.jsx` + `LessonViewV4.jsx`) |
+| `/mtw4/lesson` | MTW Lesson View D |
+| `/report1` | Admin: Teacher Engagement Overview — 3 design concepts on one page |
 | `/insights` | Data & Insights (placeholder) |
 | `/strategies` | Strategies (placeholder) |
 
@@ -86,21 +87,32 @@ src/
     Nav.jsx             — persistent top nav, sticky
   pages/
     Dashboard.jsx       — educator home (DESSA-forward + MTW CTA strip)
-    Curriculum.jsx      — MTW course library, proposal A (accessed via /mtw)
-    LessonView.jsx      — MTW lesson view, proposal A (accessed via /mtw/lesson)
-    CurriculumV2.jsx    — MTW course library, proposal B (accessed via /mtw2)
-    CourseOverviewV2.jsx — MTW course overview, proposal B (accessed via /mtw2/course)
-    LessonViewV2.jsx    — MTW lesson view, proposal B (accessed via /mtw2/lesson)
-    CurriculumV3.jsx    — MTW course library, proposal C (accessed via /mtw3)
-    LessonViewV3.jsx    — MTW lesson view, proposal C (accessed via /mtw3/lesson)
+    Curriculum.jsx      — MTW course library, proposal A (/mtw)
+    LessonView.jsx      — MTW lesson view, proposal A (/mtw/lesson)
+    CurriculumV2.jsx    — MTW course library, proposal B (/mtw2)
+    CourseOverviewV2.jsx — MTW course overview, proposal B (/mtw2/course)
+    LessonViewV2.jsx    — MTW lesson view, proposal B (/mtw2/lesson)
+    CurriculumV4.jsx    — MTW course library, proposal D (/mtw4)
+    LessonViewV4.jsx    — MTW lesson view, proposal D (/mtw4/lesson)
+    Report1.jsx         — Admin report: 3 concepts on one page (/report1)
     Ratings.jsx         — DESSA ratings, timeline, grade bar chart
-    BrandGuide.jsx      — design system reference (accessed via /brand)
+    BrandGuide.jsx      — design system reference (/brand)
   lib/
     utils.js            — cn() helper (clsx + tailwind-merge)
-    mtwData.js          — shared units/lessons data (used by proposals A and B)
+    mtwData.js          — shared units/lessons data (proposals A and B)
+    reportData.js       — mock teacher engagement data for /report1
 ```
 
 ---
+
+## Admin report — `/report1`
+Three design concepts on one shared page (all controlled by the same search/filter/goal-frequency controls at the top). Concept that most closely matches the Jira ticket is A. Mock data covers 12 teachers across 3 schools, 4 weeks of school days.
+
+- **Concept A** — Ranked list, sortable columns, expandable calendar detail panel per row
+- **Concept B** — Heatmap grid (teachers × days), hover tooltip, fill patterns for accessibility
+- **Concept C** — Dashboard: stat cards + weekly distribution chart + school breakdown + compact list
+
+Engagement levels: `d` deep (5+ min) · `a` active (1–5 min) · `b` brief (<1 min) · `n` none. Single teal color ramp; patterns (solid / stripes / dots / outline) are the primary differentiator.
 
 ## Screens still needed (future iterations)
 - `/insights` — Data & Insights (currently placeholder)

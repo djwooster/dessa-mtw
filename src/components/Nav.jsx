@@ -4,13 +4,13 @@ import { Search, HelpCircle } from 'lucide-react'
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 
 const navItems = [
-  { label: 'Dashboard',      to: '/' },
-  { label: 'Ratings',        to: '/ratings' },
-  { label: 'MTW',            to: '/mtw' },
-  { label: 'MTW 2',          to: '/mtw2' },
-  // { label: 'MTW 3',          to: '/mtw3' },
-  { label: 'MTW 3',          to: '/mtw4' },
-  { label: 'Brand Guide',   to: '/brand' },
+  { label: 'Dashboard',   to: '/' },
+  { label: 'Ratings',     to: '/ratings' },
+  { label: 'MTW',         to: '/mtw' },
+  { label: 'MTW 2',       to: '/mtw2' },
+  { label: 'MTW 3',       to: '/mtw4' },
+  { label: 'Report 1',    to: '/report1' },
+  { label: 'Brand Guide', to: '/brand' },
 ]
 
 export default function Nav() {
