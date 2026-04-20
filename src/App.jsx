@@ -7,8 +7,8 @@ import LessonView from './pages/LessonView'
 import Ratings from './pages/Ratings'
 import BrandGuide from './pages/BrandGuide'
 import CurriculumV2 from './pages/CurriculumV2'
-import CurriculumV3 from './pages/CurriculumV3'
-import LessonViewV3 from './pages/LessonViewV3'
+// import CurriculumV3 from './pages/CurriculumV3'
+// import LessonViewV3 from './pages/LessonViewV3'
 import CurriculumV4 from './pages/CurriculumV4'
 import LessonViewV4 from './pages/LessonViewV4'
 import CourseOverviewV2 from './pages/CourseOverviewV2'
@@ -75,22 +75,14 @@ export default function App() {
     })
   }
 
-  // ── MTW 3 state (independent) ─────────────────────────────────────────────
-  const [enrolledCourseV3, setEnrolledCourseV3] = useState(null)
-  const [hideUnenrolledV3, setHideUnenrolledV3] = useState(false)
-  const [bookmarkedLessonsV3, setBookmarkedLessonsV3] = useState([])
-
-  const handleEnrollV3 = (course) => setEnrolledCourseV3({ ...course, completed: 5 })
-  const handleUnenrollV3 = () => setEnrolledCourseV3(null)
-  const handleToggleHideUnenrolledV3 = () => setHideUnenrolledV3((prev) => !prev)
-  const handleBookmarkV3 = (lessonData) => {
-    setBookmarkedLessonsV3((prev) => {
-      const alreadyBookmarked = prev.some(
-        (b) => b.lesson === lessonData.lesson && b.unit === lessonData.unit
-      )
-      return alreadyBookmarked ? prev : [...prev, lessonData]
-    })
-  }
+  // ── MTW 3 state (commented out with route) ───────────────────────────────
+  // const [enrolledCourseV3, setEnrolledCourseV3] = useState(null)
+  // const [hideUnenrolledV3, setHideUnenrolledV3] = useState(false)
+  // const [bookmarkedLessonsV3, setBookmarkedLessonsV3] = useState([])
+  // const handleEnrollV3 = (course) => setEnrolledCourseV3({ ...course, completed: 5 })
+  // const handleUnenrollV3 = () => setEnrolledCourseV3(null)
+  // const handleToggleHideUnenrolledV3 = () => setHideUnenrolledV3((prev) => !prev)
+  // const handleBookmarkV3 = (lessonData) => { ... }
 
   // ── MTW 4 state (independent) ─────────────────────────────────────────────
   const [enrolledCourseV4, setEnrolledCourseV4] = useState(null)
@@ -107,15 +99,6 @@ export default function App() {
       )
       return alreadyBookmarked ? prev : [...prev, lessonData]
     })
-  }
-
-  const curriculumPropsV3 = {
-    enrolledCourse: enrolledCourseV3,
-    hideUnenrolled: hideUnenrolledV3,
-    bookmarkedLessons: bookmarkedLessonsV3,
-    onEnroll: handleEnrollV3,
-    onUnenroll: handleUnenrollV3,
-    onToggleHideUnenrolled: handleToggleHideUnenrolledV3,
   }
 
   const curriculumPropsV2 = {
@@ -141,8 +124,8 @@ export default function App() {
           <Route path="/mtw2" element={<CurriculumV2 {...curriculumPropsV2} />} />
           <Route path="/mtw2/course" element={<CourseOverviewV2 enrolledCourse={enrolledCourseV2} />} />
           <Route path="/mtw2/lesson" element={<LessonViewV2 onBookmark={handleBookmarkV2} enrolledCourse={enrolledCourseV2} />} />
-          <Route path="/mtw3" element={<CurriculumV3 {...curriculumPropsV3} />} />
-          <Route path="/mtw3/lesson" element={<LessonViewV3 onBookmark={handleBookmarkV3} />} />
+          {/* <Route path="/mtw3" element={<CurriculumV3 {...curriculumPropsV3} />} /> */}
+          {/* <Route path="/mtw3/lesson" element={<LessonViewV3 onBookmark={handleBookmarkV3} />} /> */}
           <Route path="/mtw4" element={<CurriculumV4 enrolledCourse={enrolledCourseV4} hideUnenrolled={hideUnenrolledV4} bookmarkedLessons={bookmarkedLessonsV4} onEnroll={handleEnrollV4} onUnenroll={handleUnenrollV4} onToggleHideUnenrolled={handleToggleHideUnenrolledV4} />} />
           <Route path="/mtw4/lesson" element={<LessonViewV4 onBookmark={handleBookmarkV4} />} />
           <Route path="/ratings" element={<Ratings />} />

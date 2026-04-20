@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { CheckCircle2, Circle, ChevronLeft, Play, Clock, Bookmark } from 'lucide-react'
 import { units, getFlatIndex } from '../lib/mtwData'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 
 const lesson2Videos = [
   { title: 'Introduction to Emotional Building Blocks', duration: '4:22' },
@@ -18,25 +19,20 @@ const lesson4Videos = [
   { title: 'Practice Round', duration: '5:20', description: 'Guided whole-class practice with real-time facilitation cues.' },
 ]
 
-const skills = ['Emotional Vocabulary', 'Self-Reflection', 'Community Building', 'Active Listening']
+const skills = ['Self-motivation', 'Resilience', 'Setting Goals', 'Critical Thinking']
 
 const tips = [
-  'Introduce yourself and set a warm, welcoming tone before pressing play',
-  'Pause after the Emoger reveal to let students react — that energy is data',
-  'Write the Emoger names on the board as they appear for future reference',
-  'No right or wrong feelings — remind students early and often',
+  'Students will need a sheet of paper and something to write with for this exercise.',
 ]
 
 const integrationIdeas = [
-  { subject: 'ELA', idea: 'After the video, have students write one sentence describing an Emogre in their own words.' },
-  { subject: 'Morning Meeting', idea: 'Use Emoger names as a daily check-in format — "Which Emogre visited you this morning?"' },
-  { subject: 'Art', idea: 'Students sketch their own version of their favorite Emogre to post in the classroom.' },
+  'Consider returning to the prompt used in this exercise, "Today I will ____, so tomorrow I can _____" frequently throughout the school year. Help students get into the practice of seeing how small steps can help them work towards larger outcomes.',
+  'What is a collective classroom or school-related goal your class has? Complete this exercise with a focus on the shared/group goal, and what each individual can do to contribute to make progress towards the goal.',
 ]
 
 const discussionPrompts = [
-  { context: 'At Home', question: 'Tell someone at home about one Emogre you learned about today. Which one felt most familiar to you?' },
-  { context: 'Back in Class', question: 'Which Emogre do you think visits your class the most? Why?' },
-  { context: 'Going Deeper', question: 'Do you think every person feels the same Emogres, or are some people\u2019s more different? What makes you think that?' },
+  { context: 'Question 1', question: 'How can you help each other if you get stuck?' },
+  { context: 'Question 2', question: 'Write down your goals somewhere so you remember them and Celebrate Yourself whenever you practice.' },
 ]
 
 function SectionLabel({ children }) {
@@ -48,7 +44,7 @@ function SectionLabel({ children }) {
 }
 
 function SectionHeading({ children }) {
-  return <h2 className="text-base font-semibold text-brand-text mb-4">{children}</h2>
+  return <h2 className="text-xl font-semibold text-brand-text mb-4">{children}</h2>
 }
 
 function Divider() {
@@ -390,118 +386,146 @@ export default function LessonViewV2({ onBookmark, enrolledCourse }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, delay: 0.1 }}
           >
-            {/* Skills & Objective */}
-            <div className="grid grid-cols-2 gap-6 mb-7">
-              <div>
-                <SectionLabel>Skills</SectionLabel>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {skills.map((skill) => (
-                    <span
-                      key={skill}
-                      className="text-xs font-medium px-2.5 py-1 rounded-full border border-brand-border text-brand-text bg-white"
-                    >
-                      {skill}
-                    </span>
+            <h2 className="text-3xl font-bold text-brand-text mb-6">Facilitation Guide</h2>
+
+            <Tabs defaultValue="intro">
+              <TabsList className="bg-transparent p-0 w-full border-b border-brand-border rounded-none h-auto gap-0 justify-start mb-0">
+                {['Intro', 'Discussion'].map((tab) => (
+                  <TabsTrigger
+                    key={tab}
+                    value={tab.toLowerCase()}
+                    className="rounded-none border-b-2 border-transparent -mb-px px-4 pb-3 pt-1 text-sm font-medium text-brand-subtext bg-transparent shadow-none hover:text-brand-text data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-dessa-teal data-[state=active]:text-brand-text"
+                  >
+                    {tab}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {/* Intro */}
+              <TabsContent value="intro" tabIndex={-1} className="mt-7 space-y-7">
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <SectionLabel>Skills</SectionLabel>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {skills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="text-xs font-medium px-2.5 py-1 rounded-full border border-brand-border text-brand-text bg-white"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <SectionLabel>Objective</SectionLabel>
+                    <p className="text-body text-brand-text leading-relaxed mt-2">
+                      Explain how practice helps us reach our goals and improve.
+                    </p>
+                  </div>
+                </div>
+
+                <Divider />
+
+                <div>
+                  <SectionLabel>Main Activity</SectionLabel>
+                  <div className="pl-4 border-l-4 border-mtw-amber">
+                    <p className="text-body text-brand-text leading-relaxed">
+                      Write goals on the right side of a paper and actions/steps we can take today
+                      to work towards that goal. Then complete the sentence starter, "Today I will__
+                      so that tomorrow I can ___."
+                    </p>
+                  </div>
+                </div>
+
+                <Divider />
+
+                <div>
+                  <SectionLabel>Quick Tips</SectionLabel>
+                  <ul className="space-y-2.5">
+                    {tips.map((tip) => (
+                      <li key={tip} className="flex items-start gap-3 text-body text-brand-text">
+                        <span
+                          className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ background: '#2D7D78' }}
+                        />
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Divider />
+
+                <div>
+                  <SectionLabel>Background</SectionLabel>
+                  <SectionHeading>Why Do We Do This?</SectionHeading>
+                  <p className="text-body text-brand-text leading-relaxed">
+                    In Goalie, we take time to reflect on our long-term goals and identify small,
+                    meaningful steps we can take today — no matter how big those goals might be.
+                    This approach helps us recognize the value of practice and persistence. When we
+                    break our goals into smaller actions, we build confidence as we make progress.
+                    And the more confident we feel, the more likely we are to keep going, even when
+                    things get tough.
+                  </p>
+                </div>
+
+                <Divider />
+
+                <div>
+                  <SectionLabel>Cross-Curricular</SectionLabel>
+                  <SectionHeading>Ideas for Integration</SectionHeading>
+                  <ul className="space-y-2.5">
+                    {integrationIdeas.map((idea) => (
+                      <li key={idea} className="flex items-start gap-3 text-body text-brand-text">
+                        <span
+                          className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ background: '#2D7D78' }}
+                        />
+                        {idea}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Divider />
+
+                <div>
+                  <SectionLabel>Remote Learning</SectionLabel>
+                  <SectionHeading>Virtual Facilitation</SectionHeading>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-semibold text-brand-text mb-1">Synchronous</p>
+                      <p className="text-body text-brand-text leading-relaxed">
+                        In a video conference setting, follow the video's instructions as is.
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-brand-text mb-1">Asynchronous</p>
+                      <p className="text-body text-brand-text leading-relaxed">
+                        Invite students to share a picture of their drawing/their responses to the
+                        prompts, through a discussion board, email chain, or shared document.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Discussion */}
+              <TabsContent value="discussion" tabIndex={-1} className="mt-7 pb-[600px]">
+                <div className="space-y-7">
+                  {discussionPrompts.map((p, i) => (
+                    <>
+                      <div key={p.context}>
+                        <SectionHeading>{p.context}</SectionHeading>
+                        <p className="text-body text-brand-text leading-relaxed">{p.question}</p>
+                      </div>
+                      {i < discussionPrompts.length - 1 && <Divider />}
+                    </>
                   ))}
                 </div>
-              </div>
-              <div>
-                <SectionLabel>Objective</SectionLabel>
-                <p className="text-body text-brand-text leading-relaxed mt-2">
-                  Students are introduced to the Emoger characters and begin building a shared
-                  emotional vocabulary that will be used throughout the course.
-                </p>
-              </div>
-            </div>
-
-            <Divider />
-
-            <h2 className="text-xl font-bold text-brand-text mb-6">Facilitation Guide</h2>
-
-            {/* Main Activity */}
-            <div className="mb-7">
-              <SectionLabel>Main Activity</SectionLabel>
-              <SectionHeading>Emoger Introduction Circle</SectionHeading>
-              <div className="pl-4 border-l-4 border-mtw-amber">
-                <p className="text-body text-brand-text leading-relaxed mb-3">
-                  After the video, go around the circle and ask each student to name one
-                  Emogre they recognized in themselves this week — without explaining why.
-                  The class listens without comment. This builds emotional awareness and
-                  psychological safety from lesson one.
-                </p>
-                <div className="flex items-center gap-1.5 text-sm font-medium text-brand-subtext">
-                  <Clock size={12} />
-                  10 minutes
-                </div>
-              </div>
-            </div>
-
-            <Divider />
-
-            {/* Facilitation Tips */}
-            <div className="mb-7">
-              <SectionLabel>Facilitation Tips</SectionLabel>
-              <SectionHeading>Before You Begin</SectionHeading>
-              <ul className="space-y-2.5">
-                {tips.map((tip) => (
-                  <li key={tip} className="flex items-start gap-3 text-body text-brand-text">
-                    <span
-                      className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{ background: '#2D7D78' }}
-                    />
-                    {tip}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <Divider />
-
-            {/* Why We Do This */}
-            <div className="mb-7">
-              <SectionLabel>Background</SectionLabel>
-              <SectionHeading>Why We Do This</SectionHeading>
-              <p className="text-body text-brand-text leading-relaxed">
-                Students can't regulate emotions they can't name. The Emoger framework gives
-                children a shared, non-stigmatizing language for the full range of human
-                feeling. Starting here — before any SEL skill-building — means every future
-                lesson lands on prepared ground.
-              </p>
-            </div>
-
-            <Divider />
-
-            {/* Ideas for Integration */}
-            <div className="mb-7">
-              <SectionLabel>Cross-Curricular</SectionLabel>
-              <SectionHeading>Ideas for Integration</SectionHeading>
-              <div className="grid grid-cols-3 gap-4">
-                {integrationIdeas.map((item) => (
-                  <div key={item.subject} className="bg-white rounded-xl border border-brand-border p-4">
-                    <p className="text-xs font-semibold mb-2" style={{ color: '#F5A623' }}>
-                      {item.subject}
-                    </p>
-                    <p className="text-body text-brand-text leading-relaxed">{item.idea}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <Divider />
-
-            {/* Continuing the Conversation */}
-            <div className="pb-10">
-              <SectionLabel>Discussion</SectionLabel>
-              <SectionHeading>Continuing the Conversation</SectionHeading>
-              <div className="grid grid-cols-3 gap-4">
-                {discussionPrompts.map((p) => (
-                  <div key={p.context} className="bg-white rounded-xl border border-brand-border p-4">
-                    <p className="text-xs font-semibold text-brand-subtext mb-2">{p.context}</p>
-                    <p className="text-body text-brand-text leading-relaxed">{p.question}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+              </TabsContent>
+            </Tabs>
           </motion.div>
         </div>
       </main>

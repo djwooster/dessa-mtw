@@ -356,7 +356,7 @@ function SectionLabel({ children }) {
 
 function SectionHeading({ children }) {
   return (
-    <h2 className="text-base font-semibold text-brand-text mb-4">{children}</h2>
+    <h2 className="text-xl font-semibold text-brand-text mb-4">{children}</h2>
   )
 }
 
@@ -811,7 +811,7 @@ export default function LessonView({ onBookmark }) {
 
             <Divider />
 
-            <h2 className="text-xl font-bold text-brand-text mb-6">Facilitation Guide</h2>
+            <h2 className="text-3xl font-bold text-brand-text mb-6">Facilitation Guide</h2>
 
             {/* ── Main Activity ── */}
             <div className="mb-7">

@@ -8,8 +8,8 @@ const navItems = [
   { label: 'Ratings',        to: '/ratings' },
   { label: 'MTW',            to: '/mtw' },
   { label: 'MTW 2',          to: '/mtw2' },
-  { label: 'MTW 3',          to: '/mtw3' },
-  { label: 'MTW 4',          to: '/mtw4' },
+  // { label: 'MTW 3',          to: '/mtw3' },
+  { label: 'MTW 3',          to: '/mtw4' },
   { label: 'Brand Guide',   to: '/brand' },
 ]
 

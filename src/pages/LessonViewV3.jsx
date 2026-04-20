@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { CheckCircle2, Circle, ChevronLeft, ChevronDown, ChevronUp, Play, Clock, Bookmark } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 
 
 const units = [
@@ -106,7 +107,7 @@ function SectionLabel({ children }) {
 
 function SectionHeading({ children }) {
   return (
-    <h2 className="text-base font-semibold text-brand-text mb-4">{children}</h2>
+    <h2 className="text-xl font-semibold text-brand-text mb-4">{children}</h2>
   )
 }
 
@@ -276,28 +277,31 @@ export default function LessonViewV3({ onBookmark }) {
           })}
         </div>
 
-        {/* ── Drawer overlay ── */}
+        {/* ── Toggle button — always visible ── */}
+        <div
+          className="absolute left-0 right-0 z-20 bg-white border-t border-brand-border px-4 py-3 flex justify-center"
+          style={{ top: gradientTop }}
+        >
+          <button
+            onClick={() => setLessonsRevealed((r) => !r)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-brand-subtext border border-brand-border rounded-md px-3 py-1.5 hover:bg-brand-bg transition-colors bg-white"
+          >
+            {lessonsRevealed ? (
+              <><ChevronUp size={12} /> Hide lessons</>
+            ) : (
+              <>Show all lessons <ChevronDown size={12} /></>
+            )}
+          </button>
+        </div>
+
+        {/* ── Drawer — covers units below button, slides away on reveal ── */}
         <motion.div
           initial={false}
           animate={{ y: lessonsRevealed ? '100%' : 0 }}
           transition={{ duration: 0.42, ease: [0.4, 0, 0.2, 1] }}
-          className="absolute left-0 right-0 z-10 bg-white flex flex-col border-t border-brand-border"
-          style={{ top: gradientTop, bottom: '4.25rem' }}
-        >
-          {/* Button at the top — acts as the drawer handle */}
-          <div className="px-4 py-3 flex justify-center flex-shrink-0">
-            <button
-              onClick={() => setLessonsRevealed((r) => !r)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-brand-subtext border border-brand-border rounded-md px-3 py-1.5 hover:bg-brand-bg transition-colors bg-white"
-            >
-              {lessonsRevealed ? (
-                <><ChevronUp size={12} /> Hide lessons</>
-              ) : (
-                <>Show all lessons <ChevronDown size={12} /></>
-              )}
-            </button>
-          </div>
-        </motion.div>
+          className="absolute left-0 right-0 z-10 bg-white"
+          style={{ top: gradientTop + 52, bottom: 0 }}
+        />
 
       </aside>
 
@@ -504,124 +508,127 @@ export default function LessonViewV3({ onBookmark }) {
             transition={{ duration: 0.22, delay: 0.1 }}
           >
 
-            {/* Skills & Objective */}
-            <div className="grid grid-cols-2 gap-6 mb-7">
-              <div>
-                <SectionLabel>Skills</SectionLabel>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {skills.map((skill) => (
-                    <span
-                      key={skill}
-                      className="text-xs font-medium px-2.5 py-1 rounded-full border border-brand-border text-brand-text bg-white"
-                    >
-                      {skill}
-                    </span>
+            <h2 className="text-3xl font-bold text-brand-text mb-6">Facilitation Guide</h2>
+
+            <Tabs defaultValue="intro">
+              <TabsList className="bg-transparent p-0 w-full border-b border-brand-border rounded-none h-auto gap-0 justify-start mb-0">
+                {['Intro', 'Integration', 'Discussion'].map((tab) => (
+                  <TabsTrigger
+                    key={tab}
+                    value={tab.toLowerCase()}
+                    className="rounded-none border-b-2 border-transparent -mb-px px-4 pb-3 pt-1 text-sm font-medium text-brand-subtext bg-transparent shadow-none hover:text-brand-text data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-dessa-teal data-[state=active]:text-brand-text"
+                  >
+                    {tab}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {/* Guide */}
+              <TabsContent value="intro" tabIndex={-1} className="mt-7 space-y-7">
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <SectionLabel>Skills</SectionLabel>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {skills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="text-xs font-medium px-2.5 py-1 rounded-full border border-brand-border text-brand-text bg-white"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <SectionLabel>Objective</SectionLabel>
+                    <p className="text-body text-brand-text leading-relaxed mt-2">
+                      Students are introduced to the Emoger characters and begin building a shared
+                      emotional vocabulary that will be used throughout the course.
+                    </p>
+                  </div>
+                </div>
+
+                <Divider />
+
+                <div>
+                  <SectionLabel>Main Activity</SectionLabel>
+                  <SectionHeading>Emoger Introduction Circle</SectionHeading>
+                  <div className="pl-4 border-l-4 border-mtw-amber">
+                    <p className="text-body text-brand-text leading-relaxed mb-3">
+                      After the video, go around the circle and ask each student to name one
+                      Emogre they recognized in themselves this week — without explaining why.
+                      The class listens without comment. This builds emotional awareness and
+                      psychological safety from lesson one.
+                    </p>
+                    <div className="flex items-center gap-1.5 text-sm font-medium text-brand-subtext">
+                      <Clock size={12} />
+                      10 minutes
+                    </div>
+                  </div>
+                </div>
+
+                <Divider />
+
+                <div>
+                  <SectionLabel>Facilitation Tips</SectionLabel>
+                  <SectionHeading>Before You Begin</SectionHeading>
+                  <ul className="space-y-2.5">
+                    {tips.map((tip) => (
+                      <li key={tip} className="flex items-start gap-3 text-body text-brand-text">
+                        <span
+                          className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ background: '#2D7D78' }}
+                        />
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Divider />
+
+                <div>
+                  <SectionLabel>Background</SectionLabel>
+                  <SectionHeading>Why We Do This</SectionHeading>
+                  <p className="text-body text-brand-text leading-relaxed">
+                    Students can't regulate emotions they can't name. The Emoger framework gives
+                    children a shared, non-stigmatizing language for the full range of human
+                    feeling. Starting here — before any SEL skill-building — means every future
+                    lesson lands on prepared ground.
+                  </p>
+                </div>
+              </TabsContent>
+
+              {/* Integration */}
+              <TabsContent value="integration" tabIndex={-1} className="mt-7 pb-[600px]">
+                <div className="space-y-7">
+                  {integrationIdeas.map((item, i) => (
+                    <>
+                      <div key={item.subject}>
+                        <SectionHeading>{item.subject}</SectionHeading>
+                        <p className="text-body text-brand-text leading-relaxed">{item.idea}</p>
+                      </div>
+                      {i < integrationIdeas.length - 1 && <Divider />}
+                    </>
                   ))}
                 </div>
-              </div>
-              <div>
-                <SectionLabel>Objective</SectionLabel>
-                <p className="text-body text-brand-text leading-relaxed mt-2">
-                  Students are introduced to the Emoger characters and begin building a shared
-                  emotional vocabulary that will be used throughout the course.
-                </p>
-              </div>
-            </div>
+              </TabsContent>
 
-            <Divider />
-
-            <h2 className="text-xl font-bold text-brand-text mb-6">Facilitation Guide</h2>
-
-            {/* Main Activity */}
-            <div className="mb-7">
-              <SectionLabel>Main Activity</SectionLabel>
-              <SectionHeading>Emoger Introduction Circle</SectionHeading>
-              <div className="pl-4 border-l-4 border-mtw-amber">
-                <p className="text-body text-brand-text leading-relaxed mb-3">
-                  After the video, go around the circle and ask each student to name one
-                  Emogre they recognized in themselves this week — without explaining why.
-                  The class listens without comment. This builds emotional awareness and
-                  psychological safety from lesson one.
-                </p>
-                <div className="flex items-center gap-1.5 text-sm font-medium text-brand-subtext">
-                  <Clock size={12} />
-                  10 minutes
+              {/* Discussion */}
+              <TabsContent value="discussion" tabIndex={-1} className="mt-7 pb-[600px]">
+                <div className="space-y-7">
+                  {discussionPrompts.map((p, i) => (
+                    <>
+                      <div key={p.context}>
+                        <SectionHeading>{p.context}</SectionHeading>
+                        <p className="text-body text-brand-text leading-relaxed">{p.question}</p>
+                      </div>
+                      {i < discussionPrompts.length - 1 && <Divider />}
+                    </>
+                  ))}
                 </div>
-              </div>
-            </div>
-
-            <Divider />
-
-            {/* Facilitation Tips */}
-            <div className="mb-7">
-              <SectionLabel>Facilitation Tips</SectionLabel>
-              <SectionHeading>Before You Begin</SectionHeading>
-              <ul className="space-y-2.5">
-                {tips.map((tip) => (
-                  <li key={tip} className="flex items-start gap-3 text-body text-brand-text">
-                    <span
-                      className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{ background: '#2D7D78' }}
-                    />
-                    {tip}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <Divider />
-
-            {/* Why We Do This */}
-            <div className="mb-7">
-              <SectionLabel>Background</SectionLabel>
-              <SectionHeading>Why We Do This</SectionHeading>
-              <p className="text-body text-brand-text leading-relaxed">
-                Students can't regulate emotions they can't name. The Emoger framework gives
-                children a shared, non-stigmatizing language for the full range of human
-                feeling. Starting here — before any SEL skill-building — means every future
-                lesson lands on prepared ground.
-              </p>
-            </div>
-
-            <Divider />
-
-            {/* Ideas for Integration */}
-            <div className="mb-7">
-              <SectionLabel>Cross-Curricular</SectionLabel>
-              <SectionHeading>Ideas for Integration</SectionHeading>
-              <div className="grid grid-cols-3 gap-4">
-                {integrationIdeas.map((item) => (
-                  <div
-                    key={item.subject}
-                    className="bg-white rounded-xl border border-brand-border p-4"
-                  >
-                    <p className="text-xs font-semibold mb-2" style={{ color: '#F5A623' }}>
-                      {item.subject}
-                    </p>
-                    <p className="text-body text-brand-text leading-relaxed">{item.idea}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <Divider />
-
-            {/* Continuing the Conversation */}
-            <div className="pb-10">
-              <SectionLabel>Discussion</SectionLabel>
-              <SectionHeading>Continuing the Conversation</SectionHeading>
-              <div className="grid grid-cols-3 gap-4">
-                {discussionPrompts.map((p) => (
-                  <div
-                    key={p.context}
-                    className="bg-white rounded-xl border border-brand-border p-4"
-                  >
-                    <p className="text-xs font-semibold text-brand-subtext mb-2">{p.context}</p>
-                    <p className="text-body text-brand-text leading-relaxed">{p.question}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+              </TabsContent>
+            </Tabs>
 
           </motion.div>
         </div>
