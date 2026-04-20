@@ -6,6 +6,9 @@ export default {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
       },
+      fontSize: {
+        body: ['1rem', { lineHeight: '1.625' }],
+      },
       colors: {
         dessa: {
           navy:      '#1B2B4B',

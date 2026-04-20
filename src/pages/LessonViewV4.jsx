@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { CheckCircle2, Circle, ChevronLeft, ChevronDown, Play, Clock, Bookmark, Globe } from 'lucide-react'
+import { CheckCircle2, Circle, ChevronLeft, ChevronRight, Play, Clock, Bookmark, Globe } from 'lucide-react'
 
 
 const LESSON_ROW_BG = 'rgba(245,246,248,0.5)'
@@ -51,14 +51,6 @@ const lesson2Videos = [
   { title: 'Labeling vs. Feeling', duration: '5:08' },
 ]
 
-const lesson3Videos = [
-  { title: 'Meet All 10 Emogers', duration: '3:45' },
-  { title: 'The Joy Emogre', duration: '2:30' },
-  { title: 'The Anger Emogre', duration: '2:45' },
-  { title: 'The Sadness Emogre', duration: '2:20' },
-  { title: 'The Fear Emogre', duration: '2:55' },
-  { title: 'The Surprise Emogre', duration: '2:10' },
-]
 
 const lesson4Videos = [
   { title: 'What Is the Power of Pause?', duration: '3:12', description: 'An introduction to the pause technique and why it works in the classroom.' },
@@ -83,9 +75,20 @@ const integrationIdeas = [
 ]
 
 const discussionPrompts = [
-  { context: 'At Home', question: 'Tell someone at home about one Emogre you learned about today. Which one felt most familiar to you?' },
-  { context: 'Back in Class', question: 'Which Emogre do you think visits your class the most? Why?' },
-  { context: 'Going Deeper', question: 'Do you think every person feels the same Emogres, or are some people\u2019s more different? What makes you think that?' },
+  { context: 'At Home', questions: [
+    'As a class, think about a time someone used an Emoger to manage a difficult situation.',
+    'What was that person feeling?',
+    'What Emoger did he/she use to overcome this?',
+  ]},
+  { context: 'Back in Class', questions: [
+    'Which Emoger is the most difficult for you to use?',
+    'Why do you think that?',
+  ]},
+  { context: 'Going Deeper', questions: [
+    'What is your favorite Emoger?',
+    'Why?',
+    'When do you use this Emoger the most?',
+  ]},
 ]
 
 function LanguagePicker({ language, langOpen, setLanguage, setLangOpen }) {
@@ -128,7 +131,7 @@ function SectionLabel({ children }) {
 
 function SectionHeading({ children }) {
   return (
-    <h2 className="text-base font-semibold text-brand-text mb-4">{children}</h2>
+    <h2 className="text-2xl font-semibold text-brand-text mb-4">{children}</h2>
   )
 }
 
@@ -149,6 +152,8 @@ export default function LessonViewV4({ onBookmark }) {
   const [language, setLanguage] = useState('English')
   const [langOpen, setLangOpen] = useState(false)
 
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+
   const [completedOpen, setCompletedOpen] = useState(false)
   const [expandedCompleted, setExpandedCompleted] = useState(null)
   const [currentOpen, setCurrentOpen] = useState(true)
@@ -163,7 +168,6 @@ export default function LessonViewV4({ onBookmark }) {
   const currentUnitTitle = activeUnit?.title ?? 'Unit 1 — Meet the Emogers'
 
   const isLesson2 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 1
-  const isLesson3 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 2
   const isLesson4 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 3
 
   const completedUnits = units.filter((u) => u.id < selectedLesson.unitId)
@@ -204,13 +208,22 @@ export default function LessonViewV4({ onBookmark }) {
       </AnimatePresence>
 
       {/* ── Left sidebar ── */}
-      <aside
+      <motion.aside
         className="flex-shrink-0 bg-white border-r border-brand-border flex flex-col overflow-hidden"
-        style={{ width: '20rem' }}
+        animate={{ width: sidebarOpen ? '20rem' : '2.75rem' }}
+        transition={{ duration: 0.25, ease: 'easeInOut' }}
       >
         {/* Header */}
-        <div className="px-4 py-4 border-b border-brand-border flex-shrink-0">
-          <p className="text-lg font-semibold tracking-tight text-brand-text">{grade}</p>
+        <div className="px-3 py-4 border-b border-brand-border flex-shrink-0 flex items-center gap-2.5">
+          <button
+            onClick={() => setSidebarOpen((o) => !o)}
+            className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-md hover:bg-brand-bg transition-colors text-brand-subtext"
+          >
+            {sidebarOpen ? <ChevronLeft size={15} /> : <ChevronRight size={15} />}
+          </button>
+          <p className="text-lg font-semibold tracking-tight text-brand-text whitespace-nowrap overflow-hidden">
+            {grade}
+          </p>
         </div>
 
         {/* Three-zone scrollable list */}
@@ -232,9 +245,9 @@ export default function LessonViewV4({ onBookmark }) {
                     {completedUnits.length}
                   </span>
                 </div>
-                <ChevronDown
+                <ChevronRight
                   size={13}
-                  className={`text-brand-subtext transition-transform duration-200 ${completedOpen ? 'rotate-180' : ''}`}
+                  className={`text-brand-subtext transition-transform duration-200 ${completedOpen ? 'rotate-90' : ''}`}
                 />
               </button>
               <AnimatePresence initial={false}>
@@ -259,9 +272,9 @@ export default function LessonViewV4({ onBookmark }) {
                             <span className="flex-1 text-sm leading-snug font-semibold text-brand-text">
                               {unit.title}
                             </span>
-                            <ChevronDown
+                            <ChevronRight
                               size={12}
-                              className={`flex-shrink-0 text-brand-subtext/50 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                              className={`flex-shrink-0 text-brand-subtext/50 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
                             />
                           </button>
                           <AnimatePresence initial={false}>
@@ -315,9 +328,9 @@ export default function LessonViewV4({ onBookmark }) {
                   Current
                 </span>
               </div>
-              <ChevronDown
+              <ChevronRight
                 size={13}
-                className={`transition-transform duration-200 ${currentOpen ? 'rotate-180' : ''}`}
+                className={`transition-transform duration-200 ${currentOpen ? 'rotate-90' : ''}`}
                 style={{ color: '#F5A623' }}
               />
             </button>
@@ -386,9 +399,9 @@ export default function LessonViewV4({ onBookmark }) {
                     {upcomingUnits.length}
                   </span>
                 </div>
-                <ChevronDown
+                <ChevronRight
                   size={13}
-                  className={`text-brand-subtext transition-transform duration-200 ${upcomingOpen ? 'rotate-180' : ''}`}
+                  className={`text-brand-subtext transition-transform duration-200 ${upcomingOpen ? 'rotate-90' : ''}`}
                 />
               </button>
               <AnimatePresence initial={false}>
@@ -413,9 +426,9 @@ export default function LessonViewV4({ onBookmark }) {
                             <span className="flex-1 text-sm leading-snug font-semibold text-brand-text">
                               {unit.title}
                             </span>
-                            <ChevronDown
+                            <ChevronRight
                               size={12}
-                              className={`flex-shrink-0 text-brand-subtext/50 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                              className={`flex-shrink-0 text-brand-subtext/50 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
                             />
                           </button>
                           <AnimatePresence initial={false}>
@@ -458,7 +471,7 @@ export default function LessonViewV4({ onBookmark }) {
 
         </div>
 
-      </aside>
+      </motion.aside>
 
       {/* ── Main content ── */}
       <main className="flex-1 overflow-y-auto bg-brand-bg">
@@ -522,7 +535,7 @@ export default function LessonViewV4({ onBookmark }) {
           >
 
             {/* Default — single video */}
-            {!isLesson2 && !isLesson3 && !isLesson4 && (
+            {!isLesson2 && !isLesson4 && (
               <>
                 <div
                   className="w-full rounded-2xl overflow-hidden relative"
@@ -601,43 +614,7 @@ export default function LessonViewV4({ onBookmark }) {
               </>
             )}
 
-            {/* Lesson 3 — 2-column grid */}
-            {isLesson3 && (
-              <div className="grid grid-cols-2 gap-4">
-                {lesson3Videos.map((video, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveVideo(i)}
-                    className="rounded-2xl overflow-hidden text-left transition-all"
-                    style={{ outline: i === activeVideo ? '2px solid #2A7F8F' : '2px solid transparent', outlineOffset: '2px' }}
-                  >
-                    <div className="relative" style={{ aspectRatio: '16/9', background: '#1B2B4B' }}>
-                      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.25) 0%, rgba(27,43,75,0.85) 100%)' }} />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-colors"
-                          style={{ background: i === activeVideo ? '#2A7F8F' : 'rgba(255,255,255,0.2)' }}
-                        >
-                          <Play size={14} fill="white" className="text-white ml-0.5" />
-                        </div>
-                      </div>
-                      <div className="absolute top-3 left-3 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
-                        <span className="text-xs font-bold text-brand-text">{i + 1}</span>
-                      </div>
-                      <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-0.5 rounded-full text-white text-xs" style={{ background: 'rgba(0,0,0,0.45)' }}>
-                        <Clock size={10} />{video.duration}
-                      </div>
-                      <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
-                    </div>
-                    <div className="px-3 py-2.5 bg-white border-x border-b border-brand-border rounded-b-2xl">
-                      <p className="text-sm font-semibold leading-snug" style={{ color: i === activeVideo ? '#2A7F8F' : '#1B2B4B' }}>
-                        {video.title}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+
 
             {/* Lesson 4 — split panel */}
             {isLesson4 && (
@@ -713,7 +690,7 @@ export default function LessonViewV4({ onBookmark }) {
               </div>
               <div>
                 <SectionLabel>Objective</SectionLabel>
-                <p className="text-sm text-brand-text leading-relaxed mt-2">
+                <p className="text-body text-brand-text leading-relaxed mt-2">
                   Students are introduced to the Emoger characters and begin building a shared
                   emotional vocabulary that will be used throughout the course.
                 </p>
@@ -729,7 +706,7 @@ export default function LessonViewV4({ onBookmark }) {
               <SectionLabel>Main Activity</SectionLabel>
               <SectionHeading>Emoger Introduction Circle</SectionHeading>
               <div className="pl-4 border-l-4 border-mtw-amber">
-                <p className="text-sm text-brand-text leading-relaxed mb-3">
+                <p className="text-body text-brand-text leading-relaxed mb-3">
                   After the video, go around the circle and ask each student to name one
                   Emogre they recognized in themselves this week — without explaining why.
                   The class listens without comment. This builds emotional awareness and
@@ -750,7 +727,7 @@ export default function LessonViewV4({ onBookmark }) {
               <SectionHeading>Before You Begin</SectionHeading>
               <ul className="space-y-2.5">
                 {tips.map((tip) => (
-                  <li key={tip} className="flex items-start gap-3 text-sm text-brand-text">
+                  <li key={tip} className="flex items-start gap-3 text-body text-brand-text">
                     <span
                       className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
                       style={{ background: '#2D7D78' }}
@@ -767,7 +744,7 @@ export default function LessonViewV4({ onBookmark }) {
             <div className="mb-7">
               <SectionLabel>Background</SectionLabel>
               <SectionHeading>Why We Do This</SectionHeading>
-              <p className="text-sm text-brand-text leading-relaxed">
+              <p className="text-body text-brand-text leading-relaxed">
                 Students can't regulate emotions they can't name. The Emoger framework gives
                 children a shared, non-stigmatizing language for the full range of human
                 feeling. Starting here — before any SEL skill-building — means every future
@@ -790,7 +767,7 @@ export default function LessonViewV4({ onBookmark }) {
                     <p className="text-xs font-semibold mb-2" style={{ color: '#F5A623' }}>
                       {item.subject}
                     </p>
-                    <p className="text-sm text-brand-text leading-relaxed">{item.idea}</p>
+                    <p className="text-body text-brand-text leading-relaxed">{item.idea}</p>
                   </div>
                 ))}
               </div>
@@ -802,14 +779,24 @@ export default function LessonViewV4({ onBookmark }) {
             <div className="pb-10">
               <SectionLabel>Discussion</SectionLabel>
               <SectionHeading>Continuing the Conversation</SectionHeading>
-              <div className="grid grid-cols-3 gap-4">
-                {discussionPrompts.map((p) => (
+
+              <div className="flex flex-col gap-2">
+                {discussionPrompts.map((p, i) => (
                   <div
                     key={p.context}
-                    className="bg-white rounded-xl border border-brand-border p-4"
+                    className="flex flex-col gap-3 px-7 py-6 rounded-2xl border border-brand-border bg-white"
                   >
-                    <p className="text-xs font-semibold text-brand-subtext mb-2">{p.context}</p>
-                    <p className="text-sm text-brand-text leading-relaxed">{p.question}</p>
+                    <p className="text-sm font-semibold text-brand-text leading-none select-none">
+                      Question {i + 1}
+                    </p>
+                    <ul className="space-y-1.5">
+                      {p.questions.map((q) => (
+                        <li key={q} className="flex items-center gap-3 text-body text-brand-text leading-relaxed">
+                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#2D7D78' }} />
+                          {q}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 ))}
               </div>

@@ -2,28 +2,13 @@ import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Play, ChevronRight, MoreHorizontal, Bookmark } from 'lucide-react'
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from '../components/ui/card'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 
 const stagger = (i) => ({
   initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.25, delay: i * 0.06 },
 })
-
-const filters = [
-  { value: 'all',              label: 'All' },
-  { value: 'Early Elementary', label: 'Early Elementary' },
-  { value: 'Late Elementary',  label: 'Late Elementary' },
-  { value: 'Middle School',    label: 'Middle School' },
-  { value: 'High School',      label: 'High School' },
-]
 
 const courses = [
   {
@@ -88,60 +73,52 @@ const courses = [
   },
 ]
 
-// ─── Course card ──────────────────────────────────────────────────────────────
+// ─── Course row ───────────────────────────────────────────────────────────────
 
-function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onContinue, onUnenroll, index }) {
+function CourseRow({ course, isEnrolled, completedLessons, onEnroll, onContinue, onUnenroll, isSelected, onToggleSelect }) {
   const pct = isEnrolled ? Math.round((completedLessons / course.lessons) * 100) : 0
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   return (
     <>
-    <motion.div {...stagger(index)} className="h-full">
-      <Card className="h-full flex flex-col">
-        <CardHeader>
-          {/* Emoji + Active badge row */}
-          <div className="flex items-center justify-between mb-3">
-            <div
-              className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-              style={{ background: `${course.color}14` }}
-            >
-              {course.emoji}
-            </div>
-            {isEnrolled && (
-              <span
-                className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
-                style={{ background: 'rgba(245,166,35,0.15)', color: '#F5A623' }}
-              >
-                Enrolled
-              </span>
-            )}
-          </div>
+      <TableRow
+        className="cursor-pointer"
+        onClick={() => (isEnrolled ? onContinue() : onEnroll(course))}
+      >
+        {/* Checkbox */}
+        <TableCell className="w-10" onClick={(e) => { e.stopPropagation(); onToggleSelect(course.id) }}>
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelect(course.id)}
+            className="w-4 h-4 rounded accent-dessa-teal cursor-pointer"
+          />
+        </TableCell>
 
-          <CardTitle>{course.grade}</CardTitle>
-          <p className="text-sm text-brand-subtext mt-0.5">{course.title}</p>
+        {/* Course */}
+        <TableCell>
+          <p className="font-semibold text-brand-text">{course.grade}</p>
+        </TableCell>
 
-          {/* Competency badge */}
-          <div className="mt-2">
-            <span
-              className="inline-block text-xs font-medium px-2.5 py-0.5 rounded-full"
-              style={{ background: `${course.color}12`, color: course.color }}
-            >
-              {course.competency}
-            </span>
-          </div>
-        </CardHeader>
+        {/* Competency */}
+        <TableCell>
+          <span
+            className="inline-block text-xs font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap"
+            style={{ background: `${course.color}12`, color: course.color }}
+          >
+            {course.competency}
+          </span>
+        </TableCell>
 
-        <CardContent className="flex-1 flex flex-col justify-end pt-4">
-          {/* Progress */}
-          <div className="space-y-1.5 mb-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-brand-subtext">
-                {isEnrolled
-                  ? `${completedLessons} of ${course.lessons} lessons`
-                  : 'Not enrolled'}
+        {/* Progress */}
+        <TableCell>
+          <div className="w-36">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-brand-subtext">
+                {isEnrolled ? `${completedLessons} of ${course.lessons}` : '—'}
               </span>
               {isEnrolled && (
-                <span className="text-sm font-semibold text-brand-text">{pct}%</span>
+                <span className="text-xs font-semibold text-brand-text">{pct}%</span>
               )}
             </div>
             <div className="h-1.5 bg-brand-border rounded-full overflow-hidden">
@@ -151,73 +128,87 @@ function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onContinue
               />
             </div>
           </div>
-        </CardContent>
+        </TableCell>
 
-        <CardFooter className={`border-t border-brand-border px-4 py-4 ${isEnrolled ? 'justify-between' : 'justify-end'}`}>
+        {/* Status */}
+        <TableCell>
           {isEnrolled && (
-            <button
-              className="text-sm font-medium text-brand-subtext px-3.5 py-1.5 rounded-md hover:bg-brand-bg hover:text-brand-text transition-colors"
-              onClick={() => setConfirmOpen(true)}
+            <span
+              className="text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap"
+              style={{ background: 'rgba(245,166,35,0.15)', color: '#F5A623' }}
             >
-              Unenroll
-            </button>
+              Enrolled
+            </span>
           )}
-          <button
-            className="flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-md transition-all hover:brightness-95 text-white"
-            style={{ background: '#2A7F8F' }}
-            onClick={() => (isEnrolled ? onContinue() : onEnroll(course))}
-          >
-            {isEnrolled ? (
-              <>
-                <Play size={11} fill="currentColor" /> Continue
-              </>
-            ) : (
-              <>
-                Enroll <ChevronRight size={12} />
-              </>
-            )}
-          </button>
-        </CardFooter>
-      </Card>
-    </motion.div>
+        </TableCell>
 
-    {/* Unenroll confirmation modal */}
-    {confirmOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div
-          className="absolute inset-0 bg-brand-text/40 backdrop-blur-sm"
-          onClick={() => setConfirmOpen(false)}
-        />
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.15 }}
-          className="relative bg-white rounded-2xl border border-brand-border shadow-xl p-6 w-full max-w-sm mx-4 z-10"
-        >
-          <p className="text-base font-semibold text-brand-text mb-1">
-            Unenroll from {course.title}?
-          </p>
-          <p className="text-sm text-brand-subtext mb-5 leading-relaxed">
-            Your progress will be lost and you'll need to re-enroll to continue.
-          </p>
-          <div className="flex gap-3 justify-end">
+        {/* Actions */}
+        <TableCell className="text-right">
+          <div className="flex items-center justify-end gap-3">
+            {isEnrolled && (
+              <button
+                className="text-sm font-medium text-brand-subtext hover:text-brand-text transition-colors"
+                onClick={(e) => { e.stopPropagation(); setConfirmOpen(true) }}
+              >
+                Unenroll
+              </button>
+            )}
             <button
-              className="px-4 py-2 rounded-md text-sm font-semibold border border-brand-border text-brand-subtext bg-white hover:bg-brand-bg transition-colors"
-              onClick={() => setConfirmOpen(false)}
+              className="flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-md transition-all hover:brightness-95 text-white whitespace-nowrap"
+              style={{ background: '#2A7F8F' }}
+              onClick={(e) => { e.stopPropagation(); isEnrolled ? onContinue() : onEnroll(course) }}
             >
-              Cancel
-            </button>
-            <button
-              className="px-4 py-2 rounded-md text-sm font-semibold text-white transition-all hover:brightness-90"
-              style={{ background: '#C0392B' }}
-              onClick={() => { onUnenroll(); setConfirmOpen(false) }}
-            >
-              Unenroll
+              {isEnrolled ? (
+                <><Play size={11} fill="currentColor" /> Continue</>
+              ) : (
+                <>Enroll <ChevronRight size={12} /></>
+              )}
             </button>
           </div>
-        </motion.div>
-      </div>
-    )}
+        </TableCell>
+      </TableRow>
+
+      {/* Unenroll confirmation modal */}
+      {confirmOpen && (
+        <tr>
+          <td colSpan={6} className="p-0">
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div
+                className="absolute inset-0 bg-brand-text/40 backdrop-blur-sm"
+                onClick={() => setConfirmOpen(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.15 }}
+                className="relative bg-white rounded-2xl border border-brand-border shadow-xl p-6 w-full max-w-sm mx-4 z-10"
+              >
+                <p className="text-base font-semibold text-brand-text mb-1">
+                  Unenroll from {course.title}?
+                </p>
+                <p className="text-sm text-brand-subtext mb-5 leading-relaxed">
+                  Your progress will be lost and you'll need to re-enroll to continue.
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    className="px-4 py-2 rounded-md text-sm font-semibold border border-brand-border text-brand-subtext bg-white hover:bg-brand-bg transition-colors"
+                    onClick={() => setConfirmOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 rounded-md text-sm font-semibold text-white transition-all hover:brightness-90"
+                    style={{ background: '#C0392B' }}
+                    onClick={() => { onUnenroll(); setConfirmOpen(false) }}
+                  >
+                    Unenroll
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          </td>
+        </tr>
+      )}
     </>
   )
 }
@@ -233,6 +224,8 @@ export default function CurriculumV2({
   onToggleHideUnenrolled,
 }) {
   const navigate = useNavigate()
+
+  const [selectedIds, setSelectedIds] = useState(new Set())
 
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
@@ -277,12 +270,100 @@ export default function CurriculumV2({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
-        className="mb-6"
+        className=""
       >
-        <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-1">
-          Move This World
-        </p>
-        <h1 className="text-2xl font-semibold text-brand-text">Curriculum</h1>
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-1">
+              Move This World
+            </p>
+            <h1 className="text-2xl font-semibold text-brand-text">Curriculum</h1>
+          </div>
+
+          <div className="flex items-center gap-2">
+
+          {/* Bookmarks button */}
+          <div className="relative" ref={bookmarksRef}>
+            <button
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text"
+              onClick={() => { setBookmarksOpen((o) => !o); setMenuOpen(false) }}
+            >
+              <Bookmark size={14} />
+              Bookmarks
+              {bookmarkedLessons.length > 0 && (
+                <span
+                  className="text-white text-xs font-bold leading-none px-1.5 py-0.5 rounded-full"
+                  style={{ background: '#F5A623' }}
+                >
+                  {bookmarkedLessons.length}
+                </span>
+              )}
+            </button>
+
+            {bookmarksOpen && (
+              <div className="absolute right-0 top-[calc(100%+8px)] bg-white rounded-xl border border-brand-border shadow-lg z-10 w-72">
+                {bookmarkedLessons.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <Bookmark size={20} className="text-brand-border mx-auto mb-2" />
+                    <p className="text-sm text-brand-subtext">No bookmarked lessons yet.</p>
+                  </div>
+                ) : (
+                  <div className="py-1">
+                    {bookmarkedLessons.map((bm, i) => (
+                      <button
+                        key={i}
+                        className="w-full text-left px-4 py-3 hover:bg-brand-bg transition-colors"
+                        onClick={() => {
+                          navigate('/mtw2/course', { state: { course: bm.course } })
+                          setBookmarksOpen(false)
+                        }}
+                      >
+                        <p className="text-sm font-semibold text-brand-text">{bm.lesson}</p>
+                        <p className="text-xs text-brand-subtext mt-0.5">
+                          {bm.unit} · {bm.grade}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ⋯ options menu */}
+          <div className="relative" ref={menuRef}>
+            <button
+              className="w-9 h-9 rounded-md flex items-center justify-center text-brand-subtext border border-brand-border bg-white hover:shadow-sm transition-all"
+              onClick={() => { setMenuOpen((o) => !o); setBookmarksOpen(false) }}
+              aria-label="Course options"
+            >
+              <MoreHorizontal size={17} />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-[calc(100%+8px)] bg-white rounded-xl border border-brand-border shadow-lg py-1 z-10 w-56">
+                <button
+                  className="w-full text-left px-4 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors flex items-center gap-2"
+                  onClick={() => { onToggleHideUnenrolled(); setMenuOpen(false) }}
+                >
+                  {hideUnenrolled ? (
+                    <>
+                      <span className="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0" style={{ borderColor: '#F5A623', background: '#F5A623' }} />
+                      Show all courses
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 border-brand-border" />
+                      Hide unenrolled courses
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
+        </div>
+        </div>
       </motion.div>
 
       <motion.div
@@ -290,149 +371,66 @@ export default function CurriculumV2({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, delay: 0.05 }}
       >
-        <Tabs defaultValue="all">
-
-          {/* TabsList + toolbar in one row */}
-          <div className="flex items-center justify-between">
-            <TabsList>
-              {filters.map((f) => (
-                <TabsTrigger key={f.value} value={f.value}>{f.label}</TabsTrigger>
-              ))}
-            </TabsList>
-
-            <div className="flex items-center gap-2">
-
-              {/* Bookmarks button */}
-              <div className="relative" ref={bookmarksRef}>
-                <button
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text"
-                  onClick={() => { setBookmarksOpen((o) => !o); setMenuOpen(false) }}
-                >
-                  <Bookmark size={14} />
-                  Bookmarks
-                  {bookmarkedLessons.length > 0 && (
-                    <span
-                      className="text-white text-xs font-bold leading-none px-1.5 py-0.5 rounded-full"
-                      style={{ background: '#F5A623' }}
-                    >
-                      {bookmarkedLessons.length}
-                    </span>
-                  )}
-                </button>
-
-                {bookmarksOpen && (
-                  <div className="absolute right-0 top-[calc(100%+8px)] bg-white rounded-xl border border-brand-border shadow-lg z-10 w-72">
-                    {bookmarkedLessons.length === 0 ? (
-                      <div className="px-4 py-8 text-center">
-                        <Bookmark size={20} className="text-brand-border mx-auto mb-2" />
-                        <p className="text-sm text-brand-subtext">No bookmarked lessons yet.</p>
-                      </div>
-                    ) : (
-                      <div className="py-1">
-                        {bookmarkedLessons.map((bm, i) => (
-                          <button
-                            key={i}
-                            className="w-full text-left px-4 py-3 hover:bg-brand-bg transition-colors"
-                            onClick={() => {
-                              navigate('/mtw2/course', { state: { course: bm.course } })
-                              setBookmarksOpen(false)
-                            }}
-                          >
-                            <p className="text-sm font-semibold text-brand-text">{bm.lesson}</p>
-                            <p className="text-xs text-brand-subtext mt-0.5">
-                              {bm.unit} · {bm.grade}
-                            </p>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* ⋯ options menu */}
-              <div className="relative" ref={menuRef}>
-                <button
-                  className="w-9 h-9 rounded-md flex items-center justify-center text-brand-subtext border border-brand-border bg-white hover:shadow-sm transition-all"
-                  onClick={() => { setMenuOpen((o) => !o); setBookmarksOpen(false) }}
-                  aria-label="Course options"
-                >
-                  <MoreHorizontal size={17} />
-                </button>
-
-                {menuOpen && (
-                  <div className="absolute right-0 top-[calc(100%+8px)] bg-white rounded-xl border border-brand-border shadow-lg py-1 z-10 w-56">
-                    <button
-                      className="w-full text-left px-4 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors flex items-center gap-2"
-                      onClick={() => { onToggleHideUnenrolled(); setMenuOpen(false) }}
-                    >
-                      {hideUnenrolled ? (
-                        <>
-                          <span className="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0" style={{ borderColor: '#F5A623', background: '#F5A623' }} />
-                          Show all courses
-                        </>
-                      ) : (
-                        <>
-                          <span className="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 border-brand-border" />
-                          Hide unenrolled courses
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-            </div>
+        {/* Table */}
+        {visibleCourses.length === 0 ? (
+          <div className="py-20 text-center">
+            <p className="text-brand-subtext text-sm">No enrolled course in this view.</p>
+            <button
+              className="mt-3 text-sm font-semibold hover:text-dessa-navy transition-colors"
+              style={{ color: '#F5A623' }}
+              onClick={onToggleHideUnenrolled}
+            >
+              Show all courses
+            </button>
           </div>
-
-          {filters.map((f) => {
-            const filtered =
-              f.value === 'all'
-                ? visibleCourses
-                : visibleCourses.filter((c) => c.level === f.value)
-
-            return (
-              <TabsContent key={f.value} value={f.value}>
-                {filtered.length === 0 ? (
-                  <div className="py-20 text-center">
-                    <p className="text-brand-subtext text-sm">
-                      {hideUnenrolled
-                        ? 'No enrolled course in this view.'
-                        : 'No courses in this category.'}
-                    </p>
-                    {hideUnenrolled && (
-                      <button
-                        className="mt-3 text-sm font-semibold hover:text-dessa-navy transition-colors"
-                        style={{ color: '#F5A623' }}
-                        onClick={onToggleHideUnenrolled}
-                      >
-                        Show all courses
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {filtered.map((course, i) => (
-                      <CourseCard
-                        key={course.id}
-                        course={course}
-                        isEnrolled={enrolledCourse?.id === course.id}
-                        completedLessons={
-                          enrolledCourse?.id === course.id ? enrolledCourse.completed : 0
-                        }
-                        onEnroll={handleEnroll}
-                        onContinue={() => navigate('/mtw2/course', { state: { course: enrolledCourse } })}
-                        onUnenroll={onUnenroll}
-                        index={i}
-                      />
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-            )
-          })}
-
-        </Tabs>
+        ) : (
+          <div className="mt-4 bg-white rounded-xl border border-brand-border overflow-hidden [&_td]:py-2">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded accent-dessa-teal cursor-pointer"
+                      checked={visibleCourses.every((c) => selectedIds.has(c.id))}
+                      onChange={(e) => {
+                        const next = new Set(selectedIds)
+                        visibleCourses.forEach((c) => e.target.checked ? next.add(c.id) : next.delete(c.id))
+                        setSelectedIds(next)
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead>Course</TableHead>
+                  <TableHead>Competency</TableHead>
+                  <TableHead>Progress</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleCourses.map((course) => (
+                  <CourseRow
+                    key={course.id}
+                    course={course}
+                    isEnrolled={enrolledCourse?.id === course.id}
+                    completedLessons={
+                      enrolledCourse?.id === course.id ? enrolledCourse.completed : 0
+                    }
+                    onEnroll={handleEnroll}
+                    onContinue={() => navigate('/mtw2/course', { state: { course: enrolledCourse } })}
+                    onUnenroll={onUnenroll}
+                    isSelected={selectedIds.has(course.id)}
+                    onToggleSelect={(id) => {
+                      const next = new Set(selectedIds)
+                      next.has(id) ? next.delete(id) : next.add(id)
+                      setSelectedIds(next)
+                    }}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </motion.div>
     </div>
   )

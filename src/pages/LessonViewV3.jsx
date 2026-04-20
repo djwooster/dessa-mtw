@@ -49,14 +49,6 @@ const lesson2Videos = [
   { title: 'Labeling vs. Feeling', duration: '5:08' },
 ]
 
-const lesson3Videos = [
-  { title: 'Meet All 10 Emogers', duration: '3:45' },
-  { title: 'The Joy Emogre', duration: '2:30' },
-  { title: 'The Anger Emogre', duration: '2:45' },
-  { title: 'The Sadness Emogre', duration: '2:20' },
-  { title: 'The Fear Emogre', duration: '2:55' },
-  { title: 'The Surprise Emogre', duration: '2:10' },
-]
 
 const lesson4Videos = [
   { title: 'What Is the Power of Pause?', duration: '3:12', description: 'An introduction to the pause technique and why it works in the classroom.' },
@@ -160,7 +152,6 @@ export default function LessonViewV3({ onBookmark }) {
   const currentUnitTitle = activeUnit?.title ?? 'Unit 1 — Meet the Emogers'
 
   const isLesson2 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 1
-  const isLesson3 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 2
   const isLesson4 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 3
 
   const handleSelectLesson = (unitId, lessonIndex) => {
@@ -308,11 +299,6 @@ export default function LessonViewV3({ onBookmark }) {
           </div>
         </motion.div>
 
-        <div className="p-4 border-t border-brand-border">
-          <button className="w-full py-2 rounded-md text-xs font-semibold text-brand-subtext border border-brand-border hover:bg-brand-bg transition-colors">
-            End of Unit
-          </button>
-        </div>
       </aside>
 
       {/* ── Main content ── */}
@@ -381,7 +367,7 @@ export default function LessonViewV3({ onBookmark }) {
           >
 
             {/* Lesson 1 — single video */}
-            {!isLesson2 && !isLesson3 && !isLesson4 && (
+            {!isLesson2 && !isLesson4 && (
               <>
                 <div
                   className="w-full rounded-2xl overflow-hidden relative"
@@ -460,43 +446,6 @@ export default function LessonViewV3({ onBookmark }) {
               </>
             )}
 
-            {/* Lesson 3 — 2-column video grid */}
-            {isLesson3 && (
-              <div className="grid grid-cols-2 gap-4">
-                {lesson3Videos.map((video, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveVideo(i)}
-                    className="rounded-2xl overflow-hidden text-left transition-all"
-                    style={{ outline: i === activeVideo ? '2px solid #2A7F8F' : '2px solid transparent', outlineOffset: '2px' }}
-                  >
-                    <div className="relative" style={{ aspectRatio: '16/9', background: '#1B2B4B' }}>
-                      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.25) 0%, rgba(27,43,75,0.85) 100%)' }} />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-colors"
-                          style={{ background: i === activeVideo ? '#2A7F8F' : 'rgba(255,255,255,0.2)' }}
-                        >
-                          <Play size={14} fill="white" className="text-white ml-0.5" />
-                        </div>
-                      </div>
-                      <div className="absolute top-3 left-3 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
-                        <span className="text-xs font-bold text-brand-text">{i + 1}</span>
-                      </div>
-                      <div className="absolute bottom-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full text-white text-xs" style={{ background: 'rgba(0,0,0,0.45)' }}>
-                        <Clock size={10} />{video.duration}
-                      </div>
-                    </div>
-                    <div className="px-3 py-2.5 bg-white border-x border-b border-brand-border rounded-b-2xl">
-                      <p className="text-sm font-semibold leading-snug" style={{ color: i === activeVideo ? '#2A7F8F' : '#1B2B4B' }}>
-                        {video.title}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
             {/* Lesson 4 — split panel */}
             {isLesson4 && (
               <div className="flex rounded-2xl overflow-hidden border border-brand-border" style={{ height: '300px' }}>
@@ -572,7 +521,7 @@ export default function LessonViewV3({ onBookmark }) {
               </div>
               <div>
                 <SectionLabel>Objective</SectionLabel>
-                <p className="text-sm text-brand-text leading-relaxed mt-2">
+                <p className="text-body text-brand-text leading-relaxed mt-2">
                   Students are introduced to the Emoger characters and begin building a shared
                   emotional vocabulary that will be used throughout the course.
                 </p>
@@ -588,7 +537,7 @@ export default function LessonViewV3({ onBookmark }) {
               <SectionLabel>Main Activity</SectionLabel>
               <SectionHeading>Emoger Introduction Circle</SectionHeading>
               <div className="pl-4 border-l-4 border-mtw-amber">
-                <p className="text-sm text-brand-text leading-relaxed mb-3">
+                <p className="text-body text-brand-text leading-relaxed mb-3">
                   After the video, go around the circle and ask each student to name one
                   Emogre they recognized in themselves this week — without explaining why.
                   The class listens without comment. This builds emotional awareness and
@@ -609,7 +558,7 @@ export default function LessonViewV3({ onBookmark }) {
               <SectionHeading>Before You Begin</SectionHeading>
               <ul className="space-y-2.5">
                 {tips.map((tip) => (
-                  <li key={tip} className="flex items-start gap-3 text-sm text-brand-text">
+                  <li key={tip} className="flex items-start gap-3 text-body text-brand-text">
                     <span
                       className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
                       style={{ background: '#2D7D78' }}
@@ -626,7 +575,7 @@ export default function LessonViewV3({ onBookmark }) {
             <div className="mb-7">
               <SectionLabel>Background</SectionLabel>
               <SectionHeading>Why We Do This</SectionHeading>
-              <p className="text-sm text-brand-text leading-relaxed">
+              <p className="text-body text-brand-text leading-relaxed">
                 Students can't regulate emotions they can't name. The Emoger framework gives
                 children a shared, non-stigmatizing language for the full range of human
                 feeling. Starting here — before any SEL skill-building — means every future
@@ -649,7 +598,7 @@ export default function LessonViewV3({ onBookmark }) {
                     <p className="text-xs font-semibold mb-2" style={{ color: '#F5A623' }}>
                       {item.subject}
                     </p>
-                    <p className="text-sm text-brand-text leading-relaxed">{item.idea}</p>
+                    <p className="text-body text-brand-text leading-relaxed">{item.idea}</p>
                   </div>
                 ))}
               </div>
@@ -668,7 +617,7 @@ export default function LessonViewV3({ onBookmark }) {
                     className="bg-white rounded-xl border border-brand-border p-4"
                   >
                     <p className="text-xs font-semibold text-brand-subtext mb-2">{p.context}</p>
-                    <p className="text-sm text-brand-text leading-relaxed">{p.question}</p>
+                    <p className="text-body text-brand-text leading-relaxed">{p.question}</p>
                   </div>
                 ))}
               </div>
