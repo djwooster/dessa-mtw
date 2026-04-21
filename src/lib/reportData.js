@@ -31,6 +31,9 @@ export const SCHOOLS = ['Riverside Elementary', 'Oakwood Middle', 'Summit Academ
 // "Today" from the report's perspective (last school day)
 export const REPORT_TODAY = '2026-04-18'
 
+// School days from Sep 2025 start through Apr 18, 2026 (accounts for holidays + PD days)
+export const YTD_DAYS = 140
+
 // ── Deterministic duration generator ─────────────────────────────────────────
 // Returns seconds in range based on engagement level, seeded by position.
 function dur(level, i) {
@@ -58,31 +61,43 @@ function makeDays(pattern) {
 export const TEACHERS = [
   // ── Riverside Elementary ──────────────────────────────────────────────────
   { id: 1,  firstName: 'Maya',   lastName: 'Anderson', school: 'Riverside Elementary',
+    ytdPct: 82,   // consistent high performer
     days: makeDays('ddadddadddddadddddad') },  // heavy — 17/20 active
   { id: 2,  firstName: 'Carlos', lastName: 'Bennett',  school: 'Riverside Elementary',
+    ytdPct: 57,   // moderate, consistent all year
     days: makeDays('anadnanandaandnaanda') },  // moderate — 12/20 active
   { id: 3,  firstName: 'Jordan', lastName: 'Davis',    school: 'Riverside Elementary',
+    ytdPct: 21,   // light user all year
     days: makeDays('nnbnnannnbnnannbnnan') },  // light — 5/20 active
   { id: 4,  firstName: 'Raj',    lastName: 'Iyer',     school: 'Riverside Elementary',
+    ytdPct: 91,   // exceptional all year
     days: makeDays('ddddadddddaddddddadd') },  // heavy — 19/20 active
 
   // ── Oakwood Middle ────────────────────────────────────────────────────────
   { id: 5,  firstName: 'Priya',  lastName: 'Evans',    school: 'Oakwood Middle',
+    ytdPct: 63,   // moderate, consistent
     days: makeDays('adnandaandnandaanand') },  // moderate — 13/20 active
   { id: 6,  firstName: 'Luis',   lastName: 'Garcia',   school: 'Oakwood Middle',
+    ytdPct: 72,   // strong early (Sep–Feb), now dropping off — YTD higher than recent
     days: makeDays('dddddddddnaannnnnnnn') },  // dropping off — 11/20 active
   { id: 7,  firstName: 'Alex',   lastName: 'Johnson',  school: 'Oakwood Middle',
+    ytdPct: 9,    // nearly inactive all year
     days: makeDays('nnnnnnnnnnnnnbnnnnnn') },  // nearly inactive — 1/20 active
   { id: 8,  firstName: 'Sarah',  lastName: 'Kim',      school: 'Oakwood Middle',
+    ytdPct: 77,   // mod-high, consistent
     days: makeDays('addaddaadadddaddadda') },  // mod-high — 16/20 active
 
   // ── Summit Academy ────────────────────────────────────────────────────────
   { id: 9,  firstName: 'Wei',    lastName: 'Chen',     school: 'Summit Academy',
+    ytdPct: 89,   // exceptional all year
     days: makeDays('dddddaddddddaddddadd') },  // heavy — 19/20 active
   { id: 10, firstName: 'Sam',    lastName: 'Foster',   school: 'Summit Academy',
+    ytdPct: 49,   // consistent alternating pattern
     days: makeDays('adadadadadadadadadad') },  // consistent — 10/20 active
   { id: 11, firstName: 'Tina',   lastName: 'Harris',   school: 'Summit Academy',
+    ytdPct: 36,   // slow start, now improving — YTD lower than recent
     days: makeDays('nnnnnannbbaadadadddd') },  // improving — 11/20 active
   { id: 12, firstName: 'Maria',  lastName: 'Lopez',    school: 'Summit Academy',
+    ytdPct: 62,   // moderate, consistent
     days: makeDays('andaandaanndandaanda') },  // moderate — 13/20 active
 ]

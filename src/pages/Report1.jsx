@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, ChevronDown, MoreHorizontal, Download, Printer,
+  Search, ChevronLeft, ChevronRight, MoreHorizontal, Download, Printer,
   ArrowUpDown, ArrowUp, ArrowDown, X,
 } from 'lucide-react'
-import { TEACHERS, SCHOOL_DAYS, SCHOOLS, REPORT_TODAY } from '../lib/reportData'
+import { TEACHERS, SCHOOL_DAYS, SCHOOLS, REPORT_TODAY, YTD_DAYS } from '../lib/reportData'
 
 // ── Engagement level config ───────────────────────────────────────────────────
 
@@ -36,15 +36,10 @@ function getWeeklyData(teacher) {
 }
 
 function getLastActiveBadge(dateStr) {
-  if (!dateStr) return { label: 'Never', style: 'gray' }
+  if (!dateStr) return { label: 'Never' }
   const diff = Math.round((new Date(REPORT_TODAY) - new Date(dateStr)) / 86400000)
-  if (diff === 0) return { label: 'Today',        style: 'green' }
-  if (diff === 1) return { label: 'Yesterday',    style: 'green' }
-  if (diff <= 5)  return { label: `${diff}d ago`, style: 'amber' }
-  return {
-    label: new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    style: 'gray',
-  }
+  if (diff === 0) return { label: 'Today' }
+  return { label: `${diff}d` }
 }
 
 function getCellStyle(level) {
@@ -112,12 +107,7 @@ function LevelLegend() {
 }
 
 function LastActiveBadge({ badge }) {
-  const cls = {
-    green: 'bg-green-50 text-green-700 border border-green-200',
-    amber: 'bg-amber-50 text-amber-700 border border-amber-200',
-    gray:  'bg-gray-50  text-gray-500  border border-gray-200',
-  }[badge.style]
-  return <span className={`inline-block text-xs px-1.5 py-0.5 rounded font-medium ${cls}`}>{badge.label}</span>
+  return <span className="text-sm text-brand-text">{badge.label}</span>
 }
 
 function SortBtn({ col, label, sortBy, sortDir, onSort }) {
@@ -135,30 +125,14 @@ function SortBtn({ col, label, sortBy, sortDir, onSort }) {
   )
 }
 
-function Sparkline({ weeklyData, goalFreq }) {
-  const W = 76, H = 24, PAD = 6
-  const xStep = (W - PAD * 2) / 3
-
-  const pts = weeklyData.map((w, i) => ({
-    x: PAD + i * xStep,
-    y: PAD + (1 - Math.min(w.activeDays, 5) / 5) * (H - PAD * 2),
-    hit: w.activeDays >= goalFreq,
-  }))
-
-  const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
-
+function RecentPct({ pct }) {
   return (
-    <svg width={W} height={H} aria-hidden="true" className="overflow-visible">
-      <path d={pathD} fill="none" stroke="#D1D5DB" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-      {pts.map((p, i) => (
-        <circle
-          key={i} cx={p.x} cy={p.y} r={3.5}
-          fill={p.hit ? '#2A7F8F' : 'white'}
-          stroke={p.hit ? '#2A7F8F' : '#CBD5E1'}
-          strokeWidth="1.5"
-        />
-      ))}
-    </svg>
+    <div>
+      <div className="text-sm font-semibold text-brand-text">{pct}%</div>
+      <div className="mt-1.5 h-1.5 w-16 rounded-full bg-brand-border overflow-hidden">
+        <div className="h-full rounded-full bg-dessa-teal transition-all" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
   )
 }
 
@@ -230,6 +204,32 @@ function MonthCalendar({ year, month, dayMap }) {
 }
 
 function TeacherCalendar({ teacher, goalFreq }) {
+  const [startYear,  setStartYear]  = useState(2026)
+  const [startMonth, setStartMonth] = useState(2) // 0-indexed; default: March 2026
+
+  const secondMonth = startMonth === 11 ? 0  : startMonth + 1
+  const secondYear  = startMonth === 11 ? startYear + 1 : startYear
+
+  const atMin = startYear === 2025 && startMonth === 8  // Sep 2025
+  const atMax = startYear === 2026 && startMonth === 2  // Mar 2026 (Apr as second)
+
+  function prevMonth() {
+    if (atMin) return
+    if (startMonth === 0) { setStartYear(y => y - 1); setStartMonth(11) }
+    else setStartMonth(m => m - 1)
+  }
+  function nextMonth() {
+    if (atMax) return
+    if (startMonth === 11) { setStartYear(y => y + 1); setStartMonth(0) }
+    else setStartMonth(m => m + 1)
+  }
+
+  const rangeLabel = (() => {
+    const m1 = new Date(startYear, startMonth, 1).toLocaleDateString('en-US', { month: 'short' })
+    const m2 = new Date(secondYear, secondMonth, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    return `${m1} – ${m2}`
+  })()
+
   const dayMap     = Object.fromEntries(teacher.days.map(d => [d.date, d.level]))
   const activeDays = teacher.days.filter(d => d.level !== 'n').length
   const weeksHit   = [1,2,3,4].filter(w =>
@@ -240,9 +240,28 @@ function TeacherCalendar({ teacher, goalFreq }) {
   return (
     <div className="bg-brand-bg/50 rounded-xl p-5 border border-brand-border/50 mt-1">
       <div className="flex gap-8 items-start flex-wrap">
-        <div className="flex gap-6">
-          <MonthCalendar year={2026} month={2} dayMap={dayMap} />
-          <MonthCalendar year={2026} month={3} dayMap={dayMap} />
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={prevMonth}
+              disabled={atMin}
+              className="p-1 rounded border border-brand-border hover:bg-brand-border/60 disabled:opacity-25 disabled:cursor-default transition-colors"
+            >
+              <ChevronLeft size={14} className="text-brand-subtext" />
+            </button>
+            <span className="text-xs font-medium text-brand-subtext">{rangeLabel}</span>
+            <button
+              onClick={nextMonth}
+              disabled={atMax}
+              className="p-1 rounded border border-brand-border hover:bg-brand-border/60 disabled:opacity-25 disabled:cursor-default transition-colors"
+            >
+              <ChevronRight size={14} className="text-brand-subtext" />
+            </button>
+          </div>
+          <div className="flex gap-6">
+            <MonthCalendar year={startYear}  month={startMonth}  dayMap={dayMap} />
+            <MonthCalendar year={secondYear} month={secondMonth} dayMap={dayMap} />
+          </div>
         </div>
 
         <div className="flex-1 min-w-[180px] pl-6 border-l border-brand-border">
@@ -286,13 +305,13 @@ function ConceptA({ teachers, goalFreq, expandedId, onExpand, sortBy, setSortBy,
       {/* Table header */}
       <div
         className="grid gap-4 px-4 py-2.5 border-b border-brand-border bg-brand-bg/40"
-        style={{ gridTemplateColumns: '40px 1fr 90px 110px 110px 24px' }}
+        style={{ gridTemplateColumns: '40px 1fr 90px 130px 110px 24px' }}
       >
         <div className="text-xs font-semibold text-brand-subtext text-center">#</div>
-        <SortBtn col="name"       label="Teacher"     sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
-        <div className="text-xs font-semibold text-brand-subtext">4-Wk Trend</div>
-        <SortBtn col="engagement" label="Engagement"  sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
-        <SortBtn col="lastActive" label="Last Active" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+        <SortBtn col="name"       label="Teacher"          sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+        <SortBtn col="recent"     label="Last 4 Wks"       sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+        <SortBtn col="engagement" label="Engagement (YTD)" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+        <SortBtn col="lastActive" label="Last Active"      sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
         <div />
       </div>
 
@@ -304,7 +323,7 @@ function ConceptA({ teachers, goalFreq, expandedId, onExpand, sortBy, setSortBy,
             <div key={t.id}>
               <button
                 className="grid gap-4 px-4 py-3 w-full text-left hover:bg-brand-bg/40 transition-colors group"
-                style={{ gridTemplateColumns: '40px 1fr 90px 110px 110px 24px' }}
+                style={{ gridTemplateColumns: '40px 1fr 90px 130px 110px 24px' }}
                 onClick={() => onExpand(t.id)}
                 aria-expanded={isOpen}
               >
@@ -316,13 +335,13 @@ function ConceptA({ teachers, goalFreq, expandedId, onExpand, sortBy, setSortBy,
                 </div>
 
                 <div className="self-center">
-                  <Sparkline weeklyData={t.weeklyData} goalFreq={goalFreq} />
+                  <RecentPct pct={t.engagementPct} />
                 </div>
 
                 <div className="self-center">
-                  <div className="text-sm font-semibold text-brand-text">{t.engagementPct}%</div>
-                  <div className="mt-1.5 h-1.5 w-16 rounded-full bg-brand-border overflow-hidden">
-                    <div className="h-full rounded-full bg-dessa-teal transition-all" style={{ width: `${t.engagementPct}%` }} />
+                  <div className="text-sm font-semibold text-brand-text">{t.ytdPct}%</div>
+                  <div className="mt-1.5 h-1.5 w-20 rounded-full bg-brand-border overflow-hidden">
+                    <div className="h-full rounded-full bg-dessa-teal transition-all" style={{ width: `${t.ytdPct}%` }} />
                   </div>
                 </div>
 
@@ -331,7 +350,7 @@ function ConceptA({ teachers, goalFreq, expandedId, onExpand, sortBy, setSortBy,
                 </div>
 
                 <div className="self-center text-brand-subtext group-hover:text-brand-text transition-colors">
-                  <ChevronDown size={15} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                  <ChevronRight size={15} className={`transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
                 </div>
               </button>
 
@@ -625,7 +644,7 @@ export default function Report1() {
       weeklyData:      getWeeklyData(t),
       lastActiveBadge: getLastActiveBadge(getLastActive(t)),
     }))
-  , [])
+  , [])  // ytdPct comes directly from TEACHERS data
 
   const filtered = useMemo(() =>
     enriched.filter(t => {
@@ -642,7 +661,8 @@ export default function Report1() {
     [...filtered].sort((a, b) => {
       const d = sortDir === 'desc' ? -1 : 1
       if (sortBy === 'name')       return d * a.lastName.localeCompare(b.lastName)
-      if (sortBy === 'engagement') return d * (a.engagementPct - b.engagementPct)
+      if (sortBy === 'recent')     return d * (a.engagementPct - b.engagementPct)
+      if (sortBy === 'engagement') return d * (a.ytdPct - b.ytdPct)
       if (sortBy === 'lastActive') {
         if (!a.lastActive) return 1
         if (!b.lastActive) return -1
