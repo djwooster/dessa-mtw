@@ -1,10 +1,13 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, ChevronLeft, ChevronRight, MoreHorizontal, Download, Printer,
+  Search, ChevronLeft, ChevronRight, MoreHorizontal, Download, Printer, SlidersHorizontal,
   ArrowUpDown, ArrowUp, ArrowDown, X,
 } from 'lucide-react'
 import { TEACHERS, SCHOOL_DAYS, SCHOOLS, REPORT_TODAY, YTD_DAYS } from '../lib/reportData'
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from '../components/ui/pagination'
+import { DatePicker } from '../components/ui/date-picker'
+import { Slider } from '../components/ui/slider'
 
 // ── Engagement level config ───────────────────────────────────────────────────
 
@@ -203,15 +206,17 @@ function MonthCalendar({ year, month, dayMap }) {
   )
 }
 
-function TeacherCalendar({ teacher, goalFreq }) {
+function TeacherCalendar({ teacher }) {
   const [startYear,  setStartYear]  = useState(2026)
-  const [startMonth, setStartMonth] = useState(2) // 0-indexed; default: March 2026
+  const [startMonth, setStartMonth] = useState(1) // 0-indexed; default: Feb 2026
 
   const secondMonth = startMonth === 11 ? 0  : startMonth + 1
   const secondYear  = startMonth === 11 ? startYear + 1 : startYear
+  const thirdMonth  = secondMonth === 11 ? 0  : secondMonth + 1
+  const thirdYear   = secondMonth === 11 ? secondYear + 1 : secondYear
 
-  const atMin = startYear === 2025 && startMonth === 8  // Sep 2025
-  const atMax = startYear === 2026 && startMonth === 2  // Mar 2026 (Apr as second)
+  const atMin = startYear === 2025 && startMonth === 8  // Sep 2025 (shows Sep–Nov)
+  const atMax = startYear === 2026 && startMonth === 1  // Feb 2026 (shows Feb–Apr)
 
   function prevMonth() {
     if (atMin) return
@@ -225,15 +230,15 @@ function TeacherCalendar({ teacher, goalFreq }) {
   }
 
   const rangeLabel = (() => {
-    const m1 = new Date(startYear, startMonth, 1).toLocaleDateString('en-US', { month: 'short' })
-    const m2 = new Date(secondYear, secondMonth, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-    return `${m1} – ${m2}`
+    const m1 = new Date(startYear,  startMonth,  1).toLocaleDateString('en-US', { month: 'short' })
+    const m3 = new Date(thirdYear,  thirdMonth,  1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    return `${m1} – ${m3}`
   })()
 
-  const dayMap     = Object.fromEntries(teacher.days.map(d => [d.date, d.level]))
-  const activeDays = teacher.days.filter(d => d.level !== 'n').length
-  const weeksHit   = [1,2,3,4].filter(w =>
-    teacher.days.filter(d => d.week === w && d.level !== 'n').length >= goalFreq
+  const dayMap      = Object.fromEntries(teacher.days.map(d => [d.date, d.level]))
+  const activeDays  = teacher.days.filter(d => d.level !== 'n').length
+  const weeksActive = [1,2,3,4].filter(w =>
+    teacher.days.some(d => d.week === w && d.level !== 'n')
   ).length
   const badge = teacher.lastActiveBadge
 
@@ -261,6 +266,7 @@ function TeacherCalendar({ teacher, goalFreq }) {
           <div className="flex gap-6">
             <MonthCalendar year={startYear}  month={startMonth}  dayMap={dayMap} />
             <MonthCalendar year={secondYear} month={secondMonth} dayMap={dayMap} />
+            <MonthCalendar year={thirdYear}  month={thirdMonth}  dayMap={dayMap} />
           </div>
         </div>
 
@@ -269,7 +275,7 @@ function TeacherCalendar({ teacher, goalFreq }) {
           <div className="grid grid-cols-2 gap-y-5 gap-x-4">
             <div>
               <div className="text-2xl font-bold text-brand-text">{Math.round(activeDays / 20 * 100)}%</div>
-              <div className="text-xs text-brand-subtext">Engagement rate</div>
+              <div className="text-xs text-brand-subtext">4-week engagement rate</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-brand-text">{activeDays}</div>
@@ -277,9 +283,9 @@ function TeacherCalendar({ teacher, goalFreq }) {
             </div>
             <div>
               <div className="text-2xl font-bold text-brand-text">
-                {weeksHit}<span className="text-sm font-normal text-brand-subtext ml-1">/ 4</span>
+                {weeksActive}<span className="text-sm font-normal text-brand-subtext ml-1">/ 4</span>
               </div>
-              <div className="text-xs text-brand-subtext">Weeks hitting goal</div>
+              <div className="text-xs text-brand-subtext">Weeks with access</div>
             </div>
             <div>
               <div className="mb-1.5"><LastActiveBadge badge={badge} /></div>
@@ -292,7 +298,7 @@ function TeacherCalendar({ teacher, goalFreq }) {
   )
 }
 
-function ConceptA({ teachers, goalFreq, expandedId, onExpand, sortBy, setSortBy, sortDir, setSortDir }) {
+function ConceptA({ teachers, expandedId, onExpand, sortBy, setSortBy, sortDir, setSortDir }) {
   function handleSort(col) {
     if (sortBy === col) setSortDir(d => d === 'desc' ? 'asc' : 'desc')
     else { setSortBy(col); setSortDir('desc') }
@@ -365,7 +371,7 @@ function ConceptA({ teachers, goalFreq, expandedId, onExpand, sortBy, setSortBy,
                     className="overflow-hidden"
                   >
                     <div className="px-4 pb-4">
-                      <TeacherCalendar teacher={t} goalFreq={goalFreq} />
+                      <TeacherCalendar teacher={t} />
                     </div>
                   </motion.div>
                 )}
@@ -528,44 +534,48 @@ function WeeklyDistributionChart({ teachers }) {
   )
 }
 
-function ConceptC({ teachers, goalFreq }) {
-  if (!teachers.length) return <EmptyState />
-
+function StatCards({ teachers }) {
+  if (!teachers.length) return null
   const activeThisWeek = teachers.filter(t => t.days.some(d => d.week === 4 && d.level !== 'n'))
-  const hittingGoal    = teachers.filter(t => t.days.filter(d => d.week === 4 && d.level !== 'n').length >= goalFreq)
   const avgPct         = Math.round(teachers.reduce((s, t) => s + t.engagementPct, 0) / teachers.length)
+  const totalActive    = teachers.reduce((s, t) => s + t.days.filter(d => d.level !== 'n').length, 0)
+  const avgDaysPerWk   = (totalActive / teachers.length / 4).toFixed(1)
+  const stats = [
+    { value: `${activeThisWeek.length}`, sub: `of ${teachers.length} teachers`, label: 'Active this week',       pct: Math.round(activeThisWeek.length / teachers.length * 100) },
+    { value: `${avgPct}%`,               sub: 'avg over 4 weeks',               label: '4-week engagement rate', pct: avgPct },
+    { value: avgDaysPerWk,               sub: 'avg per teacher',                 label: 'Lesson days per week',   pct: Math.min(Math.round(parseFloat(avgDaysPerWk) / 5 * 100), 100) },
+  ]
+  return (
+    <div className="grid grid-cols-3 gap-4 mb-6">
+      {stats.map(({ value, sub, label, pct }) => (
+        <div key={label} className="bg-white rounded-xl p-5 border border-brand-border shadow-sm">
+          <div className="text-3xl font-bold text-brand-text">{value}</div>
+          <div className="text-xs text-brand-subtext mt-0.5 mb-4">{sub}</div>
+          <div className="h-1.5 rounded-full bg-brand-border overflow-hidden mb-2">
+            <div className="h-full rounded-full bg-dessa-teal transition-all duration-500" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="text-xs font-semibold text-brand-text">{label}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ConceptC({ teachers }) {
+  if (!teachers.length) return <EmptyState />
 
   const schoolStats = SCHOOLS
     .map(school => {
       const ts = teachers.filter(t => t.school === school)
       if (!ts.length) return null
-      const avg  = Math.round(ts.reduce((s, t) => s + t.engagementPct, 0) / ts.length)
-      const goal = ts.filter(t => t.days.filter(d => d.week === 4 && d.level !== 'n').length >= goalFreq).length
-      return { school, count: ts.length, avg, goal }
+      const avg = Math.round(ts.reduce((s, t) => s + t.engagementPct, 0) / ts.length)
+      return { school, count: ts.length, avg }
     })
     .filter(Boolean)
 
-  const stats = [
-    { value: `${activeThisWeek.length}`, sub: `of ${teachers.length} teachers`, label: 'Active this week',          pct: Math.round(activeThisWeek.length / teachers.length * 100) },
-    { value: `${avgPct}%`,               sub: 'avg over 4 weeks',              label: '4-week engagement rate',     pct: avgPct },
-    { value: `${hittingGoal.length}`,    sub: `of ${teachers.length} teachers`, label: `Hitting ${goalFreq}-day/week goal`, pct: Math.round(hittingGoal.length / teachers.length * 100) },
-  ]
-
   return (
     <div className="space-y-6">
-      {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-4">
-        {stats.map(({ value, sub, label, pct }) => (
-          <div key={label} className="bg-white rounded-xl p-5 border border-brand-border shadow-sm">
-            <div className="text-3xl font-bold text-brand-text">{value}</div>
-            <div className="text-xs text-brand-subtext mt-0.5 mb-4">{sub}</div>
-            <div className="h-1.5 rounded-full bg-brand-border overflow-hidden mb-2">
-              <div className="h-full rounded-full bg-dessa-teal transition-all duration-500" style={{ width: `${pct}%` }} />
-            </div>
-            <div className="text-xs font-semibold text-brand-text">{label}</div>
-          </div>
-        ))}
-      </div>
+      <StatCards teachers={teachers} />
 
       {/* Chart + school breakdown */}
       <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 280px' }}>
@@ -586,7 +596,6 @@ function ConceptC({ teachers, goalFreq }) {
                 </div>
                 <div className="flex justify-between text-[11px] text-brand-subtext">
                   <span>{avg}% engagement</span>
-                  <span>{goal}/{count} hitting goal</span>
                 </div>
               </div>
             ))}
@@ -628,10 +637,18 @@ function ConceptC({ teachers, goalFreq }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Report1() {
-  const [search,     setSearch]     = useState('')
-  const [school,     setSchool]     = useState('All')
-  const [goalFreq,   setGoalFreq]   = useState(3)
-  const [expandedId, setExpandedId] = useState(null)
+  const [search,          setSearch]          = useState('')
+  const [school,          setSchool]          = useState('All')
+  const [dateStart,       setDateStart]       = useState('')
+  const [dateEnd,         setDateEnd]         = useState('')
+  const [engagementRange, setEngagementRange] = useState([0, 100])
+  const [showFilters,     setShowFilters]     = useState(false)
+  const [expandedId,      setExpandedId]      = useState(null)
+  const [page,            setPage]            = useState(1)
+  const PAGE_SIZE     = 10
+  const filterRef     = useRef(null)
+  const engagementActive = engagementRange[0] !== 0 || engagementRange[1] !== 100
+  const activeFilters = (dateStart || dateEnd ? 1 : 0) + (engagementActive ? 1 : 0)
   const [sortBy,     setSortBy]     = useState('engagement')
   const [sortDir,    setSortDir]    = useState('desc')
   const [showMenu,   setShowMenu]   = useState(false)
@@ -651,11 +668,23 @@ export default function Report1() {
       if (school !== 'All' && t.school !== school) return false
       if (search) {
         const q = search.toLowerCase()
-        return t.firstName.toLowerCase().includes(q) || t.lastName.toLowerCase().includes(q)
+        if (!t.firstName.toLowerCase().includes(q) && !t.lastName.toLowerCase().includes(q)) return false
+      }
+      if (dateStart || dateEnd) {
+        const hasActivity = t.days.some(d =>
+          d.level !== 'n' &&
+          (!dateStart || d.date >= dateStart) &&
+          (!dateEnd   || d.date <= dateEnd)
+        )
+        if (!hasActivity) return false
+      }
+      if (engagementActive) {
+        const p = t.engagementPct
+        if (p < engagementRange[0] || p > engagementRange[1]) return false
       }
       return true
     })
-  , [enriched, school, search])
+  , [enriched, school, search, dateStart, dateEnd, engagementRange])
 
   const sorted = useMemo(() =>
     [...filtered].sort((a, b) => {
@@ -672,11 +701,25 @@ export default function Report1() {
     })
   , [filtered, sortBy, sortDir])
 
+  const totalPages  = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const pagedTeachers = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const rangeStart  = sorted.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const rangeEnd    = Math.min(page * PAGE_SIZE, sorted.length)
+
+  useEffect(() => { setPage(1) }, [search, school, dateStart, dateEnd, engagementRange[0], engagementRange[1]])
+
+  useEffect(() => {
+    if (!showFilters) return
+    function handleClick(e) { if (filterRef.current && !filterRef.current.contains(e.target)) setShowFilters(false) }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showFilters])
+
   return (
     <div className="max-w-screen-xl mx-auto px-6 py-8">
 
       {/* Page header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-end justify-between mb-6">
         <div>
           <div className="text-[10px] font-bold tracking-widest uppercase text-brand-subtext mb-1.5">
             MTW · Admin Report
@@ -719,84 +762,157 @@ export default function Report1() {
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex flex-wrap items-center gap-3 mb-5">
-        {/* Search */}
-        <div className="relative">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search teachers…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-8 pr-7 py-1.5 text-sm border border-brand-border rounded-lg bg-white w-52 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-          />
-          {search && (
-            <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
-              <X size={12} />
+      <StatCards teachers={sorted} />
+
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-brand-border shadow-sm mb-16">
+
+        {/* Table toolbar */}
+        <div className="flex items-center justify-end gap-3 px-4 py-3 border-b border-brand-border bg-brand-bg/40">
+          <LevelLegend />
+          <div className="flex-1" />
+          <div className="relative">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search teachers…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-8 pr-7 py-1.5 text-sm border border-brand-border rounded-lg bg-white w-48 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          <select
+            value={school}
+            onChange={e => setSchool(e.target.value)}
+            className="text-sm border border-brand-border rounded-lg bg-white px-3 py-1.5 text-brand-text focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+          >
+            <option value="All">All schools</option>
+            {SCHOOLS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          {/* Filter button + panel */}
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setShowFilters(v => !v)}
+              className={`flex items-center gap-1.5 text-xs font-medium border rounded-lg px-3 py-1.5 transition-colors ${
+                activeFilters > 0
+                  ? 'bg-dessa-teal text-white border-dessa-teal'
+                  : 'bg-white text-brand-subtext border-brand-border hover:text-brand-text hover:bg-brand-bg'
+              }`}
+            >
+              <SlidersHorizontal size={13} />
+              Filters
+              {activeFilters > 0 && (
+                <span className="ml-0.5 bg-white/25 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  {activeFilters}
+                </span>
+              )}
             </button>
+
+            {showFilters && (
+              <div className="absolute right-0 top-full mt-1.5 w-96 bg-white border border-brand-border rounded-xl shadow-lg z-30 p-4">
+                {/* Date range */}
+                <div className="mb-4">
+                  <div className="text-[10px] font-bold tracking-widest uppercase text-brand-subtext mb-3">Date Range</div>
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="text-xs text-brand-subtext block mb-1">From</label>
+                      <DatePicker
+                        value={dateStart}
+                        onChange={setDateStart}
+                        placeholder="Start date"
+                        max={dateEnd || REPORT_TODAY}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-brand-subtext block mb-1">To</label>
+                      <DatePicker
+                        value={dateEnd}
+                        onChange={setDateEnd}
+                        placeholder="End date"
+                        min={dateStart || undefined}
+                        max={REPORT_TODAY}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-px bg-brand-border mb-4" />
+
+                {/* Engagement range */}
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-[10px] font-bold tracking-widest uppercase text-brand-subtext">4-Week Engagement</div>
+                    <span className="text-xs font-semibold text-dessa-teal">
+                      {engagementRange[0]}% – {engagementRange[1]}%
+                    </span>
+                  </div>
+                  <Slider
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={engagementRange}
+                    onValueChange={setEngagementRange}
+                    className="my-2"
+                  />
+                  <div className="flex justify-between text-[11px] text-brand-subtext mt-2">
+                    <span>0%</span>
+                    <span>100%</span>
+                  </div>
+                </div>
+
+                {activeFilters > 0 && (
+                  <button
+                    onClick={() => { setDateStart(''); setDateEnd(''); setEngagementRange([0, 100]) }}
+                    className="w-full text-xs text-brand-subtext hover:text-brand-text pt-2 border-t border-brand-border mt-1 transition-colors"
+                  >
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <ConceptA
+          teachers={pagedTeachers}
+          expandedId={expandedId}
+          onExpand={id => setExpandedId(prev => prev === id ? null : id)}
+          sortBy={sortBy} setSortBy={setSortBy}
+          sortDir={sortDir} setSortDir={setSortDir}
+        />
+
+        {/* Table footer */}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-brand-border bg-brand-bg/40">
+          <span className="text-xs text-brand-subtext">
+            {sorted.length === 0 ? '0 teachers' : `${rangeStart}–${rangeEnd} of ${sorted.length} teacher${sorted.length !== 1 ? 's' : ''}`}
+          </span>
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} />
+                </PaginationItem>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                  <PaginationItem key={p}>
+                    <PaginationLink isActive={p === page} onClick={() => setPage(p)}>{p}</PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           )}
         </div>
-
-        {/* School */}
-        <select
-          value={school}
-          onChange={e => setSchool(e.target.value)}
-          className="text-sm border border-brand-border rounded-lg bg-white px-3 py-1.5 text-brand-text focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-        >
-          <option value="All">All schools</option>
-          {SCHOOLS.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-
-        {/* Goal frequency */}
-        <div className="flex items-center gap-2 ml-1">
-          <span className="text-xs text-brand-subtext">Goal:</span>
-          <div className="flex rounded-lg overflow-hidden border border-brand-border bg-white">
-            {[1, 2, 3, 4].map(n => (
-              <button
-                key={n}
-                onClick={() => setGoalFreq(n)}
-                className={`px-3 py-1.5 text-xs font-semibold transition-colors border-r border-brand-border last:border-r-0 ${
-                  goalFreq === n ? 'bg-dessa-teal text-white' : 'text-brand-subtext hover:bg-brand-bg hover:text-brand-text'
-                }`}
-              >
-                {n}×
-              </button>
-            ))}
-          </div>
-          <span className="text-xs text-brand-subtext">/week</span>
-        </div>
-
-        <div className="ml-auto text-xs text-brand-subtext">
-          {filtered.length} teacher{filtered.length !== 1 ? 's' : ''}
-        </div>
       </div>
 
-      {/* Legend */}
-      <div className="mb-10 pb-6 border-b border-brand-border">
-        <LevelLegend />
-      </div>
-
-      {/* ── Concept A ─────────────────────────────────────────────────────── */}
-      <div className="mb-16">
-        <ConceptHeader
-          label="Concept A"
-          title="Ranked List with Calendar Detail"
-          description="Sortable table ranked by engagement rate. Click any row to expand a month-at-a-glance calendar with per-day pattern encoding and summary stats. Only one panel open at a time."
-        />
-        <div className="bg-white rounded-xl border border-brand-border shadow-sm overflow-hidden">
-          <ConceptA
-            teachers={sorted}
-            goalFreq={goalFreq}
-            expandedId={expandedId}
-            onExpand={id => setExpandedId(prev => prev === id ? null : id)}
-            sortBy={sortBy} setSortBy={setSortBy}
-            sortDir={sortDir} setSortDir={setSortDir}
-          />
-        </div>
-      </div>
-
-      {/* ── Concept B ─────────────────────────────────────────────────────── */}
+      {/* ── Concept B (commented out) ─────────────────────────────────────
       <div className="mb-16">
         <ConceptHeader
           label="Concept B"
@@ -807,16 +923,18 @@ export default function Report1() {
           <ConceptB teachers={sorted} />
         </div>
       </div>
+      ── end Concept B ───────────────────────────────────────────────────── */}
 
-      {/* ── Concept C ─────────────────────────────────────────────────────── */}
+      {/* ── Concept C (commented out) ─────────────────────────────────────
       <div className="mb-16">
         <ConceptHeader
           label="Concept C"
           title="Program Dashboard"
           description="Aggregate view first — stat cards, a weekly distribution chart showing engagement quality over time, and a school-level breakdown — followed by a compact ranked teacher list."
         />
-        <ConceptC teachers={sorted} goalFreq={goalFreq} />
+        <ConceptC teachers={sorted} />
       </div>
+      ── end Concept C ───────────────────────────────────────────────────── */}
 
     </div>
   )
