@@ -12,6 +12,18 @@ Fidelity bar: **confident design exploration** — not a wireframe, not producti
 - **Tailwind CSS v3** — custom palette only, no default Tailwind colors used
 - **Framer Motion** — page reveals `{opacity:0, y:8}→{opacity:1, y:0}`, card hover `{y:-2}`
 - **React Router v6** — all data is hardcoded/mocked, no backend
+- **react-day-picker v9** + **date-fns** — calendar/date picker components
+- **@radix-ui/react-slider** — range slider component
+- **@radix-ui/react-popover** — installed, available for use
+
+## shadcn-style UI components
+No `components.json` — components are added manually to `src/components/ui/` and styled with project tokens (not shadcn defaults). Existing components:
+- `card.jsx` — Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter
+- `table.jsx`, `tabs.jsx` — base layout primitives
+- `calendar.jsx` — DayPicker v9 wrapper, uses `captionLayout="dropdown"`, styled with `dessa-teal`
+- `date-picker.jsx` — button + Calendar popover, value/onChange use `YYYY-MM-DD` strings
+- `pagination.jsx` — Previous/Next/Link/Ellipsis buttons, styled with `dessa-teal` for active page
+- `slider.jsx` — Radix dual-handle range slider, track in `dessa-teal`
 
 ---
 
@@ -27,7 +39,7 @@ Fidelity bar: **confident design exploration** — not a wireframe, not producti
 | `/mtw2/lesson` | MTW Lesson View B |
 | `/mtw4` | MTW Curriculum — design proposal D (`CurriculumV4.jsx` + `LessonViewV4.jsx`) |
 | `/mtw4/lesson` | MTW Lesson View D |
-| `/report1` | Admin: Teacher Engagement Overview — 3 design concepts on one page |
+| `/report1` | Admin: Teacher Engagement Dashboard (Concept A active; B and C commented out) |
 | `/insights` | Data & Insights (placeholder) |
 | `/strategies` | Strategies (placeholder) |
 
@@ -94,25 +106,42 @@ src/
     LessonViewV2.jsx    — MTW lesson view, proposal B (/mtw2/lesson)
     CurriculumV4.jsx    — MTW course library, proposal D (/mtw4)
     LessonViewV4.jsx    — MTW lesson view, proposal D (/mtw4/lesson)
-    Report1.jsx         — Admin report: 3 concepts on one page (/report1)
+    Report1.jsx         — Admin engagement dashboard (/report1)
     Ratings.jsx         — DESSA ratings, timeline, grade bar chart
     BrandGuide.jsx      — design system reference (/brand)
+  components/
+    Nav.jsx             — persistent top nav, sticky
+    ui/                 — shadcn-style components (manual, no components.json)
+      calendar.jsx, date-picker.jsx, pagination.jsx, slider.jsx
+      card.jsx, table.jsx, tabs.jsx
   lib/
     utils.js            — cn() helper (clsx + tailwind-merge)
     mtwData.js          — shared units/lessons data (proposals A and B)
-    reportData.js       — mock teacher engagement data for /report1
+    reportData.js       — 12 teachers, 3 schools, 20 school days (Mar 24–Apr 18 2026) + ytdPct per teacher (140 school days YTD)
 ```
 
 ---
 
 ## Admin report — `/report1`
-Three design concepts on one shared page (all controlled by the same search/filter/goal-frequency controls at the top). Concept that most closely matches the Jira ticket is A. Mock data covers 12 teachers across 3 schools, 4 weeks of school days.
+Polished admin dashboard for Site Leaders / Program Admins. Based on a Jira ticket: "Daily Curriculum Engagement Report." Concepts B and C are commented out in the JSX — only Concept A is rendered.
 
-- **Concept A** — Ranked list, sortable columns, expandable calendar detail panel per row
-- **Concept B** — Heatmap grid (teachers × days), hover tooltip, fill patterns for accessibility
-- **Concept C** — Dashboard: stat cards + weekly distribution chart + school breakdown + compact list
+**Layout (top to bottom):**
+1. Page header — title, date range, Options menu (export CSV / print)
+2. Stat cards (3) — Active this week · 4-week engagement rate · Lesson days per week
+3. Table card — toolbar (legend · search · school filter · Filters panel) → sortable rows → footer (range label + pagination)
 
-Engagement levels: `d` deep (5+ min) · `a` active (1–5 min) · `b` brief (<1 min) · `n` none. Single teal color ramp; patterns (solid / stripes / dots / outline) are the primary differentiator.
+**Table columns:** # · Teacher · Last 4 Wks (% + bar) · Engagement YTD (% + bar, 140 school days) · Last Active (Today / Nd plain text)
+
+**Expandable row:** 3-month calendar (prev/next nav, Sep 2025–Apr 2026) + summary stats (4-wk rate, days with access, weeks with access, last active)
+
+**Filters panel** (right of school dropdown):
+- Date range — two `DatePicker` fields (From / To), filters on active days within range
+- 4-Week Engagement — dual-handle `Slider` (0–100%, step 5%)
+- Active filter count badge on button; "Clear all filters" when active
+
+**Engagement levels:** `d` deep (5+ min) · `a` active (1–5 min) · `b` brief (<1 min) · `n` none. Fill patterns (solid/stripes/dots/outline) used in heatmap (Concept B, commented out).
+
+**Data:** `reportData.js` — 12 teachers, 3 schools (Riverside Elementary, Oakwood Middle, Summit Academy), 20 school days Mar 24–Apr 18 2026. Each teacher has `ytdPct` (school-year engagement %, 140-day denominator) — values tell a story (e.g. Garcia high YTD but dropping off recently; Harris low YTD but improving).
 
 ## Screens still needed (future iterations)
 - `/insights` — Data & Insights (currently placeholder)
