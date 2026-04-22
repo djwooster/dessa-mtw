@@ -249,12 +249,6 @@ export default function Dashboard({ enrolledCourse }) {
             emotional competencies.
           </p>
         </div>
-        <button
-          className="flex-shrink-0 px-5 py-2.5 rounded-md text-sm font-semibold text-white transition-all hover:brightness-105 mt-1"
-          style={{ background: '#2A7F8F' }}
-        >
-          Manage Students
-        </button>
       </motion.div>
 
       {/* ── MTW CTA ── */}

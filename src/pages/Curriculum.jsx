@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Play, ChevronRight, MoreHorizontal, Bookmark } from 'lucide-react'
+import { Play, ChevronRight, ChevronLeft, MoreHorizontal, Bookmark, Flame } from 'lucide-react'
+import * as Popover from '@radix-ui/react-popover'
 import {
   Card,
   CardHeader,
@@ -10,6 +11,112 @@ import {
   CardFooter,
 } from '../components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
+
+// ─── Streak calendar data ─────────────────────────────────────────────────────
+
+const streakData = {
+  '2026-3': new Set([1, 2, 3, 7, 8, 9, 10, 13, 14, 15, 16, 17, 20, 21, 22]),
+  '2026-2': new Set([3, 4, 5, 6, 10, 11, 12, 13, 17, 18, 19, 24, 25, 26, 27]),
+  '2026-1': new Set([6, 7, 8, 9, 12, 13, 14, 15, 16, 20, 22, 23, 27, 28, 29]),
+  '2026-0': new Set([5, 6, 7, 8, 9, 13, 14, 15, 21, 22, 23, 26, 27, 28, 29, 30]),
+  '2025-11': new Set([1, 2, 3, 4, 8, 9, 10, 11, 15, 16, 17, 18]),
+  '2025-10': new Set([3, 4, 5, 6, 10, 11, 12, 13, 17, 18, 19, 20, 24, 25]),
+  '2025-9':  new Set([1, 2, 3, 6, 7, 8, 9, 10, 13, 14, 15, 16, 20, 21, 22, 23, 24, 27, 28, 29, 30]),
+  '2025-8':  new Set([3, 4, 5, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 22, 23, 24, 25, 26, 29, 30]),
+}
+
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December']
+const DAY_HEADERS = ['Su','Mo','Tu','We','Th','Fr','Sa']
+
+function StreakCalendarContent() {
+  const [year, setYear]   = useState(2026)
+  const [month, setMonth] = useState(3)
+
+  const completed      = streakData[`${year}-${month}`] || new Set()
+  const startOffset    = new Date(year, month, 1).getDay()
+  const daysInMonth    = new Date(year, month + 1, 0).getDate()
+  const isToday        = (d) => year === 2026 && month === 3 && d === 22
+  const canGoPrev      = !(year === 2025 && month === 8)
+  const canGoNext      = !(year === 2026 && month === 3)
+
+  const goPrev = () => month === 0  ? (setYear(y => y - 1), setMonth(11)) : setMonth(m => m - 1)
+  const goNext = () => month === 11 ? (setYear(y => y + 1), setMonth(0))  : setMonth(m => m + 1)
+
+  const cells = [...Array(startOffset).fill(null),
+                 ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+
+  return (
+    <div className="w-80 p-5">
+      {/* Month header */}
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <p className="text-xs text-brand-subtext mb-0.5">{year}</p>
+          <h2 className="text-xl font-bold text-brand-text">{MONTH_NAMES[month]}</h2>
+        </div>
+        <div className="flex gap-1 mt-1">
+          <button
+            onClick={goPrev} disabled={!canGoPrev}
+            className="w-8 h-8 rounded-lg flex items-center justify-center bg-brand-bg hover:bg-brand-border disabled:opacity-30 transition-colors"
+          >
+            <ChevronLeft size={14} className="text-brand-text" />
+          </button>
+          <button
+            onClick={goNext} disabled={!canGoNext}
+            className="w-8 h-8 rounded-lg flex items-center justify-center bg-brand-bg hover:bg-brand-border disabled:opacity-30 transition-colors"
+          >
+            <ChevronRight size={14} className="text-brand-text" />
+          </button>
+        </div>
+      </div>
+
+      {/* Day-of-week headers */}
+      <div className="grid grid-cols-7 mb-1">
+        {DAY_HEADERS.map((d, i) => (
+          <div key={d} className={`text-center text-[10px] font-semibold uppercase text-brand-subtext py-1${i === 0 || i === 6 ? ' opacity-40' : ''}`}>
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-y-0.5">
+        {cells.map((day, i) => {
+          const col = i % 7
+          const isWeekend = col === 0 || col === 6
+          return (
+          <div key={i} className={`flex justify-center items-center aspect-square${isWeekend ? ' opacity-40' : ''}`}>
+            {day === null ? null : completed.has(day) && !isWeekend ? (
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={isToday(day)
+                  ? { background: 'rgba(245,166,35,0.2)', border: '1.5px solid #F5A623' }
+                  : { border: '1.5px dashed rgba(245,166,35,0.45)', background: 'rgba(245,166,35,0.06)' }}
+              >
+                <Flame size={14} style={{ color: '#F5A623' }} />
+              </div>
+            ) : (
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                style={isToday(day) ? { background: 'rgba(107,122,141,0.18)', fontWeight: 600 } : {}}
+              >
+                <span className="text-brand-subtext">{day}</span>
+              </div>
+            )}
+          </div>
+        )})}
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-brand-border mt-4 pt-3 flex items-center gap-2">
+        <Flame size={13} style={{ color: '#F5A623' }} />
+        <p className="text-xs text-brand-subtext">
+          You are on a <span className="font-semibold text-brand-text">12-day streak</span> · Best: 18 days
+        </p>
+      </div>
+    </div>
+  )
+}
 
 const stagger = (i) => ({
   initial: { opacity: 0, y: 8 },
@@ -349,6 +456,24 @@ export default function Curriculum({
                   </div>
                 )}
               </div>
+
+              {/* Streak button */}
+              <Popover.Root>
+                <Popover.Trigger asChild>
+                  <button className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text">
+                    <Flame size={14} style={{ color: '#F5A623' }} /> Streak
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    align="center"
+                    sideOffset={8}
+                    className="z-50 bg-white rounded-2xl border border-brand-border shadow-xl outline-none"
+                  >
+                    <StreakCalendarContent />
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
 
               {/* ⋯ options menu */}
               <div className="relative" ref={menuRef}>
