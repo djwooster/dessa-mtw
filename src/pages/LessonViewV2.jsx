@@ -386,17 +386,15 @@ export default function LessonViewV2({ onBookmark, enrolledCourse }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, delay: 0.1 }}
           >
-            <h2 className="text-3xl font-bold text-brand-text mb-6">Facilitation Guide</h2>
-
             <Tabs defaultValue="intro">
               <TabsList className="bg-transparent p-0 w-full border-b border-brand-border rounded-none h-auto gap-0 justify-start mb-0">
-                {['Intro', 'Discussion'].map((tab) => (
+                {[{ label: 'Facilitation Guide', value: 'intro' }, { label: 'Continuing the Conversation', value: 'discussion' }].map((tab) => (
                   <TabsTrigger
-                    key={tab}
-                    value={tab.toLowerCase()}
+                    key={tab.value}
+                    value={tab.value}
                     className="rounded-none border-b-2 border-transparent -mb-px px-4 pb-3 pt-1 text-sm font-medium text-brand-subtext bg-transparent shadow-none hover:text-brand-text data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-dessa-teal data-[state=active]:text-brand-text"
                   >
-                    {tab}
+                    {tab.label}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -513,16 +511,27 @@ export default function LessonViewV2({ onBookmark, enrolledCourse }) {
 
               {/* Discussion */}
               <TabsContent value="discussion" tabIndex={-1} className="mt-7 pb-[600px]">
-                <div className="space-y-7">
-                  {discussionPrompts.map((p, i) => (
-                    <>
-                      <div key={p.context}>
-                        <SectionHeading>{p.context}</SectionHeading>
-                        <p className="text-body text-brand-text leading-relaxed">{p.question}</p>
+                <div className="grid grid-cols-2 gap-6">
+                  {discussionPrompts.map((p, i) => {
+                    const configs = [
+                      { gradient: 'from-[#F5A623] to-[#E8653A]', emoji: '🤝' },
+                      { gradient: 'from-[#2D7D78] to-[#2A7F8F]', emoji: '🌟' },
+                    ]
+                    const cfg = configs[i]
+                    return (
+                      <div key={p.context} className="rounded-2xl border border-brand-border overflow-hidden bg-white shadow-sm">
+                        <div className={`relative bg-gradient-to-br ${cfg.gradient} h-36 flex items-center justify-center overflow-hidden`}>
+                          <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/10" />
+                          <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/10" />
+                          <span className="text-5xl relative z-10">{cfg.emoji}</span>
+                        </div>
+                        <div className="px-6 py-5">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-2">{p.context}</p>
+                          <p className="text-base font-medium text-brand-text leading-relaxed">{p.question}</p>
+                        </div>
                       </div>
-                      {i < discussionPrompts.length - 1 && <Divider />}
-                    </>
-                  ))}
+                    )
+                  })}
                 </div>
               </TabsContent>
             </Tabs>

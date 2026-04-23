@@ -145,6 +145,7 @@ export default function LessonViewV4({ onBookmark }) {
   const course = location.state?.course
 
   const [selectedLesson, setSelectedLesson] = useState({ unitId: 3, lessonIndex: 0 })
+  const [progressUnitId, setProgressUnitId] = useState(3)
   const [activeVideo, setActiveVideo] = useState(0)
   const [bookmarked, setBookmarked] = useState(false)
   const [showToast, setShowToast] = useState(false)
@@ -170,13 +171,29 @@ export default function LessonViewV4({ onBookmark }) {
   const isLesson2 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 1
   const isLesson4 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 3
 
-  const completedUnits = units.filter((u) => u.id < selectedLesson.unitId)
-  const upcomingUnits = units.filter((u) => u.id > selectedLesson.unitId)
+  const progressUnit = units.find((u) => u.id === progressUnitId)
+  const completedUnits = units.filter((u) => u.id < progressUnitId)
+  const upcomingUnits = units.filter((u) => u.id > progressUnitId)
 
   const handleSelectLesson = (unitId, lessonIndex) => {
     setSelectedLesson({ unitId, lessonIndex })
     setActiveVideo(0)
     setBookmarked(false)
+    if (unitId < progressUnitId) {
+      setCompletedOpen(true)
+      setExpandedCompleted(unitId)
+      setCurrentOpen(false)
+      setUpcomingOpen(false)
+    } else if (unitId === progressUnitId) {
+      setCompletedOpen(false)
+      setCurrentOpen(true)
+      setUpcomingOpen(false)
+    } else {
+      setCompletedOpen(false)
+      setCurrentOpen(false)
+      setUpcomingOpen(true)
+      setExpandedUpcoming(unitId)
+    }
   }
 
   const handleBookmark = () => {
@@ -287,21 +304,27 @@ export default function LessonViewV4({ onBookmark }) {
                                 className="overflow-hidden"
                               >
                                 <div>
-                                  {unit.sub.map((item, i) => (
-                                    <div key={item}>
-                                      <button
-                                        onClick={() => handleSelectLesson(unit.id, i)}
-                                        className="w-full flex items-center justify-between py-2 text-left transition-colors hover:brightness-95"
-                                        style={{ paddingLeft: '52px', paddingRight: '8px', background: LESSON_ROW_BG }}
-                                      >
-                                        <span className="text-sm text-brand-subtext">{item}</span>
-                                        <CheckCircle2 size={15} className="flex-shrink-0" style={{ color: 'rgba(74,158,74,0.5)' }} />
-                                      </button>
-                                      {i < unit.sub.length - 1 && (
-                                        <div className="border-t border-brand-border" />
-                                      )}
-                                    </div>
-                                  ))}
+                                  {unit.sub.map((item, i) => {
+                                    const isSelected = selectedLesson.unitId === unit.id && selectedLesson.lessonIndex === i
+                                    return (
+                                      <div key={item}>
+                                        <button
+                                          onClick={() => handleSelectLesson(unit.id, i)}
+                                          className={`w-full flex items-center justify-between py-2 text-left transition-colors ${isSelected ? 'bg-mtw-amberLight' : 'hover:brightness-95'}`}
+                                          style={{ paddingLeft: '52px', paddingRight: '8px', background: isSelected ? undefined : LESSON_ROW_BG }}
+                                        >
+                                          <span className={`text-sm ${isSelected ? 'font-semibold text-brand-text' : 'text-brand-subtext'}`}>{item}</span>
+                                          {isSelected
+                                            ? <Circle size={15} className="flex-shrink-0 text-mtw-amber" />
+                                            : <CheckCircle2 size={15} className="flex-shrink-0" style={{ color: 'rgba(74,158,74,0.5)' }} />
+                                          }
+                                        </button>
+                                        {i < unit.sub.length - 1 && (
+                                          <div className="border-t border-brand-border" />
+                                        )}
+                                      </div>
+                                    )
+                                  })}
                                 </div>
                               </motion.div>
                             )}
@@ -347,16 +370,16 @@ export default function LessonViewV4({ onBookmark }) {
                     <div className="flex items-center gap-2.5 px-4 py-2">
                       <Circle size={13} className="flex-shrink-0 text-mtw-amber" />
                       <span className="flex-1 text-sm leading-snug font-semibold text-brand-text">
-                        {activeUnit?.title}
+                        {progressUnit?.title}
                       </span>
                     </div>
                     <div>
-                      {activeUnit?.sub.map((item, i) => {
-                        const isSelected = selectedLesson.lessonIndex === i
+                      {progressUnit?.sub.map((item, i) => {
+                        const isSelected = selectedLesson.unitId === progressUnitId && selectedLesson.lessonIndex === i
                         return (
                           <div key={item}>
                             <button
-                              onClick={() => handleSelectLesson(selectedLesson.unitId, i)}
+                              onClick={() => handleSelectLesson(progressUnitId, i)}
                               className={`w-full flex items-center justify-between py-2.5 text-left transition-colors ${
                                 isSelected ? 'bg-mtw-amberLight' : 'hover:bg-brand-bg'
                               }`}
@@ -370,7 +393,7 @@ export default function LessonViewV4({ onBookmark }) {
                                 className={`flex-shrink-0 ${isSelected ? 'text-mtw-amber' : 'text-brand-border'}`}
                               />
                             </button>
-                            {i < (activeUnit?.sub.length ?? 0) - 1 && (
+                            {i < (progressUnit?.sub.length ?? 0) - 1 && (
                               <div className="border-t border-brand-border" />
                             )}
                           </div>
@@ -441,21 +464,23 @@ export default function LessonViewV4({ onBookmark }) {
                                 className="overflow-hidden"
                               >
                                 <div>
-                                  {unit.sub.map((item, i) => (
+                                  {unit.sub.map((item, i) => {
+                                    const isSelected = selectedLesson.unitId === unit.id && selectedLesson.lessonIndex === i
+                                    return (
                                     <div key={item}>
                                       <button
                                         onClick={() => handleSelectLesson(unit.id, i)}
-                                        className="w-full flex items-center justify-between py-2 text-left transition-colors hover:brightness-95"
-                                        style={{ paddingLeft: '52px', paddingRight: '8px', background: LESSON_ROW_BG }}
+                                        className={`w-full flex items-center justify-between py-2 text-left transition-colors ${isSelected ? 'bg-mtw-amberLight' : 'hover:brightness-95'}`}
+                                        style={{ paddingLeft: '52px', paddingRight: '8px', background: isSelected ? undefined : LESSON_ROW_BG }}
                                       >
-                                        <span className="text-sm" style={{ color: '#4b5465' }}>{item}</span>
-                                        <Circle size={15} className="flex-shrink-0 text-brand-border" />
+                                        <span className={`text-sm ${isSelected ? 'font-semibold text-brand-text' : ''}`} style={isSelected ? undefined : { color: '#4b5465' }}>{item}</span>
+                                        <Circle size={15} className={`flex-shrink-0 ${isSelected ? 'text-mtw-amber' : 'text-brand-border'}`} />
                                       </button>
                                       {i < unit.sub.length - 1 && (
                                         <div className="border-t border-brand-border" />
                                       )}
                                     </div>
-                                  ))}
+                                  )})}
                                 </div>
                               </motion.div>
                             )}

@@ -120,8 +120,9 @@ export default function LessonViewV3({ onBookmark }) {
   const location = useLocation()
   const course = location.state?.course
 
-  const [expandedUnit, setExpandedUnit] = useState(1)
-  const [selectedLesson, setSelectedLesson] = useState({ unitId: 1, lessonIndex: 0 })
+  const [expandedUnits, setExpandedUnits] = useState(new Set([3]))
+  const [selectedLesson, setSelectedLesson] = useState({ unitId: 3, lessonIndex: 0 })
+  const [progressUnitId, setProgressUnitId] = useState(3)
   const [activeVideo, setActiveVideo] = useState(0)
   const [bookmarked, setBookmarked] = useState(false)
   const [showToast, setShowToast] = useState(false)
@@ -143,7 +144,7 @@ export default function LessonViewV3({ onBookmark }) {
     // re-measure after accordion animation finishes (~180ms)
     const t = setTimeout(measure, 220)
     return () => clearTimeout(t)
-  }, [expandedUnit, selectedLesson])
+  }, [expandedUnits, progressUnitId])
 
   const grade = course?.grade ?? 'Grade 3'
   const competency = course?.competency ?? 'Self-Awareness'
@@ -160,6 +161,10 @@ export default function LessonViewV3({ onBookmark }) {
     setActiveVideo(0)
     setBookmarked(false)
     setLessonsRevealed(false)
+    if (unitId > progressUnitId) {
+      setProgressUnitId(unitId)
+      setExpandedUnits(prev => new Set([...prev, unitId]))
+    }
   }
 
   const handleBookmark = () => {
@@ -204,27 +209,36 @@ export default function LessonViewV3({ onBookmark }) {
 
         <div className="flex-1 overflow-y-auto py-1">
           {units.map((unit) => {
-            const isExpanded = expandedUnit === unit.id
-            const toggle = () => setExpandedUnit(isExpanded ? null : unit.id)
+            const isExpanded = expandedUnits.has(unit.id)
+            const toggle = () => setExpandedUnits(prev => {
+              const next = new Set(prev)
+              if (next.has(unit.id)) next.delete(unit.id)
+              else next.add(unit.id)
+              return next
+            })
+
+            const isCurrentUnit = unit.id === progressUnitId
+            const isCompletedUnit = unit.id < progressUnitId
 
             return (
               <div
                 key={unit.id}
-                ref={unit.id === selectedLesson.unitId + 1 ? nextUnitRef : undefined}
-                className={`border-l-2 ${unit.active ? 'border-mtw-amber' : 'border-transparent'}`}
+                ref={unit.id === progressUnitId + 1 ? nextUnitRef : undefined}
+                className={`border-l-2 ${isCurrentUnit ? 'border-mtw-amber' : 'border-transparent'}`}
               >
                 {/* Unit row */}
                 <button
                   onClick={toggle}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors hover:bg-brand-bg"
                 >
-                  <Circle
-                    size={14}
-                    className={`flex-shrink-0 mt-0.5 ${unit.active ? 'text-mtw-amber' : 'text-brand-border'}`}
-                  />
+                  {isCompletedUnit ? (
+                    <CheckCircle2 size={14} className="flex-shrink-0 mt-0.5 text-dessa-teal" />
+                  ) : (
+                    <Circle size={14} className={`flex-shrink-0 mt-0.5 ${isCurrentUnit ? 'text-mtw-amber' : 'text-brand-border'}`} />
+                  )}
                   <span
-                    className={`flex-1 text-sm leading-snug ${unit.active ? 'font-bold text-brand-text' : ''}`}
-                    style={unit.active ? undefined : { color: '#4b5465' }}
+                    className={`flex-1 text-sm leading-snug ${isCurrentUnit ? 'font-bold text-brand-text' : ''}`}
+                    style={isCurrentUnit || isCompletedUnit ? undefined : { color: '#4b5465' }}
                   >
                     {unit.title}
                   </span>
