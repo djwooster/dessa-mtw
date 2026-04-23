@@ -461,12 +461,12 @@ export default function Curriculum({
               <Popover.Root>
                 <Popover.Trigger asChild>
                   <button className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text">
-                    <Flame size={14} style={{ color: '#F5A623' }} /> Streak
+                    <Flame size={14} style={{ color: '#F5A623' }} /> 12
                   </button>
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Content
-                    align="center"
+                    align="end"
                     sideOffset={8}
                     className="z-50 bg-white rounded-2xl border border-brand-border shadow-xl outline-none"
                   >
@@ -475,37 +475,6 @@ export default function Curriculum({
                 </Popover.Portal>
               </Popover.Root>
 
-              {/* ⋯ options menu */}
-              <div className="relative" ref={menuRef}>
-                <button
-                  className="w-9 h-9 rounded-md flex items-center justify-center text-brand-subtext border border-brand-border bg-white hover:shadow-sm transition-all"
-                  onClick={() => { setMenuOpen((o) => !o); setBookmarksOpen(false) }}
-                  aria-label="Course options"
-                >
-                  <MoreHorizontal size={17} />
-                </button>
-
-                {menuOpen && (
-                  <div className="absolute right-0 top-[calc(100%+8px)] bg-white rounded-xl border border-brand-border shadow-lg py-1 z-10 w-56">
-                    <button
-                      className="w-full text-left px-4 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors flex items-center gap-2"
-                      onClick={() => { onToggleHideUnenrolled(); setMenuOpen(false) }}
-                    >
-                      {hideUnenrolled ? (
-                        <>
-                          <span className="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0" style={{ borderColor: '#F5A623', background: '#F5A623' }} />
-                          Show all courses
-                        </>
-                      ) : (
-                        <>
-                          <span className="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 border-brand-border" />
-                          Hide unenrolled courses
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
 
             </div>
           </div>

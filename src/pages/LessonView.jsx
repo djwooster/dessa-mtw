@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Clock, Bookmark, Maximize2, Minimize2 } from 'lucide-react'
+import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Clock, Bookmark, Maximize2, Minimize2, Flame, Check } from 'lucide-react'
 
 
 const units = [
@@ -375,6 +375,7 @@ export default function LessonView({ onBookmark }) {
   const [activeContent, setActiveContent] = useState('video')
   const [bookmarked, setBookmarked] = useState(false)
   const [showToast, setShowToast] = useState(false)
+  const [showCompletion, setShowCompletion] = useState(false)
 
   const grade = course?.grade ?? 'Grade 3'
   const competency = course?.competency ?? 'Self-Awareness'
@@ -548,7 +549,10 @@ export default function LessonView({ onBookmark }) {
                     <Bookmark size={15} fill={bookmarked ? 'currentColor' : 'none'} />
                   </button>
                   {/* Mark as complete */}
-                  <button className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold border border-brand-border text-brand-subtext hover:border-dessa-teal hover:text-dessa-teal transition-colors bg-white">
+                  <button
+                    onClick={() => setShowCompletion(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold border border-brand-border text-brand-subtext hover:border-dessa-teal hover:text-dessa-teal transition-colors bg-white"
+                  >
                     <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
                       <rect x="0.5" y="0.5" width="14" height="14" rx="3.5" stroke="currentColor"/>
                     </svg>
@@ -910,6 +914,94 @@ export default function LessonView({ onBookmark }) {
           </motion.div>
         </div>
       </main>
+
+      {/* ── Completion overlay ── */}
+      <AnimatePresence>
+        {showCompletion && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-white flex flex-col"
+          >
+            {/* Centered content */}
+            <div className="flex-1 flex flex-col items-center justify-center px-6">
+
+              {/* Flame icon */}
+              <motion.div
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.35, delay: 0.1, type: 'spring', stiffness: 200 }}
+              >
+                <Flame size={96} style={{ color: '#F5A623' }} />
+              </motion.div>
+
+              {/* Streak count */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.25 }}
+                className="text-center mt-4 mb-2"
+              >
+                <p className="text-8xl font-bold leading-none" style={{ color: '#F5A623' }}>13</p>
+                <p className="text-xl font-semibold mt-3" style={{ color: '#F5A623' }}>day streak</p>
+              </motion.div>
+
+              {/* Week card */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.35 }}
+                className="mt-8 border border-brand-border rounded-2xl px-10 py-5 w-full max-w-sm"
+              >
+                {/* Day labels */}
+                <div className="flex justify-between mb-2">
+                  {[['M', true], ['Tu', true], ['W', true], ['Th', false], ['F', false]].map(([label, done]) => (
+                    <span key={label} className="text-xs font-semibold w-10 text-center" style={{ color: done ? '#F5A623' : '#6B7A8D' }}>
+                      {label}
+                    </span>
+                  ))}
+                </div>
+                {/* Circles */}
+                <div className="flex justify-between mb-5">
+                  {[true, true, true, false, false].map((done, i) => (
+                    <div
+                      key={i}
+                      className="w-10 h-10 rounded-full flex items-center justify-center"
+                      style={done ? { background: '#F5A623' } : { background: 'rgba(107,122,141,0.15)' }}
+                    >
+                      {done && <Check size={16} strokeWidth={2.5} color="white" />}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm text-brand-subtext text-center leading-relaxed">
+                  Keep showing up tomorrow to grow your streak.
+                </p>
+              </motion.div>
+
+            </div>
+
+            {/* Bottom bar */}
+            <div className="border-t border-brand-border px-8 py-5 flex items-center justify-between">
+              <button
+                onClick={() => setShowCompletion(false)}
+                className="px-6 py-3 rounded-xl border border-brand-border text-sm font-semibold text-brand-subtext hover:bg-brand-bg transition-colors"
+              >
+                Review Lesson
+              </button>
+              <button
+                onClick={() => navigate('/mtw')}
+                className="px-6 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:brightness-95"
+                style={{ background: '#2A7F8F' }}
+              >
+                Continue
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   )
 }
