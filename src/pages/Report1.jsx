@@ -46,18 +46,9 @@ function getLastActiveBadge(dateStr) {
 }
 
 function getCellStyle(level) {
-  switch (level) {
-    case 'd': return { backgroundColor: '#2A7F8F' }
-    case 'a': return {
-      background: 'repeating-linear-gradient(45deg,#2A7F8F 0px,#2A7F8F 2px,#E8F4F6 2px,#E8F4F6 8px)',
-    }
-    case 'b': return {
-      backgroundImage: 'radial-gradient(circle,#2A7F8F 1.5px,transparent 1.5px)',
-      backgroundSize: '6px 6px',
-      backgroundColor: '#E8F4F6',
-    }
-    default: return { backgroundColor: '#F5F7F9', border: '1px solid #E2E6EA' }
-  }
+  return level && level !== 'n'
+    ? { backgroundColor: '#2A7F8F' }
+    : {}
 }
 
 function formatDuration(secs) {
@@ -71,7 +62,7 @@ function exportCsv(teachers) {
   const rows = [['Last Name', 'First Name', 'School', 'Date', 'Duration (sec)', 'Engagement Level']]
   teachers.forEach(t =>
     t.days.forEach(d =>
-      rows.push([t.lastName, t.firstName, t.school, d.date, d.durationSecs, LEVEL_CONFIG[d.level].short])
+      rows.push([t.lastName, t.firstName, t.school, d.date, d.durationSecs, d.level !== 'n' ? 'Completed' : 'No lesson'])
     )
   )
   const url = URL.createObjectURL(new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' }))
@@ -93,18 +84,15 @@ function LevelSwatch({ level, size = 14 }) {
 
 function LevelLegend() {
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-brand-subtext">
-      {[
-        { level: 'd', label: 'Deep engagement (5+ min)' },
-        { level: 'a', label: 'Active engagement (1–5 min)' },
-        { level: 'b', label: 'Brief visit (< 1 min)' },
-        { level: 'n', label: 'No access' },
-      ].map(({ level, label }) => (
-        <span key={level} className="flex items-center gap-1.5">
-          <LevelSwatch level={level} />
-          {label}
-        </span>
-      ))}
+    <div className="flex items-center gap-x-5 text-xs text-brand-subtext">
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block rounded-sm shrink-0 w-3.5 h-3.5" style={{ backgroundColor: '#2A7F8F' }} />
+        Lesson completed
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block rounded-sm shrink-0 w-3.5 h-3.5 bg-brand-bg border border-brand-border" />
+        No lesson
+      </span>
     </div>
   )
 }
@@ -189,13 +177,12 @@ function MonthCalendar({ year, month, dayMap }) {
               key={day}
               className={`w-7 h-7 flex items-center justify-center text-[11px] rounded mx-auto ${
                 isWknd ? 'text-brand-subtext/25' :
-                level === 'd' ? 'text-white font-semibold' :
-                level ? 'text-dessa-teal font-semibold' :
+                (level && level !== 'n') ? 'text-white font-semibold' :
                 'text-brand-subtext/40'
               }`}
-              style={level ? getCellStyle(level) : {}}
-              aria-label={`${dateStr}: ${level ? LEVEL_CONFIG[level].label : isWknd ? 'Weekend' : 'No lesson visit'}`}
-              title={level ? `${dateStr} · ${LEVEL_CONFIG[level].label}` : dateStr}
+              style={isWknd ? {} : getCellStyle(level)}
+              aria-label={`${dateStr}: ${isWknd ? 'Weekend' : (level && level !== 'n') ? 'Lesson completed' : 'No lesson'}`}
+              title={`${dateStr}${(!isWknd && level && level !== 'n') ? ' · Lesson completed' : ''}`}
             >
               {day}
             </div>
@@ -437,14 +424,17 @@ function ConceptB({ teachers }) {
                   {weekGroups.map(({ week, days }) => (
                     <div key={week} className="flex gap-1" style={{ marginRight: week < 4 ? 16 : 0 }}>
                       {days.map(day => {
-                        const d     = dayLookup[day.date]
-                        const level = d?.level ?? 'n'
-                        const tip   = `${t.lastName}, ${t.firstName} · ${day.date} · ${LEVEL_CONFIG[level].label}${d?.durationSecs ? ` · ${formatDuration(d.durationSecs)}` : ''}`
+                        const d         = dayLookup[day.date]
+                        const level     = d?.level ?? 'n'
+                        const dow       = new Date(day.date).getDay()
+                        const isWknd    = dow === 0 || dow === 6
+                        const completed = !isWknd && level !== 'n'
+                        const tip       = `${t.lastName}, ${t.firstName} · ${day.date} · ${isWknd ? 'Weekend' : completed ? 'Lesson completed' : 'No lesson'}`
                         return (
                           <div
                             key={day.date}
                             className="w-7 h-7 rounded-sm cursor-default"
-                            style={getCellStyle(level)}
+                            style={isWknd ? {} : getCellStyle(level)}
                             aria-label={tip}
                             onMouseEnter={e => setTooltip({ text: tip, x: e.clientX, y: e.clientY })}
                             onMouseLeave={() => setTooltip(null)}
@@ -543,7 +533,7 @@ function StatCards({ teachers }) {
   const stats = [
     { value: `${activeThisWeek.length}`, sub: `of ${teachers.length} teachers`, label: 'Active this week',       pct: Math.round(activeThisWeek.length / teachers.length * 100) },
     { value: `${avgPct}%`,               sub: 'avg over 4 weeks',               label: '4-week engagement rate', pct: avgPct },
-    { value: avgDaysPerWk,               sub: 'avg per teacher',                 label: 'Lesson days per week',   pct: Math.min(Math.round(parseFloat(avgDaysPerWk) / 5 * 100), 100) },
+    { value: avgDaysPerWk,               sub: 'avg per teacher',                 label: 'Lessons completed per week',   pct: Math.min(Math.round(parseFloat(avgDaysPerWk) / 5 * 100), 100) },
   ]
   return (
     <div className="grid grid-cols-3 gap-4 mb-6">

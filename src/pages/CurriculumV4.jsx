@@ -114,17 +114,7 @@ function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onContinue
             )}
           </div>
 
-          <CardTitle>{course.grade}</CardTitle>
-          <p className="text-sm text-brand-subtext mt-0.5">{course.title}</p>
-
-          <div className="mt-2">
-            <span
-              className="inline-block text-xs font-medium px-2.5 py-0.5 rounded-full"
-              style={{ background: `${course.color}12`, color: course.color }}
-            >
-              {course.competency}
-            </span>
-          </div>
+          <CardTitle className="text-2xl font-bold">{course.grade}</CardTitle>
         </CardHeader>
 
         <CardContent className="flex-1 flex flex-col justify-end pt-4">

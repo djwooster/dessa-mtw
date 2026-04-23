@@ -135,6 +135,7 @@ const filters = [
 const courses = [
   {
     id: 1,
+    image: '/courseImages/Lady_bug_toy_202604231144.jpeg',
     grade: 'Grade 3',
     level: 'Early Elementary',
     title: 'Understanding Our Emotions',
@@ -145,51 +146,51 @@ const courses = [
   },
   {
     id: 2,
+    image: '/courseImages/Butterfly_toy_illustration_202604231146.jpeg',
     grade: 'Grade 4',
     level: 'Late Elementary',
     title: 'Self-Management in Action',
     competency: 'Self-Management',
-    emoji: '🦋',
     color: '#F5A623',
     lessons: 36,
   },
   {
     id: 3,
+    image: '/courseImages/Bumble_bee_toy_202604231145.jpeg',
     grade: 'Grade 5',
     level: 'Late Elementary',
     title: 'Building Responsible Decisions',
     competency: 'Responsible Decision-Making',
-    emoji: '🌟',
     color: '#E8653A',
     lessons: 36,
   },
   {
     id: 4,
+    image: '/courseImages/Dinosaur_toy_illustration_202604231145.jpeg',
     grade: 'Grade 6',
     level: 'Middle School',
     title: 'Social Awareness & Empathy',
     competency: 'Social Awareness',
-    emoji: '🤝',
     color: '#7B5EA7',
     lessons: 36,
   },
   {
     id: 5,
+    image: '/courseImages/Lion_toy_illustration_202604231144.jpeg',
     grade: 'Grade 7',
     level: 'Middle School',
     title: 'Relationship Skills',
     competency: 'Relationship Skills',
-    emoji: '💬',
     color: '#5B9E4D',
     lessons: 36,
   },
   {
     id: 6,
+    image: '/courseImages/Hummingbird_toy_character_202604231145.jpeg',
     grade: 'Grade 8',
     level: 'Middle School',
     title: 'Goal-Directed Behavior',
     competency: 'Goal-Directed Behavior',
-    emoji: '🎯',
     color: '#2A7F8F',
     lessons: 36,
   },
@@ -204,16 +205,15 @@ function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onContinue
   return (
     <>
     <motion.div {...stagger(index)} className="h-full">
-      <Card className="h-full flex flex-col">
+      <Card className="h-full flex flex-col overflow-hidden">
+        {/* Course image */}
+        <div className="w-full flex-shrink-0">
+          <img src={course.image} alt={course.grade} className="w-full h-auto" />
+        </div>
+
         <CardHeader>
-          {/* Emoji + Active badge row */}
-          <div className="flex items-center justify-between mb-3">
-            <div
-              className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-              style={{ background: `${course.color}14` }}
-            >
-              {course.emoji}
-            </div>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-2xl font-bold">{course.grade}</CardTitle>
             {isEnrolled && (
               <span
                 className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
@@ -222,19 +222,6 @@ function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onContinue
                 Enrolled
               </span>
             )}
-          </div>
-
-          <CardTitle>{course.grade}</CardTitle>
-          <p className="text-sm text-brand-subtext mt-0.5">{course.title}</p>
-
-          {/* Competency badge */}
-          <div className="mt-2">
-            <span
-              className="inline-block text-xs font-medium px-2.5 py-0.5 rounded-full"
-              style={{ background: `${course.color}12`, color: course.color }}
-            >
-              {course.competency}
-            </span>
           </div>
         </CardHeader>
 
