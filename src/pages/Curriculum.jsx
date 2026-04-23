@@ -109,10 +109,11 @@ function StreakCalendarContent() {
 
       {/* Footer */}
       <div className="border-t border-brand-border mt-4 pt-3 flex items-center gap-2">
-        <Flame size={13} style={{ color: '#F5A623' }} />
-        <p className="text-xs text-brand-subtext">
-          You are on a <span className="font-semibold text-brand-text">12-day streak</span> · Best: 18 days
-        </p>
+        <Flame size={16} style={{ color: '#F5A623' }} />
+        <div>
+          <p className="font-semibold text-brand-text" style={{ fontSize: 15 }}>4-week streak</p>
+          <p className="text-xs text-brand-subtext mt-0.5">3×/week goal · Best: 6 weeks</p>
+        </div>
       </div>
     </div>
   )
@@ -448,7 +449,7 @@ export default function Curriculum({
               <Popover.Root>
                 <Popover.Trigger asChild>
                   <button className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text">
-                    <Flame size={14} style={{ color: '#F5A623' }} /> 12
+                    <Flame size={14} style={{ color: '#F5A623' }} /> 4
                   </button>
                 </Popover.Trigger>
                 <Popover.Portal>
