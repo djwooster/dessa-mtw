@@ -377,7 +377,7 @@ export default function Report2() {
     const getValue = row => ({
       name:        row.school.name,
       teachers:    row.totalTeachers,
-      reached:     row.meetingGoal,
+      reached:     row.pct,
       engagement:  row.pct,
     })[sortBy] ?? row.pct
     return [...selectedWeekSchools].sort((a, b) => {
