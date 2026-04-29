@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { format, addDays, parseISO } from 'date-fns'
-import { Settings, MoreHorizontal, Download, Printer, X, ChevronLeft, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Settings, MoreHorizontal, Download, Printer, X, ChevronLeft, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Search, SlidersHorizontal } from 'lucide-react'
 import {
   schools, schoolWeeks, getWeekData,
   getDistrictTrend, getSchoolTrend, getDistrictWeekData,
   MOST_RECENT_WEEK,
 } from '../lib/report2Data'
 import { DatePicker } from '../components/ui/date-picker'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, Cell, ResponsiveContainer,
+} from 'recharts'
+import { ChartContainer, ChartTooltipContent } from '../components/ui/chart'
 
 const SITE_LEADER_SCHOOL = schools[0]
 
@@ -148,72 +152,52 @@ function exportCSV(trendData, activeSchools, goal) {
 // ─── Trend Chart ──────────────────────────────────────────────────────────────
 
 function TrendChart({ data, districtTarget, selectedWeek }) {
-  const W = 800, H = 220
-  const m = { t: 16, r: 28, b: 38, l: 44 }
-  const pw = W - m.l - m.r
-  const ph = H - m.t - m.b
-  const minY = 40, maxY = 100
-
-  const xs = i  => m.l + (i / Math.max(data.length - 1, 1)) * pw
-  const ys = pct => m.t + (1 - (pct - minY) / (maxY - minY)) * ph
-
-  const pts      = data.map((d, i) => [xs(i), ys(d.pct)])
-  const linePath = pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x},${y}`).join(' ')
-  const areaPath = pts.length > 1
-    ? [...pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x},${y}`),
-       `L${pts[pts.length - 1][0]},${m.t + ph}`, `L${pts[0][0]},${m.t + ph}`, 'Z'].join(' ')
-    : ''
-
-  const goalY = ys(districtTarget)
-  const yLabels = [40, 60, 80, 100]
-
-  // First week of each month gets an x-axis label
-  const xLabels = []
-  let lastMonth = null
-  data.forEach((d, i) => {
-    const mo = d.weekStart.slice(5, 7)
-    if (mo !== lastMonth) { lastMonth = mo; xLabels.push({ text: format(parseISO(d.weekStart), 'MMM d'), x: xs(i) }) }
-  })
-
-  const selIdx = data.findIndex(d => d.weekStart === selectedWeek)
-  const selX   = selIdx >= 0 ? xs(selIdx) : null
+  const chartData = data.map(d => ({
+    label: format(parseISO(d.weekStart), 'MMM d'),
+    pct: d.pct,
+    weekStart: d.weekStart,
+  }))
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
-      {/* Grid lines */}
-      {yLabels.map(y => (
-        <line key={y} x1={m.l} y1={ys(y)} x2={W - m.r} y2={ys(y)} stroke="#E2E6EA" strokeWidth="1" />
-      ))}
-
-      {/* Selected week indicator */}
-      {selX !== null && (
-        <line x1={selX} y1={m.t} x2={selX} y2={m.t + ph} stroke="#2A7F8F" strokeWidth="1.5" strokeDasharray="3,3" opacity="0.45" />
-      )}
-
-      {/* Area fill */}
-      {areaPath && <path d={areaPath} fill="rgba(42,127,143,0.07)" />}
-
-      {/* District target dashed line */}
-      <line x1={m.l} y1={goalY} x2={W - m.r} y2={goalY} stroke="#B0B9C6" strokeWidth="1.5" strokeDasharray="5,4" />
-
-      {/* Engagement line */}
-      {pts.length > 1 && <path d={linePath} fill="none" stroke="#2A7F8F" strokeWidth="1.25" strokeLinejoin="round" />}
-
-      {/* Data dots */}
-      {pts.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r="3" fill="white" stroke="#2A7F8F" strokeWidth="1.25" />
-      ))}
-
-      {/* Y axis labels */}
-      {yLabels.map(y => (
-        <text key={y} x={m.l - 6} y={ys(y) + 4} textAnchor="end" fontSize="10" fill="#6B7A8D">{y}%</text>
-      ))}
-
-      {/* X axis labels */}
-      {xLabels.map(({ text, x }) => (
-        <text key={text} x={x} y={H - 4} textAnchor="middle" fontSize="10" fill="#6B7A8D">{text}</text>
-      ))}
-    </svg>
+    <ChartContainer config={{ pct: { color: '#2A7F8F' } }} className="h-56">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }} barCategoryGap="30%">
+          <CartesianGrid vertical={false} stroke="#E2E6EA" strokeDasharray="0" />
+          <XAxis
+            dataKey="label"
+            tick={{ fontSize: 11, fill: '#6B7A8D' }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            domain={[0, 100]}
+            tickFormatter={v => `${v}%`}
+            tick={{ fontSize: 11, fill: '#6B7A8D' }}
+            axisLine={false}
+            tickLine={false}
+            width={40}
+          />
+          <Tooltip
+            cursor={{ fill: 'rgba(42,127,143,0.06)' }}
+            content={<ChartTooltipContent formatter={v => `${v}%`} />}
+          />
+          <ReferenceLine
+            y={districtTarget}
+            stroke="#B0B9C6"
+            strokeDasharray="5 4"
+            strokeWidth={1.5}
+          />
+          <Bar dataKey="pct" name="Engagement" radius={[4, 4, 0, 0]}>
+            {chartData.map(entry => (
+              <Cell
+                key={entry.weekStart}
+                fill={entry.weekStart === selectedWeek ? '#1B2B4B' : '#2A7F8F'}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartContainer>
   )
 }
 
@@ -243,6 +227,14 @@ function RoleToggle({ role, onChange }) {
       </div>
     </div>
   )
+}
+
+// ─── Pct color helper ─────────────────────────────────────────────────────────
+
+function pctColor(pct) {
+  if (pct >= 80) return { text: '#166534', bg: '#DCFCE7' }   // dark green
+  if (pct >= 50) return { text: '#B45309', bg: '#FEF3C7' }   // accessible amber
+  return            { text: '#B91C1C', bg: '#FEE2E2' }        // red
 }
 
 // ─── Settings Modal ───────────────────────────────────────────────────────────
@@ -336,10 +328,13 @@ export default function Report2() {
   const [sortDir, setSortDir]               = useState('desc')
   const [dateFrom, setDateFrom]             = useState('')
   const [dateTo, setDateTo]                 = useState('')
+  const [searchQ, setSearchQ]               = useState('')
+  const [showFilters, setShowFilters]       = useState(false)
 
   const TABLE_PAGE_SIZE = 10
   const [menuOpen, setMenuOpen]             = useState(false)
-  const menuRef = useRef(null)
+  const menuRef  = useRef(null)
+  const filterRef = useRef(null)
 
   const activeSchools = role === 'site_leader' ? [SITE_LEADER_SCHOOL] : schools
 
@@ -349,6 +344,13 @@ export default function Report2() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [menuOpen])
+
+  useEffect(() => {
+    if (!showFilters) return
+    const handler = e => { if (filterRef.current && !filterRef.current.contains(e.target)) setShowFilters(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showFilters])
 
   // Trend data (oldest → newest for left-to-right chart)
   const rawTrend = useMemo(() => (
@@ -366,7 +368,7 @@ export default function Report2() {
     activeSchools.map(school => ({ school, ...getWeekData(school.id, selectedWeek, goal) }))
   ), [selectedWeek, goal, role])
 
-  useEffect(() => setTablePage(1), [selectedWeek, role, sortBy, sortDir])
+  useEffect(() => setTablePage(1), [selectedWeek, role, sortBy, sortDir, searchQ])
 
   function handleSort(col) {
     if (sortBy === col) setSortDir(d => d === 'desc' ? 'asc' : 'desc')
@@ -388,8 +390,14 @@ export default function Report2() {
     })
   }, [selectedWeekSchools, sortBy, sortDir])
 
-  const totalTablePages = Math.ceil(sortedSchools.length / TABLE_PAGE_SIZE)
-  const visibleSchools  = sortedSchools.slice(
+  const filteredSchools = useMemo(() => {
+    if (!searchQ) return sortedSchools
+    const q = searchQ.toLowerCase()
+    return sortedSchools.filter(r => r.school.name.toLowerCase().includes(q))
+  }, [sortedSchools, searchQ])
+
+  const totalTablePages = Math.ceil(filteredSchools.length / TABLE_PAGE_SIZE)
+  const visibleSchools  = filteredSchools.slice(
     (tablePage - 1) * TABLE_PAGE_SIZE,
     tablePage * TABLE_PAGE_SIZE
   )
@@ -406,13 +414,13 @@ export default function Report2() {
 
   const statCards = role === 'program_admin'
     ? [
-        { label: 'Schools Engaged',      value: `${schoolsEngaged} of ${schools.length}`, sub: weekLabel(selectedWeek)               },
-        { label: 'Teachers Meeting Goal', value: `${weekStats.pct}%`,                      sub: 'district-wide'                       },
+        { label: 'Schools engaged',      value: `${schoolsEngaged} of ${schools.length}`, sub: weekLabel(selectedWeek)               },
+        { label: 'Teachers meeting goal', value: `${weekStats.pct}%`,                      sub: 'district-wide'                       },
         { label: 'Goal',                  value: `${goal}×`,                               sub: 'per week · change in settings'        },
       ]
     : [
-        { label: 'Teachers on Track', value: `${selectedWeekSchools[0]?.meetingGoal} of ${selectedWeekSchools[0]?.totalTeachers}`, sub: weekLabel(selectedWeek) },
-        { label: 'Engagement Rate',   value: `${selectedWeekSchools[0]?.pct}%`,    sub: SITE_LEADER_SCHOOL.name                  },
+        { label: 'Teachers on track', value: `${selectedWeekSchools[0]?.meetingGoal} of ${selectedWeekSchools[0]?.totalTeachers}`, sub: weekLabel(selectedWeek) },
+        { label: 'Engagement rate',   value: `${selectedWeekSchools[0]?.pct}%`,    sub: SITE_LEADER_SCHOOL.name                  },
         { label: 'Goal',              value: `${goal}×`,                           sub: 'per week · change in settings'           },
       ]
 
@@ -480,7 +488,7 @@ export default function Report2() {
             transition={{ duration: 0.25, delay: 0.08 + i * 0.05 }}
             className="bg-white rounded-xl border border-brand-border shadow-sm px-5 py-4"
           >
-            <p className="text-xs font-semibold text-brand-subtext uppercase tracking-wide mb-2">{label}</p>
+            <p className="text-xs font-semibold text-brand-subtext mb-2">{label}</p>
             <p className="text-2xl font-bold text-brand-text">{value}</p>
             <p className="text-xs text-brand-subtext mt-0.5">{sub}</p>
           </motion.div>
@@ -495,32 +503,16 @@ export default function Report2() {
         <div className="px-5 pt-5 pb-2">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-semibold text-brand-text">
-                {role === 'program_admin' ? 'District' : SITE_LEADER_SCHOOL.name} engagement trend
+              <p className="text-2xl font-semibold text-brand-text">
+                Weekly curriculum engagement
               </p>
-              <p className="text-xs text-brand-subtext mt-0.5">
-                % of teachers meeting {goal}-day goal, week over week
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="From" className="w-36" />
-              <DatePicker value={dateTo}   onChange={setDateTo}   placeholder="To"   className="w-36" />
-              {(dateFrom || dateTo) && (
-                <button
-                  className="text-xs font-semibold text-brand-subtext hover:text-brand-text px-2 py-1.5 rounded-md hover:bg-brand-bg transition-colors"
-                  onClick={() => { setDateFrom(''); setDateTo('') }}
-                >Clear</button>
-              )}
             </div>
           </div>
 
           {/* Legend */}
           <div className="flex items-center gap-5 mt-3">
             <div className="flex items-center gap-1.5">
-              <svg width="22" height="10" viewBox="0 0 22 10">
-                <line x1="0" y1="5" x2="22" y2="5" stroke="#2A7F8F" strokeWidth="1.25" />
-                <circle cx="11" cy="5" r="2.5" fill="white" stroke="#2A7F8F" strokeWidth="1.25" />
-              </svg>
+              <span className="inline-block w-3 h-3 rounded-sm bg-dessa-teal" />
               <span className="text-xs text-brand-subtext">Engagement %</span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -528,6 +520,10 @@ export default function Report2() {
                 <line x1="0" y1="5" x2="22" y2="5" stroke="#B0B9C6" strokeWidth="1.5" strokeDasharray="4,3" />
               </svg>
               <span className="text-xs text-brand-subtext">{districtTarget}% target</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-sm bg-dessa-navy" />
+              <span className="text-xs text-brand-subtext">Selected week</span>
             </div>
           </div>
         </div>
@@ -537,15 +533,101 @@ export default function Report2() {
         </div>
       </motion.div>
 
-      {/* Week pills + school table */}
+      {/* School table */}
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.28 }}
         className="bg-white rounded-xl border border-brand-border shadow-sm overflow-hidden"
       >
-        {/* Week selector */}
-        <div className="px-5 py-4 border-b border-brand-border flex items-center justify-center">
-          <WeekSelector weeks={schoolWeeks} selected={selectedWeek} onChange={setSelectedWeek} />
-        </div>
+        {/* Table toolbar */}
+        {(() => {
+          const activeFilters = (dateFrom || dateTo) ? 1 : 0
+          const selIdx = schoolWeeks.findIndex(w => w === selectedWeek)
+          return (
+            <div className="flex items-center justify-end gap-2 px-4 py-3 border-b border-brand-border bg-brand-bg/40">
+              {/* Week nav */}
+              <div className="flex items-center gap-0.5 border border-brand-border rounded-lg bg-white overflow-hidden mr-1">
+                <button
+                  className="px-2 py-1.5 text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors disabled:opacity-30"
+                  disabled={selIdx <= 0}
+                  onClick={() => setSelectedWeek(schoolWeeks[selIdx - 1])}
+                ><ChevronLeft size={14} /></button>
+                <select
+                  value={selectedWeek}
+                  onChange={e => setSelectedWeek(e.target.value)}
+                  className="text-xs font-medium text-brand-text bg-white px-1 py-1.5 focus:outline-none cursor-pointer"
+                >
+                  {schoolWeeks.map(w => (
+                    <option key={w} value={w}>{weekLabel(w)}</option>
+                  ))}
+                </select>
+                <button
+                  className="px-2 py-1.5 text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors disabled:opacity-30"
+                  disabled={selIdx >= schoolWeeks.length - 1}
+                  onClick={() => setSelectedWeek(schoolWeeks[selIdx + 1])}
+                ><ChevronRight size={14} /></button>
+              </div>
+
+              {/* Search */}
+              <div className="relative">
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search schools…"
+                  value={searchQ}
+                  onChange={e => setSearchQ(e.target.value)}
+                  className="pl-8 pr-7 py-1.5 text-sm border border-brand-border rounded-lg bg-white w-44 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                />
+                {searchQ && (
+                  <button onClick={() => setSearchQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Filters */}
+              <div className="relative" ref={filterRef}>
+                <button
+                  onClick={() => setShowFilters(v => !v)}
+                  className={`flex items-center gap-1.5 text-xs font-medium border rounded-lg px-3 py-1.5 transition-colors ${
+                    activeFilters > 0
+                      ? 'bg-dessa-teal text-white border-dessa-teal'
+                      : 'bg-white text-brand-subtext border-brand-border hover:text-brand-text hover:bg-brand-bg'
+                  }`}
+                >
+                  <SlidersHorizontal size={13} />
+                  Filters
+                  {activeFilters > 0 && (
+                    <span className="ml-0.5 bg-white/25 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                      {activeFilters}
+                    </span>
+                  )}
+                </button>
+
+                {showFilters && (
+                  <div className="absolute right-0 top-full mt-1.5 w-80 bg-white border border-brand-border rounded-xl shadow-lg z-30 p-4">
+                    <div className="text-[10px] font-bold tracking-widest uppercase text-brand-subtext mb-3">Chart date range</div>
+                    <div className="flex items-end gap-2 mb-4">
+                      <div className="flex-1">
+                        <label className="text-xs text-brand-subtext block mb-1">From</label>
+                        <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Start date" />
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-xs text-brand-subtext block mb-1">To</label>
+                        <DatePicker value={dateTo} onChange={setDateTo} placeholder="End date" />
+                      </div>
+                    </div>
+                    {activeFilters > 0 && (
+                      <button
+                        onClick={() => { setDateFrom(''); setDateTo(''); setShowFilters(false) }}
+                        className="w-full text-xs font-semibold text-brand-subtext hover:text-brand-text py-1.5 rounded-lg border border-brand-border hover:bg-brand-bg transition-colors"
+                      >Clear all filters</button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* School table */}
         <table className="w-full table-fixed">
@@ -564,35 +646,38 @@ export default function Report2() {
             </tr>
           </thead>
           <tbody>
-            {visibleSchools.map(({ school, totalTeachers, meetingGoal, pct }) => (
-              <tr key={school.id} className="border-b border-brand-border last:border-b-0">
-                <td className="py-4 pl-5">
-                  <span className="text-sm font-semibold text-brand-text">{school.name}</span>
-                </td>
-                <td className="py-4">
-                  <span className="text-sm text-brand-text">{totalTeachers}</span>
-                </td>
-                <td className="py-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-brand-text">{meetingGoal}</span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-bg text-brand-subtext">
-                      {pct}%
-                    </span>
-                  </div>
-                </td>
-                <td className="py-4 pr-5">
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 bg-brand-border rounded-full overflow-hidden flex-1 min-w-0">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${pct}%`, background: '#1B2B4B' }}
-                      />
+            {visibleSchools.map(({ school, totalTeachers, meetingGoal, pct }) => {
+              const { text: pctText, bg: pctBg } = pctColor(pct)
+              return (
+                <tr key={school.id} className="border-b border-brand-border last:border-b-0">
+                  <td className="py-4 pl-5">
+                    <span className="text-sm font-semibold text-brand-text">{school.name}</span>
+                  </td>
+                  <td className="py-4">
+                    <span className="text-sm text-brand-text">{totalTeachers}</span>
+                  </td>
+                  <td className="py-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-brand-text">{meetingGoal}</span>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ color: pctText, background: pctBg }}>
+                        {pct}%
+                      </span>
                     </div>
-                    <span className="text-sm font-semibold text-brand-text w-10 text-right">{pct}%</span>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="py-4 pr-5">
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 bg-brand-border rounded-full overflow-hidden flex-1 min-w-0">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${pct}%`, background: pctText }}
+                        />
+                      </div>
+                      <span className="text-sm font-semibold w-10 text-right" style={{ color: pctText }}>{pct}%</span>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
 
@@ -600,7 +685,7 @@ export default function Report2() {
         {totalTablePages > 1 && (
           <div className="px-5 py-4 border-t border-brand-border flex items-center justify-between">
             <p className="text-sm text-brand-subtext">
-              Showing {(tablePage - 1) * TABLE_PAGE_SIZE + 1}–{Math.min(tablePage * TABLE_PAGE_SIZE, sortedSchools.length)} of {sortedSchools.length} schools
+              Showing {(tablePage - 1) * TABLE_PAGE_SIZE + 1}–{Math.min(tablePage * TABLE_PAGE_SIZE, filteredSchools.length)} of {filteredSchools.length} schools
             </p>
             <div className="flex items-center gap-1">
               <button
