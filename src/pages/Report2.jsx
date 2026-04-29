@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { format, addDays, parseISO } from 'date-fns'
-import { Settings, MoreHorizontal, Download, Printer, X, ChevronLeft, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Search, SlidersHorizontal } from 'lucide-react'
+import { Settings, MoreHorizontal, Download, Printer, X, ChevronLeft, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Search, CalendarDays, Plus, Trash2, Lock, Pencil } from 'lucide-react'
 import {
   schools, schoolWeeks, getWeekData,
   getDistrictTrend, getSchoolTrend, getDistrictWeekData,
   MOST_RECENT_WEEK,
 } from '../lib/report2Data'
 import { DatePicker } from '../components/ui/date-picker'
+import { DayPicker } from 'react-day-picker'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, Cell, ResponsiveContainer,
 } from 'recharts'
@@ -237,11 +238,167 @@ function pctColor(pct) {
   return            { text: '#B91C1C', bg: '#FEE2E2' }        // red
 }
 
+// ─── Shared calendar helpers ──────────────────────────────────────────────────
+
+const CAL_NAV_COMPONENTS = {
+  Chevron: ({ orientation }) =>
+    orientation === 'left' ? <ChevronLeft size={18} /> : <ChevronRight size={18} />,
+}
+
+function calClassNames(months = 1) {
+  return {
+    months:          months === 2 ? 'flex gap-8 justify-between' : 'flex',
+    month:           'flex flex-col flex-1',
+    month_caption:   'flex justify-center items-center relative h-9 mb-4',
+    caption_label:   'text-sm font-bold text-brand-text',
+    nav:             'flex items-center absolute inset-x-0 top-6 justify-between px-6 pointer-events-none z-10',
+    button_previous: 'pointer-events-auto relative z-10 p-1.5 rounded-lg text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors',
+    button_next:     'pointer-events-auto relative z-10 p-1.5 rounded-lg text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors',
+    month_grid:      'w-full border-collapse',
+    weekdays:        'flex mb-1',
+    weekday:         'flex-1 text-center text-xs font-medium text-brand-subtext pb-1',
+    week:            'flex',
+    day:             'flex-1 relative p-0 text-center',
+    day_button:      'w-9 h-9 mx-auto flex items-center justify-center text-sm rounded-full transition-colors text-brand-text hover:bg-brand-bg',
+    today:           '[&>button]:font-bold [&>button]:text-blue-500',
+    outside:         '[&>button]:text-brand-subtext/30',
+    disabled:        '[&>button]:text-brand-subtext/25 [&>button]:cursor-default [&>button]:hover:bg-transparent',
+    hidden:          'invisible',
+    selected:        '',
+    range_start:     'bg-gradient-to-r from-transparent to-[#F0F2F5] [&>button]:!bg-brand-text [&>button]:!text-white [&>button]:rounded-full',
+    range_end:       'bg-gradient-to-l from-transparent to-[#F0F2F5] [&>button]:!bg-brand-text [&>button]:!text-white [&>button]:rounded-full',
+    range_middle:    'bg-[#F0F2F5] [&>button]:rounded-none [&>button]:hover:bg-[#E2E6EA]',
+  }
+}
+
+function InlineRangeCal({ from, to, onFromChange, onToChange }) {
+  return (
+    <DayPicker
+      mode="range"
+      numberOfMonths={2}
+      defaultMonth={from ? parseISO(from) : new Date()}
+      selected={{ from: from ? parseISO(from) : undefined, to: to ? parseISO(to) : undefined }}
+      onSelect={r => {
+        onFromChange(r?.from ? format(r.from, 'yyyy-MM-dd') : '')
+        onToChange(r?.to   ? format(r.to,   'yyyy-MM-dd') : '')
+      }}
+      showOutsideDays={false}
+      captionLayout="label"
+      classNames={calClassNames(2)}
+      components={CAL_NAV_COMPONENTS}
+    />
+  )
+}
+
+function InlineSingleCal({ value, onChange, locked }) {
+  return locked
+    ? <div className="px-3 py-2 text-sm border border-brand-border rounded-lg bg-brand-bg text-brand-subtext select-none">
+        {value ? format(parseISO(value), 'MMM d') : '—'}
+      </div>
+    : (
+      <DayPicker
+        mode="single"
+        defaultMonth={value ? parseISO(value) : new Date()}
+        selected={value ? parseISO(value) : undefined}
+        onSelect={d => onChange(d ? format(d, 'yyyy-MM-dd') : '')}
+        showOutsideDays={false}
+        captionLayout="label"
+        classNames={{
+          ...calClassNames(1),
+          selected: '[&>button]:!bg-brand-text [&>button]:!text-white [&>button]:rounded-full',
+        }}
+        components={CAL_NAV_COMPONENTS}
+      />
+    )
+}
+
 // ─── Settings Modal ───────────────────────────────────────────────────────────
 
+const DEFAULT_BLACKOUT_PERIODS = [
+  { id: 1, name: 'Fall Break',    from: '2025-10-13', to: '2025-10-17' },
+  { id: 2, name: 'Thanksgiving',  from: '2025-11-24', to: '2025-11-28' },
+  { id: 3, name: 'Winter Break',  from: '2025-12-22', to: '2026-01-02' },
+  { id: 4, name: 'MLK Day',       from: '2026-01-19', to: '2026-01-19' },
+  { id: 5, name: 'Spring Break',  from: '2026-03-16', to: '2026-03-20' },
+  { id: 6, name: 'Memorial Day',  from: '2026-05-25', to: '2026-05-25' },
+]
+
+const SETTINGS_TABS = [
+  {
+    id: 'engagement',
+    label: 'Engagement',
+    title: 'Engagement settings',
+    description: 'Configure how teacher engagement is measured and reported across your district.',
+  },
+  {
+    id: 'school_year',
+    label: 'School year',
+    title: 'School year',
+    description: "Define your district's school year boundaries and quarterly calendar.",
+  },
+  {
+    id: 'blackout',
+    label: 'Blackout periods',
+    title: 'Blackout periods',
+    description: "Mark non-instructional days so they're excluded from engagement calculations.",
+  },
+]
+
 function SettingsModal({ goal, districtTarget, onSave, onClose }) {
+  const [activeTab,  setActiveTab]  = useState('engagement')
   const [tempGoal,   setTempGoal]   = useState(goal)
   const [tempTarget, setTempTarget] = useState(districtTarget)
+
+  const [yearStart, setYearStart] = useState('2025-08-25')
+  const [yearEnd,   setYearEnd]   = useState('2026-06-05')
+  const [q2Start,   setQ2Start]   = useState('2025-11-03')
+  const [q3Start,   setQ3Start]   = useState('2026-01-12')
+  const [q4Start,   setQ4Start]   = useState('2026-03-23')
+
+  const [periods,   setPeriods]   = useState(DEFAULT_BLACKOUT_PERIODS)
+  const [newName,   setNewName]   = useState('')
+  const [newFrom,   setNewFrom]   = useState('')
+  const [newTo,     setNewTo]     = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editName,  setEditName]  = useState('')
+  const [editFrom,  setEditFrom]  = useState('')
+  const [editTo,    setEditTo]    = useState('')
+
+  const canAdd = newName.trim() && newFrom && newTo && newFrom <= newTo
+
+  function startEdit(p) {
+    setEditingId(p.id); setEditName(p.name); setEditFrom(p.from); setEditTo(p.to)
+  }
+  function saveEdit() {
+    if (!editName.trim() || !editFrom || !editTo) return
+    setPeriods(ps => ps.map(p => p.id === editingId ? { ...p, name: editName.trim(), from: editFrom, to: editTo } : p))
+    setEditingId(null)
+  }
+
+  const isDirty = (
+    tempGoal !== goal ||
+    yearStart !== '2025-08-25' ||
+    yearEnd   !== '2026-06-05' ||
+    q2Start   !== '2025-11-03' ||
+    q3Start   !== '2026-01-12' ||
+    q4Start   !== '2026-03-23' ||
+    JSON.stringify(periods) !== JSON.stringify(DEFAULT_BLACKOUT_PERIODS)
+  )
+
+  function addPeriod() {
+    if (!canAdd) return
+    setPeriods(p => [...p, { id: Date.now(), name: newName.trim(), from: newFrom, to: newTo }])
+    setNewName(''); setNewFrom(''); setNewTo('')
+  }
+
+  const quarters = [
+    { label: 'Q1', value: yearStart, locked: true },
+    { label: 'Q2', value: q2Start,   set: setQ2Start },
+    { label: 'Q3', value: q3Start,   set: setQ3Start },
+    { label: 'Q4', value: q4Start,   set: setQ4Start },
+  ]
+
+  const currentTab = SETTINGS_TABS.find(t => t.id === activeTab)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -250,65 +407,170 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.15 }}
-        className="relative bg-white rounded-2xl border border-brand-border shadow-2xl w-full max-w-[480px] mx-4 z-10"
+        className="relative bg-white rounded-2xl border border-brand-border shadow-2xl z-10 flex flex-col"
+        style={{ width: '50vw', height: '70vh' }}
       >
-        <div className="flex items-center justify-between px-6 py-5 border-b border-brand-border">
-          <h2 className="text-base font-semibold text-brand-text">Report Settings</h2>
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-0 shrink-0">
+          <h2 className="text-lg font-bold text-brand-text">Settings</h2>
           <button className="text-brand-subtext hover:text-brand-text p-1 rounded-lg hover:bg-brand-bg transition-colors" onClick={onClose}>
             <X size={16} />
           </button>
         </div>
 
-        <div className="px-6 py-6 space-y-7">
-          {/* Weekly goal */}
-          <div>
-            <p className="text-sm font-semibold text-brand-text mb-1">Weekly Engagement Goal</p>
-            <p className="text-sm text-brand-subtext mb-4 leading-relaxed">
-              A teacher is "on track" when they access a lesson at least this many days per week.
-            </p>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center border border-brand-border rounded-lg overflow-hidden">
-                <button className="px-4 py-2.5 text-base font-medium text-brand-subtext hover:bg-brand-bg disabled:opacity-30 transition-colors select-none"
-                  onClick={() => setTempGoal(g => Math.max(1, g - 1))} disabled={tempGoal <= 1}>−</button>
-                <span className="px-5 py-2.5 text-2xl font-bold text-brand-text border-x border-brand-border min-w-[60px] text-center select-none">
-                  {tempGoal}
-                </span>
-                <button className="px-4 py-2.5 text-base font-medium text-brand-subtext hover:bg-brand-bg disabled:opacity-30 transition-colors select-none"
-                  onClick={() => setTempGoal(g => Math.min(5, g + 1))} disabled={tempGoal >= 5}>+</button>
-              </div>
-              <span className="text-sm text-brand-subtext">days per week</span>
-            </div>
-          </div>
-
-          {/* District target */}
-          <div>
-            <p className="text-sm font-semibold text-brand-text mb-1">District Target</p>
-            <p className="text-sm text-brand-subtext mb-4 leading-relaxed">
-              The % of teachers that should be on track each week — shown as the dashed line on the trend chart.
-            </p>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center border border-brand-border rounded-lg overflow-hidden">
-                <button className="px-4 py-2.5 text-base font-medium text-brand-subtext hover:bg-brand-bg disabled:opacity-30 transition-colors select-none"
-                  onClick={() => setTempTarget(t => Math.max(50, t - 5))} disabled={tempTarget <= 50}>−</button>
-                <span className="px-4 py-2.5 text-2xl font-bold text-brand-text border-x border-brand-border min-w-[72px] text-center select-none">
-                  {tempTarget}%
-                </span>
-                <button className="px-4 py-2.5 text-base font-medium text-brand-subtext hover:bg-brand-bg disabled:opacity-30 transition-colors select-none"
-                  onClick={() => setTempTarget(t => Math.min(95, t + 5))} disabled={tempTarget >= 95}>+</button>
-              </div>
-              <span className="text-sm text-brand-subtext">of teachers</span>
-            </div>
-          </div>
+        {/* Tab bar */}
+        <div className="flex border-b border-brand-border px-6 mt-3 shrink-0">
+          {SETTINGS_TABS.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className={`pb-3 mr-6 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                activeTab === t.id
+                  ? 'border-dessa-teal text-dessa-teal'
+                  : 'border-transparent text-brand-subtext hover:text-brand-text'
+              }`}
+            >{t.label}</button>
+          ))}
         </div>
 
-        <div className="flex gap-3 justify-end px-6 py-4 border-t border-brand-border">
-          <button className="px-4 py-2 rounded-lg text-sm font-semibold border border-brand-border text-brand-subtext bg-white hover:bg-brand-bg transition-colors"
-            onClick={onClose}>Cancel</button>
-          <button className="px-4 py-2 rounded-lg text-sm font-semibold text-white hover:brightness-95 transition-all"
-            style={{ background: '#2A7F8F' }}
-            onClick={() => { onSave(tempGoal, tempTarget); onClose() }}>
-            Save Changes
-          </button>
+        {/* Scrollable content */}
+        <div className="overflow-y-auto flex-1">
+
+          {/* Card header — gray bar with title, description, Save */}
+          <div className="bg-brand-bg border-b border-brand-border px-6 py-4 flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-brand-text">{currentTab.title}</p>
+              <p className="text-xs text-brand-subtext mt-0.5 leading-relaxed max-w-lg">{currentTab.description}</p>
+            </div>
+            <button
+              className="shrink-0 px-3 py-1 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-95"
+              style={{ background: '#1B2B4B' }}
+              disabled={!isDirty}
+              onClick={() => { onSave(tempGoal, tempTarget); onClose() }}
+            >Save</button>
+          </div>
+
+          {/* Form body */}
+          <div className="px-6 py-6">
+
+            {/* ── Engagement ── */}
+            {activeTab === 'engagement' && (
+              <div>
+                <p className="text-sm font-semibold text-brand-text mb-1">Weekly goal</p>
+                <p className="text-xs text-brand-subtext mb-4 leading-relaxed">
+                  Days per week a teacher must access a lesson to be "on track."
+                </p>
+                <div className="flex items-center border border-brand-border rounded-lg overflow-hidden w-fit">
+                  {[3,4,5].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => setTempGoal(n)}
+                      className={`px-4 py-1.5 text-sm font-semibold transition-colors border-r border-brand-border last:border-r-0 ${
+                        tempGoal === n
+                          ? 'bg-dessa-teal text-white'
+                          : 'bg-white text-brand-subtext hover:bg-brand-bg'
+                      }`}
+                    >{n}</button>
+                  ))}
+                </div>
+                <p className="text-xs text-brand-subtext mt-2">{tempGoal} days / week selected</p>
+              </div>
+            )}
+
+            {/* ── School year ── */}
+            {activeTab === 'school_year' && (
+              <div className="space-y-6">
+                <div>
+                  <p className="text-sm font-semibold text-brand-text mb-3">Set the school year</p>
+                  <InlineRangeCal from={yearStart} to={yearEnd} onFromChange={setYearStart} onToChange={setYearEnd} />
+                </div>
+                <div className="h-px bg-brand-border" />
+                <div>
+                  <p className="text-sm font-semibold text-brand-text mb-1">Quarter start dates</p>
+                  <p className="text-xs text-brand-subtext mb-3">Q1 always begins on the school year start date.</p>
+                  <div className="grid grid-cols-2 gap-6">
+                    {quarters.map(q => (
+                      <div key={q.label}>
+                        <label className="text-xs font-medium text-brand-subtext flex items-center gap-1 mb-2">
+                          {q.label}
+                          {q.locked && <Lock size={10} className="opacity-50" />}
+                        </label>
+                        <InlineSingleCal value={q.locked ? yearStart : q.value} onChange={q.locked ? undefined : q.set} locked={q.locked} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Blackout periods ── */}
+            {activeTab === 'blackout' && (
+              <div>
+                {/* Period list */}
+                <div className="border border-brand-border rounded-xl overflow-hidden mb-4">
+                  {periods.length === 0 && (
+                    <p className="text-sm text-brand-subtext text-center py-8">No blackout periods added yet.</p>
+                  )}
+                  {periods.map((p, i) => (
+                    <div key={p.id} className={`px-4 py-3 ${i < periods.length - 1 ? 'border-b border-brand-border' : ''}`}>
+                      {editingId === p.id ? (
+                        <div>
+                          <input
+                            autoFocus
+                            value={editName}
+                            onChange={e => setEditName(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Escape') setEditingId(null) }}
+                            className="w-full px-3 py-2 text-sm border border-brand-border rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                          />
+                          <InlineRangeCal from={editFrom} to={editTo} onFromChange={setEditFrom} onToChange={setEditTo} />
+                          <div className="flex items-center gap-2 mt-3">
+                            <button onClick={saveEdit} disabled={!editName.trim() || !editFrom || !editTo} className="text-xs font-semibold px-3 py-1.5 rounded-md text-white disabled:opacity-40" style={{ background: '#2A7F8F' }}>Save</button>
+                            <button onClick={() => setEditingId(null)} className="text-xs font-semibold text-brand-subtext hover:text-brand-text">Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium text-brand-text flex-1">{p.name}</span>
+                          <span className="text-xs text-brand-subtext tabular-nums">
+                            {format(parseISO(p.from), 'MMM d')}
+                            {p.from !== p.to && <> – {format(parseISO(p.to), p.to.slice(0,7) === p.from.slice(0,7) ? 'd' : 'MMM d')}</>}
+                          </span>
+                          <button onClick={() => startEdit(p)} className="text-brand-subtext hover:text-brand-text p-1 rounded-md hover:bg-brand-bg transition-colors">
+                            <Pencil size={13} />
+                          </button>
+                          <button onClick={() => setPeriods(ps => ps.filter(x => x.id !== p.id))} className="text-brand-subtext hover:text-red-500 p-1 rounded-md hover:bg-red-50 transition-colors">
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add row */}
+                <div className="border-t border-brand-border pt-4 mt-2">
+                  <p className="text-xs font-semibold text-brand-text mb-2">Add a period</p>
+                  <input
+                    type="text"
+                    placeholder="Name (e.g. Winter Break)"
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-brand-border rounded-lg text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal mb-3"
+                  />
+                  <InlineRangeCal from={newFrom} to={newTo} onFromChange={setNewFrom} onToChange={setNewTo} />
+                  <button
+                    onClick={addPeriod}
+                    disabled={!canAdd}
+                    className="flex items-center gap-1.5 mt-3 px-3 py-2 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-40"
+                    style={{ background: '#2A7F8F' }}
+                  >
+                    <Plus size={14} /> Add period
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
       </motion.div>
     </div>
@@ -495,7 +757,7 @@ export default function Report2() {
         ))}
       </div>
 
-      {/* Trend chart card */}
+      {/* Trend chart card — commented out
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.2 }}
         className="bg-white rounded-xl border border-brand-border shadow-sm mb-6 overflow-hidden"
@@ -508,8 +770,6 @@ export default function Report2() {
               </p>
             </div>
           </div>
-
-          {/* Legend */}
           <div className="flex items-center gap-5 mt-3">
             <div className="flex items-center gap-1.5">
               <span className="inline-block w-3 h-3 rounded-sm bg-dessa-teal" />
@@ -527,46 +787,22 @@ export default function Report2() {
             </div>
           </div>
         </div>
-
         <div className="px-2 pb-2">
           <TrendChart data={trendData} districtTarget={districtTarget} selectedWeek={selectedWeek} />
         </div>
       </motion.div>
+      */}
 
       {/* School table */}
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.28 }}
-        className="bg-white rounded-xl border border-brand-border shadow-sm overflow-hidden"
+        className="bg-white rounded-xl border border-brand-border shadow-sm"
       >
         {/* Table toolbar */}
         {(() => {
           const activeFilters = (dateFrom || dateTo) ? 1 : 0
-          const selIdx = schoolWeeks.findIndex(w => w === selectedWeek)
           return (
-            <div className="flex items-center justify-end gap-2 px-4 py-3 border-b border-brand-border bg-brand-bg/40">
-              {/* Week nav */}
-              <div className="flex items-center gap-0.5 border border-brand-border rounded-lg bg-white overflow-hidden mr-1">
-                <button
-                  className="px-2 py-1.5 text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors disabled:opacity-30"
-                  disabled={selIdx <= 0}
-                  onClick={() => setSelectedWeek(schoolWeeks[selIdx - 1])}
-                ><ChevronLeft size={14} /></button>
-                <select
-                  value={selectedWeek}
-                  onChange={e => setSelectedWeek(e.target.value)}
-                  className="text-xs font-medium text-brand-text bg-white px-1 py-1.5 focus:outline-none cursor-pointer"
-                >
-                  {schoolWeeks.map(w => (
-                    <option key={w} value={w}>{weekLabel(w)}</option>
-                  ))}
-                </select>
-                <button
-                  className="px-2 py-1.5 text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors disabled:opacity-30"
-                  disabled={selIdx >= schoolWeeks.length - 1}
-                  onClick={() => setSelectedWeek(schoolWeeks[selIdx + 1])}
-                ><ChevronRight size={14} /></button>
-              </div>
-
+            <div className="flex items-center justify-end gap-2 px-4 py-3 border-b border-brand-border bg-brand-bg/40 rounded-t-xl">
               {/* Search */}
               <div className="relative">
                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
@@ -594,8 +830,8 @@ export default function Report2() {
                       : 'bg-white text-brand-subtext border-brand-border hover:text-brand-text hover:bg-brand-bg'
                   }`}
                 >
-                  <SlidersHorizontal size={13} />
-                  Filters
+                  <CalendarDays size={13} />
+                  Date range
                   {activeFilters > 0 && (
                     <span className="ml-0.5 bg-white/25 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                       {activeFilters}
@@ -604,24 +840,28 @@ export default function Report2() {
                 </button>
 
                 {showFilters && (
-                  <div className="absolute right-0 top-full mt-1.5 w-80 bg-white border border-brand-border rounded-xl shadow-lg z-30 p-4">
-                    <div className="text-[10px] font-bold tracking-widest uppercase text-brand-subtext mb-3">Chart date range</div>
-                    <div className="flex items-end gap-2 mb-4">
-                      <div className="flex-1">
-                        <label className="text-xs text-brand-subtext block mb-1">From</label>
-                        <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Start date" />
-                      </div>
-                      <div className="flex-1">
-                        <label className="text-xs text-brand-subtext block mb-1">To</label>
-                        <DatePicker value={dateTo} onChange={setDateTo} placeholder="End date" />
+                  <div className="absolute right-0 top-full mt-1.5 bg-white border border-brand-border rounded-xl shadow-lg z-30 p-5" style={{ width: 620 }}>
+                    <InlineRangeCal from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
+                    <div className="flex items-center justify-between mt-3 pt-3">
+                      <span className="text-xs text-brand-subtext">
+                        {dateFrom && dateTo
+                          ? `${format(parseISO(dateFrom), 'MMM d')} – ${format(parseISO(dateTo), 'MMM d, yyyy')}`
+                          : dateFrom ? `From ${format(parseISO(dateFrom), 'MMM d, yyyy')}` : ''}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          disabled={!dateFrom && !dateTo}
+                          onClick={() => { setDateFrom(''); setDateTo('') }}
+                          className="text-xs font-semibold text-blue-500 hover:text-blue-600 transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+                        >Clear</button>
+                        <button
+                          disabled={!dateFrom && !dateTo}
+                          onClick={() => setShowFilters(false)}
+                          className="text-xs font-semibold text-white px-3 py-1 rounded-md transition-colors hover:opacity-90 disabled:opacity-35 disabled:cursor-not-allowed"
+                          style={{ background: '#1B2B4B' }}
+                        >Save</button>
                       </div>
                     </div>
-                    {activeFilters > 0 && (
-                      <button
-                        onClick={() => { setDateFrom(''); setDateTo(''); setShowFilters(false) }}
-                        className="w-full text-xs font-semibold text-brand-subtext hover:text-brand-text py-1.5 rounded-lg border border-brand-border hover:bg-brand-bg transition-colors"
-                      >Clear all filters</button>
-                    )}
                   </div>
                 )}
               </div>
@@ -630,6 +870,7 @@ export default function Report2() {
         })()}
 
         {/* School table */}
+        <div className="overflow-hidden rounded-b-xl">
         <table className="w-full table-fixed">
           <colgroup>
             <col style={{ width: '32%' }} />
@@ -639,10 +880,10 @@ export default function Report2() {
           </colgroup>
           <thead>
             <tr className="border-b border-brand-border">
-              <th className="py-3 pl-5 text-left"><SortBtn col="name"       label="School"       sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></th>
+              <th className="py-3 pl-4 text-left"><SortBtn col="name"       label="School"       sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></th>
               <th className="py-3 text-left">      <SortBtn col="teachers"   label="Teachers"     sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></th>
               <th className="py-3 text-left">      <SortBtn col="reached"    label="Reached Goal" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></th>
-              <th className="py-3 pr-5 text-left"> <SortBtn col="engagement" label="Engagement"   sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></th>
+              <th className="py-3 pr-4 text-left"> <SortBtn col="engagement" label="Engagement"   sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></th>
             </tr>
           </thead>
           <tbody>
@@ -650,7 +891,7 @@ export default function Report2() {
               const { text: pctText, bg: pctBg } = pctColor(pct)
               return (
                 <tr key={school.id} className="border-b border-brand-border last:border-b-0">
-                  <td className="py-4 pl-5">
+                  <td className="py-4 pl-4">
                     <span className="text-sm font-semibold text-brand-text">{school.name}</span>
                   </td>
                   <td className="py-4">
@@ -664,7 +905,7 @@ export default function Report2() {
                       </span>
                     </div>
                   </td>
-                  <td className="py-4 pr-5">
+                  <td className="py-4 pr-4">
                     <div className="flex items-center gap-3">
                       <div className="h-2 bg-brand-border rounded-full overflow-hidden flex-1 min-w-0">
                         <div
@@ -680,6 +921,7 @@ export default function Report2() {
             })}
           </tbody>
         </table>
+        </div>
 
         {/* Pagination footer */}
         {totalTablePages > 1 && (
