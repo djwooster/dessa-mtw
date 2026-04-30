@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, ChevronLeft, ChevronRight, MoreHorizontal, Download, Printer, SlidersHorizontal,
-  ArrowUpDown, ArrowUp, ArrowDown, X,
+  Search, ChevronLeft, ChevronRight, ChevronDown, MoreHorizontal, Download, Printer, SlidersHorizontal,
+  ArrowUpDown, ArrowUp, ArrowDown, X, Check, Calendar,
 } from 'lucide-react'
-import { TEACHERS, SCHOOL_DAYS, SCHOOLS, REPORT_TODAY, YTD_DAYS } from '../lib/reportData'
+import { ALL_TEACHERS, SCHOOL_DAYS, SCHOOLS, REPORT_TODAY, YTD_DAYS } from '../lib/reportData'
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from '../components/ui/pagination'
 import { DatePicker } from '../components/ui/date-picker'
 import { Slider } from '../components/ui/slider'
@@ -101,6 +101,45 @@ function LastActiveBadge({ badge }) {
   return <span className="text-sm text-brand-text">{badge.label}</span>
 }
 
+function WeekDots({ teacher }) {
+  const week4Days = SCHOOL_DAYS.filter(d => d.week === 4)
+  const dayLookup = Object.fromEntries(teacher.days.map(d => [d.date, d.level]))
+  return (
+    <div className="flex items-end gap-1.5">
+      {week4Days.map(day => {
+        const level = dayLookup[day.date]
+        const completed = level && level !== 'n'
+        const isToday = day.date === REPORT_TODAY
+        return (
+          <div
+            key={day.date}
+            className="flex flex-col items-center gap-1"
+            title={`${day.date}: ${completed ? 'Lesson completed' : 'No lesson'}`}
+          >
+            <div
+              className={`w-4 h-4 rounded-full border-2 transition-colors flex items-center justify-center ${
+                completed
+                  ? 'bg-dessa-teal border-dessa-teal'
+                  : 'bg-transparent border-brand-border'
+              }`}
+            >
+              {completed
+                ? <Check size={9} strokeWidth={3} className="text-white" />
+                : <X size={9} strokeWidth={3} className="text-brand-border" />
+              }
+            </div>
+            <span className={`text-[9px] leading-none ${
+              isToday ? 'font-bold text-brand-text' : 'text-brand-subtext/50'
+            }`}>
+              {day.dayLabel}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function SortBtn({ col, label, sortBy, sortDir, onSort }) {
   const active = sortBy === col
   return (
@@ -117,14 +156,7 @@ function SortBtn({ col, label, sortBy, sortDir, onSort }) {
 }
 
 function RecentPct({ pct }) {
-  return (
-    <div>
-      <div className="text-sm font-semibold text-brand-text">{pct}%</div>
-      <div className="mt-1.5 h-1.5 w-16 rounded-full bg-brand-border overflow-hidden">
-        <div className="h-full rounded-full bg-dessa-teal transition-all" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  )
+  return <div className="text-sm font-semibold text-brand-text">{pct}%</div>
 }
 
 function ConceptHeader({ label, title, description }) {
@@ -150,6 +182,47 @@ function EmptyState() {
   )
 }
 
+function SchoolSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const options = ['All', ...SCHOOLS]
+
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-2 text-sm border border-brand-border rounded-lg bg-white pl-3 pr-3 py-1.5 text-brand-text hover:bg-brand-bg transition-colors min-w-[140px] justify-between"
+      >
+        <span>{value === 'All' ? 'All schools' : value}</span>
+        <ChevronDown size={14} className={`text-brand-subtext transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1.5 w-56 bg-white border border-brand-border rounded-lg shadow-lg z-20 py-1 overflow-hidden">
+          {options.map(opt => (
+            <button
+              key={opt}
+              onClick={() => { onChange(opt); setOpen(false) }}
+              className={`flex items-center justify-between w-full px-3 py-2 text-sm text-left transition-colors ${
+                value === opt ? 'text-dessa-teal font-medium bg-brand-bg' : 'text-brand-text hover:bg-brand-bg'
+              }`}
+            >
+              {opt === 'All' ? 'All schools' : opt}
+              {value === opt && <Check size={13} className="text-dessa-teal" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Concept A: Ranked List + Calendar Detail ──────────────────────────────────
 
 function MonthCalendar({ year, month, dayMap }) {
@@ -162,9 +235,9 @@ function MonthCalendar({ year, month, dayMap }) {
       <div className="text-xs font-semibold text-brand-subtext mb-2">
         {new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
       </div>
-      <div className="grid grid-cols-7 gap-0.5">
+      <div className="grid grid-cols-7 gap-px">
         {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
-          <div key={d} className="text-[10px] text-brand-subtext/60 text-center py-0.5">{d}</div>
+          <div key={d} className="text-[10px] text-brand-subtext/80 text-center py-0.5">{d}</div>
         ))}
         {cells.map((day, i) => {
           if (!day) return <div key={`e-${i}`} />
@@ -175,12 +248,12 @@ function MonthCalendar({ year, month, dayMap }) {
           return (
             <div
               key={day}
-              className={`w-7 h-7 flex items-center justify-center text-[11px] rounded mx-auto ${
+              className={`w-6 h-6 flex items-center justify-center text-[11px] rounded mx-auto ${
                 isWknd ? 'text-brand-subtext/25' :
                 (level && level !== 'n') ? 'text-white font-semibold' :
-                'text-brand-subtext/40'
+                'text-brand-subtext/70'
               }`}
-              style={isWknd ? {} : getCellStyle(level)}
+              style={isWknd ? {} : (level && level !== 'n') ? getCellStyle(level) : { backgroundColor: '#EBEBEB' }}
               aria-label={`${dateStr}: ${isWknd ? 'Weekend' : (level && level !== 'n') ? 'Lesson completed' : 'No lesson'}`}
               title={`${dateStr}${(!isWknd && level && level !== 'n') ? ' · Lesson completed' : ''}`}
             >
@@ -194,16 +267,22 @@ function MonthCalendar({ year, month, dayMap }) {
 }
 
 function TeacherCalendar({ teacher }) {
-  const [startYear,  setStartYear]  = useState(2026)
-  const [startMonth, setStartMonth] = useState(1) // 0-indexed; default: Feb 2026
+  const [startYear,  setStartYear]  = useState(2025)
+  const [startMonth, setStartMonth] = useState(10) // 0-indexed; default: Nov 2025 → shows Nov–Apr
 
   const secondMonth = startMonth === 11 ? 0  : startMonth + 1
   const secondYear  = startMonth === 11 ? startYear + 1 : startYear
   const thirdMonth  = secondMonth === 11 ? 0  : secondMonth + 1
   const thirdYear   = secondMonth === 11 ? secondYear + 1 : secondYear
+  const fourthMonth = thirdMonth  === 11 ? 0  : thirdMonth  + 1
+  const fourthYear  = thirdMonth  === 11 ? thirdYear  + 1 : thirdYear
+  const fifthMonth  = fourthMonth === 11 ? 0  : fourthMonth + 1
+  const fifthYear   = fourthMonth === 11 ? fourthYear + 1 : fourthYear
+  const sixthMonth  = fifthMonth  === 11 ? 0  : fifthMonth  + 1
+  const sixthYear   = fifthMonth  === 11 ? fifthYear  + 1 : fifthYear
 
-  const atMin = startYear === 2025 && startMonth === 8  // Sep 2025 (shows Sep–Nov)
-  const atMax = startYear === 2026 && startMonth === 1  // Feb 2026 (shows Feb–Apr)
+  const atMin = startYear === 2025 && startMonth === 8  // Sep 2025 (shows Sep–Feb)
+  const atMax = startYear === 2025 && startMonth === 10 // Nov 2025 (shows Nov–Apr)
 
   function prevMonth() {
     if (atMin) return
@@ -217,23 +296,17 @@ function TeacherCalendar({ teacher }) {
   }
 
   const rangeLabel = (() => {
-    const m1 = new Date(startYear,  startMonth,  1).toLocaleDateString('en-US', { month: 'short' })
-    const m3 = new Date(thirdYear,  thirdMonth,  1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-    return `${m1} – ${m3}`
+    const m1 = new Date(startYear, startMonth,  1).toLocaleDateString('en-US', { month: 'short' })
+    const m6 = new Date(sixthYear, sixthMonth,  1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    return `${m1} – ${m6}`
   })()
 
-  const dayMap      = Object.fromEntries(teacher.days.map(d => [d.date, d.level]))
-  const activeDays  = teacher.days.filter(d => d.level !== 'n').length
-  const weeksActive = [1,2,3,4].filter(w =>
-    teacher.days.some(d => d.week === w && d.level !== 'n')
-  ).length
-  const badge = teacher.lastActiveBadge
+  const dayMap = Object.fromEntries(teacher.days.map(d => [d.date, d.level]))
 
   return (
     <div className="bg-brand-bg/50 rounded-xl p-5 border border-brand-border/50 mt-1">
-      <div className="flex gap-8 items-start flex-wrap">
-        <div>
-          <div className="flex items-center justify-between mb-3">
+      <div>
+        <div className="flex items-center justify-between mb-3">
             <button
               onClick={prevMonth}
               disabled={atMin}
@@ -254,33 +327,11 @@ function TeacherCalendar({ teacher }) {
             <MonthCalendar year={startYear}  month={startMonth}  dayMap={dayMap} />
             <MonthCalendar year={secondYear} month={secondMonth} dayMap={dayMap} />
             <MonthCalendar year={thirdYear}  month={thirdMonth}  dayMap={dayMap} />
+            <MonthCalendar year={fourthYear} month={fourthMonth} dayMap={dayMap} />
+            <MonthCalendar year={fifthYear}  month={fifthMonth}  dayMap={dayMap} />
+            <MonthCalendar year={sixthYear}  month={sixthMonth}  dayMap={dayMap} />
           </div>
         </div>
-
-        <div className="flex-1 min-w-[180px] pl-6 border-l border-brand-border">
-          <div className="text-[10px] font-bold tracking-widest uppercase text-brand-subtext mb-4">Summary</div>
-          <div className="grid grid-cols-2 gap-y-5 gap-x-4">
-            <div>
-              <div className="text-2xl font-bold text-brand-text">{Math.round(activeDays / 20 * 100)}%</div>
-              <div className="text-xs text-brand-subtext">4-week engagement rate</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-brand-text">{activeDays}</div>
-              <div className="text-xs text-brand-subtext">Days with lesson access</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-brand-text">
-                {weeksActive}<span className="text-sm font-normal text-brand-subtext ml-1">/ 4</span>
-              </div>
-              <div className="text-xs text-brand-subtext">Weeks with access</div>
-            </div>
-            <div>
-              <div className="mb-1.5"><LastActiveBadge badge={badge} /></div>
-              <div className="text-xs text-brand-subtext">Last active</div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
@@ -298,13 +349,13 @@ function ConceptA({ teachers, expandedId, onExpand, sortBy, setSortBy, sortDir, 
       {/* Table header */}
       <div
         className="grid gap-4 px-4 py-2.5 border-b border-brand-border bg-brand-bg/40"
-        style={{ gridTemplateColumns: '40px 1fr 90px 130px 110px 24px' }}
+        style={{ gridTemplateColumns: '40px 1fr 90px 130px 130px 24px' }}
       >
         <div className="text-xs font-semibold text-brand-subtext text-center">#</div>
         <SortBtn col="name"       label="Teacher"          sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
         <SortBtn col="recent"     label="Last 4 Wks"       sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
         <SortBtn col="engagement" label="Engagement (YTD)" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
-        <SortBtn col="lastActive" label="Last Active"      sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+        <SortBtn col="lastActive" label="This Week"        sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
         <div />
       </div>
 
@@ -316,7 +367,7 @@ function ConceptA({ teachers, expandedId, onExpand, sortBy, setSortBy, sortDir, 
             <div key={t.id}>
               <button
                 className="grid gap-4 px-4 py-3 w-full text-left hover:bg-brand-bg/40 transition-colors group"
-                style={{ gridTemplateColumns: '40px 1fr 90px 130px 110px 24px' }}
+                style={{ gridTemplateColumns: '40px 1fr 90px 130px 130px 24px' }}
                 onClick={() => onExpand(t.id)}
                 aria-expanded={isOpen}
               >
@@ -333,13 +384,10 @@ function ConceptA({ teachers, expandedId, onExpand, sortBy, setSortBy, sortDir, 
 
                 <div className="self-center">
                   <div className="text-sm font-semibold text-brand-text">{t.ytdPct}%</div>
-                  <div className="mt-1.5 h-1.5 w-20 rounded-full bg-brand-border overflow-hidden">
-                    <div className="h-full rounded-full bg-dessa-teal transition-all" style={{ width: `${t.ytdPct}%` }} />
-                  </div>
                 </div>
 
                 <div className="self-center">
-                  <LastActiveBadge badge={t.lastActiveBadge} />
+                  <WeekDots teacher={t} />
                 </div>
 
                 <div className="self-center text-brand-subtext group-hover:text-brand-text transition-colors">
@@ -635,7 +683,7 @@ export default function Report1() {
   const [showFilters,     setShowFilters]     = useState(false)
   const [expandedId,      setExpandedId]      = useState(null)
   const [page,            setPage]            = useState(1)
-  const PAGE_SIZE     = 10
+  const [pageSize,        setPageSize]        = useState(25)
   const filterRef     = useRef(null)
   const engagementActive = engagementRange[0] !== 0 || engagementRange[1] !== 100
   const activeFilters = (dateStart || dateEnd ? 1 : 0) + (engagementActive ? 1 : 0)
@@ -644,7 +692,7 @@ export default function Report1() {
   const [showMenu,   setShowMenu]   = useState(false)
 
   const enriched = useMemo(() =>
-    TEACHERS.map(t => ({
+    ALL_TEACHERS.map(t => ({
       ...t,
       engagementPct:   getEngagementPct(t),
       lastActive:      getLastActive(t),
@@ -691,12 +739,12 @@ export default function Report1() {
     })
   , [filtered, sortBy, sortDir])
 
-  const totalPages  = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
-  const pagedTeachers = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  const rangeStart  = sorted.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
-  const rangeEnd    = Math.min(page * PAGE_SIZE, sorted.length)
+  const totalPages  = Math.max(1, Math.ceil(sorted.length / pageSize))
+  const pagedTeachers = sorted.slice((page - 1) * pageSize, page * pageSize)
+  const rangeStart  = sorted.length === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd    = Math.min(page * pageSize, sorted.length)
 
-  useEffect(() => { setPage(1) }, [search, school, dateStart, dateEnd, engagementRange[0], engagementRange[1]])
+  useEffect(() => { setPage(1) }, [search, school, dateStart, dateEnd, engagementRange[0], engagementRange[1], pageSize])
 
   useEffect(() => {
     if (!showFilters) return
@@ -752,15 +800,36 @@ export default function Report1() {
         </div>
       </div>
 
-      <StatCards teachers={sorted} />
+      {/* <StatCards teachers={sorted} /> */}
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-brand-border shadow-sm mb-16">
 
         {/* Table toolbar */}
         <div className="flex items-center justify-end gap-3 px-4 py-3 border-b border-brand-border bg-brand-bg/40">
-          <LevelLegend />
-          <div className="flex-1" />
+          <div className="flex items-center gap-2 flex-1 flex-wrap">
+            {school !== 'All' && (
+              <span className="flex items-center gap-1 text-xs bg-dessa-teal/10 text-dessa-teal border border-dessa-teal/20 rounded-md px-2.5 py-0.5 font-medium">
+                {school}
+                <button onClick={() => setSchool('All')} className="hover:text-dessa-teal/60 transition-colors ml-0.5"><X size={11} /></button>
+              </span>
+            )}
+            {(dateStart || dateEnd) && (
+              <span className="flex items-center gap-1.5 text-xs bg-dessa-teal/10 text-dessa-teal border border-dessa-teal/20 rounded-md px-2.5 py-0.5 font-medium">
+                <Calendar size={11} />
+                {dateStart ? new Date(dateStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '…'}
+                {' – '}
+                {dateEnd ? new Date(dateEnd + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '…'}
+                <button onClick={() => { setDateStart(''); setDateEnd('') }} className="hover:text-dessa-teal/60 transition-colors ml-0.5"><X size={11} /></button>
+              </span>
+            )}
+            {engagementActive && (
+              <span className="flex items-center gap-1 text-xs bg-dessa-teal/10 text-dessa-teal border border-dessa-teal/20 rounded-md px-2.5 py-0.5 font-medium">
+                {engagementRange[0]}%–{engagementRange[1]}% engagement
+                <button onClick={() => setEngagementRange([0, 100])} className="hover:text-dessa-teal/60 transition-colors ml-0.5"><X size={11} /></button>
+              </span>
+            )}
+          </div>
           <div className="relative">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
             <input
@@ -776,14 +845,7 @@ export default function Report1() {
               </button>
             )}
           </div>
-          <select
-            value={school}
-            onChange={e => setSchool(e.target.value)}
-            className="text-sm border border-brand-border rounded-lg bg-white px-3 py-1.5 text-brand-text focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-          >
-            <option value="All">All schools</option>
-            {SCHOOLS.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <SchoolSelect value={school} onChange={setSchool} />
 
           {/* Filter button + panel */}
           <div className="relative" ref={filterRef}>
@@ -879,9 +941,18 @@ export default function Report1() {
 
         {/* Table footer */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-brand-border bg-brand-bg/40">
-          <span className="text-xs text-brand-subtext">
-            {sorted.length === 0 ? '0 teachers' : `${rangeStart}–${rangeEnd} of ${sorted.length} teacher${sorted.length !== 1 ? 's' : ''}`}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-brand-subtext">
+              {sorted.length === 0 ? '0 teachers' : `${rangeStart}–${rangeEnd} of ${sorted.length} teacher${sorted.length !== 1 ? 's' : ''}`}
+            </span>
+            <select
+              value={pageSize}
+              onChange={e => setPageSize(Number(e.target.value))}
+              className="text-xs border border-brand-border rounded-md bg-white px-2 py-1 text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+            >
+              {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n} per page</option>)}
+            </select>
+          </div>
           {totalPages > 1 && (
             <Pagination>
               <PaginationContent>

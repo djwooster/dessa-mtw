@@ -61,43 +61,69 @@ function makeDays(pattern) {
 export const TEACHERS = [
   // ── Riverside Elementary ──────────────────────────────────────────────────
   { id: 1,  firstName: 'Maya',   lastName: 'Anderson', school: 'Riverside Elementary',
-    ytdPct: 82,   // consistent high performer
-    days: makeDays('ddadddadddddadddddad') },  // heavy — 17/20 active
+    ytdPct: 85,   // daily habit — deep every day, rarely misses
+    days: makeDays('ddddaddddadddddadddd') },  // 18/20 — misses only 2 days
   { id: 2,  firstName: 'Carlos', lastName: 'Bennett',  school: 'Riverside Elementary',
-    ytdPct: 57,   // moderate, consistent all year
-    days: makeDays('anadnanandaandnaanda') },  // moderate — 12/20 active
+    ytdPct: 44,   // front-loads the week, skips Th/F consistently
+    days: makeDays('ddnnnddnnndaannnddnn') },  // 9/20 — Mon–Wed only pattern
   { id: 3,  firstName: 'Jordan', lastName: 'Davis',    school: 'Riverside Elementary',
-    ytdPct: 21,   // light user all year
-    days: makeDays('nnbnnannnbnnannbnnan') },  // light — 5/20 active
+    ytdPct: 18,   // went cold after week 2, one brief check-in since
+    days: makeDays('daadddnnnnnnnnbnnnnn') },  // 7/20 — dropped off wk 3
   { id: 4,  firstName: 'Raj',    lastName: 'Iyer',     school: 'Riverside Elementary',
-    ytdPct: 91,   // exceptional all year
-    days: makeDays('ddddadddddaddddddadd') },  // heavy — 19/20 active
+    ytdPct: 93,   // perfect streak, deep engagement every day
+    days: makeDays('dddddddddddddddddddd') },  // 20/20 — perfect
 
   // ── Oakwood Middle ────────────────────────────────────────────────────────
   { id: 5,  firstName: 'Priya',  lastName: 'Evans',    school: 'Oakwood Middle',
-    ytdPct: 63,   // moderate, consistent
-    days: makeDays('adnandaandnandaanand') },  // moderate — 13/20 active
+    ytdPct: 68,   // end-of-week pattern — Thu/Fri deep, Mon light or skip
+    days: makeDays('nnaddbnaaddnnaaddnadd') },  // 13/20 — Th/F heavy
   { id: 6,  firstName: 'Luis',   lastName: 'Garcia',   school: 'Oakwood Middle',
-    ytdPct: 72,   // strong early (Sep–Feb), now dropping off — YTD higher than recent
-    days: makeDays('dddddddddnaannnnnnnn') },  // dropping off — 11/20 active
+    ytdPct: 74,   // strong start, completely stopped wk 4 — needs follow-up
+    days: makeDays('ddddddddddddddaannnn') },  // 16/20 — stalled last 5 days
   { id: 7,  firstName: 'Alex',   lastName: 'Johnson',  school: 'Oakwood Middle',
-    ytdPct: 9,    // nearly inactive all year
-    days: makeDays('nnnnnnnnnnnnnbnnnnnn') },  // nearly inactive — 1/20 active
+    ytdPct: 11,   // sporadic brief visits, no real engagement
+    days: makeDays('nbnnnnnbnnnnnnnbnnbn') },  // 4/20 — brief only
   { id: 8,  firstName: 'Sarah',  lastName: 'Kim',      school: 'Oakwood Middle',
-    ytdPct: 77,   // mod-high, consistent
-    days: makeDays('addaddaadadddaddadda') },  // mod-high — 16/20 active
+    ytdPct: 79,   // improving trajectory — started slow, now consistent deep
+    days: makeDays('nnaannaadadddddddadd') },  // 14/20 — ramping up
 
   // ── Summit Academy ────────────────────────────────────────────────────────
   { id: 9,  firstName: 'Wei',    lastName: 'Chen',     school: 'Summit Academy',
-    ytdPct: 89,   // exceptional all year
-    days: makeDays('dddddaddddddaddddadd') },  // heavy — 19/20 active
+    ytdPct: 91,   // top performer, deep every day without fail
+    days: makeDays('dddddddddddddddddadd') },  // 19/20 — near perfect
   { id: 10, firstName: 'Sam',    lastName: 'Foster',   school: 'Summit Academy',
-    ytdPct: 49,   // consistent alternating pattern
-    days: makeDays('adadadadadadadadadad') },  // consistent — 10/20 active
+    ytdPct: 52,   // mid-week drop — misses Wed every week
+    days: makeDays('adnadnadnadnadnadnad') },  // 12/20 — consistent Wed gaps
   { id: 11, firstName: 'Tina',   lastName: 'Harris',   school: 'Summit Academy',
-    ytdPct: 36,   // slow start, now improving — YTD lower than recent
-    days: makeDays('nnnnnannbbaadadadddd') },  // improving — 11/20 active
+    ytdPct: 33,   // late bloomer — inactive early, re-engaged wks 3–4
+    days: makeDays('nnnnnnnnnnnaadaddddd') },  // 8/20 — strong finish
   { id: 12, firstName: 'Maria',  lastName: 'Lopez',    school: 'Summit Academy',
-    ytdPct: 62,   // moderate, consistent
-    days: makeDays('andaandaanndandaanda') },  // moderate — 13/20 active
+    ytdPct: 61,   // reliable but brief — shows up daily, never deep
+    days: makeDays('ababaababaababaababaa') },  // 16/20 — brief/active only
 ]
+
+// ── Generated teachers (ids 13–175) ──────────────────────────────────────────
+const FIRST_NAMES = ['James','Olivia','Liam','Emma','Noah','Ava','Ethan','Sophia','Mason','Isabella','Logan','Mia','Lucas','Charlotte','Aiden','Amelia','Jackson','Harper','Sebastian','Evelyn','Mateo','Abigail','Jack','Emily','Owen','Elizabeth','Theodore','Sofia','Elijah','Avery','Henry','Ella','Gabriel','Scarlett','Carter','Grace','Julian','Chloe','Levi','Victoria','Isaiah','Riley','Jayden','Aria','Lincoln','Lily','Daniel','Aubrey','Michael','Zoey']
+const LAST_NAMES  = ['Smith','Johnson','Williams','Brown','Jones','Garcia','Miller','Davis','Wilson','Taylor','Moore','Jackson','Martin','Lee','Thompson','White','Harris','Clark','Lewis','Robinson','Walker','Hall','Allen','Young','Hernandez','King','Wright','Scott','Green','Baker','Adams','Nelson','Carter','Mitchell','Perez','Roberts','Turner','Phillips','Campbell','Parker','Evans','Edwards','Collins','Stewart','Sanchez','Morris','Rogers','Reed','Cook','Morgan']
+const GEN_SCHOOLS = ['Riverside Elementary','Oakwood Middle','Summit Academy','Lincoln High','Cedar Park Elementary','Westview Middle']
+
+function rng(seed) { return (Math.abs(Math.sin(seed * 9301 + 49297) * 233280) % 1) }
+
+const generated = Array.from({ length: 163 }, (_, i) => {
+  const id    = i + 13
+  const r     = s => rng(id * 7 + s)
+  const pattern = Array.from({ length: 20 }, (__, j) => {
+    const v = rng(id * 31 + j * 17)
+    return v < 0.15 ? 'n' : v < 0.30 ? 'b' : v < 0.55 ? 'a' : 'd'
+  }).join('')
+  return {
+    id,
+    firstName: FIRST_NAMES[Math.floor(r(1) * FIRST_NAMES.length)],
+    lastName:  LAST_NAMES[Math.floor(r(2)  * LAST_NAMES.length)],
+    school:    GEN_SCHOOLS[Math.floor(r(3)  * GEN_SCHOOLS.length)],
+    ytdPct:    Math.floor(r(4) * 91) + 5,
+    days:      makeDays(pattern),
+  }
+})
+
+export const ALL_TEACHERS = [...TEACHERS, ...generated]
