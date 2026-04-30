@@ -1,16 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Play, ChevronRight, ChevronLeft, MoreHorizontal, Bookmark, Flame } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Bookmark, Flame } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from '../components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
+import { CourseCard } from '../components/CourseCard'
+import { courses } from '../lib/courseData'
 
 // ─── Streak calendar data ─────────────────────────────────────────────────────
 
@@ -119,12 +114,6 @@ function StreakCalendarContent() {
   )
 }
 
-const stagger = (i) => ({
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.25, delay: i * 0.06 },
-})
-
 const filters = [
   { value: 'all',              label: 'All' },
   { value: 'Early Elementary', label: 'Early Elementary' },
@@ -132,190 +121,6 @@ const filters = [
   { value: 'Middle School',    label: 'Middle School' },
   { value: 'High School',      label: 'High School' },
 ]
-
-const courses = [
-  {
-    id: 1,
-    image: '/courseImages/Lady_bug_toy_202604231144.jpeg',
-    grade: 'Grade 3',
-    level: 'Early Elementary',
-    title: 'Understanding Our Emotions',
-    competency: 'Self-Awareness',
-    emoji: '🌱',
-    color: '#2D7D78',
-    lessons: 36,
-  },
-  {
-    id: 2,
-    image: '/courseImages/Butterfly_toy_illustration_202604231146.jpeg',
-    grade: 'Grade 4',
-    level: 'Late Elementary',
-    title: 'Self-Management in Action',
-    competency: 'Self-Management',
-    color: '#F5A623',
-    lessons: 36,
-  },
-  {
-    id: 3,
-    image: '/courseImages/Bumble_bee_toy_202604231145.jpeg',
-    grade: 'Grade 5',
-    level: 'Late Elementary',
-    title: 'Building Responsible Decisions',
-    competency: 'Responsible Decision-Making',
-    color: '#E8653A',
-    lessons: 36,
-  },
-  {
-    id: 4,
-    image: '/courseImages/Dinosaur_toy_illustration_202604231145.jpeg',
-    grade: 'Grade 6',
-    level: 'Middle School',
-    title: 'Social Awareness & Empathy',
-    competency: 'Social Awareness',
-    color: '#7B5EA7',
-    lessons: 36,
-  },
-  {
-    id: 5,
-    image: '/courseImages/Lion_toy_illustration_202604231144.jpeg',
-    grade: 'Grade 7',
-    level: 'Middle School',
-    title: 'Relationship Skills',
-    competency: 'Relationship Skills',
-    color: '#5B9E4D',
-    lessons: 36,
-  },
-  {
-    id: 6,
-    image: '/courseImages/Hummingbird_toy_character_202604231145.jpeg',
-    grade: 'Grade 8',
-    level: 'Middle School',
-    title: 'Goal-Directed Behavior',
-    competency: 'Goal-Directed Behavior',
-    color: '#2A7F8F',
-    lessons: 36,
-  },
-]
-
-// ─── Course card ──────────────────────────────────────────────────────────────
-
-function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onContinue, onUnenroll, index }) {
-  const pct = isEnrolled ? Math.round((completedLessons / course.lessons) * 100) : 0
-  const [confirmOpen, setConfirmOpen] = useState(false)
-
-  return (
-    <>
-    <motion.div {...stagger(index)} className="h-full">
-      <Card className="h-full flex flex-col overflow-hidden">
-        {/* Course image */}
-        <div className="w-full flex-shrink-0">
-          <img src={course.image} alt={course.grade} className="w-full h-auto" />
-        </div>
-
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl font-bold">{course.grade}</CardTitle>
-            {isEnrolled && (
-              <span
-                className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
-                style={{ background: 'rgba(245,166,35,0.15)', color: '#F5A623' }}
-              >
-                Enrolled
-              </span>
-            )}
-          </div>
-        </CardHeader>
-
-        <CardContent className="flex-1 flex flex-col justify-end pt-4">
-          {/* Progress */}
-          <div className="space-y-1.5 mb-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-brand-subtext">
-                {isEnrolled
-                  ? `${completedLessons} of ${course.lessons} lessons`
-                  : 'Not enrolled'}
-              </span>
-              {isEnrolled && (
-                <span className="text-sm font-semibold text-brand-text">{pct}%</span>
-              )}
-            </div>
-            <div className="h-1.5 bg-brand-border rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${pct}%`, background: course.color }}
-              />
-            </div>
-          </div>
-        </CardContent>
-
-        <CardFooter className={`border-t border-brand-border px-4 py-4 ${isEnrolled ? 'justify-between' : 'justify-end'}`}>
-          {isEnrolled && (
-            <button
-              className="text-sm font-medium text-brand-subtext px-3.5 py-1.5 rounded-md hover:bg-brand-bg hover:text-brand-text transition-colors"
-              onClick={() => setConfirmOpen(true)}
-            >
-              Unenroll
-            </button>
-          )}
-          <button
-            className="flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-md transition-all hover:brightness-95 text-white"
-            style={{ background: '#2A7F8F' }}
-            onClick={() => (isEnrolled ? onContinue() : onEnroll(course))}
-          >
-            {isEnrolled ? (
-              <>
-                <Play size={11} fill="currentColor" /> Continue
-              </>
-            ) : (
-              <>
-                Enroll <ChevronRight size={12} />
-              </>
-            )}
-          </button>
-        </CardFooter>
-      </Card>
-    </motion.div>
-
-    {/* Unenroll confirmation modal */}
-    {confirmOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div
-          className="absolute inset-0 bg-brand-text/40 backdrop-blur-sm"
-          onClick={() => setConfirmOpen(false)}
-        />
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.15 }}
-          className="relative bg-white rounded-2xl border border-brand-border shadow-xl p-6 w-full max-w-sm mx-4 z-10"
-        >
-          <p className="text-base font-semibold text-brand-text mb-1">
-            Unenroll from {course.title}?
-          </p>
-          <p className="text-sm text-brand-subtext mb-5 leading-relaxed">
-            Your progress will be lost and you'll need to re-enroll to continue.
-          </p>
-          <div className="flex gap-3 justify-end">
-            <button
-              className="px-4 py-2 rounded-md text-sm font-semibold border border-brand-border text-brand-subtext bg-white hover:bg-brand-bg transition-colors"
-              onClick={() => setConfirmOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-              className="px-4 py-2 rounded-md text-sm font-semibold text-white transition-all hover:brightness-90"
-              style={{ background: '#C0392B' }}
-              onClick={() => { onUnenroll(); setConfirmOpen(false) }}
-            >
-              Unenroll
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    )}
-    </>
-  )
-}
 
 // ─── Curriculum ───────────────────────────────────────────────────────────────
 

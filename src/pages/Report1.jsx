@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, ChevronLeft, ChevronRight, ChevronDown, MoreHorizontal, Download, Printer, SlidersHorizontal,
-  ArrowUpDown, ArrowUp, ArrowDown, X, Check, Calendar,
+  ArrowUpDown, ArrowUp, ArrowDown, X, Check, Calendar, CheckCircle2, XCircle,
 } from 'lucide-react'
 import { ALL_TEACHERS, SCHOOL_DAYS, SCHOOLS, REPORT_TODAY, YTD_DAYS } from '../lib/reportData'
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from '../components/ui/pagination'
@@ -672,6 +672,55 @@ function ConceptC({ teachers }) {
   )
 }
 
+// ── Weekly Goal KPI Bar ───────────────────────────────────────────────────────
+
+const WEEKLY_GOAL_DAYS = 3  // lessons/week to hit the goal
+
+function WeeklyGoalBar({ teachers }) {
+  const metGoal = teachers.filter(t =>
+    t.days.filter(d => d.week === 4 && d.level !== 'n').length >= WEEKLY_GOAL_DAYS
+  ).length
+  const total   = teachers.length
+  const pct     = total === 0 ? 0 : Math.round((metGoal / total) * 100)
+
+  const TICKS       = 160
+  const filledTicks = total === 0 ? 0 : Math.round((metGoal / total) * TICKS)
+  const barColor    = pct >= 85 ? '#4CAF72' : pct >= 50 ? '#F5A623' : '#D95555'
+
+  return (
+    <div className="bg-white rounded-xl border border-brand-border shadow-sm px-8 py-7 mb-4">
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <div className="text-[12px] font-semibold tracking-widest uppercase text-brand-subtext/80 mb-2">
+            Teachers hitting weekly goal
+          </div>
+          <div className="text-4xl font-bold text-brand-text leading-none">{pct}%</div>
+        </div>
+        <div className="text-right text-[10px] font-bold tracking-widest uppercase text-brand-subtext leading-relaxed pt-0.5">
+          Goal: {WEEKLY_GOAL_DAYS}+ lessons<br />
+          <span className="font-normal normal-case tracking-normal text-xs text-brand-subtext/70">Week 4 · Apr 14–18</span>
+        </div>
+      </div>
+
+      {/* Segmented tick bar */}
+      <div className="flex gap-[2px] mb-5">
+        {Array.from({ length: TICKS }).map((_, i) => (
+          <div
+            key={i}
+            className="flex-1 h-[28px] rounded-full"
+            style={{ backgroundColor: i < filledTicks ? barColor : '#E2E6EA' }}
+          />
+        ))}
+      </div>
+
+      <div className="flex justify-between text-[14px] text-brand-subtext">
+        <span><span className="font-semibold text-brand-text">{metGoal}</span> / {total} teachers</span>
+        <span>{total - metGoal} not yet reached</span>
+      </div>
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Report1() {
@@ -685,8 +734,9 @@ export default function Report1() {
   const [page,            setPage]            = useState(1)
   const [pageSize,        setPageSize]        = useState(25)
   const filterRef     = useRef(null)
+  const [quickFilter,     setQuickFilter]     = useState(null)
   const engagementActive = engagementRange[0] !== 0 || engagementRange[1] !== 100
-  const activeFilters = (dateStart || dateEnd ? 1 : 0) + (engagementActive ? 1 : 0)
+  const activeFilters = (quickFilter ? 1 : 0) + (dateStart || dateEnd ? 1 : 0) + (engagementActive ? 1 : 0)
   const [sortBy,     setSortBy]     = useState('engagement')
   const [sortDir,    setSortDir]    = useState('desc')
   const [showMenu,   setShowMenu]   = useState(false)
@@ -720,9 +770,18 @@ export default function Report1() {
         const p = t.engagementPct
         if (p < engagementRange[0] || p > engagementRange[1]) return false
       }
+      if (quickFilter === 'completed-today') {
+        const level = t.days.find(d => d.date === REPORT_TODAY)?.level
+        if (!level || level === 'n') return false
+      }
+      if (quickFilter === 'not-completed-today') {
+        const level = t.days.find(d => d.date === REPORT_TODAY)?.level
+        if (level && level !== 'n') return false
+      }
+
       return true
     })
-  , [enriched, school, search, dateStart, dateEnd, engagementRange])
+  , [enriched, school, search, dateStart, dateEnd, engagementRange, quickFilter])
 
   const sorted = useMemo(() =>
     [...filtered].sort((a, b) => {
@@ -744,7 +803,7 @@ export default function Report1() {
   const rangeStart  = sorted.length === 0 ? 0 : (page - 1) * pageSize + 1
   const rangeEnd    = Math.min(page * pageSize, sorted.length)
 
-  useEffect(() => { setPage(1) }, [search, school, dateStart, dateEnd, engagementRange[0], engagementRange[1], pageSize])
+  useEffect(() => { setPage(1) }, [search, school, dateStart, dateEnd, engagementRange[0], engagementRange[1], pageSize, quickFilter])
 
   useEffect(() => {
     if (!showFilters) return
@@ -800,7 +859,7 @@ export default function Report1() {
         </div>
       </div>
 
-      {/* <StatCards teachers={sorted} /> */}
+      <WeeklyGoalBar teachers={sorted} />
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-brand-border shadow-sm mb-16">
@@ -827,6 +886,12 @@ export default function Report1() {
               <span className="flex items-center gap-1 text-xs bg-dessa-teal/10 text-dessa-teal border border-dessa-teal/20 rounded-md px-2.5 py-0.5 font-medium">
                 {engagementRange[0]}%–{engagementRange[1]}% engagement
                 <button onClick={() => setEngagementRange([0, 100])} className="hover:text-dessa-teal/60 transition-colors ml-0.5"><X size={11} /></button>
+              </span>
+            )}
+            {quickFilter && (
+              <span className="flex items-center gap-1 text-xs bg-dessa-teal/10 text-dessa-teal border border-dessa-teal/20 rounded-md px-2.5 py-0.5 font-medium">
+                {{ 'completed-today': 'Completed today', 'not-completed-today': 'Not completed today', 'on-track': 'On track this week', 'needs-attention': 'Needs attention' }[quickFilter]}
+                <button onClick={() => setQuickFilter(null)} className="hover:text-dessa-teal/60 transition-colors ml-0.5"><X size={11} /></button>
               </span>
             )}
           </div>
@@ -867,10 +932,36 @@ export default function Report1() {
             </button>
 
             {showFilters && (
-              <div className="absolute right-0 top-full mt-1.5 w-96 bg-white border border-brand-border rounded-xl shadow-lg z-30 p-4">
+              <div className="absolute right-0 top-full mt-1.5 w-[400px] bg-white border border-brand-border rounded-xl shadow-lg z-30 p-4">
+                {/* Quick filters */}
+                <div className="mb-4">
+                  <div className="text-[10px] font-bold tracking-widest uppercase text-brand-text mb-3">Quick filters</div>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: 'completed-today',     label: 'Completed today',     Icon: CheckCircle2 },
+                      { key: 'not-completed-today', label: 'Not completed today', Icon: XCircle      },
+                    ].map(({ key, label, Icon }) => (
+                      <button
+                        key={key}
+                        onClick={() => setQuickFilter(q => q === key ? null : key)}
+                        className={`flex items-center gap-1.5 text-[14px] px-3 py-1.5 rounded-full border transition-colors ${
+                          quickFilter === key
+                            ? 'bg-dessa-teal/10 border-dessa-teal text-dessa-teal font-medium'
+                            : 'bg-white border-brand-border text-brand-subtext hover:border-brand-text hover:text-brand-text'
+                        }`}
+                      >
+                        <Icon size={14} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-px bg-brand-border mb-4" />
+
                 {/* Date range */}
                 <div className="mb-4">
-                  <div className="text-[10px] font-bold tracking-widest uppercase text-brand-subtext mb-3">Date Range</div>
+                  <div className="text-[10px] font-bold tracking-widest uppercase text-brand-text mb-3">Date Range</div>
                   <div className="flex items-end gap-2">
                     <div className="flex-1">
                       <label className="text-xs text-brand-subtext block mb-1">From</label>
@@ -899,7 +990,7 @@ export default function Report1() {
                 {/* Engagement range */}
                 <div className="mb-3">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="text-[10px] font-bold tracking-widest uppercase text-brand-subtext">4-Week Engagement</div>
+                    <div className="text-[10px] font-bold tracking-widest uppercase text-brand-text">4-Week Engagement</div>
                     <span className="text-xs font-semibold text-dessa-teal">
                       {engagementRange[0]}% – {engagementRange[1]}%
                     </span>
@@ -920,7 +1011,7 @@ export default function Report1() {
 
                 {activeFilters > 0 && (
                   <button
-                    onClick={() => { setDateStart(''); setDateEnd(''); setEngagementRange([0, 100]) }}
+                    onClick={() => { setQuickFilter(null); setDateStart(''); setDateEnd(''); setEngagementRange([0, 100]) }}
                     className="w-full text-xs text-brand-subtext hover:text-brand-text pt-2 border-t border-brand-border mt-1 transition-colors"
                   >
                     Clear all filters
