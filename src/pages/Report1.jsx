@@ -9,6 +9,8 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { DatePicker } from '../components/ui/date-picker'
 import { Slider } from '../components/ui/slider'
 
+const COLOR_GREEN_DARK = '#26884b'  // dessa-greenDark token
+
 // ── Engagement level config ───────────────────────────────────────────────────
 
 const LEVEL_CONFIG = {
@@ -117,11 +119,8 @@ function WeekDots({ teacher }) {
             title={`${day.date}: ${completed ? 'Lesson completed' : 'No lesson'}`}
           >
             <div
-              className={`w-4 h-4 rounded-full border-2 transition-colors flex items-center justify-center ${
-                completed
-                  ? 'bg-dessa-teal border-dessa-teal'
-                  : 'bg-transparent border-brand-border'
-              }`}
+              className="w-4 h-4 rounded-full border-2 transition-colors flex items-center justify-center"
+              style={completed ? { backgroundColor: COLOR_GREEN_DARK, borderColor: COLOR_GREEN_DARK } : {}}
             >
               {completed
                 ? <Check size={9} strokeWidth={3} className="text-white" />
@@ -685,7 +684,7 @@ function WeeklyGoalBar({ teachers }) {
 
   const TICKS       = 160
   const filledTicks = total === 0 ? 0 : Math.round((metGoal / total) * TICKS)
-  const barColor    = pct >= 85 ? '#4CAF72' : pct >= 50 ? '#F5A623' : '#D95555'
+  const barColor    = pct >= 85 ? COLOR_GREEN_DARK : pct >= 50 ? '#F5A623' : '#D95555'
 
   return (
     <div className="bg-white rounded-xl border border-brand-border shadow-sm px-8 py-7 mb-4">
