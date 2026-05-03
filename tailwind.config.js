@@ -42,6 +42,7 @@ export default {
           border:  '#E2E6EA',
           focus:   '#2A7F8F',
         },
+        'interactive-blue': '#0061FF',
       },
     },
   },

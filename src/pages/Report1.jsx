@@ -675,7 +675,7 @@ function ConceptC({ teachers }) {
 
 const WEEKLY_GOAL_DAYS = 3  // lessons/week to hit the goal
 
-function WeeklyGoalBar({ teachers }) {
+function WeeklyGoalBar({ teachers, filterLabels = [] }) {
   const metGoal = teachers.filter(t =>
     t.days.filter(d => d.week === 4 && d.level !== 'n').length >= WEEKLY_GOAL_DAYS
   ).length
@@ -693,7 +693,15 @@ function WeeklyGoalBar({ teachers }) {
           <div className="text-[12px] font-semibold tracking-widest uppercase text-brand-subtext/80 mb-2">
             Teachers hitting weekly goal
           </div>
-          <div className="text-4xl font-bold text-brand-text leading-none">{pct}%</div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="text-4xl font-bold text-brand-text leading-none">{pct}%</div>
+            {filterLabels.map(({ label, type }, i) => (
+              <span key={i} className="inline-flex items-center gap-1 text-[11px] bg-dessa-teal/10 text-dessa-teal border border-dessa-teal/20 rounded-md px-2 py-0.5 font-medium">
+                {type === 'date' && <Calendar size={10} />}
+                {label}
+              </span>
+            ))}
+          </div>
         </div>
         <div className="text-right text-[10px] font-bold tracking-widest uppercase text-brand-subtext leading-relaxed pt-0.5">
           Goal: {WEEKLY_GOAL_DAYS}+ lessons<br />
@@ -736,6 +744,18 @@ export default function Report1() {
   const [quickFilter,     setQuickFilter]     = useState(null)
   const engagementActive = engagementRange[0] !== 0 || engagementRange[1] !== 100
   const activeFilters = (quickFilter ? 1 : 0) + (dateStart || dateEnd ? 1 : 0) + (engagementActive ? 1 : 0)
+
+  const filterLabels = useMemo(() => {
+    const labels = []
+    if (school !== 'All') labels.push({ label: school, type: 'school' })
+    if (dateStart || dateEnd) {
+      const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      labels.push({ label: `${dateStart ? fmt(dateStart) : '…'} – ${dateEnd ? fmt(dateEnd) : '…'}`, type: 'date' })
+    }
+    if (engagementActive) labels.push({ label: `${engagementRange[0]}%–${engagementRange[1]}% engagement`, type: 'engagement' })
+    if (quickFilter) labels.push({ label: { 'completed-today': 'Completed today', 'not-completed-today': 'Not completed today', 'on-track': 'On track this week', 'needs-attention': 'Needs attention' }[quickFilter], type: 'quick' })
+    return labels
+  }, [school, dateStart, dateEnd, engagementActive, engagementRange, quickFilter])
   const [sortBy,     setSortBy]     = useState('engagement')
   const [sortDir,    setSortDir]    = useState('desc')
   const [showMenu,   setShowMenu]   = useState(false)
@@ -858,7 +878,7 @@ export default function Report1() {
         </div>
       </div>
 
-      <WeeklyGoalBar teachers={sorted} />
+      <WeeklyGoalBar teachers={sorted} filterLabels={filterLabels} />
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-brand-border shadow-sm mb-16">
@@ -932,6 +952,20 @@ export default function Report1() {
 
             {showFilters && (
               <div className="absolute right-0 top-full mt-1.5 w-[400px] bg-white border border-brand-border rounded-xl shadow-lg z-30 p-4">
+                {/* Panel header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-[10px] font-bold tracking-widest uppercase text-brand-text">Filters</div>
+                  {activeFilters > 0 && (
+                    <button
+                      onClick={() => { setQuickFilter(null); setDateStart(''); setDateEnd(''); setEngagementRange([0, 100]) }}
+                      className="text-xs font-medium hover:opacity-70 transition-opacity"
+                      style={{ color: '#0061FF' }}
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+
                 {/* Quick filters */}
                 <div className="mb-4">
                   <div className="text-[10px] font-bold tracking-widest uppercase text-brand-text mb-3">Quick filters</div>
@@ -1008,14 +1042,6 @@ export default function Report1() {
                   </div>
                 </div>
 
-                {activeFilters > 0 && (
-                  <button
-                    onClick={() => { setQuickFilter(null); setDateStart(''); setDateEnd(''); setEngagementRange([0, 100]) }}
-                    className="w-full text-xs text-brand-subtext hover:text-brand-text pt-2 border-t border-brand-border mt-1 transition-colors"
-                  >
-                    Clear all filters
-                  </button>
-                )}
               </div>
             )}
           </div>
