@@ -1,53 +1,46 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
+import * as Popover from '@radix-ui/react-popover'
 import { Calendar } from './calendar'
 import { cn } from '../../lib/utils'
 
-// value / onChange use 'YYYY-MM-DD' strings (or '')
-export function DatePicker({ value, onChange, placeholder = 'Pick a date', min, max, className }) {
+export function DatePicker({ value, onChange, placeholder = 'Pick a date', min, max, className, disabled }) {
   const [open, setOpen] = useState(false)
-  const ref  = useRef(null)
 
-  useEffect(() => {
-    if (!open) return
-    function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [open])
-
-  const selected  = value ? parseISO(value) : undefined
-  const minDate   = min   ? parseISO(min)   : undefined
-  const maxDate   = max   ? parseISO(max)   : undefined
-
-  function handleSelect(day) {
-    onChange(day ? format(day, 'yyyy-MM-dd') : '')
-    setOpen(false)
-  }
+  const selected = value ? parseISO(value) : undefined
+  const minDate  = min   ? parseISO(min)   : undefined
+  const maxDate  = max   ? parseISO(max)   : undefined
 
   return (
-    <div className={cn('relative', className)} ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen(v => !v)}
-        className={cn(
-          'w-full flex items-center gap-2 text-sm border border-brand-border rounded-lg px-3 py-1.5 bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal',
-          value ? 'text-brand-text' : 'text-brand-subtext',
-          open && 'ring-2 ring-dessa-teal/25 border-dessa-teal'
-        )}
-      >
-        <CalendarIcon size={13} className="shrink-0 text-brand-subtext" />
-        <span className="flex-1 text-left">
-          {value ? format(parseISO(value), 'MMM d, yyyy') : placeholder}
-        </span>
-      </button>
-
-      {open && (
-        <div className="absolute top-full mt-1.5 left-0 z-50 bg-white border border-brand-border rounded-xl shadow-lg">
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className={cn(
+            'w-full flex items-center gap-2 text-sm border border-brand-border rounded-lg px-3 py-2 bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal',
+            value ? 'text-brand-text' : 'text-brand-subtext',
+            disabled && 'opacity-50 cursor-not-allowed bg-brand-bg',
+            className
+          )}
+        >
+          <CalendarIcon size={14} className="shrink-0 text-brand-subtext" />
+          <span className="flex-1 text-left">
+            {value ? format(parseISO(value), 'MMM d, yyyy') : placeholder}
+          </span>
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="start"
+          sideOffset={6}
+          className="z-50 bg-white border border-brand-border rounded-xl shadow-lg outline-none"
+        >
           <Calendar
             mode="single"
             selected={selected}
-            onSelect={handleSelect}
+            onSelect={d => { onChange(d ? format(d, 'yyyy-MM-dd') : ''); setOpen(false) }}
             disabled={d =>
               (minDate && d < minDate) ||
               (maxDate && d > maxDate)
@@ -64,8 +57,8 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', min, 
               </button>
             </div>
           )}
-        </div>
-      )}
-    </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }

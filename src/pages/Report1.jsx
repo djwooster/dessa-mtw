@@ -675,7 +675,7 @@ function ConceptC({ teachers }) {
 
 const WEEKLY_GOAL_DAYS = 3  // lessons/week to hit the goal
 
-function WeeklyGoalBar({ teachers, filterLabels = [] }) {
+function WeeklyGoalBar({ teachers }) {
   const metGoal = teachers.filter(t =>
     t.days.filter(d => d.week === 4 && d.level !== 'n').length >= WEEKLY_GOAL_DAYS
   ).length
@@ -693,19 +693,10 @@ function WeeklyGoalBar({ teachers, filterLabels = [] }) {
           <div className="text-[12px] font-semibold tracking-widest uppercase text-brand-subtext/80 mb-2">
             Teachers hitting weekly goal
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="text-4xl font-bold text-brand-text leading-none">{pct}%</div>
-            {filterLabels.map(({ label, type }, i) => (
-              <span key={i} className="inline-flex items-center gap-1 text-[11px] bg-dessa-teal/10 text-dessa-teal border border-dessa-teal/20 rounded-md px-2 py-0.5 font-medium">
-                {type === 'date' && <Calendar size={10} />}
-                {label}
-              </span>
-            ))}
-          </div>
+          <div className="text-4xl font-bold text-brand-text leading-none">{pct}%</div>
         </div>
-        <div className="text-right text-[10px] font-bold tracking-widest uppercase text-brand-subtext leading-relaxed pt-0.5">
-          Goal: {WEEKLY_GOAL_DAYS}+ lessons<br />
-          <span className="font-normal normal-case tracking-normal text-xs text-brand-subtext/70">Week 4 · Apr 14–18</span>
+        <div className="text-right text-[14px] text-brand-subtext">
+          Goal: {WEEKLY_GOAL_DAYS}+ lessons
         </div>
       </div>
 
@@ -721,8 +712,8 @@ function WeeklyGoalBar({ teachers, filterLabels = [] }) {
       </div>
 
       <div className="flex justify-between text-[14px] text-brand-subtext">
-        <span><span className="font-semibold text-brand-text">{metGoal}</span> / {total} teachers</span>
-        <span>{total - metGoal} not yet reached</span>
+        <span>Week 4 · Apr 14–18</span>
+        <span>{metGoal} / {total} teachers</span>
       </div>
     </div>
   )
@@ -734,7 +725,6 @@ export default function Report1() {
   const [search,          setSearch]          = useState('')
   const [school,          setSchool]          = useState('All')
   const [dateStart,       setDateStart]       = useState('')
-  const [dateEnd,         setDateEnd]         = useState('')
   const [engagementRange, setEngagementRange] = useState([0, 100])
   const [showFilters,     setShowFilters]     = useState(false)
   const [expandedId,      setExpandedId]      = useState(null)
@@ -743,20 +733,9 @@ export default function Report1() {
   const filterRef     = useRef(null)
   const [quickFilter,     setQuickFilter]     = useState(null)
   const engagementActive = engagementRange[0] !== 0 || engagementRange[1] !== 100
-  const activeFilters = (quickFilter ? 1 : 0) + (dateStart || dateEnd ? 1 : 0) + (engagementActive ? 1 : 0)
+  const activeFilters = (quickFilter ? 1 : 0) + (dateStart ? 1 : 0) + (engagementActive ? 1 : 0)
 
-  const filterLabels = useMemo(() => {
-    const labels = []
-    if (school !== 'All') labels.push({ label: school, type: 'school' })
-    if (dateStart || dateEnd) {
-      const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-      labels.push({ label: `${dateStart ? fmt(dateStart) : '…'} – ${dateEnd ? fmt(dateEnd) : '…'}`, type: 'date' })
-    }
-    if (engagementActive) labels.push({ label: `${engagementRange[0]}%–${engagementRange[1]}% engagement`, type: 'engagement' })
-    if (quickFilter) labels.push({ label: { 'completed-today': 'Completed today', 'not-completed-today': 'Not completed today', 'on-track': 'On track this week', 'needs-attention': 'Needs attention' }[quickFilter], type: 'quick' })
-    return labels
-  }, [school, dateStart, dateEnd, engagementActive, engagementRange, quickFilter])
-  const [sortBy,     setSortBy]     = useState('engagement')
+const [sortBy,     setSortBy]     = useState('engagement')
   const [sortDir,    setSortDir]    = useState('desc')
   const [showMenu,   setShowMenu]   = useState(false)
 
@@ -777,13 +756,8 @@ export default function Report1() {
         const q = search.toLowerCase()
         if (!t.firstName.toLowerCase().includes(q) && !t.lastName.toLowerCase().includes(q)) return false
       }
-      if (dateStart || dateEnd) {
-        const hasActivity = t.days.some(d =>
-          d.level !== 'n' &&
-          (!dateStart || d.date >= dateStart) &&
-          (!dateEnd   || d.date <= dateEnd)
-        )
-        if (!hasActivity) return false
+      if (dateStart) {
+        if (!t.days.some(d => d.level !== 'n' && d.date >= dateStart)) return false
       }
       if (engagementActive) {
         const p = t.engagementPct
@@ -800,7 +774,7 @@ export default function Report1() {
 
       return true
     })
-  , [enriched, school, search, dateStart, dateEnd, engagementRange, quickFilter])
+  , [enriched, school, search, dateStart, engagementRange, quickFilter])
 
   const sorted = useMemo(() =>
     [...filtered].sort((a, b) => {
@@ -822,7 +796,7 @@ export default function Report1() {
   const rangeStart  = sorted.length === 0 ? 0 : (page - 1) * pageSize + 1
   const rangeEnd    = Math.min(page * pageSize, sorted.length)
 
-  useEffect(() => { setPage(1) }, [search, school, dateStart, dateEnd, engagementRange[0], engagementRange[1], pageSize, quickFilter])
+  useEffect(() => { setPage(1) }, [search, school, dateStart, engagementRange[0], engagementRange[1], pageSize, quickFilter])
 
   useEffect(() => {
     if (!showFilters) return
@@ -832,18 +806,15 @@ export default function Report1() {
   }, [showFilters])
 
   return (
-    <div className="max-w-screen-xl mx-auto px-6 py-8">
+    <div className="max-w-screen-xl mx-auto px-6 pt-20 pb-8">
 
       {/* Page header */}
       <div className="flex items-end justify-between mb-6">
         <div>
-          <div className="text-[10px] font-bold tracking-widest uppercase text-brand-subtext mb-1.5">
-            MTW · Admin Report
-          </div>
           <h1 className="text-2xl font-bold text-brand-text leading-tight">
             Teacher Engagement Overview
           </h1>
-          <p className="text-sm text-brand-subtext mt-1">
+          <p className="text-[14px] text-brand-subtext mt-1">
             MTW curriculum lesson access · Mar 24 – Apr 18, 2026
           </p>
         </div>
@@ -878,7 +849,7 @@ export default function Report1() {
         </div>
       </div>
 
-      <WeeklyGoalBar teachers={sorted} filterLabels={filterLabels} />
+      <WeeklyGoalBar teachers={sorted} />
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-brand-border shadow-sm mb-16">
@@ -892,13 +863,11 @@ export default function Report1() {
                 <button onClick={() => setSchool('All')} className="hover:text-dessa-teal/60 transition-colors ml-0.5"><X size={11} /></button>
               </span>
             )}
-            {(dateStart || dateEnd) && (
+            {dateStart && (
               <span className="flex items-center gap-1.5 text-xs bg-dessa-teal/10 text-dessa-teal border border-dessa-teal/20 rounded-md px-2.5 py-0.5 font-medium">
                 <Calendar size={11} />
-                {dateStart ? new Date(dateStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '…'}
-                {' – '}
-                {dateEnd ? new Date(dateEnd + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '…'}
-                <button onClick={() => { setDateStart(''); setDateEnd('') }} className="hover:text-dessa-teal/60 transition-colors ml-0.5"><X size={11} /></button>
+                From {new Date(dateStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                <button onClick={() => setDateStart('')} className="hover:text-dessa-teal/60 transition-colors ml-0.5"><X size={11} /></button>
               </span>
             )}
             {engagementActive && (
@@ -952,23 +921,20 @@ export default function Report1() {
 
             {showFilters && (
               <div className="absolute right-0 top-full mt-1.5 w-[400px] bg-white border border-brand-border rounded-xl shadow-lg z-30 p-4">
-                {/* Panel header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-[10px] font-bold tracking-widest uppercase text-brand-text">Filters</div>
-                  {activeFilters > 0 && (
-                    <button
-                      onClick={() => { setQuickFilter(null); setDateStart(''); setDateEnd(''); setEngagementRange([0, 100]) }}
-                      className="text-xs font-medium hover:opacity-70 transition-opacity"
-                      style={{ color: '#0061FF' }}
-                    >
-                      Clear filters
-                    </button>
-                  )}
-                </div>
-
                 {/* Quick filters */}
                 <div className="mb-4">
-                  <div className="text-[10px] font-bold tracking-widest uppercase text-brand-text mb-3">Quick filters</div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-[10px] font-bold tracking-widest uppercase text-brand-text">Quick filters</div>
+                    {activeFilters > 0 && (
+                      <button
+                        onClick={() => { setQuickFilter(null); setDateStart(''); setEngagementRange([0, 100]) }}
+                        className="text-xs font-medium hover:opacity-70 transition-opacity"
+                        style={{ color: '#0061FF' }}
+                      >
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {[
                       { key: 'completed-today',     label: 'Completed today',     Icon: CheckCircle2 },
@@ -977,10 +943,10 @@ export default function Report1() {
                       <button
                         key={key}
                         onClick={() => setQuickFilter(q => q === key ? null : key)}
-                        className={`flex items-center gap-1.5 text-[14px] px-3 py-1.5 rounded-full border transition-colors ${
+                        className={`flex items-center gap-1.5 text-[14px] px-3 py-1.5 rounded-lg border border-dashed transition-colors ${
                           quickFilter === key
                             ? 'bg-dessa-teal/10 border-dessa-teal text-dessa-teal font-medium'
-                            : 'bg-white border-brand-border text-brand-subtext hover:border-brand-text hover:text-brand-text'
+                            : 'bg-white border-brand-subtext/50 text-brand-text hover:border-brand-text'
                         }`}
                       >
                         <Icon size={14} />
@@ -995,27 +961,14 @@ export default function Report1() {
                 {/* Date range */}
                 <div className="mb-4">
                   <div className="text-[10px] font-bold tracking-widest uppercase text-brand-text mb-3">Date Range</div>
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1">
-                      <label className="text-xs text-brand-subtext block mb-1">From</label>
-                      <DatePicker
-                        value={dateStart}
-                        onChange={setDateStart}
-                        placeholder="Start date"
-                        max={dateEnd || REPORT_TODAY}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-xs text-brand-subtext block mb-1">To</label>
-                      <DatePicker
-                        value={dateEnd}
-                        onChange={setDateEnd}
-                        placeholder="End date"
-                        min={dateStart || undefined}
-                        max={REPORT_TODAY}
-                      />
-                    </div>
-                  </div>
+                  <label className="text-xs text-brand-subtext block mb-1">From</label>
+                  <DatePicker
+                    value={dateStart}
+                    onChange={setDateStart}
+                    placeholder="Start date"
+                    max={REPORT_TODAY}
+                    buttonClassName="border-brand-subtext/50 text-brand-text"
+                  />
                 </div>
 
                 <div className="h-px bg-brand-border mb-4" />

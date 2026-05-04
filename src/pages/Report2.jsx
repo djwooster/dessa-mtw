@@ -8,6 +8,7 @@ import {
   MOST_RECENT_WEEK,
 } from '../lib/report2Data'
 import { DatePicker } from '../components/ui/date-picker'
+import { DateRangePicker } from '../components/ui/date-range-picker'
 import { DayPicker } from 'react-day-picker'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, Cell, ResponsiveContainer,
@@ -408,7 +409,7 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.15 }}
         className="relative bg-white rounded-2xl border border-brand-border shadow-2xl z-10 flex flex-col"
-        style={{ width: '50vw', height: '70vh' }}
+        style={{ width: '50vw', height: '85vh' }}
       >
         {/* Modal header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-0 shrink-0">
@@ -461,7 +462,7 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
                   Days per week a teacher must access a lesson to be "on track."
                 </p>
                 <div className="flex items-center border border-brand-border rounded-lg overflow-hidden w-fit">
-                  {[3,4,5].map(n => (
+                  {[1,2,3,4,5].map(n => (
                     <button
                       key={n}
                       onClick={() => setTempGoal(n)}
@@ -473,7 +474,6 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
                     >{n}</button>
                   ))}
                 </div>
-                <p className="text-xs text-brand-subtext mt-2">{tempGoal} days / week selected</p>
               </div>
             )}
 
@@ -482,20 +482,34 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
               <div className="space-y-6">
                 <div>
                   <p className="text-sm font-semibold text-brand-text mb-3">Set the school year</p>
-                  <InlineRangeCal from={yearStart} to={yearEnd} onFromChange={setYearStart} onToChange={setYearEnd} />
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs text-brand-subtext block mb-1">Start</label>
+                      <DatePicker value={yearStart} onChange={setYearStart} placeholder="Start date" max={yearEnd || undefined} />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-brand-subtext block mb-1">End</label>
+                      <DatePicker value={yearEnd} onChange={setYearEnd} placeholder="End date" min={yearStart || undefined} />
+                    </div>
+                  </div>
                 </div>
                 <div className="h-px bg-brand-border" />
                 <div>
                   <p className="text-sm font-semibold text-brand-text mb-1">Quarter start dates</p>
                   <p className="text-xs text-brand-subtext mb-3">Q1 always begins on the school year start date.</p>
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-4 gap-3">
                     {quarters.map(q => (
                       <div key={q.label}>
-                        <label className="text-xs font-medium text-brand-subtext flex items-center gap-1 mb-2">
+                        <label className="text-xs font-medium text-brand-subtext flex items-center gap-1 mb-1.5">
                           {q.label}
                           {q.locked && <Lock size={10} className="opacity-50" />}
                         </label>
-                        <InlineSingleCal value={q.locked ? yearStart : q.value} onChange={q.locked ? undefined : q.set} locked={q.locked} />
+                        <DatePicker
+                          value={q.locked ? yearStart : q.value}
+                          onChange={q.locked ? () => {} : q.set}
+                          placeholder="Select date"
+                          disabled={q.locked}
+                        />
                       </div>
                     ))}
                   </div>
@@ -515,15 +529,17 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
                     <div key={p.id} className={`px-4 py-3 ${i < periods.length - 1 ? 'border-b border-brand-border' : ''}`}>
                       {editingId === p.id ? (
                         <div>
-                          <input
-                            autoFocus
-                            value={editName}
-                            onChange={e => setEditName(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Escape') setEditingId(null) }}
-                            className="w-full px-3 py-2 text-sm border border-brand-border rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-                          />
-                          <InlineRangeCal from={editFrom} to={editTo} onFromChange={setEditFrom} onToChange={setEditTo} />
-                          <div className="flex items-center gap-2 mt-3">
+                          <div className="flex items-center gap-2 mb-3">
+                            <input
+                              autoFocus
+                              value={editName}
+                              onChange={e => setEditName(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Escape') setEditingId(null) }}
+                              className="flex-1 px-3 py-2 text-sm border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                            />
+                            <DateRangePicker from={editFrom} to={editTo} onFromChange={setEditFrom} onToChange={setEditTo} />
+                          </div>
+                          <div className="flex items-center gap-2">
                             <button onClick={saveEdit} disabled={!editName.trim() || !editFrom || !editTo} className="text-xs font-semibold px-3 py-1.5 rounded-md text-white disabled:opacity-40" style={{ background: '#2A7F8F' }}>Save</button>
                             <button onClick={() => setEditingId(null)} className="text-xs font-semibold text-brand-subtext hover:text-brand-text">Cancel</button>
                           </div>
@@ -550,18 +566,20 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
                 {/* Add row */}
                 <div className="border-t border-brand-border pt-4 mt-2">
                   <p className="text-xs font-semibold text-brand-text mb-2">Add a period</p>
-                  <input
-                    type="text"
-                    placeholder="Name (e.g. Winter Break)"
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-brand-border rounded-lg text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal mb-3"
-                  />
-                  <InlineRangeCal from={newFrom} to={newTo} onFromChange={setNewFrom} onToChange={setNewTo} />
+                  <div className="flex items-center gap-2 mb-3">
+                    <input
+                      type="text"
+                      placeholder="Name (e.g. Winter Break)"
+                      value={newName}
+                      onChange={e => setNewName(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm border border-brand-border rounded-lg text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                    />
+                    <DateRangePicker from={newFrom} to={newTo} onFromChange={setNewFrom} onToChange={setNewTo} />
+                  </div>
                   <button
                     onClick={addPeriod}
                     disabled={!canAdd}
-                    className="flex items-center gap-1.5 mt-3 px-3 py-2 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-40"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-40"
                     style={{ background: '#2A7F8F' }}
                   >
                     <Plus size={14} /> Add period
