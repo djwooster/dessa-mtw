@@ -678,12 +678,12 @@ export default function Report2() {
     ? [
         { label: 'Schools engaged',      value: `${schoolsEngaged} of ${schools.length}`, sub: weekLabel(selectedWeek)               },
         { label: 'Teachers meeting goal', value: `${weekStats.pct}%`,                      sub: 'district-wide'                       },
-        { label: 'Goal',                  value: `${goal}×`,                               sub: 'per week · change in settings'        },
+        { label: 'Goal',                  value: `${goal}×`,                               sub: 'per week'        },
       ]
     : [
         { label: 'Teachers on track', value: `${selectedWeekSchools[0]?.meetingGoal} of ${selectedWeekSchools[0]?.totalTeachers}`, sub: weekLabel(selectedWeek) },
         { label: 'Engagement rate',   value: `${selectedWeekSchools[0]?.pct}%`,    sub: SITE_LEADER_SCHOOL.name                  },
-        { label: 'Goal',              value: `${goal}×`,                           sub: 'per week · change in settings'           },
+        { label: 'Goal',              value: `${goal}×`,                           sub: 'per week'           },
       ]
 
   return (
@@ -705,6 +705,47 @@ export default function Report2() {
           >
             <Settings size={14} /> Settings
           </button>
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setShowFilters(v => !v)}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border transition-all hover:shadow-sm ${
+                (dateFrom || dateTo)
+                  ? 'bg-dessa-teal text-white border-dessa-teal'
+                  : 'bg-white text-brand-text border-brand-border'
+              }`}
+            >
+              <CalendarDays size={14} />
+              Date range
+              {(dateFrom || dateTo) && (
+                <span className="ml-0.5 bg-white/25 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">1</span>
+              )}
+            </button>
+            {showFilters && (
+              <div className="absolute right-0 top-[calc(100%+6px)] bg-white border border-brand-border rounded-xl shadow-lg z-30 p-5" style={{ width: 620 }}>
+                <InlineRangeCal from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
+                <div className="flex items-center justify-between mt-3 pt-3">
+                  <span className="text-xs text-brand-subtext">
+                    {dateFrom && dateTo
+                      ? `${format(parseISO(dateFrom), 'MMM d')} – ${format(parseISO(dateTo), 'MMM d, yyyy')}`
+                      : dateFrom ? `From ${format(parseISO(dateFrom), 'MMM d, yyyy')}` : ''}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={!dateFrom && !dateTo}
+                      onClick={() => { setDateFrom(''); setDateTo('') }}
+                      className="text-xs font-semibold text-blue-500 hover:text-blue-600 transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+                    >Clear</button>
+                    <button
+                      disabled={!dateFrom && !dateTo}
+                      onClick={() => setShowFilters(false)}
+                      className="text-xs font-semibold text-white px-3 py-1 rounded-md transition-colors hover:opacity-90 disabled:opacity-35 disabled:cursor-not-allowed"
+                      style={{ background: '#1B2B4B' }}
+                    >Save</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           <div className="relative" ref={menuRef}>
             <button
               className="flex items-center px-3.5 py-[11px] rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text"
@@ -756,7 +797,7 @@ export default function Report2() {
             transition={{ duration: 0.25, delay: 0.08 + i * 0.05 }}
             className="bg-white rounded-xl border border-brand-border shadow-sm px-5 py-4"
           >
-            <p className="text-xs font-semibold text-brand-subtext mb-2">{label}</p>
+            <p className="text-sm font-medium text-brand-subtext mb-4">{label}</p>
             <p className="text-2xl font-bold text-brand-text">{value}</p>
             <p className="text-xs text-brand-subtext mt-0.5">{sub}</p>
           </motion.div>
@@ -805,75 +846,23 @@ export default function Report2() {
         className="bg-white rounded-xl border border-brand-border shadow-sm"
       >
         {/* Table toolbar */}
-        {(() => {
-          const activeFilters = (dateFrom || dateTo) ? 1 : 0
-          return (
-            <div className="flex items-center justify-end gap-2 px-4 py-3 border-b border-brand-border bg-brand-bg/40 rounded-t-xl">
-              {/* Search */}
-              <div className="relative">
-                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Search schools…"
-                  value={searchQ}
-                  onChange={e => setSearchQ(e.target.value)}
-                  className="pl-8 pr-7 py-1.5 text-sm border border-brand-border rounded-lg bg-white w-44 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-                />
-                {searchQ && (
-                  <button onClick={() => setSearchQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-
-              {/* Filters */}
-              <div className="relative" ref={filterRef}>
-                <button
-                  onClick={() => setShowFilters(v => !v)}
-                  className={`flex items-center gap-1.5 text-xs font-medium border rounded-lg px-3 py-1.5 transition-colors ${
-                    activeFilters > 0
-                      ? 'bg-dessa-teal text-white border-dessa-teal'
-                      : 'bg-white text-brand-subtext border-brand-border hover:text-brand-text hover:bg-brand-bg'
-                  }`}
-                >
-                  <CalendarDays size={13} />
-                  Date range
-                  {activeFilters > 0 && (
-                    <span className="ml-0.5 bg-white/25 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                      {activeFilters}
-                    </span>
-                  )}
-                </button>
-
-                {showFilters && (
-                  <div className="absolute right-0 top-full mt-1.5 bg-white border border-brand-border rounded-xl shadow-lg z-30 p-5" style={{ width: 620 }}>
-                    <InlineRangeCal from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
-                    <div className="flex items-center justify-between mt-3 pt-3">
-                      <span className="text-xs text-brand-subtext">
-                        {dateFrom && dateTo
-                          ? `${format(parseISO(dateFrom), 'MMM d')} – ${format(parseISO(dateTo), 'MMM d, yyyy')}`
-                          : dateFrom ? `From ${format(parseISO(dateFrom), 'MMM d, yyyy')}` : ''}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          disabled={!dateFrom && !dateTo}
-                          onClick={() => { setDateFrom(''); setDateTo('') }}
-                          className="text-xs font-semibold text-blue-500 hover:text-blue-600 transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
-                        >Clear</button>
-                        <button
-                          disabled={!dateFrom && !dateTo}
-                          onClick={() => setShowFilters(false)}
-                          className="text-xs font-semibold text-white px-3 py-1 rounded-md transition-colors hover:opacity-90 disabled:opacity-35 disabled:cursor-not-allowed"
-                          style={{ background: '#1B2B4B' }}
-                        >Save</button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        })()}
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-b border-brand-border bg-brand-bg/40 rounded-t-xl">
+          <div className="relative">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search schools…"
+              value={searchQ}
+              onChange={e => setSearchQ(e.target.value)}
+              className="pl-8 pr-7 py-1.5 text-sm border border-brand-border rounded-lg bg-white w-44 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+            />
+            {searchQ && (
+              <button onClick={() => setSearchQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* School table */}
         <div className="overflow-hidden rounded-b-xl">

@@ -197,7 +197,7 @@ function SchoolSelect({ value, onChange }) {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-2 text-sm border border-brand-border rounded-lg bg-white pl-3 pr-3 py-1.5 text-brand-text hover:bg-brand-bg transition-colors min-w-[140px] justify-between"
+        className="flex items-center gap-2 text-sm font-medium border border-brand-border rounded-md bg-white pl-3.5 pr-3.5 py-2 text-brand-text hover:shadow-sm transition-all min-w-[140px] justify-between"
       >
         <span>{value === 'All' ? 'All schools' : value}</span>
         <ChevronDown size={14} className={`text-brand-subtext transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
@@ -231,7 +231,7 @@ function MonthCalendar({ year, month, dayMap }) {
 
   return (
     <div>
-      <div className="text-xs font-semibold text-brand-subtext mb-2">
+      <div className="text-sm font-medium text-brand-subtext mb-2">
         {new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
       </div>
       <div className="grid grid-cols-7 gap-px">
@@ -690,7 +690,7 @@ function WeeklyGoalBar({ teachers }) {
     <div className="bg-white rounded-xl border border-brand-border shadow-sm px-8 py-7 mb-6">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <div className="text-[12px] font-semibold tracking-widest uppercase text-brand-subtext/80 mb-2">
+          <div className="text-sm font-medium text-brand-subtext mb-2">
             Teachers hitting weekly goal
           </div>
           <div className="text-4xl font-bold text-brand-text leading-none">{pct}%</div>
@@ -824,10 +824,9 @@ const [sortBy,     setSortBy]     = useState('engagement')
         <div className="relative">
           <button
             onClick={() => setShowMenu(v => !v)}
-            className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-lg px-3 py-1.5 bg-white hover:bg-brand-bg transition-colors"
+            className="flex items-center px-3.5 py-[11px] rounded-md text-sm font-medium border border-brand-border bg-white text-brand-text hover:shadow-sm transition-all"
           >
             <MoreHorizontal size={14} />
-            Options
           </button>
           {showMenu && (
             <div className="absolute right-0 top-full mt-1.5 w-44 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
@@ -891,7 +890,7 @@ const [sortBy,     setSortBy]     = useState('engagement')
               placeholder="Search teachers…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-8 pr-7 py-1.5 text-sm border border-brand-border rounded-lg bg-white w-48 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+              className="pl-8 pr-7 py-2 text-sm border border-brand-border rounded-md bg-white w-48 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
@@ -905,13 +904,13 @@ const [sortBy,     setSortBy]     = useState('engagement')
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => setShowFilters(v => !v)}
-              className={`flex items-center gap-1.5 text-xs font-medium border rounded-lg px-3 py-1.5 transition-colors ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border transition-all hover:shadow-sm ${
                 activeFilters > 0
                   ? 'bg-dessa-teal text-white border-dessa-teal'
-                  : 'bg-white text-brand-subtext border-brand-border hover:text-brand-text hover:bg-brand-bg'
+                  : 'bg-white text-brand-text border-brand-border'
               }`}
             >
-              <SlidersHorizontal size={13} />
+              <SlidersHorizontal size={14} />
               Filters
               {activeFilters > 0 && (
                 <span className="ml-0.5 bg-white/25 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">

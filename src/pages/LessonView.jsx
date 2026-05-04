@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Clock, Bookmark, Maximize2, Minimize2, Flame, Check } from 'lucide-react'
+import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Clock, Bookmark, Maximize2, Minimize2, Flame, Check, Eye, EyeOff } from 'lucide-react'
 
 
 const units = [
@@ -376,6 +376,7 @@ export default function LessonView({ onBookmark }) {
   const [bookmarked, setBookmarked] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [showCompletion, setShowCompletion] = useState(false)
+  const [showInactive, setShowInactive] = useState(true)
 
   const grade = course?.grade ?? 'Grade 3'
   const competency = course?.competency ?? 'Self-Awareness'
@@ -425,14 +426,21 @@ export default function LessonView({ onBookmark }) {
 
       {/* ── Left sidebar ── */}
       <aside className="flex-shrink-0 bg-white border-r border-brand-border flex flex-col overflow-hidden" style={{ width: '20rem' }}>
-        <div className="px-4 py-4 border-b border-brand-border">
+        <div className="px-4 py-4 border-b border-brand-border flex items-center justify-between">
           <p className="text-lg font-semibold tracking-tight text-brand-text">
             {grade}
           </p>
+          <button
+            onClick={() => setShowInactive(v => !v)}
+            className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors"
+          >
+            {showInactive ? <Eye size={13} /> : <EyeOff size={13} />}
+            {showInactive ? 'Hide inactive units' : 'Show inactive units'}
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto py-1">
-          {units.map((unit) => {
+          {units.filter(unit => showInactive || unit.active).map((unit) => {
             const isExpanded = expandedUnit === unit.id
             const toggle = () => setExpandedUnit(isExpanded ? null : unit.id)
 
