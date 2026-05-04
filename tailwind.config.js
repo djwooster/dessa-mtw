@@ -16,6 +16,7 @@ export default {
           tealLight: '#E8F4F6',
           green:     '#5DB87A',
           greenDark: '#26884b',
+          magenta:   '#B5179E',
           salmon:    '#F08080',
           blue:      '#A8C8E8',
           bg:        '#F0F2F5',

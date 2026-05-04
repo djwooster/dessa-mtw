@@ -5,12 +5,13 @@ import { Search, HelpCircle } from 'lucide-react'
 
 const navItems = [
   { label: 'Dashboard',   to: '/' },
-  { label: 'Ratings',     to: '/ratings' },
+  // { label: 'Ratings',     to: '/ratings' },
   { label: 'MTW',         to: '/mtw' },
   { label: 'MTW 2',       to: '/mtw2' },
   { label: 'MTW 3',       to: '/mtw4' },
-  { label: 'Report 1',    to: '/report1' },
-  { label: 'Report 2',    to: '/report2' },
+  { label: 'DCE Report',             to: '/report1' },
+  { label: 'DCE(b)',                 to: '/report1b' },
+  { label: 'School Expectations',    to: '/report2' },
   { label: 'Brand Guide', to: '/brand' },
 ]
 

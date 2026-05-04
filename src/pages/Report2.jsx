@@ -88,7 +88,7 @@ function WeekSelector({ weeks, selected, onChange }) {
 
       <div className="relative" ref={ref}>
         <button
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-brand-border bg-white text-sm font-semibold text-brand-text hover:shadow-sm transition-all min-w-[210px] justify-between"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-brand-border bg-white text-sm font-semibold text-brand-text transition-all min-w-[210px] justify-between"
           onClick={() => setOpen(o => !o)}
         >
           <span>{weekLabel(selected, true)}</span>
@@ -96,7 +96,7 @@ function WeekSelector({ weeks, selected, onChange }) {
         </button>
 
         {open && (
-          <div className="absolute top-[calc(100%+6px)] left-1/2 -translate-x-1/2 bg-white rounded-xl border border-brand-border shadow-xl z-30 w-64 max-h-72 overflow-y-auto py-1.5">
+          <div className="absolute top-[calc(100%+6px)] left-1/2 -translate-x-1/2 bg-white rounded-xl border border-brand-border z-30 w-64 max-h-72 overflow-y-auto py-1.5">
             {grouped.map(({ label, weeks: mw }) => (
               <div key={label}>
                 <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-brand-subtext sticky top-0 bg-white">
@@ -381,7 +381,7 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.15 }}
-        className="relative bg-white rounded-2xl border border-brand-border shadow-2xl z-10 flex flex-col"
+        className="relative bg-white rounded-2xl border border-brand-border z-10 flex flex-col"
         style={{ width: '50vw', height: '85vh' }}
       >
         {/* Modal header */}
@@ -609,7 +609,13 @@ export default function Report2() {
 
   useEffect(() => {
     if (!showFilters) return
-    const handler = e => { if (filterRef.current && !filterRef.current.contains(e.target)) setShowFilters(false) }
+    const handler = e => {
+      if (
+        filterRef.current &&
+        !filterRef.current.contains(e.target) &&
+        !e.target.closest('[data-radix-popper-content-wrapper]')
+      ) setShowFilters(false)
+    }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [showFilters])
@@ -695,24 +701,19 @@ export default function Report2() {
         className="flex items-end justify-between mb-6"
       >
         <div>
-<h1 className="text-2xl font-semibold text-brand-text">School Engagement</h1>
+          <h1 className="text-2xl font-semibold text-brand-text">School Expectations Report</h1>
           <p className="text-sm text-brand-subtext mt-1">Teachers actively bringing SEL to their classrooms each week</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text"
-            onClick={() => setSettingsOpen(true)}
-          >
-            <Settings size={14} /> Settings
-          </button>
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => setShowFilters(v => !v)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border transition-all hover:shadow-sm ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border transition-all ${
                 (dateFrom || dateTo)
-                  ? 'bg-dessa-teal text-white border-dessa-teal'
+                  ? 'text-white'
                   : 'bg-white text-brand-text border-brand-border'
               }`}
+              style={(dateFrom || dateTo) ? { backgroundColor: '#B5179E', borderColor: '#B5179E' } : {}}
             >
               <CalendarDays size={14} />
               Date range
@@ -721,7 +722,7 @@ export default function Report2() {
               )}
             </button>
             {showFilters && (
-              <div className="absolute right-0 top-[calc(100%+6px)] bg-white border border-brand-border rounded-xl shadow-lg z-30 p-5" style={{ width: 620 }}>
+              <div className="absolute right-0 top-[calc(100%+6px)] bg-white border border-brand-border rounded-xl z-30 p-5" style={{ width: 620 }}>
                 <InlineRangeCal from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
                 <div className="flex items-center justify-between mt-3 pt-3">
                   <span className="text-xs text-brand-subtext">
@@ -746,15 +747,21 @@ export default function Report2() {
               </div>
             )}
           </div>
+          <button
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border border-brand-border bg-white transition-all text-brand-text"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <Settings size={14} /> Settings
+          </button>
           <div className="relative" ref={menuRef}>
             <button
-              className="flex items-center px-3.5 py-[11px] rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text"
+              className="flex items-center px-3.5 py-[11px] rounded-md text-sm font-medium border border-brand-border bg-white transition-all text-brand-text"
               onClick={() => setMenuOpen(o => !o)}
             >
               <MoreHorizontal size={14} />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-[calc(100%+6px)] bg-white rounded-xl border border-brand-border shadow-lg z-20 w-52 py-1">
+              <div className="absolute right-0 top-[calc(100%+6px)] bg-white rounded-xl border border-brand-border z-20 w-52 py-1">
                 <p className="px-3.5 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-brand-subtext">View as</p>
                 {[
                   { value: 'program_admin', label: 'District Admin' },
@@ -795,7 +802,7 @@ export default function Report2() {
             key={label}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, delay: 0.08 + i * 0.05 }}
-            className="bg-white rounded-xl border border-brand-border shadow-sm px-5 py-4"
+            className="bg-white rounded-xl border border-brand-border px-5 py-4"
           >
             <p className="text-sm font-medium text-brand-subtext mb-4">{label}</p>
             <p className="text-2xl font-bold text-brand-text">{value}</p>
@@ -807,7 +814,7 @@ export default function Report2() {
       {/* Trend chart card — commented out
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.2 }}
-        className="bg-white rounded-xl border border-brand-border shadow-sm mb-6 overflow-hidden"
+        className="bg-white rounded-xl border border-brand-border mb-6 overflow-hidden"
       >
         <div className="px-5 pt-5 pb-2">
           <div className="flex items-start justify-between">
@@ -843,7 +850,7 @@ export default function Report2() {
       {/* School table */}
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.28 }}
-        className="bg-white rounded-xl border border-brand-border shadow-sm"
+        className="bg-white rounded-xl border border-brand-border"
       >
         {/* Table toolbar */}
         <div className="flex items-center justify-end gap-2 px-4 py-3 border-b border-brand-border bg-brand-bg/40 rounded-t-xl">

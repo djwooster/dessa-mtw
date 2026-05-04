@@ -12,6 +12,7 @@ import CurriculumV2 from './pages/CurriculumV2'
 // import LessonViewV3 from './pages/LessonViewV3'
 import CurriculumV4 from './pages/CurriculumV4'
 import Report1 from './pages/Report1'
+import Report1B from './pages/Report1B'
 import Report2 from './pages/Report2'
 import LessonViewV4 from './pages/LessonViewV4'
 import CourseOverviewV2 from './pages/CourseOverviewV2'
@@ -134,6 +135,7 @@ export default function App() {
           <Route path="/mtw4/lesson" element={<LessonViewV4 onBookmark={handleBookmarkV4} />} />
           <Route path="/ratings" element={<Ratings />} />
           <Route path="/report1" element={<Report1 />} />
+          <Route path="/report1b" element={<Report1B />} />
           <Route path="/report2" element={<Report2 />} />
           <Route path="/insights" element={<Placeholder title="Data & Insights" />} />
           <Route path="/strategies" element={<Placeholder title="Strategies" />} />
