@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import Nav from './components/Nav'
 import Dashboard from './pages/Dashboard'
 import Curriculum from './pages/Curriculum'
@@ -114,6 +115,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <Toaster position="top-center" richColors />
       <div className="min-h-screen bg-brand-bg">
         <Nav />
         <Routes>

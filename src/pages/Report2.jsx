@@ -7,6 +7,7 @@ import {
   getDistrictTrend, getSchoolTrend, getDistrictWeekData,
   MOST_RECENT_WEEK,
 } from '../lib/report2Data'
+import { toast } from 'sonner'
 import { DatePicker } from '../components/ui/date-picker'
 import { DateRangePicker } from '../components/ui/date-range-picker'
 import { DayPicker } from 'react-day-picker'
@@ -200,34 +201,6 @@ function TrendChart({ data, districtTarget, selectedWeek }) {
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>
-  )
-}
-
-// ─── Role Toggle ──────────────────────────────────────────────────────────────
-
-function RoleToggle({ role, onChange }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-brand-subtext font-medium">Viewing as:</span>
-      <div className="flex items-center bg-brand-bg border border-brand-border rounded-lg p-0.5 gap-0.5">
-        {[
-          { value: 'program_admin', label: 'District Admin' },
-          { value: 'site_leader',   label: 'Site Leader'   },
-        ].map(opt => (
-          <button
-            key={opt.value}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-              role === opt.value
-                ? 'bg-white text-brand-text shadow-sm border border-brand-border'
-                : 'text-brand-subtext hover:text-brand-text'
-            }`}
-            onClick={() => onChange(opt.value)}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    </div>
   )
 }
 
@@ -447,7 +420,16 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
               className="shrink-0 px-3 py-1 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-95"
               style={{ background: '#1B2B4B' }}
               disabled={!isDirty}
-              onClick={() => { onSave(tempGoal, tempTarget); onClose() }}
+              onClick={() => {
+                const messages = {
+                  engagement:  `Weekly goal updated to ${tempGoal} day${tempGoal !== 1 ? 's' : ''} per week`,
+                  school_year: 'School year dates saved',
+                  blackout:    'Blackout periods saved',
+                }
+                toast.success(messages[activeTab] ?? 'Settings saved')
+                onSave(tempGoal, tempTarget)
+                onClose()
+              }}
             >Save</button>
           </div>
 
@@ -705,19 +687,18 @@ export default function Report2() {
       ]
 
   return (
-    <div className="max-w-screen-xl mx-auto px-6 py-8">
+    <div className="max-w-screen-xl mx-auto px-6 pt-20 pb-8">
 
       {/* Page header */}
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
-        className="flex items-start justify-between mb-6"
+        className="flex items-end justify-between mb-6"
       >
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-1">Move This World</p>
-          <h1 className="text-2xl font-semibold text-brand-text">School Engagement</h1>
+<h1 className="text-2xl font-semibold text-brand-text">School Engagement</h1>
           <p className="text-sm text-brand-subtext mt-1">Teachers actively bringing SEL to their classrooms each week</p>
         </div>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2">
           <button
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text"
             onClick={() => setSettingsOpen(true)}
@@ -726,13 +707,28 @@ export default function Report2() {
           </button>
           <div className="relative" ref={menuRef}>
             <button
-              className="flex items-center px-3.5 py-2 rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text"
+              className="flex items-center px-3.5 py-[11px] rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text"
               onClick={() => setMenuOpen(o => !o)}
             >
               <MoreHorizontal size={14} />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-[calc(100%+6px)] bg-white rounded-xl border border-brand-border shadow-lg z-20 w-44 py-1">
+              <div className="absolute right-0 top-[calc(100%+6px)] bg-white rounded-xl border border-brand-border shadow-lg z-20 w-52 py-1">
+                <p className="px-3.5 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-brand-subtext">View as</p>
+                {[
+                  { value: 'program_admin', label: 'District Admin' },
+                  { value: 'site_leader',   label: 'Site Leader'   },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    className="w-full flex items-center justify-between px-3.5 py-2 text-sm text-brand-text hover:bg-brand-bg transition-colors"
+                    onClick={() => { setRole(opt.value); setMenuOpen(false) }}
+                  >
+                    {opt.label}
+                    {role === opt.value && <Check size={13} style={{ color: '#2A7F8F' }} />}
+                  </button>
+                ))}
+                <div className="h-px bg-brand-border mx-2 my-1" />
                 <button
                   className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors"
                   onClick={() => { exportCSV(rawTrend, activeSchools, goal); setMenuOpen(false) }}
@@ -749,14 +745,6 @@ export default function Report2() {
             )}
           </div>
         </div>
-      </motion.div>
-
-      {/* Role toggle */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.04 }}
-        className="mb-6"
-      >
-        <RoleToggle role={role} onChange={setRole} />
       </motion.div>
 
       {/* Stat cards */}

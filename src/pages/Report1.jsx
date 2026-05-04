@@ -687,7 +687,7 @@ function WeeklyGoalBar({ teachers }) {
   const barColor    = pct >= 85 ? COLOR_GREEN_DARK : pct >= 50 ? '#F5A623' : '#D95555'
 
   return (
-    <div className="bg-white rounded-xl border border-brand-border shadow-sm px-8 py-7 mb-4">
+    <div className="bg-white rounded-xl border border-brand-border shadow-sm px-8 py-7 mb-6">
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="text-[12px] font-semibold tracking-widest uppercase text-brand-subtext/80 mb-2">
@@ -695,8 +695,9 @@ function WeeklyGoalBar({ teachers }) {
           </div>
           <div className="text-4xl font-bold text-brand-text leading-none">{pct}%</div>
         </div>
-        <div className="text-right text-[14px] text-brand-subtext">
-          Goal: {WEEKLY_GOAL_DAYS}+ lessons
+        <div className="text-right">
+          <div className="text-[14px] font-semibold text-brand-text">Weekly Goal</div>
+          <div className="text-[14px] text-brand-subtext">{WEEKLY_GOAL_DAYS}+ lessons</div>
         </div>
       </div>
 
@@ -811,7 +812,7 @@ const [sortBy,     setSortBy]     = useState('engagement')
       {/* Page header */}
       <div className="flex items-end justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-brand-text leading-tight">
+          <h1 className="text-2xl font-semibold text-brand-text leading-tight">
             Teacher Engagement Overview
           </h1>
           <p className="text-[14px] text-brand-subtext mt-1">
