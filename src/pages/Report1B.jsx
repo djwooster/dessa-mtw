@@ -388,7 +388,7 @@ function ConceptA({ teachers, expandedId, onExpand, sortBy, setSortBy, sortDir, 
       >
         <div className="text-xs font-semibold text-brand-subtext">#</div>
         <SortBtn col="name"       label="Teacher"          sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
-        <div className="text-xs font-semibold text-brand-subtext">School</div>
+        <SortBtn col="school" label="School" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
         <SortBtn col="recent"     label="Last 4 Wks"       sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
         <SortBtn col="engagement" label="Engagement (YTD)" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
         <SortBtn col="lastActive" label="This Week"        sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
@@ -859,6 +859,7 @@ const [sortBy,     setSortBy]     = useState('engagement')
     [...filtered].sort((a, b) => {
       const d = sortDir === 'desc' ? -1 : 1
       if (sortBy === 'name')       return d * a.lastName.localeCompare(b.lastName)
+      if (sortBy === 'school')     return d * a.school.localeCompare(b.school)
       if (sortBy === 'recent')     return d * (a.engagementPct - b.engagementPct)
       if (sortBy === 'engagement') return d * (a.ytdPct - b.ytdPct)
       if (sortBy === 'lastActive') {
