@@ -707,9 +707,9 @@ function ConceptC({ teachers }) {
   )
 }
 
-// ── Weekly Goal KPI Bar ───────────────────────────────────────────────────────
+// ── Weekly Goal KPI Bar (commented out) ──────────────────────────────────────
 
-const WEEKLY_GOAL_DAYS = 3  // lessons/week to hit the goal
+/* const WEEKLY_GOAL_DAYS = 3
 
 function WeeklyGoalBar({ teachers }) {
   const currentWeek  = SCHOOL_DAYS.find(d => d.date === REPORT_TODAY)?.week ?? 4
@@ -746,8 +746,6 @@ function WeeklyGoalBar({ teachers }) {
           <div className="text-[14px] text-brand-subtext">{WEEKLY_GOAL_DAYS}+ lessons</div>
         </div>
       </div>
-
-      {/* Segmented tick bar */}
       <div className="flex gap-[2px] mb-5">
         {Array.from({ length: TICKS }).map((_, i) => (
           <div
@@ -757,10 +755,44 @@ function WeeklyGoalBar({ teachers }) {
           />
         ))}
       </div>
-
       <div className="flex justify-end text-[14px] text-brand-subtext">
         <span>{metGoal} / {total} teachers</span>
       </div>
+    </div>
+  )
+} */
+
+// ── KPI Cards ─────────────────────────────────────────────────────────────────
+
+const WEEKLY_GOAL_DAYS = 3
+
+function KpiCards({ teachers }) {
+  if (!teachers.length) return null
+  const total          = teachers.length
+  const activeThisWeek = teachers.filter(t => t.days.some(d => d.week === 4 && d.level !== 'n'))
+  const loggedInPct    = Math.round((activeThisWeek.length / total) * 100)
+  const metGoal        = teachers.filter(t =>
+    t.days.filter(d => d.week === 4 && d.level !== 'n').length >= WEEKLY_GOAL_DAYS
+  ).length
+  const goalPct        = Math.round((metGoal / total) * 100)
+  const statCards = [
+    { label: 'Logged in this week',    value: `${loggedInPct}%`, sub: `${activeThisWeek.length} of ${total} teachers` },
+    { label: 'Teachers hitting goal',  value: `${goalPct}%`,     sub: `${metGoal} of ${total} teachers`               },
+  ]
+  return (
+    <div className="grid grid-cols-2 gap-4 mb-6">
+      {statCards.map(({ label, value, sub }, i) => (
+        <motion.div
+          key={label}
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.08 + i * 0.05 }}
+          className="bg-white rounded-xl border border-brand-border px-5 py-4"
+        >
+          <p className="text-sm font-medium text-brand-subtext mb-4">{label}</p>
+          <p className="text-2xl font-bold text-brand-text">{value}</p>
+          <p className="text-xs text-brand-subtext mt-0.5">{sub}</p>
+        </motion.div>
+      ))}
     </div>
   )
 }
@@ -1000,7 +1032,8 @@ const [sortBy,     setSortBy]     = useState('engagement')
         </div>
       </div>
 
-      <WeeklyGoalBar teachers={sorted} />
+      {/* <WeeklyGoalBar teachers={sorted} /> */}
+      <KpiCards teachers={sorted} />
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-brand-border mb-16">

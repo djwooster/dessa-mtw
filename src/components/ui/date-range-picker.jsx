@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { DayPicker } from 'react-day-picker'
 
@@ -28,7 +28,7 @@ const CAL_CLASS_NAMES = {
   range_middle:    'bg-[#F0F2F5] [&>button]:rounded-none [&>button]:hover:bg-[#E2E6EA]',
 }
 
-export function DateRangePicker({ from, to, onFromChange, onToChange }) {
+export function DateRangePicker({ from, to, onFromChange, onToChange, align = 'end', buttonClassName = '' }) {
   const [open, setOpen] = useState(false)
 
   const hasRange = from || to
@@ -45,15 +45,16 @@ export function DateRangePicker({ from, to, onFromChange, onToChange }) {
             hasRange
               ? 'bg-dessa-teal text-white border-dessa-teal'
               : 'bg-white text-brand-subtext border-brand-border hover:text-brand-text hover:bg-brand-bg'
-          }`}
+          } ${buttonClassName}`}
         >
-          <CalendarDays size={13} />
-          {label}
+          <CalendarDays size={13} className="shrink-0" />
+          <span className="flex-1 text-left">{label}</span>
+          {buttonClassName.includes('w-full') && <ChevronDown size={13} className="shrink-0 opacity-50" />}
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          align="end"
+          align={align}
           sideOffset={6}
           className="z-50 bg-white border border-brand-border rounded-xl shadow-lg outline-none p-5"
         >

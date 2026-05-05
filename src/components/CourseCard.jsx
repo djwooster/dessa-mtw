@@ -42,10 +42,6 @@ export function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onC
                 <BookOpen size={13} className="shrink-0" />
                 <span>{course.lessons} Lessons</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-brand-subtext">
-                <GraduationCap size={13} className="shrink-0" />
-                <span>{course.competency}</span>
-              </div>
             </div>
 
             {/* Divider */}
@@ -69,7 +65,7 @@ export function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onC
 
             {/* Last activity */}
             <p className="text-xs text-brand-subtext mb-4">
-              {isEnrolled ? 'Last Activity: Apr 18 · 9:45 am' : 'Not yet enrolled'}
+              {isEnrolled ? 'Last Activity: Apr. 18' : 'Not yet enrolled'}
             </p>
 
             {/* Actions */}

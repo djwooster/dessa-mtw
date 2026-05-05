@@ -244,10 +244,6 @@ export default function Dashboard({ enrolledCourse }) {
             {today}
           </p>
           <h1 className="text-2xl font-semibold text-brand-text">Welcome back, Tara!</h1>
-          <p className="text-sm text-brand-subtext mt-0.5">
-            Assess your students and identify targeted strategies to develop their social and
-            emotional competencies.
-          </p>
         </div>
       </motion.div>
 
