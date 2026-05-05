@@ -923,7 +923,7 @@ const [sortBy,     setSortBy]     = useState('engagement')
     <div className="max-w-screen-xl mx-auto px-6 pt-12 pb-8">
 
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-semibold text-brand-text">Daily Curriculum Engagement</h1>
+        <h1 className="text-2xl font-semibold text-brand-text">Daily Curriculum Engagement</h1>
         <div className="flex items-center gap-2">
           {/* Search */}
           <div className="relative">
@@ -1091,9 +1091,7 @@ const [sortBy,     setSortBy]     = useState('engagement')
               </span>
             )}
           </div>
-          <span className="text-xs font-semibold text-brand-subtext bg-brand-bg border border-brand-border rounded-full px-2.5 py-0.5 shrink-0">
-            {sorted.length}
-          </span>
+          <span className="text-xs text-brand-subtext shrink-0">{sorted.length} teachers</span>
         </div>
 
         <ConceptA
