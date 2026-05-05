@@ -120,8 +120,7 @@ function WeekDots({ teacher }) {
             title={`${day.date}: ${completed ? 'Lesson completed' : 'No lesson'}`}
           >
             <div
-              className="w-4 h-4 rounded-full border-2 transition-colors flex items-center justify-center"
-              style={completed ? { backgroundColor: COLOR_GREEN_DARK, borderColor: COLOR_GREEN_DARK } : {}}
+              className={`w-4 h-4 rounded-full border-2 transition-colors flex items-center justify-center ${completed ? 'bg-dessa-teal border-dessa-teal' : ''}`}
             >
               {completed
                 ? <Check size={9} strokeWidth={3} className="text-white" />
@@ -923,6 +922,48 @@ const [sortBy,     setSortBy]     = useState('engagement')
   return (
     <div className="max-w-screen-xl mx-auto px-6 pt-12 pb-8">
 
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-semibold text-brand-text">Daily Curriculum Engagement</h1>
+        <div className="flex items-center gap-2">
+          {/* Search */}
+          <div className="relative">
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search teachers…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-7 pr-6 h-8 text-xs border border-brand-border rounded-md bg-white w-60 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* Options menu */}
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu(v => !v)}
+              className="flex items-center justify-center w-8 h-8 rounded-md border border-brand-border bg-white text-brand-text hover:bg-brand-bg transition-all"
+            >
+              <MoreHorizontal size={13} />
+            </button>
+            {showMenu && (
+              <div className="absolute right-0 top-full mt-1.5 w-44 bg-white border border-brand-border rounded-lg z-20 overflow-hidden py-1">
+                <button className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(filtered); setShowMenu(false) }}>
+                  <Download size={13} className="text-brand-subtext" />Export as CSV
+                </button>
+                <button className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { window.print(); setShowMenu(false) }}>
+                  <Printer size={13} className="text-brand-subtext" />Print report
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Filter panel */}
       <div className="bg-white border border-brand-border rounded-xl mb-6">
         <button
@@ -1022,81 +1063,37 @@ const [sortBy,     setSortBy]     = useState('engagement')
       <div className="bg-white rounded-xl border border-brand-border mb-16">
 
         {/* Table card header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-brand-border">
-          <div className="flex items-center gap-3">
-            <span className="text-xl font-semibold text-brand-text">Daily Curriculum Engagement</span>
-            <span className="text-xs font-semibold text-brand-subtext bg-brand-bg border border-brand-border rounded-full px-2.5 py-0.5">
-              {sorted.length}
-            </span>
-            {activeFilters > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {school !== 'All' && (
-                  <span className="flex items-center gap-1 text-xs rounded-md px-2.5 py-0.5 font-medium border" style={{ backgroundColor: 'rgba(181,23,158,0.08)', color: '#B5179E', borderColor: 'rgba(181,23,158,0.2)' }}>
-                    {school}
-                    <button onClick={() => setSchool('All')} className="transition-colors ml-0.5 opacity-70 hover:opacity-100"><X size={11} /></button>
-                  </span>
-                )}
-                {dateStart && (
-                  <span className="flex items-center gap-1.5 text-xs rounded-md px-2.5 py-0.5 font-medium border" style={{ backgroundColor: 'rgba(181,23,158,0.08)', color: '#B5179E', borderColor: 'rgba(181,23,158,0.2)' }}>
-                    <Calendar size={11} />
-                    From {new Date(dateStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    <button onClick={() => setDateStart('')} className="transition-colors ml-0.5 opacity-70 hover:opacity-100"><X size={11} /></button>
-                  </span>
-                )}
-                {engagementActive && (
-                  <span className="flex items-center gap-1 text-xs rounded-md px-2.5 py-0.5 font-medium border" style={{ backgroundColor: 'rgba(181,23,158,0.08)', color: '#B5179E', borderColor: 'rgba(181,23,158,0.2)' }}>
-                    {engagementRange[0]}%–{engagementRange[1]}% engagement
-                    <button onClick={() => setEngagementRange([0, 100])} className="transition-colors ml-0.5 opacity-70 hover:opacity-100"><X size={11} /></button>
-                  </span>
-                )}
-                {quickFilter && (
-                  <span className="flex items-center gap-1 text-xs rounded-md px-2.5 py-0.5 font-medium border" style={{ backgroundColor: 'rgba(181,23,158,0.08)', color: '#B5179E', borderColor: 'rgba(181,23,158,0.2)' }}>
-                    {{ 'completed-today': 'Completed today', 'not-completed-today': 'Not completed today', 'on-track': 'On track this week', 'needs-attention': 'Needs attention' }[quickFilter]}
-                    <button onClick={() => setQuickFilter(null)} className="transition-colors ml-0.5 opacity-70 hover:opacity-100"><X size={11} /></button>
-                  </span>
-                )}
-              </div>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-brand-border">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {school !== 'All' && (
+              <span className="flex items-center gap-1 text-xs rounded-md px-2.5 py-0.5 font-medium border" style={{ backgroundColor: 'rgba(181,23,158,0.08)', color: '#B5179E', borderColor: 'rgba(181,23,158,0.2)' }}>
+                {school}
+                <button onClick={() => setSchool('All')} className="transition-colors ml-0.5 opacity-70 hover:opacity-100"><X size={11} /></button>
+              </span>
+            )}
+            {dateStart && (
+              <span className="flex items-center gap-1.5 text-xs rounded-md px-2.5 py-0.5 font-medium border" style={{ backgroundColor: 'rgba(181,23,158,0.08)', color: '#B5179E', borderColor: 'rgba(181,23,158,0.2)' }}>
+                <Calendar size={11} />
+                From {new Date(dateStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                <button onClick={() => setDateStart('')} className="transition-colors ml-0.5 opacity-70 hover:opacity-100"><X size={11} /></button>
+              </span>
+            )}
+            {engagementActive && (
+              <span className="flex items-center gap-1 text-xs rounded-md px-2.5 py-0.5 font-medium border" style={{ backgroundColor: 'rgba(181,23,158,0.08)', color: '#B5179E', borderColor: 'rgba(181,23,158,0.2)' }}>
+                {engagementRange[0]}%–{engagementRange[1]}% engagement
+                <button onClick={() => setEngagementRange([0, 100])} className="transition-colors ml-0.5 opacity-70 hover:opacity-100"><X size={11} /></button>
+              </span>
+            )}
+            {quickFilter && (
+              <span className="flex items-center gap-1 text-xs rounded-md px-2.5 py-0.5 font-medium border" style={{ backgroundColor: 'rgba(181,23,158,0.08)', color: '#B5179E', borderColor: 'rgba(181,23,158,0.2)' }}>
+                {{ 'completed-today': 'Completed today', 'not-completed-today': 'Not completed today', 'on-track': 'On track this week', 'needs-attention': 'Needs attention' }[quickFilter]}
+                <button onClick={() => setQuickFilter(null)} className="transition-colors ml-0.5 opacity-70 hover:opacity-100"><X size={11} /></button>
+              </span>
             )}
           </div>
-
-          <div className="flex items-center gap-2">
-            {/* Search */}
-            <div className="relative">
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search teachers…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="pl-7 pr-6 py-1.5 text-xs border border-brand-border rounded-md bg-white w-44 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-              />
-              {search && (
-                <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-
-            {/* Options menu */}
-            <div className="relative">
-              <button
-                onClick={() => setShowMenu(v => !v)}
-                className="flex items-center px-2 py-1.5 rounded-md text-xs font-medium border border-brand-border bg-white text-brand-text hover:bg-brand-bg transition-all"
-              >
-                <MoreHorizontal size={13} />
-              </button>
-              {showMenu && (
-                <div className="absolute right-0 top-full mt-1.5 w-44 bg-white border border-brand-border rounded-lg z-20 overflow-hidden py-1">
-                  <button className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(filtered); setShowMenu(false) }}>
-                    <Download size={13} className="text-brand-subtext" />Export as CSV
-                  </button>
-                  <button className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { window.print(); setShowMenu(false) }}>
-                    <Printer size={13} className="text-brand-subtext" />Print report
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          <span className="text-xs font-semibold text-brand-subtext bg-brand-bg border border-brand-border rounded-full px-2.5 py-0.5 shrink-0">
+            {sorted.length}
+          </span>
         </div>
 
         <ConceptA
