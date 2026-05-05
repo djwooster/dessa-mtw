@@ -200,7 +200,7 @@ function SchoolCombobox({ value, onChange, hideLabel = false }) {
     : SCHOOLS
 
   return (
-    <div className="mb-4" ref={ref}>
+    <div className="mb-4 relative" ref={ref}>
       {!hideLabel && <div className="text-[10px] font-bold tracking-widest uppercase text-brand-text mb-3">School</div>}
       <button
         onClick={() => setOpen(v => !v)}
@@ -210,7 +210,7 @@ function SchoolCombobox({ value, onChange, hideLabel = false }) {
         <ChevronDown size={12} className={`text-brand-subtext transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="mt-1 border border-brand-border rounded-lg overflow-hidden bg-white">
+        <div className="absolute top-full left-0 right-0 mt-1 border border-brand-border rounded-lg overflow-hidden bg-white z-20 shadow-lg">
           <div className="flex items-center gap-2 px-3 border-b border-brand-border">
             <Search size={12} className="text-brand-subtext shrink-0" />
             <input
