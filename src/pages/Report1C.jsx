@@ -366,6 +366,9 @@ function TeacherCalendar({ teacher }) {
             <MonthCalendar year={fifthYear}  month={fifthMonth}  dayMap={dayMap} />
             <MonthCalendar year={sixthYear}  month={sixthMonth}  dayMap={dayMap} />
           </div>
+          <div className="flex justify-end mt-3">
+            <LevelLegend />
+          </div>
         </div>
     </div>
   )
@@ -722,7 +725,7 @@ function KpiCards({ teachers }) {
   ).length
   const goalPct        = Math.round((metGoal / total) * 100)
   const statCards = [
-    { label: 'Logged in this week',   value: `${loggedInPct}%`, sub: `${activeThisWeek.length} of ${total} users` },
+    { label: 'Completed a lesson this week',   value: `${loggedInPct}%`, sub: `${activeThisWeek.length} of ${total} users` },
     { label: 'Users hitting goal',    value: `${goalPct}%`,     sub: `${metGoal} of ${total} users`, goalNote: `${WEEKLY_GOAL_DAYS}× per week` },
   ]
   return (
