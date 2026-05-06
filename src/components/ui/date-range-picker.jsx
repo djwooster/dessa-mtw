@@ -41,10 +41,10 @@ export function DateRangePicker({ from, to, onFromChange, onToChange, align = 'e
       <Popover.Trigger asChild>
         <button
           type="button"
-          className={`flex items-center gap-1.5 text-xs font-medium border rounded-lg px-3 h-[34px] transition-colors whitespace-nowrap ${
+          className={`flex items-center gap-1.5 text-sm font-medium border rounded-lg px-3 h-[34px] transition-colors whitespace-nowrap ${
             hasRange
               ? 'bg-white text-dessa-teal border-dessa-teal'
-              : 'bg-white text-brand-subtext border-brand-border hover:text-brand-text hover:bg-brand-bg'
+              : 'bg-white text-brand-subtext border-brand-subtext/50 hover:text-brand-text hover:bg-brand-bg'
           } ${buttonClassName}`}
         >
           <CalendarDays size={13} className="shrink-0" />

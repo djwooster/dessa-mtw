@@ -203,9 +203,9 @@ function SchoolCombobox({ value, onChange, hideLabel = false }) {
       {!hideLabel && <div className="text-[10px] font-bold tracking-widest uppercase text-brand-text mb-3">School</div>}
       <button
         onClick={() => setOpen(v => !v)}
-        className="flex items-center justify-between w-full px-3 py-1.5 text-xs border border-brand-border rounded-lg bg-white text-brand-text hover:bg-brand-bg transition-colors"
+        className="flex items-center justify-between w-full px-3 h-[34px] text-sm border border-brand-subtext/50 rounded-lg bg-white text-brand-text hover:bg-brand-bg transition-colors"
       >
-        <span>{value === 'All' ? 'All sites' : value}</span>
+        <span className={value === 'All' ? 'text-brand-subtext' : ''}>{value === 'All' ? 'All sites' : value}</span>
         <ChevronDown size={12} className={`text-brand-subtext transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
@@ -628,7 +628,7 @@ function StatCards({ teachers }) {
           <div className="h-1.5 rounded-full bg-brand-border overflow-hidden mb-2">
             <div className="h-full rounded-full bg-dessa-teal transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
-          <div className="text-xs font-semibold text-brand-text">{label}</div>
+          <div className="text-sm font-semibold text-brand-text">{label}</div>
         </div>
       ))}
     </div>
@@ -928,27 +928,15 @@ const [sortBy,     setSortBy]     = useState('engagement')
   return (
     <div className="max-w-screen-xl mx-auto px-6 pt-12 pb-8">
 
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-brand-text">Daily Curriculum Engagement</h1>
-        <div className="flex items-center gap-2">
-          {/* Search */}
-          <div className="relative">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search teachers…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-7 pr-6 h-8 text-xs border border-brand-border rounded-md bg-white w-60 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
-                <X size={12} />
-              </button>
-            )}
-          </div>
+      {/* Top card: title + filters */}
+      <div className="bg-white rounded-xl border border-brand-border p-5 mb-6">
 
-          {/* Options menu */}
+        {/* Header row */}
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-brand-text">Daily Curriculum Engagement</h1>
+            <p className="text-sm text-brand-subtext mt-1">This report shows MTW lesson completion for all teachers in your program, Mar 24 – Apr 18, 2026.</p>
+          </div>
           <div className="relative">
             <button
               onClick={() => setShowMenu(v => !v)}
@@ -968,13 +956,11 @@ const [sortBy,     setSortBy]     = useState('engagement')
             )}
           </div>
         </div>
-      </div>
 
-      {/* Filter panel */}
-      <div className="mb-6">
+        {/* Filter toggle */}
         <button
           onClick={toggleFilters}
-          className="flex items-center px-0 py-2 w-full text-left transition-colors"
+          className="flex items-center py-1 text-left transition-colors"
         >
           <span className="text-sm font-medium text-brand-text">Filters</span>
           {activeFilters > 0 && (
@@ -986,68 +972,67 @@ const [sortBy,     setSortBy]     = useState('engagement')
         </button>
 
         {showFilters && (
-        <div className="border border-brand-border rounded-xl bg-white p-5 mt-2">
-          <div className="grid grid-cols-3 gap-6 items-start">
+          <div className="mt-4 pt-4 border-t border-brand-border">
+            <div className="grid grid-cols-3 gap-6 items-start">
 
-            {/* Quick filters */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-brand-text">Quick Filters</span>
-                {pendingQuickFilter && <button onClick={() => setPendingQuickFilter(null)} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
+              {/* Quick filters */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-brand-text">Quick Filters</span>
+                  {pendingQuickFilter && <button onClick={() => setPendingQuickFilter(null)} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
+                </div>
+                <div className="space-y-1.5">
+                  {[
+                    { key: 'completed-today',     label: 'Completed today',     Icon: CheckCircle2 },
+                    { key: 'not-completed-today', label: 'Not completed today', Icon: XCircle      },
+                  ].map(({ key, label, Icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setPendingQuickFilter(q => q === key ? null : key)}
+                      className={`flex items-center gap-2 w-full px-3 h-[34px] text-sm rounded-lg border transition-colors text-left ${
+                        pendingQuickFilter === key
+                          ? 'bg-dessa-teal/10 border-dessa-teal text-dessa-teal font-medium'
+                          : 'bg-white border-brand-subtext/50 text-brand-text hover:bg-brand-bg'
+                      }`}
+                    >
+                      <Icon size={15} className="shrink-0" />{label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-1.5">
-                {[
-                  { key: 'completed-today',     label: 'Completed today',     Icon: CheckCircle2 },
-                  { key: 'not-completed-today', label: 'Not completed today', Icon: XCircle      },
-                ].map(({ key, label, Icon }) => (
-                  <button
-                    key={key}
-                    onClick={() => setPendingQuickFilter(q => q === key ? null : key)}
-                    className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs rounded-lg border transition-colors text-left ${
-                      pendingQuickFilter === key
-                        ? 'bg-dessa-teal/10 border-dessa-teal text-dessa-teal font-medium'
-                        : 'bg-white border-brand-border text-brand-text hover:bg-brand-bg'
-                    }`}
-                  >
-                    <Icon size={13} className="shrink-0" />{label}
-                  </button>
-                ))}
+
+              {/* Date range */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-brand-text">Date Range</span>
+                  {(pendingDateStart || pendingDateEnd) && <button onClick={() => { setPendingDateStart(''); setPendingDateEnd('') }} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
+                </div>
+                <DateRangePicker
+                  from={pendingDateStart}
+                  to={pendingDateEnd}
+                  onFromChange={setPendingDateStart}
+                  onToChange={setPendingDateEnd}
+                  align="start"
+                  buttonClassName="w-full justify-between"
+                />
               </div>
+
+              {/* School */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-brand-text">Site</span>
+                  {pendingSchool !== 'All' && <button onClick={() => setPendingSchool('All')} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
+                </div>
+                <SchoolCombobox value={pendingSchool} onChange={setPendingSchool} hideLabel />
+              </div>
+
             </div>
 
-            {/* Date range */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-brand-text">Date Range</span>
-                {(pendingDateStart || pendingDateEnd) && <button onClick={() => { setPendingDateStart(''); setPendingDateEnd('') }} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
-              </div>
-              <DateRangePicker
-                from={pendingDateStart}
-                to={pendingDateEnd}
-                onFromChange={setPendingDateStart}
-                onToChange={setPendingDateEnd}
-                align="start"
-                buttonClassName="w-full justify-between"
-              />
+            <div className="flex items-center justify-start gap-2 mt-5">
+              <button onClick={applyFilters} className="px-3 h-8 text-sm font-medium text-white rounded-md transition-colors hover:opacity-90 bg-dessa-teal">Apply</button>
+              <button onClick={resetFilters} className="px-3 h-8 text-sm font-medium text-brand-text border border-brand-border rounded-md hover:bg-brand-bg transition-colors">Reset filters</button>
             </div>
-
-            {/* School */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-brand-text">Site</span>
-                {pendingSchool !== 'All' && <button onClick={() => setPendingSchool('All')} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
-              </div>
-              <SchoolCombobox value={pendingSchool} onChange={setPendingSchool} hideLabel />
-            </div>
-
-
           </div>
-
-          <div className="flex items-center justify-end gap-2 mt-5 pt-4 border-t border-brand-border">
-            <button onClick={resetFilters} className="px-3 py-1.5 text-xs font-medium text-brand-text border border-brand-border rounded-md hover:bg-brand-bg transition-colors">Reset</button>
-            <button onClick={applyFilters} className="px-3 py-1.5 text-xs font-medium text-white rounded-md transition-colors hover:opacity-90" style={{ backgroundColor: '#1B2B4B' }}>Apply</button>
-          </div>
-        </div>
         )}
       </div>
 
@@ -1085,7 +1070,24 @@ const [sortBy,     setSortBy]     = useState('engagement')
               </span>
             )}
           </div>
-          <span className="text-xs text-brand-subtext shrink-0">{sorted.length} users</span>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search teachers…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-7 pr-6 h-8 text-xs border border-brand-border rounded-md bg-white w-52 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+            <span className="text-xs text-brand-subtext shrink-0">{sorted.length} users</span>
+          </div>
         </div>
 
         <ConceptA
