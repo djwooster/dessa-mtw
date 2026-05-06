@@ -803,7 +803,7 @@ export default function Report2() {
         <div className="flex items-start justify-between mb-4">
           <div>
             <h2 className="text-2xl font-semibold text-brand-text">Site Engagement</h2>
-            <p className="text-sm text-brand-subtext mt-1">This report shows weekly Move This World lesson completion rates by site across your district.</p>
+            <p className="text-sm text-brand-subtext mt-1">This report shows Move This World lesson completion rates by site across your district.</p>
           </div>
           <div className="relative" ref={menuRef}>
             <button
@@ -1042,7 +1042,7 @@ export default function Report2() {
           <thead>
             <tr className="border-b border-brand-border">
               <th className="py-3 pl-4 text-left"><SortBtn col="name"       label="Site"       sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></th>
-              <th className="py-3 text-left">      <SortBtn col="teachers"   label="Users"      sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></th>
+              <th className="py-3 text-left">      <SortBtn col="teachers"   label="Total Users"      sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></th>
               <th className="py-3 text-left">      <SortBtn col="reached"    label="Reached Goal" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></th>
               <th className="py-3 pr-4"><div className="flex justify-end"><SortBtn col="engagement" label="Engagement" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></div></th>
             </tr>

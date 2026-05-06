@@ -12,7 +12,7 @@ const navItems = [
   // { label: 'DCE Report',             to: '/report1' },
   // { label: 'DCE(b)',                 to: '/report1b' },
   { label: 'DCE Report',             to: '/report1c' },
-  { label: 'Site Expectations',       to: '/report2' },
+  { label: 'Site Engagement',          to: '/report2' },
   { label: 'Brand Guide', to: '/brand' },
 ]
 
