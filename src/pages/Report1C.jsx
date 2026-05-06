@@ -930,7 +930,7 @@ const [sortBy,     setSortBy]     = useState('engagement')
   useEffect(() => { setPage(1) }, [search, school, dateStart, dateEnd, engagementRange[0], engagementRange[1], pageSize, quickFilter])
 
   return (
-    <div className="max-w-screen-xl mx-auto px-6 pt-12 pb-8">
+    <div className="max-w-screen-xl mx-auto px-6 pt-20 pb-8">
 
       {/* Top card: title + filters */}
       <div className="bg-white rounded-xl border border-brand-border p-5 mb-6">
