@@ -936,12 +936,12 @@ const [sortBy,     setSortBy]     = useState('engagement')
         <div className="flex items-start justify-between mb-4">
           <div>
             <h1 className="text-2xl font-semibold text-brand-text">Daily Curriculum Engagement</h1>
-            <p className="text-sm text-brand-subtext mt-1">This report shows Move This World lesson completion for all users at your sites.</p>
+            <p className="text-sm text-brand-subtext mt-1">This report shows Move This World user engagement through lesson completion activity.</p>
           </div>
           <div className="relative">
             <button
               onClick={() => setShowMenu(v => !v)}
-              className="flex items-center justify-center w-8 h-8 rounded-md border border-brand-border bg-white text-brand-text hover:bg-brand-bg transition-all"
+              className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
             >
               <MoreHorizontal size={13} />
             </button>
