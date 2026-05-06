@@ -144,7 +144,7 @@ function SortBtn({ col, label, sortBy, sortDir, onSort }) {
   return (
     <button
       onClick={() => onSort(col)}
-      className="flex items-center gap-1 text-xs font-semibold text-brand-subtext hover:text-brand-text transition-colors group"
+      className="flex items-center gap-1 text-xs font-semibold text-brand-subtext hover:text-brand-text transition-colors group whitespace-nowrap"
     >
       {label}
       {active
@@ -384,11 +384,11 @@ function ConceptA({ teachers, expandedId, onExpand, sortBy, setSortBy, sortDir, 
       {/* Table header */}
       <div
         className="grid gap-4 px-4 py-2 border-b border-brand-border bg-brand-bg/40"
-        style={{ gridTemplateColumns: '1fr 180px 90px 130px 130px 24px' }}
+        style={{ gridTemplateColumns: '1fr 160px 130px 130px 130px 24px' }}
       >
         <SortBtn col="name"       label="User"             sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
         <SortBtn col="school"     label="School"           sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
-        <SortBtn col="recent"     label="Last 4 Wks"       sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+        <SortBtn col="recent"     label="Lessons Last 4 Wks" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
         <SortBtn col="engagement" label="Engagement (YTD)" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
         <div className="text-xs font-semibold text-brand-subtext">This Week</div>
         <div />
@@ -402,7 +402,7 @@ function ConceptA({ teachers, expandedId, onExpand, sortBy, setSortBy, sortDir, 
             <div key={t.id}>
               <button
                 className="grid gap-4 px-4 py-2 w-full text-left hover:bg-brand-bg/40 transition-colors group"
-                style={{ gridTemplateColumns: '1fr 180px 90px 130px 130px 24px' }}
+                style={{ gridTemplateColumns: '1fr 160px 130px 130px 130px 24px' }}
                 onClick={() => onExpand(t.id)}
                 aria-expanded={isOpen}
               >
@@ -415,7 +415,7 @@ function ConceptA({ teachers, expandedId, onExpand, sortBy, setSortBy, sortDir, 
                 </div>
 
                 <div className="self-center">
-                  <RecentPct pct={t.engagementPct} />
+                  <div className="text-sm text-brand-text/70">{t.lessonCount}</div>
                 </div>
 
                 <div className="self-center">
@@ -865,6 +865,7 @@ const [sortBy,     setSortBy]     = useState('engagement')
     ALL_TEACHERS.map(t => ({
       ...t,
       engagementPct:   getEngagementPct(t),
+      lessonCount:     t.days.filter(d => d.level !== 'n').length,
       lastActive:      getLastActive(t),
       weeklyData:      getWeeklyData(t),
       lastActiveBadge: getLastActiveBadge(getLastActive(t)),
@@ -935,7 +936,7 @@ const [sortBy,     setSortBy]     = useState('engagement')
         <div className="flex items-start justify-between mb-4">
           <div>
             <h1 className="text-2xl font-semibold text-brand-text">Daily Curriculum Engagement</h1>
-            <p className="text-sm text-brand-subtext mt-1">This report shows MTW lesson completion for all teachers in your program, Mar 24 – Apr 18, 2026.</p>
+            <p className="text-sm text-brand-subtext mt-1">This report shows Move This World lesson completion for all users at your sites.</p>
           </div>
           <div className="relative">
             <button
@@ -1075,7 +1076,7 @@ const [sortBy,     setSortBy]     = useState('engagement')
               <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search teachers…"
+                placeholder="Search users…"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="pl-7 pr-6 h-8 text-xs border border-brand-border rounded-md bg-white w-52 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"

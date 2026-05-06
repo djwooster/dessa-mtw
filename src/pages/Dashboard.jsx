@@ -290,8 +290,8 @@ export default function Dashboard({ enrolledCourse }) {
             ) : (
               <>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white/50 text-xs font-medium mb-0.5">
-                    Move This World · Curriculum Ready
+                  <p className="text-white/70 text-xs font-semibold mb-0.5">
+                    Move This World
                   </p>
                   <p className="text-white font-semibold text-base">
                     Choose a course to get started with your students
