@@ -205,7 +205,7 @@ function SchoolCombobox({ value, onChange, hideLabel = false }) {
         onClick={() => setOpen(v => !v)}
         className="flex items-center justify-between w-full px-3 py-1.5 text-xs border border-brand-border rounded-lg bg-white text-brand-text hover:bg-brand-bg transition-colors"
       >
-        <span>{value === 'All' ? 'All schools' : value}</span>
+        <span>{value === 'All' ? 'All sites' : value}</span>
         <ChevronDown size={12} className={`text-brand-subtext transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
@@ -233,7 +233,7 @@ function SchoolCombobox({ value, onChange, hideLabel = false }) {
                 value === 'All' ? 'text-dessa-teal font-medium bg-brand-bg' : 'text-brand-text hover:bg-brand-bg'
               }`}
             >
-              All schools
+              All sites
               {value === 'All' && <Check size={13} className="text-dessa-teal" />}
             </button>
             {filtered.length === 0 && (
@@ -723,18 +723,24 @@ function KpiCards({ teachers }) {
   const goalPct        = Math.round((metGoal / total) * 100)
   const statCards = [
     { label: 'Logged in this week',   value: `${loggedInPct}%`, sub: `${activeThisWeek.length} of ${total} users` },
-    { label: 'Users hitting goal',    value: `${goalPct}%`,     sub: `${metGoal} of ${total} users`               },
+    { label: 'Users hitting goal',    value: `${goalPct}%`,     sub: `${metGoal} of ${total} users`, goalNote: `${WEEKLY_GOAL_DAYS}× per week` },
   ]
   return (
     <div className="grid grid-cols-2 gap-4 mb-6">
-      {statCards.map(({ label, value, sub }, i) => (
+      {statCards.map(({ label, value, sub, goalNote }, i) => (
         <motion.div
           key={label}
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: 0.08 + i * 0.05 }}
-          className="bg-white rounded-xl border border-brand-border px-5 py-4"
+          className="bg-white rounded-xl border border-brand-border px-5 py-4 relative"
         >
-          <p className="text-sm font-medium text-brand-subtext mb-4">{label}</p>
+          {goalNote && (
+            <div className="absolute top-4 right-5 text-right">
+              <p className="text-sm font-medium text-brand-text leading-tight">Goal</p>
+              <p className="text-xs text-brand-subtext leading-tight">{goalNote}</p>
+            </div>
+          )}
+          <p className="text-sm font-medium text-brand-text mb-4">{label}</p>
           <p className="text-2xl font-bold text-brand-text">{value}</p>
           <p className="text-xs text-brand-subtext mt-0.5">{sub}</p>
         </motion.div>
@@ -965,24 +971,23 @@ const [sortBy,     setSortBy]     = useState('engagement')
       </div>
 
       {/* Filter panel */}
-      <div className="bg-white border border-brand-border rounded-xl mb-6">
+      <div className="mb-6">
         <button
           onClick={toggleFilters}
-          className="flex items-center gap-1.5 px-5 py-3.5 w-full text-left transition-colors hover:bg-brand-bg/50"
+          className="flex items-center px-0 py-2 w-full text-left transition-colors"
         >
-          <SlidersHorizontal size={14} className="text-brand-subtext" />
           <span className="text-sm font-medium text-brand-text">Filters</span>
           {activeFilters > 0 && (
-            <span className="ml-0.5 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center text-white" style={{ backgroundColor: '#2A7F8F' }}>
+            <span className="ml-1.5 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center text-white" style={{ backgroundColor: '#2A7F8F' }}>
               {activeFilters}
             </span>
           )}
-          <ChevronDown size={14} className={`ml-auto text-brand-subtext transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
+          <ChevronDown size={14} className={`ml-2 text-brand-subtext transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
         </button>
 
         {showFilters && (
-        <div className="border-t border-brand-border p-5">
-          <div className="grid grid-cols-4 gap-6 items-start">
+        <div className="border border-brand-border rounded-xl bg-white p-5 mt-2">
+          <div className="grid grid-cols-3 gap-6 items-start">
 
             {/* Quick filters */}
             <div>
@@ -1029,23 +1034,12 @@ const [sortBy,     setSortBy]     = useState('engagement')
             {/* School */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-brand-text">School</span>
+                <span className="text-xs font-semibold text-brand-text">Site</span>
                 {pendingSchool !== 'All' && <button onClick={() => setPendingSchool('All')} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
               </div>
               <SchoolCombobox value={pendingSchool} onChange={setPendingSchool} hideLabel />
             </div>
 
-            {/* 4-week engagement */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-brand-text">4-Week Engagement</span>
-              </div>
-              <Slider min={0} max={100} step={5} value={pendingEngagementRange} onValueChange={setPendingEngagementRange} className="mb-2" />
-              <div className="flex justify-between text-[11px] text-brand-subtext">
-                <span>{pendingEngagementRange[0]}%</span>
-                <span>{pendingEngagementRange[1]}%</span>
-              </div>
-            </div>
 
           </div>
 
