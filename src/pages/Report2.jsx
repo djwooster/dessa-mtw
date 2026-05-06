@@ -784,7 +784,7 @@ export default function Report2() {
 
   const statCards = role === 'program_admin'
     ? [
-        { label: 'Sites engaged',      value: `${schoolsEngaged} of ${schools.length}`, sub: weekLabel(selectedWeek)               },
+        { label: 'Sites engaged',      value: `${schoolsEngaged} of ${schools.length}`, sub: dateFrom && dateTo ? `${format(parseISO(dateFrom), 'MMM d')} – ${format(parseISO(dateTo), 'MMM d, yyyy')}` : dateFrom ? `From ${format(parseISO(dateFrom), 'MMM d, yyyy')}` : dateTo ? `To ${format(parseISO(dateTo), 'MMM d, yyyy')}` : 'This school year' },
         { label: 'Users meeting goal', value: `${weekStats.pct}%`,                      sub: 'district-wide'                       },
         { label: 'Goal',                  value: `${goal}×`,                               sub: 'per week'        },
       ]
