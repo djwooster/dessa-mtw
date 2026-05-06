@@ -979,6 +979,31 @@ const [sortBy,     setSortBy]     = useState('engagement')
           <div className="mt-4 pt-4 border-t border-brand-border">
             <div className="grid grid-cols-3 gap-6 items-start">
 
+              {/* School */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-brand-text">Site</span>
+                  {pendingSchool !== 'All' && <button onClick={() => setPendingSchool('All')} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
+                </div>
+                <SchoolCombobox value={pendingSchool} onChange={setPendingSchool} hideLabel />
+              </div>
+
+              {/* Date range */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-brand-text">Date Range</span>
+                  {(pendingDateStart || pendingDateEnd) && <button onClick={() => { setPendingDateStart(''); setPendingDateEnd('') }} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
+                </div>
+                <DateRangePicker
+                  from={pendingDateStart}
+                  to={pendingDateEnd}
+                  onFromChange={setPendingDateStart}
+                  onToChange={setPendingDateEnd}
+                  align="start"
+                  buttonClassName="w-full justify-between"
+                />
+              </div>
+
               {/* Quick filters */}
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -1003,31 +1028,6 @@ const [sortBy,     setSortBy]     = useState('engagement')
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Date range */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-brand-text">Date Range</span>
-                  {(pendingDateStart || pendingDateEnd) && <button onClick={() => { setPendingDateStart(''); setPendingDateEnd('') }} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
-                </div>
-                <DateRangePicker
-                  from={pendingDateStart}
-                  to={pendingDateEnd}
-                  onFromChange={setPendingDateStart}
-                  onToChange={setPendingDateEnd}
-                  align="start"
-                  buttonClassName="w-full justify-between"
-                />
-              </div>
-
-              {/* School */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-brand-text">Site</span>
-                  {pendingSchool !== 'All' && <button onClick={() => setPendingSchool('All')} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
-                </div>
-                <SchoolCombobox value={pendingSchool} onChange={setPendingSchool} hideLabel />
               </div>
 
             </div>
