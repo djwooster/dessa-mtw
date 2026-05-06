@@ -802,7 +802,7 @@ export default function Report2() {
 
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-semibold text-brand-text">School Engagement</h2>
+            <h2 className="text-2xl font-semibold text-brand-text">Site Engagement</h2>
             <p className="text-sm text-brand-subtext mt-1">This report shows weekly Move This World lesson completion rates by site across your district.</p>
           </div>
           <div className="relative" ref={menuRef}>
