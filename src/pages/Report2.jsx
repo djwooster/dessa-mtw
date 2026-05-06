@@ -784,7 +784,7 @@ export default function Report2() {
 
   const statCards = role === 'program_admin'
     ? [
-        { label: 'Sites engaged',      value: `${schoolsEngaged} of ${schools.length}`, sub: dateFrom && dateTo ? `${format(parseISO(dateFrom), 'MMM d')} – ${format(parseISO(dateTo), 'MMM d, yyyy')}` : dateFrom ? `From ${format(parseISO(dateFrom), 'MMM d, yyyy')}` : dateTo ? `To ${format(parseISO(dateTo), 'MMM d, yyyy')}` : 'This school year' },
+        { label: 'Sites engaged',      value: `${schoolsEngaged} of ${schools.length}`, sub: weekLabel(selectedWeek, true) },
         { label: 'Users meeting goal', value: `${weekStats.pct}%`,                      sub: 'district-wide'                       },
         { label: 'Goal',                  value: `${goal}×`,                               sub: 'per week'        },
       ]
@@ -852,18 +852,32 @@ export default function Report2() {
           </div>
         </div>
 
-        <button
-          onClick={toggleFilters}
-          className="flex items-center py-1 text-left transition-colors"
-        >
-          <span className="text-sm font-medium text-brand-text">Filters</span>
-          {activeFilters > 0 && (
-            <span className="ml-1.5 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center text-white" style={{ backgroundColor: '#2A7F8F' }}>
-              {activeFilters}
-            </span>
-          )}
-          <ChevronDown size={14} className={`ml-2 text-brand-subtext transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            onClick={toggleFilters}
+            className="flex items-center py-1 text-left transition-colors"
+          >
+            <span className="text-sm font-medium text-brand-text">Filters</span>
+            {activeFilters > 0 && (
+              <span className="ml-1.5 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center text-white" style={{ backgroundColor: '#2A7F8F' }}>
+                {activeFilters}
+              </span>
+            )}
+            <ChevronDown size={14} className={`ml-2 text-brand-subtext transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
+          <div className="flex flex-col items-end gap-1">
+            {selectedWeek !== MOST_RECENT_WEEK && (
+              <button
+                onClick={() => setSelectedWeek(MOST_RECENT_WEEK)}
+                className="text-xs font-medium hover:underline"
+                style={{ color: '#0061FF' }}
+              >
+                Back to current week
+              </button>
+            )}
+            <WeekSelector weeks={schoolWeeks} selected={selectedWeek} onChange={setSelectedWeek} />
+          </div>
+        </div>
 
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-brand-border">
@@ -875,7 +889,7 @@ export default function Report2() {
                   <span className="text-sm font-semibold text-brand-text">Quick Filters</span>
                   {pendingQuickFilter && <button onClick={() => setPendingQuickFilter(null)} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
                 </div>
-                <div className="space-y-1.5">
+                <div className="flex gap-2">
                   {[
                     { key: 'meeting-goal',    label: 'Meeting goal',    Icon: CheckCircle2 },
                     { key: 'needs-attention', label: 'Needs attention', Icon: XCircle      },
@@ -883,7 +897,7 @@ export default function Report2() {
                     <button
                       key={key}
                       onClick={() => setPendingQuickFilter(q => q === key ? null : key)}
-                      className={`flex items-center gap-2 w-full px-3 h-[34px] text-sm rounded-lg border transition-colors text-left ${
+                      className={`flex items-center gap-2 px-3 h-[34px] text-sm rounded-lg border transition-colors ${
                         pendingQuickFilter === key
                           ? 'bg-dessa-teal/10 border-dessa-teal text-dessa-teal font-medium'
                           : 'bg-white border-brand-subtext/50 text-brand-text hover:bg-brand-bg'

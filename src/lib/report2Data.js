@@ -87,7 +87,7 @@ function formatDate(d) {
 function generateSchoolWeeks() {
   const weeks = []
   const d = new Date(2025, 8, 1)
-  const end = new Date(2026, 3, 21)
+  const end = new Date(2026, 4, 11)
   while (d < end) {
     weeks.push(formatDate(new Date(d)))
     d.setDate(d.getDate() + 7)

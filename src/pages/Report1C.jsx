@@ -1010,7 +1010,7 @@ const [sortBy,     setSortBy]     = useState('engagement')
                   <span className="text-sm font-semibold text-brand-text">Quick Filters</span>
                   {pendingQuickFilter && <button onClick={() => setPendingQuickFilter(null)} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
                 </div>
-                <div className="space-y-1.5">
+                <div className="flex gap-2">
                   {[
                     { key: 'completed-today',     label: 'Completed today',     Icon: CheckCircle2 },
                     { key: 'not-completed-today', label: 'Not completed today', Icon: XCircle      },
@@ -1018,7 +1018,7 @@ const [sortBy,     setSortBy]     = useState('engagement')
                     <button
                       key={key}
                       onClick={() => setPendingQuickFilter(q => q === key ? null : key)}
-                      className={`flex items-center gap-2 w-full px-3 h-[34px] text-sm rounded-lg border transition-colors text-left ${
+                      className={`flex items-center gap-2 px-3 h-[34px] text-sm rounded-lg border transition-colors ${
                         pendingQuickFilter === key
                           ? 'bg-dessa-teal/10 border-dessa-teal text-dessa-teal font-medium'
                           : 'bg-white border-brand-subtext/50 text-brand-text hover:bg-brand-bg'
