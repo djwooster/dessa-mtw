@@ -1047,7 +1047,22 @@ const [sortBy,     setSortBy]     = useState('engagement')
 
         {/* Table card header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-brand-border">
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative shrink-0">
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search users…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-7 pr-6 h-8 text-xs border border-brand-border rounded-md bg-white w-52 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
             {school !== 'All' && (
               <span className="flex items-center gap-1 text-xs rounded-md px-2.5 py-0.5 font-medium border" style={{ backgroundColor: 'rgba(181,23,158,0.08)', color: '#B5179E', borderColor: 'rgba(181,23,158,0.2)' }}>
                 {school}
@@ -1074,24 +1089,7 @@ const [sortBy,     setSortBy]     = useState('engagement')
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search users…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="pl-7 pr-6 h-8 text-xs border border-brand-border rounded-md bg-white w-52 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-              />
-              {search && (
-                <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-            <span className="text-xs text-brand-subtext shrink-0">{sorted.length} users</span>
-          </div>
+          <span className="text-xs text-brand-subtext shrink-0">{sorted.length} users</span>
         </div>
 
         <ConceptA

@@ -989,7 +989,22 @@ export default function Report2() {
       >
         {/* Table toolbar */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-brand-border bg-brand-bg/40 rounded-t-xl">
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative shrink-0">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search sites…"
+                value={searchQ}
+                onChange={e => setSearchQ(e.target.value)}
+                className="pl-8 pr-7 py-1.5 text-sm border border-brand-border rounded-lg bg-white w-44 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+              />
+              {searchQ && (
+                <button onClick={() => setSearchQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
             {schoolFilter !== 'All' && (
               <span className="flex items-center gap-1 text-xs rounded-md px-2.5 py-0.5 font-medium border" style={{ backgroundColor: 'rgba(181,23,158,0.08)', color: '#B5179E', borderColor: 'rgba(181,23,158,0.2)' }}>
                 {schoolFilter}
@@ -1013,21 +1028,7 @@ export default function Report2() {
               </span>
             )}
           </div>
-          <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search sites…"
-              value={searchQ}
-              onChange={e => setSearchQ(e.target.value)}
-              className="pl-8 pr-7 py-1.5 text-sm border border-brand-border rounded-lg bg-white w-44 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-            />
-            {searchQ && (
-              <button onClick={() => setSearchQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
-                <X size={12} />
-              </button>
-            )}
-          </div>
+          <span className="text-xs text-brand-subtext shrink-0">{filteredSchools.length} sites</span>
         </div>
 
         {/* School table */}
