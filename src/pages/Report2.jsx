@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { format, addDays, parseISO } from 'date-fns'
 import { Settings, MoreHorizontal, Download, Printer, X, ChevronLeft, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Search, CalendarDays, Plus, Trash2, Lock, Pencil } from 'lucide-react'
 import {
@@ -304,12 +304,7 @@ const SETTINGS_TABS = [
     title: 'Engagement settings',
     description: 'Configure how teacher engagement is measured and reported across your district.',
   },
-  {
-    id: 'school_year',
-    label: 'School year',
-    title: 'School year',
-    description: "Define your district's school year boundaries and quarterly calendar.",
-  },
+  // { id: 'school_year', label: 'School year', title: 'School year', description: "Define your district's school year boundaries and quarterly calendar." },
   {
     id: 'blackout',
     label: 'Blackout periods',
@@ -382,7 +377,7 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.15 }}
         className="relative bg-white rounded-2xl border border-brand-border z-10 flex flex-col"
-        style={{ width: '50vw', height: '85vh' }}
+        style={{ width: 1132, height: '85vh' }}
       >
         {/* Modal header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-0 shrink-0">
@@ -410,27 +405,10 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
         {/* Scrollable content */}
         <div className="overflow-y-auto flex-1">
 
-          {/* Card header — gray bar with title, description, Save */}
-          <div className="bg-brand-bg border-b border-brand-border px-6 py-4 flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold text-brand-text">{currentTab.title}</p>
-              <p className="text-xs text-brand-subtext mt-0.5 leading-relaxed max-w-lg">{currentTab.description}</p>
-            </div>
-            <button
-              className="shrink-0 px-3 py-1 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-95"
-              style={{ background: '#1B2B4B' }}
-              disabled={!isDirty}
-              onClick={() => {
-                const messages = {
-                  engagement:  `Weekly goal updated to ${tempGoal} day${tempGoal !== 1 ? 's' : ''} per week`,
-                  school_year: 'School year dates saved',
-                  blackout:    'Blackout periods saved',
-                }
-                toast.success(messages[activeTab] ?? 'Settings saved')
-                onSave(tempGoal, tempTarget)
-                onClose()
-              }}
-            >Save</button>
+          {/* Card header — gray bar with title and description */}
+          <div className="bg-brand-bg border-b border-brand-border px-6 py-4">
+            <p className="text-sm font-semibold text-brand-text">{currentTab.title}</p>
+            <p className="text-xs text-brand-subtext mt-0.5 leading-relaxed max-w-lg">{currentTab.description}</p>
           </div>
 
           {/* Form body */}
@@ -508,39 +486,44 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
                     <p className="text-sm text-brand-subtext text-center py-8">No blackout periods added yet.</p>
                   )}
                   {periods.map((p, i) => (
-                    <div key={p.id} className={`px-4 py-3 ${i < periods.length - 1 ? 'border-b border-brand-border' : ''}`}>
-                      {editingId === p.id ? (
-                        <div>
-                          <div className="flex items-center gap-2 mb-3">
-                            <input
-                              autoFocus
-                              value={editName}
-                              onChange={e => setEditName(e.target.value)}
-                              onKeyDown={e => { if (e.key === 'Escape') setEditingId(null) }}
-                              className="flex-1 px-3 py-2 text-sm border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-                            />
-                            <DateRangePicker from={editFrom} to={editTo} onFromChange={setEditFrom} onToChange={setEditTo} />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button onClick={saveEdit} disabled={!editName.trim() || !editFrom || !editTo} className="text-xs font-semibold px-3 py-1.5 rounded-md text-white disabled:opacity-40" style={{ background: '#2A7F8F' }}>Save</button>
-                            <button onClick={() => setEditingId(null)} className="text-xs font-semibold text-brand-subtext hover:text-brand-text">Cancel</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium text-brand-text flex-1">{p.name}</span>
-                          <span className="text-xs text-brand-subtext tabular-nums">
-                            {format(parseISO(p.from), 'MMM d')}
-                            {p.from !== p.to && <> – {format(parseISO(p.to), p.to.slice(0,7) === p.from.slice(0,7) ? 'd' : 'MMM d')}</>}
-                          </span>
-                          <button onClick={() => startEdit(p)} className="text-brand-subtext hover:text-brand-text p-1 rounded-md hover:bg-brand-bg transition-colors">
-                            <Pencil size={13} />
-                          </button>
-                          <button onClick={() => setPeriods(ps => ps.filter(x => x.id !== p.id))} className="text-brand-subtext hover:text-red-500 p-1 rounded-md hover:bg-red-50 transition-colors">
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      )}
+                    <div key={p.id} className={i < periods.length - 1 ? 'border-b border-brand-border' : ''}>
+                      {/* Always-visible row */}
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        <span className="text-sm font-medium text-brand-text flex-1">{p.name}</span>
+                        <span className="text-xs text-brand-subtext tabular-nums">
+                          {format(parseISO(p.from), 'MMM d')}
+                          {p.from !== p.to && <> – {format(parseISO(p.to), p.to.slice(0,7) === p.from.slice(0,7) ? 'd' : 'MMM d')}</>}
+                        </span>
+                        <button onClick={() => editingId === p.id ? setEditingId(null) : startEdit(p)} className={`text-xs font-semibold px-3 h-[34px] rounded-md border transition-colors shrink-0 ${editingId === p.id ? 'border-dessa-teal text-dessa-teal bg-dessa-teal/5' : 'border-brand-border text-brand-text hover:bg-brand-bg'}`}>Edit</button>
+                        <button onClick={() => setPeriods(ps => ps.filter(x => x.id !== p.id))} className="text-xs font-semibold px-3 h-[34px] rounded-md border border-red-300 text-red-600 hover:bg-red-50 transition-colors shrink-0">Delete</button>
+                      </div>
+
+                      {/* Animated edit panel */}
+                      <AnimatePresence initial={false}>
+                        {editingId === p.id && (
+                          <motion.div
+                            key="edit"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                            className="overflow-hidden"
+                          >
+                            <div className="flex items-center gap-2 px-4 pb-3 pt-0">
+                              <input
+                                autoFocus
+                                value={editName}
+                                onChange={e => setEditName(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Escape') setEditingId(null) }}
+                                className="flex-1 px-3 h-[34px] text-sm border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                              />
+                              <DateRangePicker from={editFrom} to={editTo} onFromChange={setEditFrom} onToChange={setEditTo} />
+                              <button onClick={() => setEditingId(null)} className="text-xs font-semibold px-3 h-[34px] rounded-md border border-brand-border text-brand-subtext hover:text-brand-text hover:bg-brand-bg shrink-0">Cancel</button>
+                              <button onClick={saveEdit} disabled={!editName.trim() || !editFrom || !editTo} className="text-xs font-semibold px-3 h-[34px] rounded-md text-white disabled:opacity-40 shrink-0" style={{ background: '#2A7F8F' }}>Save</button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   ))}
                 </div>
@@ -548,29 +531,52 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
                 {/* Add row */}
                 <div className="border-t border-brand-border pt-4 mt-2">
                   <p className="text-xs font-semibold text-brand-text mb-2">Add a period</p>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2">
                     <input
                       type="text"
                       placeholder="Name (e.g. Winter Break)"
                       value={newName}
                       onChange={e => setNewName(e.target.value)}
-                      className="flex-1 px-3 py-2 text-sm border border-brand-border rounded-lg text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                      className="flex-1 px-3 h-[34px] text-sm border border-brand-border rounded-lg text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
                     />
                     <DateRangePicker from={newFrom} to={newTo} onFromChange={setNewFrom} onToChange={setNewTo} />
+                    <button
+                      onClick={addPeriod}
+                      disabled={!canAdd}
+                      className="flex items-center gap-1.5 px-3 h-[34px] rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-40 shrink-0"
+                      style={{ background: '#2A7F8F' }}
+                    >
+                      <Plus size={14} /> Add period
+                    </button>
                   </div>
-                  <button
-                    onClick={addPeriod}
-                    disabled={!canAdd}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-40"
-                    style={{ background: '#2A7F8F' }}
-                  >
-                    <Plus size={14} /> Add period
-                  </button>
                 </div>
               </div>
             )}
 
           </div>
+        </div>
+
+        {/* Modal footer */}
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-brand-border shrink-0">
+          <button
+            onClick={onClose}
+            className="px-4 h-[34px] rounded-lg text-sm font-medium text-brand-text border border-brand-border bg-white hover:bg-brand-bg transition-colors"
+          >Cancel</button>
+          <button
+            className="px-4 h-[34px] rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-95"
+            style={{ background: '#1B2B4B' }}
+            disabled={!isDirty}
+            onClick={() => {
+              const messages = {
+                engagement:  `Weekly goal updated to ${tempGoal} day${tempGoal !== 1 ? 's' : ''} per week`,
+                school_year: 'School year dates saved',
+                blackout:    'Blackout periods saved',
+              }
+              toast.success(messages[activeTab] ?? 'Settings saved')
+              onSave(tempGoal, tempTarget)
+              onClose()
+            }}
+          >Save</button>
         </div>
       </motion.div>
     </div>
