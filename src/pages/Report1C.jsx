@@ -386,7 +386,7 @@ function ConceptA({ teachers, expandedId, onExpand, sortBy, setSortBy, sortDir, 
         className="grid gap-4 px-4 py-2 border-b border-brand-border bg-brand-bg/40"
         style={{ gridTemplateColumns: '1fr 180px 90px 130px 130px 24px' }}
       >
-        <SortBtn col="name"       label="Teacher"          sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+        <SortBtn col="name"       label="User"             sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
         <SortBtn col="school"     label="School"           sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
         <SortBtn col="recent"     label="Last 4 Wks"       sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
         <SortBtn col="engagement" label="Engagement (YTD)" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
@@ -722,8 +722,8 @@ function KpiCards({ teachers }) {
   ).length
   const goalPct        = Math.round((metGoal / total) * 100)
   const statCards = [
-    { label: 'Logged in this week',   value: `${loggedInPct}%`, sub: `${activeThisWeek.length} of ${total} teachers` },
-    { label: 'Teachers hitting goal', value: `${goalPct}%`,     sub: `${metGoal} of ${total} teachers`               },
+    { label: 'Logged in this week',   value: `${loggedInPct}%`, sub: `${activeThisWeek.length} of ${total} users` },
+    { label: 'Users hitting goal',    value: `${goalPct}%`,     sub: `${metGoal} of ${total} users`               },
   ]
   return (
     <div className="grid grid-cols-2 gap-4 mb-6">
@@ -1091,7 +1091,7 @@ const [sortBy,     setSortBy]     = useState('engagement')
               </span>
             )}
           </div>
-          <span className="text-xs text-brand-subtext shrink-0">{sorted.length} teachers</span>
+          <span className="text-xs text-brand-subtext shrink-0">{sorted.length} users</span>
         </div>
 
         <ConceptA
