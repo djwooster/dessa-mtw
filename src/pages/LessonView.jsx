@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Clock, Bookmark, Maximize2, Minimize2, Flame, Check, Eye, EyeOff } from 'lucide-react'
+import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Clock, Bookmark, Maximize2, Minimize2, Flame, Check, Eye, EyeOff, Tag, Target, Users, Lightbulb, HelpCircle, Share2, MessageCircle, Globe } from 'lucide-react'
 
 
 const units = [
@@ -346,6 +346,36 @@ function SlideViewer({ slides, fill = false }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+function LanguagePicker({ language, langOpen, setLanguage, setLangOpen }) {
+  return (
+    <div className="absolute bottom-3 right-3 z-10">
+      <button
+        onClick={() => setLangOpen((o) => !o)}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white"
+        style={{ background: 'rgba(0,0,0,0.45)' }}
+      >
+        <Globe size={11} />
+        {language}
+      </button>
+      {langOpen && (
+        <div className="absolute bottom-full right-0 mb-1.5 bg-white rounded-lg shadow-lg border border-brand-border overflow-hidden" style={{ minWidth: '100px' }}>
+          {['English', 'Spanish'].map((lang) => (
+            <button
+              key={lang}
+              onClick={() => { setLanguage(lang); setLangOpen(false) }}
+              className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                language === lang ? 'font-semibold text-brand-text bg-brand-bg' : 'text-brand-text hover:bg-brand-bg'
+              }`}
+            >
+              {lang}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SectionLabel({ children }) {
   return (
     <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-1.5">
@@ -354,14 +384,17 @@ function SectionLabel({ children }) {
   )
 }
 
-function SectionHeading({ children }) {
+function SectionHeading({ children, icon: Icon }) {
   return (
-    <h2 className="text-xl font-semibold text-brand-text mb-4">{children}</h2>
+    <div className="flex items-center gap-2 mb-4">
+      {Icon && <Icon size={24} className="text-brand-subtext shrink-0 opacity-70" />}
+      <h2 className="text-xl font-semibold text-brand-text">{children}</h2>
+    </div>
   )
 }
 
 function Divider() {
-  return <div className="border-t border-brand-border my-7" />
+  return <div className="border-t border-brand-border my-10" />
 }
 
 export default function LessonView({ onBookmark }) {
@@ -377,6 +410,8 @@ export default function LessonView({ onBookmark }) {
   const [showToast, setShowToast] = useState(false)
   const [showCompletion, setShowCompletion] = useState(false)
   const [showInactive, setShowInactive] = useState(true)
+  const [language, setLanguage] = useState('English')
+  const [langOpen, setLangOpen] = useState(false)
 
   const grade = course?.grade ?? 'Grade 3'
   const competency = course?.competency ?? 'Self-Awareness'
@@ -597,10 +632,8 @@ export default function LessonView({ onBookmark }) {
                   <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
                     <Clock size={11} />6:48
                   </div>
+                  <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
                 </div>
-                <p className="text-sm text-brand-subtext mt-2 px-1">
-                  Watch all the way through before pausing — the Emoger reveal at 5:10 lands best without interruption.
-                </p>
               </>
             )}
 
@@ -624,6 +657,7 @@ export default function LessonView({ onBookmark }) {
                   <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
                     {activeVideo + 1} / {lesson2Videos.length}
                   </div>
+                  <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
                 </div>
 
                 {/* Thumbnail strip */}
@@ -678,6 +712,7 @@ export default function LessonView({ onBookmark }) {
                       <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
                         <Clock size={11} />5:14
                       </div>
+                      <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
                     </>
                   )}
                   {activeContent === 'slides' && (
@@ -758,6 +793,7 @@ export default function LessonView({ onBookmark }) {
                   <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
                     <Clock size={11} />{lesson4Videos[activeVideo].duration}
                   </div>
+                  <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
                 </div>
 
                 {/* Episode list */}
@@ -827,7 +863,6 @@ export default function LessonView({ onBookmark }) {
 
             {/* ── Main Activity ── */}
             <div className="mb-7">
-              <SectionLabel>Main Activity</SectionLabel>
               <SectionHeading>Emoger Introduction Circle</SectionHeading>
               <div className="pl-4 border-l-4 border-mtw-amber">
                 <p className="text-body text-brand-text leading-relaxed mb-3">
@@ -847,13 +882,12 @@ export default function LessonView({ onBookmark }) {
 
             {/* ── Facilitation Tips ── */}
             <div className="mb-7">
-              <SectionLabel>Facilitation Tips</SectionLabel>
-              <SectionHeading>Before You Begin</SectionHeading>
+              <SectionHeading icon={Lightbulb}>Before You Begin</SectionHeading>
               <ul className="space-y-2.5">
                 {tips.map((tip) => (
-                  <li key={tip} className="flex items-start gap-3 text-body text-brand-text">
+                  <li key={tip} className="flex items-center gap-3 text-body text-brand-text">
                     <span
-                      className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                       style={{ background: '#2D7D78' }}
                     />
                     {tip}
@@ -866,8 +900,7 @@ export default function LessonView({ onBookmark }) {
 
             {/* ── Why We Do This ── */}
             <div className="mb-7">
-              <SectionLabel>Background</SectionLabel>
-              <SectionHeading>Why We Do This</SectionHeading>
+              <SectionHeading icon={HelpCircle}>Why We Do This</SectionHeading>
               <p className="text-body text-brand-text leading-relaxed">
                 Students can't regulate emotions they can't name. The Emoger framework gives
                 children a shared, non-stigmatizing language for the full range of human
@@ -880,8 +913,7 @@ export default function LessonView({ onBookmark }) {
 
             {/* ── Ideas for Integration ── */}
             <div className="mb-7">
-              <SectionLabel>Cross-Curricular</SectionLabel>
-              <SectionHeading>Ideas for Integration</SectionHeading>
+              <SectionHeading icon={Share2}>Ideas for Integration</SectionHeading>
               <div className="grid grid-cols-3 gap-4">
                 {integrationIdeas.map((item) => (
                   <div
@@ -904,8 +936,7 @@ export default function LessonView({ onBookmark }) {
 
             {/* ── Continuing the Conversation ── */}
             <div className="pb-10">
-              <SectionLabel>Discussion</SectionLabel>
-              <SectionHeading>Continuing the Conversation</SectionHeading>
+              <SectionHeading icon={MessageCircle}>Continuing the Conversation</SectionHeading>
               <div className="grid grid-cols-3 gap-4">
                 {discussionPrompts.map((p) => (
                   <div
