@@ -17,9 +17,13 @@ export function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onC
     <>
       <motion.div {...stagger(index)} className="h-full">
         <Card className="h-full flex flex-col overflow-hidden">
-          {/* Course image */}
-          <div className="w-full shrink-0 overflow-hidden">
-            <img src={course.image} alt={course.grade} className="w-full h-44 object-cover" />
+          {/* Course banner */}
+          <div
+            className="w-full h-44 shrink-0 flex flex-col items-center justify-center gap-1"
+            style={{ background: course.color }}
+          >
+            <span className="text-white font-black text-5xl leading-none tracking-tight">{course.grade}</span>
+            <span className="text-white/60 text-sm font-medium">{course.level}</span>
           </div>
 
           <div className="flex flex-col flex-1 px-5 pt-4 pb-5">
