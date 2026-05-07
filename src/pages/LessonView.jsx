@@ -43,13 +43,6 @@ const units = [
   { id: 36, title: 'Unit 36 — Celebration of Growth',        active: false, sub: ['Welcome Video!', 'My Growth Story', 'Strength Spotlight', 'Gratitude Garden', 'Celebration Ritual'] },
 ]
 
-const lesson2Videos = [
-  { title: 'Introduction to Emotional Building Blocks', duration: '4:22' },
-  { title: 'The Five Core Emotions', duration: '6:15' },
-  { title: 'Labeling vs. Feeling', duration: '5:08' },
-]
-
-
 const lesson4Videos = [
   { title: 'What Is the Power of Pause?', duration: '3:12', description: 'An introduction to the pause technique and why it works in the classroom.' },
   { title: 'Recognizing Your Triggers', duration: '4:45', description: 'How to spot the moments when pausing is most needed — before reacting.' },
@@ -420,7 +413,6 @@ export default function LessonView({ onBookmark }) {
   const currentLessonTitle = activeUnit?.sub[selectedLesson.lessonIndex] ?? 'Welcome Video!'
   const currentUnitTitle = activeUnit?.title ?? 'Unit 1 — Meet the Emogers'
 
-  const isLesson2 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 1
   const isLesson4 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 3
   const isFeelingsChekin = selectedLesson.unitId === 2 && selectedLesson.lessonIndex === 1
 
@@ -615,8 +607,8 @@ export default function LessonView({ onBookmark }) {
             className="mb-7"
           >
 
-            {/* Lesson 1 — single video */}
-            {!isLesson2 && !isLesson4 && !isFeelingsChekin && (
+            {/* Single video */}
+            {!isLesson4 && !isFeelingsChekin && (
               <>
                 <div
                   className="w-full rounded-2xl overflow-hidden relative"
@@ -633,63 +625,6 @@ export default function LessonView({ onBookmark }) {
                     <Clock size={11} />6:48
                   </div>
                   <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
-                </div>
-              </>
-            )}
-
-            {/* Lesson 2 — active player + horizontal thumbnail strip */}
-            {isLesson2 && (
-              <>
-                <div
-                  className="w-full rounded-2xl overflow-hidden relative mb-3"
-                  style={{ aspectRatio: '16/9', background: '#1B2B4B' }}
-                >
-                  <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.8) 100%)' }} />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
-                    <button className="w-14 h-14 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: '#2A7F8F' }}>
-                      <Play size={20} fill="white" className="text-white ml-0.5" />
-                    </button>
-                    <p className="text-white font-semibold text-base leading-snug">{lesson2Videos[activeVideo].title}</p>
-                  </div>
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
-                    <Clock size={11} />{lesson2Videos[activeVideo].duration}
-                  </div>
-                  <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
-                    {activeVideo + 1} / {lesson2Videos.length}
-                  </div>
-                  <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
-                </div>
-
-                {/* Thumbnail strip */}
-                <div className="flex gap-3">
-                  {lesson2Videos.map((video, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setActiveVideo(i)}
-                      className="flex-1 rounded-xl overflow-hidden text-left transition-all"
-                      style={{ outline: i === activeVideo ? '2px solid #2A7F8F' : '2px solid transparent', outlineOffset: '2px' }}
-                    >
-                      <div className="relative" style={{ aspectRatio: '16/9', background: '#1B2B4B' }}>
-                        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.2) 0%, rgba(27,43,75,0.85) 100%)' }} />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div
-                            className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
-                            style={{ background: i === activeVideo ? '#2A7F8F' : 'rgba(255,255,255,0.2)' }}
-                          >
-                            <Play size={10} fill="white" className="text-white ml-0.5" />
-                          </div>
-                        </div>
-                        <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded text-white" style={{ background: 'rgba(0,0,0,0.5)', fontSize: '10px' }}>
-                          <Clock size={9} />{video.duration}
-                        </div>
-                      </div>
-                      <div className="px-2 py-1.5 bg-white border-x border-b border-brand-border rounded-b-xl">
-                        <p className="text-xs font-semibold leading-snug" style={{ color: i === activeVideo ? '#2A7F8F' : '#1B2B4B' }}>
-                          {video.title}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
                 </div>
               </>
             )}
