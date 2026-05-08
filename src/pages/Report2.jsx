@@ -778,11 +778,11 @@ export default function Report2() {
             )}
             <ChevronDown size={14} className={`ml-2 text-brand-subtext transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
           </button>
-          <div className="flex flex-col items-end gap-1">
+          <div className="relative">
             {selectedWeek !== MOST_RECENT_WEEK && (
               <button
                 onClick={() => setSelectedWeek(MOST_RECENT_WEEK)}
-                className="text-xs font-medium hover:underline"
+                className="absolute -top-5 right-0 text-xs font-medium hover:underline whitespace-nowrap"
                 style={{ color: '#0061FF' }}
               >
                 Back to current week
