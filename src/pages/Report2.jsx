@@ -355,14 +355,14 @@ function InlineSingleCal({ value, onChange, locked }) {
 
 // ─── Settings Modal ───────────────────────────────────────────────────────────
 
-const DEFAULT_BLACKOUT_PERIODS = [
-  { id: 1, name: 'Fall Break',    from: '2025-10-13', to: '2025-10-17' },
-  { id: 2, name: 'Thanksgiving',  from: '2025-11-24', to: '2025-11-28' },
-  { id: 3, name: 'Winter Break',  from: '2025-12-22', to: '2026-01-02' },
-  { id: 4, name: 'MLK Day',       from: '2026-01-19', to: '2026-01-19' },
-  { id: 5, name: 'Spring Break',  from: '2026-03-16', to: '2026-03-20' },
-  { id: 6, name: 'Memorial Day',  from: '2026-05-25', to: '2026-05-25' },
-]
+// const DEFAULT_BLACKOUT_PERIODS = [
+//   { id: 1, name: 'Fall Break',    from: '2025-10-13', to: '2025-10-17' },
+//   { id: 2, name: 'Thanksgiving',  from: '2025-11-24', to: '2025-11-28' },
+//   { id: 3, name: 'Winter Break',  from: '2025-12-22', to: '2026-01-02' },
+//   { id: 4, name: 'MLK Day',       from: '2026-01-19', to: '2026-01-19' },
+//   { id: 5, name: 'Spring Break',  from: '2026-03-16', to: '2026-03-20' },
+//   { id: 6, name: 'Memorial Day',  from: '2026-05-25', to: '2026-05-25' },
+// ]
 
 const SETTINGS_TABS = [
   {
@@ -371,13 +371,13 @@ const SETTINGS_TABS = [
     title: 'Engagement settings',
     description: 'Configure how teacher engagement is measured and reported across your district.',
   },
-  // { id: 'school_year', label: 'School year', title: 'School year', description: "Define your district's school year boundaries and quarterly calendar." },
-  {
-    id: 'blackout',
-    label: 'Blackout periods',
-    title: 'Blackout periods',
-    description: "Mark non-instructional days so they're excluded from engagement calculations.",
-  },
+  { id: 'school_year', label: 'School year', title: 'School year', description: "Define your district's school year boundaries and quarterly calendar." },
+  // {
+  //   id: 'blackout',
+  //   label: 'Blackout periods',
+  //   title: 'Blackout periods',
+  //   description: "Mark non-instructional days so they're excluded from engagement calculations.",
+  // },
 ]
 
 function SettingsModal({ goal, districtTarget, onSave, onClose }) {
@@ -391,25 +391,18 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
   const [q3Start,   setQ3Start]   = useState('2026-01-12')
   const [q4Start,   setQ4Start]   = useState('2026-03-23')
 
-  const [periods,   setPeriods]   = useState(DEFAULT_BLACKOUT_PERIODS)
-  const [newName,   setNewName]   = useState('')
-  const [newFrom,   setNewFrom]   = useState('')
-  const [newTo,     setNewTo]     = useState('')
-  const [editingId, setEditingId] = useState(null)
-  const [editName,  setEditName]  = useState('')
-  const [editFrom,  setEditFrom]  = useState('')
-  const [editTo,    setEditTo]    = useState('')
-
-  const canAdd = newName.trim() && newFrom && newTo && newFrom <= newTo
-
-  function startEdit(p) {
-    setEditingId(p.id); setEditName(p.name); setEditFrom(p.from); setEditTo(p.to)
-  }
-  function saveEdit() {
-    if (!editName.trim() || !editFrom || !editTo) return
-    setPeriods(ps => ps.map(p => p.id === editingId ? { ...p, name: editName.trim(), from: editFrom, to: editTo } : p))
-    setEditingId(null)
-  }
+  // const [periods,   setPeriods]   = useState(DEFAULT_BLACKOUT_PERIODS)
+  // const [newName,   setNewName]   = useState('')
+  // const [newFrom,   setNewFrom]   = useState('')
+  // const [newTo,     setNewTo]     = useState('')
+  // const [editingId, setEditingId] = useState(null)
+  // const [editName,  setEditName]  = useState('')
+  // const [editFrom,  setEditFrom]  = useState('')
+  // const [editTo,    setEditTo]    = useState('')
+  // const canAdd = newName.trim() && newFrom && newTo && newFrom <= newTo
+  // function startEdit(p) { setEditingId(p.id); setEditName(p.name); setEditFrom(p.from); setEditTo(p.to) }
+  // function saveEdit() { ... }
+  // function addPeriod() { ... }
 
   const isDirty = (
     tempGoal !== goal ||
@@ -417,15 +410,8 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
     yearEnd   !== '2026-06-05' ||
     q2Start   !== '2025-11-03' ||
     q3Start   !== '2026-01-12' ||
-    q4Start   !== '2026-03-23' ||
-    JSON.stringify(periods) !== JSON.stringify(DEFAULT_BLACKOUT_PERIODS)
+    q4Start   !== '2026-03-23'
   )
-
-  function addPeriod() {
-    if (!canAdd) return
-    setPeriods(p => [...p, { id: Date.now(), name: newName.trim(), from: newFrom, to: newTo }])
-    setNewName(''); setNewFrom(''); setNewTo('')
-  }
 
   const quarters = [
     { label: 'Q1', value: yearStart, locked: true },
@@ -444,7 +430,7 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.15 }}
         className="relative bg-white rounded-2xl border border-brand-border z-10 flex flex-col"
-        style={{ width: 1132, height: '85vh' }}
+        style={{ width: 600, height: '85vh' }}
       >
         {/* Modal header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-0 shrink-0">
@@ -510,16 +496,17 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
                 <div>
                   <p className="text-sm font-semibold text-brand-text mb-3">Set the school year</p>
                   <div className="flex items-end gap-3">
-                    <div className="flex-1">
+                    <div style={{ width: 200 }}>
                       <label className="text-xs text-brand-subtext block mb-1">Start</label>
                       <DatePicker value={yearStart} onChange={setYearStart} placeholder="Start date" max={yearEnd || undefined} />
                     </div>
-                    <div className="flex-1">
+                    <div style={{ width: 200 }}>
                       <label className="text-xs text-brand-subtext block mb-1">End</label>
                       <DatePicker value={yearEnd} onChange={setYearEnd} placeholder="End date" min={yearStart || undefined} />
                     </div>
                   </div>
                 </div>
+                {/* Quarter start dates — commented out
                 <div className="h-px bg-brand-border" />
                 <div>
                   <p className="text-sm font-semibold text-brand-text mb-1">Quarter start dates</p>
@@ -541,84 +528,11 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
                     ))}
                   </div>
                 </div>
+                */}
               </div>
             )}
 
-            {/* ── Blackout periods ── */}
-            {activeTab === 'blackout' && (
-              <div>
-                {/* Period list */}
-                <div className="border border-brand-border rounded-xl overflow-hidden mb-4">
-                  {periods.length === 0 && (
-                    <p className="text-sm text-brand-subtext text-center py-8">No blackout periods added yet.</p>
-                  )}
-                  {periods.map((p, i) => (
-                    <div key={p.id} className={i < periods.length - 1 ? 'border-b border-brand-border' : ''}>
-                      {/* Always-visible row */}
-                      <div className="flex items-center gap-3 px-4 py-3">
-                        <span className="text-sm font-medium text-brand-text flex-1">{p.name}</span>
-                        <span className="text-xs text-brand-subtext tabular-nums">
-                          {format(parseISO(p.from), 'MMM d')}
-                          {p.from !== p.to && <> – {format(parseISO(p.to), p.to.slice(0,7) === p.from.slice(0,7) ? 'd' : 'MMM d')}</>}
-                        </span>
-                        <button onClick={() => editingId === p.id ? setEditingId(null) : startEdit(p)} className={`text-xs font-semibold px-3 h-[34px] rounded-md border transition-colors shrink-0 ${editingId === p.id ? 'border-dessa-teal text-dessa-teal bg-dessa-teal/5' : 'border-brand-border text-brand-text hover:bg-brand-bg'}`}>Edit</button>
-                        <button onClick={() => setPeriods(ps => ps.filter(x => x.id !== p.id))} className="text-xs font-semibold px-3 h-[34px] rounded-md border border-red-300 text-red-600 hover:bg-red-50 transition-colors shrink-0">Delete</button>
-                      </div>
-
-                      {/* Animated edit panel */}
-                      <AnimatePresence initial={false}>
-                        {editingId === p.id && (
-                          <motion.div
-                            key="edit"
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                            className="overflow-hidden"
-                          >
-                            <div className="flex items-center gap-2 px-4 pb-3 pt-0">
-                              <input
-                                autoFocus
-                                value={editName}
-                                onChange={e => setEditName(e.target.value)}
-                                onKeyDown={e => { if (e.key === 'Escape') setEditingId(null) }}
-                                className="flex-1 px-3 h-[34px] text-sm border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-                              />
-                              <DateRangePicker from={editFrom} to={editTo} onFromChange={setEditFrom} onToChange={setEditTo} />
-                              <button onClick={() => setEditingId(null)} className="text-xs font-semibold px-3 h-[34px] rounded-md border border-brand-border text-brand-subtext hover:text-brand-text hover:bg-brand-bg shrink-0">Cancel</button>
-                              <button onClick={saveEdit} disabled={!editName.trim() || !editFrom || !editTo} className="text-xs font-semibold px-3 h-[34px] rounded-md text-white disabled:opacity-40 shrink-0" style={{ background: '#2A7F8F' }}>Save</button>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Add row */}
-                <div className="border-t border-brand-border pt-4 mt-2">
-                  <p className="text-xs font-semibold text-brand-text mb-2">Add a period</p>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Name (e.g. Winter Break)"
-                      value={newName}
-                      onChange={e => setNewName(e.target.value)}
-                      className="flex-1 px-3 h-[34px] text-sm border border-brand-border rounded-lg text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-                    />
-                    <DateRangePicker from={newFrom} to={newTo} onFromChange={setNewFrom} onToChange={setNewTo} />
-                    <button
-                      onClick={addPeriod}
-                      disabled={!canAdd}
-                      className="flex items-center gap-1.5 px-3 h-[34px] rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-40 shrink-0"
-                      style={{ background: '#2A7F8F' }}
-                    >
-                      <Plus size={14} /> Add period
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Blackout periods — commented out */}
 
           </div>
         </div>
@@ -637,7 +551,6 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
               const messages = {
                 engagement:  `Weekly goal updated to ${tempGoal} day${tempGoal !== 1 ? 's' : ''} per week`,
                 school_year: 'School year dates saved',
-                blackout:    'Blackout periods saved',
               }
               toast.success(messages[activeTab] ?? 'Settings saved')
               onSave(tempGoal, tempTarget)
