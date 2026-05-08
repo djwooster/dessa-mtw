@@ -5,11 +5,11 @@ import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Clo
 
 
 const units = [
-  { id:  1, title: 'Unit 1 — Meet the Emogers',             active: true,  sub: ['Welcome Video!', 'Emotional Building Blocks', '10 Emogers', 'Power of Pause'] },
-  { id:  2, title: 'Unit 2 — Naming What We Feel',           active: false, sub: ['Welcome Video!', 'Feelings Check-In', 'Emotion Charades', 'The Feelings Map'] },
-  { id:  3, title: 'Unit 3 — The Anger Emogre',              active: false, sub: ['Welcome Video!', 'Meet the Anger Emogre', 'Body Signals', 'Cooling Down Strategies', 'Power of Pause'] },
-  { id:  4, title: 'Unit 4 — Finding Your Calm',             active: false, sub: ['Welcome Video!', 'Calm Toolkit', 'Breathing Buddies', 'The Pause Button'] },
-  { id:  5, title: 'Unit 5 — Breathing Together',            active: false, sub: ['Welcome Video!', 'Breath Awareness', '4-7-8 Breathing', 'Mindful Minute', 'Partner Share'] },
+  { id:  1, title: 'Unit 1 — Meet the Emogers',             active: false, completed: true,  sub: ['Welcome Video!', 'Emotional Building Blocks', '10 Emogers', 'Power of Pause'] },
+  { id:  2, title: 'Unit 2 — Naming What We Feel',           active: false, completed: true,  sub: ['Welcome Video!', 'Feelings Check-In', 'Emotion Charades', 'The Feelings Map'] },
+  { id:  3, title: 'Unit 3 — The Anger Emogre',              active: false, completed: true,  sub: ['Welcome Video!', 'Meet the Anger Emogre', 'Body Signals', 'Cooling Down Strategies', 'Power of Pause'] },
+  { id:  4, title: 'Unit 4 — Finding Your Calm',             active: false, completed: true,  sub: ['Welcome Video!', 'Calm Toolkit', 'Breathing Buddies', 'The Pause Button'] },
+  { id:  5, title: 'Unit 5 — Breathing Together',            active: true,  completed: false, sub: ['Welcome Video!', 'Breath Awareness', '4-7-8 Breathing', 'Mindful Minute', 'Partner Share'] },
   { id:  6, title: 'Unit 6 — Sharing Our Stories',           active: false, sub: ['Welcome Video!', 'Story Circle', 'Haikuul 2', 'The Hero Sandwich', 'Power of Pause'] },
   { id:  7, title: 'Unit 7 — When Things Feel Big',          active: false, sub: ['Welcome Video!', 'The Overwhelm Emogre', 'Grounding Techniques', 'Safe Space'] },
   { id:  8, title: 'Unit 8 — The Joy Emogre',                active: false, sub: ['Welcome Video!', 'Meet the Joy Emogre', 'Gratitude Garden', 'Strength Spotlight', 'Reflection'] },
@@ -395,8 +395,8 @@ export default function LessonView({ onBookmark }) {
   const location = useLocation()
   const course = location.state?.course
 
-  const [expandedUnit, setExpandedUnit] = useState(1)
-  const [selectedLesson, setSelectedLesson] = useState({ unitId: 1, lessonIndex: 0 })
+  const [expandedUnit, setExpandedUnit] = useState(5)
+  const [selectedLesson, setSelectedLesson] = useState({ unitId: 5, lessonIndex: 2 })
   const [activeVideo, setActiveVideo] = useState(0)
   const [activeContent, setActiveContent] = useState('video')
   const [bookmarked, setBookmarked] = useState(false)
@@ -434,22 +434,7 @@ export default function LessonView({ onBookmark }) {
   return (
     <div className="flex h-[calc(100vh-56px)] overflow-hidden">
 
-      {/* ── Toast ── */}
-      <AnimatePresence>
-        {showToast && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2 }}
-            className="fixed top-[68px] right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white pointer-events-none"
-            style={{ background: '#1B2B4B' }}
-          >
-            <Bookmark size={14} fill="currentColor" />
-            Lesson bookmarked
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ── Bookmark toast — commented out ── */}
 
       {/* ── Left sidebar ── */}
       <aside className="flex-shrink-0 bg-white border-r border-brand-border flex flex-col overflow-hidden" style={{ width: '20rem' }}>
@@ -472,16 +457,16 @@ export default function LessonView({ onBookmark }) {
             const toggle = () => setExpandedUnit(isExpanded ? null : unit.id)
 
             return (
-              <div key={unit.id} className={`border-l-2 ${unit.active ? 'border-mtw-amber' : 'border-transparent'}`}>
+              <div key={unit.id} className={`border-l-2 ${unit.active ? 'border-mtw-amber' : unit.completed ? 'border-dessa-teal/40' : 'border-transparent'}`}>
                 {/* Unit row */}
                 <button
                   onClick={toggle}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors hover:bg-brand-bg"
                 >
-                  <Circle
-                    size={14}
-                    className={`flex-shrink-0 mt-0.5 ${unit.active ? 'text-mtw-amber' : 'text-brand-border'}`}
-                  />
+                  {unit.completed
+                    ? <CheckCircle2 size={14} className="flex-shrink-0 mt-0.5 text-dessa-teal" />
+                    : <Circle size={14} className={`flex-shrink-0 mt-0.5 ${unit.active ? 'text-mtw-amber' : 'text-brand-border'}`} />
+                  }
                   <span
                     className={`flex-1 text-sm leading-snug ${unit.active ? 'font-bold text-brand-text' : ''}`}
                     style={unit.active ? undefined : { color: '#4b5465' }}
@@ -517,10 +502,10 @@ export default function LessonView({ onBookmark }) {
                                 <span className={`text-sm ${isSelectedLesson ? 'font-semibold text-brand-text' : 'text-brand-text'}`}>
                                   {item}
                                 </span>
-                                <Circle
-                                  size={18}
-                                  className={`flex-shrink-0 ${isSelectedLesson ? 'text-mtw-amber' : 'text-brand-border'}`}
-                                />
+                                {unit.completed
+                                  ? <CheckCircle2 size={18} className="flex-shrink-0 text-dessa-teal" />
+                                  : <Circle size={18} className={`flex-shrink-0 ${isSelectedLesson ? 'text-mtw-amber' : 'text-brand-border'}`} />
+                                }
                               </button>
                               {i < unit.sub.length - 1 && (
                                 <div className="border-t border-brand-border" />
@@ -574,15 +559,11 @@ export default function LessonView({ onBookmark }) {
                   {competency}
                 </span>
                 <div className="flex items-center gap-2">
-                  {/* Bookmark */}
-                  <button
-                    onClick={handleBookmark}
-                    className="flex items-center justify-center w-9 h-9 rounded-md border border-brand-border bg-white transition-colors hover:border-mtw-amber hover:text-mtw-amber text-brand-subtext"
-                    style={bookmarked ? { color: '#F5A623', borderColor: '#F5A623' } : undefined}
-                    aria-label="Bookmark lesson"
-                  >
-                    <Bookmark size={15} fill={bookmarked ? 'currentColor' : 'none'} />
+                  {/* Bookmark — commented out
+                  <button onClick={handleBookmark} aria-label="Bookmark lesson">
+                    <Bookmark size={15} />
                   </button>
+                  */}
                   {/* Mark as complete */}
                   <button
                     onClick={() => setShowCompletion(true)}

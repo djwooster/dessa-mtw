@@ -172,105 +172,33 @@ export default function Curriculum({
   return (
     <div className="max-w-screen-xl mx-auto px-6 py-8">
 
-      {/* Page header */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-        className="mb-6"
-      >
-        <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-1">
-          Move This World
-        </p>
-        <h1 className="text-2xl font-semibold text-brand-text">Curriculum</h1>
-      </motion.div>
+      <Tabs defaultValue="all">
 
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.05 }}
-      >
-        <Tabs defaultValue="all">
-
-          {/* TabsList + toolbar in one row */}
-          <div className="flex items-center justify-between">
-            <TabsList>
-              {filters.map((f) => (
-                <TabsTrigger key={f.value} value={f.value}>{f.label}</TabsTrigger>
-              ))}
-            </TabsList>
-
-            <div className="flex items-center gap-2">
-
-              {/* Bookmarks button */}
-              <div className="relative" ref={bookmarksRef}>
-                <button
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text"
-                  onClick={() => { setBookmarksOpen((o) => !o); setMenuOpen(false) }}
-                >
-                  <Bookmark size={14} />
-                  Bookmarks
-                  {bookmarkedLessons.length > 0 && (
-                    <span
-                      className="text-white text-xs font-bold leading-none px-1.5 py-0.5 rounded-full"
-                      style={{ background: '#F5A623' }}
-                    >
-                      {bookmarkedLessons.length}
-                    </span>
-                  )}
-                </button>
-
-                {bookmarksOpen && (
-                  <div className="absolute right-0 top-[calc(100%+8px)] bg-white rounded-xl border border-brand-border shadow-lg z-10 w-72">
-                    {bookmarkedLessons.length === 0 ? (
-                      <div className="px-4 py-8 text-center">
-                        <Bookmark size={20} className="text-brand-border mx-auto mb-2" />
-                        <p className="text-sm text-brand-subtext">No bookmarked lessons yet.</p>
-                      </div>
-                    ) : (
-                      <div className="py-1">
-                        {bookmarkedLessons.map((bm, i) => (
-                          <button
-                            key={i}
-                            className="w-full text-left px-4 py-3 hover:bg-brand-bg transition-colors"
-                            onClick={() => {
-                              navigate('/mtw/lesson', { state: { course: bm.course } })
-                              setBookmarksOpen(false)
-                            }}
-                          >
-                            <p className="text-sm font-semibold text-brand-text">{bm.lesson}</p>
-                            <p className="text-xs text-brand-subtext mt-0.5">
-                              {bm.unit} · {bm.grade}
-                            </p>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Streak button */}
-              <Popover.Root>
-                <Popover.Trigger asChild>
-                  <button className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-medium border border-brand-border bg-white hover:shadow-sm transition-all text-brand-text">
-                    <Flame size={14} style={{ color: '#F5A623' }} /> 4
-                  </button>
-                </Popover.Trigger>
-                <Popover.Portal>
-                  <Popover.Content
-                    align="end"
-                    sideOffset={8}
-                    className="z-50 bg-white rounded-2xl border border-brand-border shadow-xl outline-none"
-                  >
-                    <StreakCalendarContent />
-                  </Popover.Content>
-                </Popover.Portal>
-              </Popover.Root>
-
-
-            </div>
+        {/* Page header + tabs in one row */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+          className="flex items-center justify-between mb-6"
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-1">
+              Move This World
+            </p>
+            <h1 className="text-2xl font-semibold text-brand-text">Curriculum</h1>
           </div>
+          <TabsList>
+            {filters.map((f) => (
+              <TabsTrigger key={f.value} value={f.value}>{f.label}</TabsTrigger>
+            ))}
+          </TabsList>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.05 }}
+        >
 
           {filters.map((f) => {
             const filtered =
@@ -319,8 +247,9 @@ export default function Curriculum({
             )
           })}
 
-        </Tabs>
-      </motion.div>
+        </motion.div>
+
+      </Tabs>
     </div>
   )
 }
