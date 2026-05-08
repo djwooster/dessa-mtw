@@ -98,7 +98,7 @@ function TokenRow({ token, hex, usage }) {
 
 export default function BrandGuide() {
   return (
-    <div className="max-w-screen-xl mx-auto px-6 py-8">
+    <div className="max-w-screen-xl mx-auto px-6 pt-20 pb-8">
 
       {/* ── Hero ── */}
       <motion.div {...stagger(0)} className="mb-10">

@@ -235,7 +235,7 @@ export default function Dashboard({ enrolledCourse }) {
     : 0
 
   return (
-    <div className="max-w-screen-xl mx-auto px-6 py-7">
+    <div className="max-w-screen-xl mx-auto px-6 pt-20 pb-7">
 
       {/* ── Greeting row ── */}
       <motion.div {...stagger(0)} className="flex items-start justify-between mb-6">
