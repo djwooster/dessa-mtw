@@ -475,7 +475,7 @@ export default function LessonView({ onBookmark }) {
                   </span>
                   <ChevronDown
                     size={13}
-                    className={`flex-shrink-0 text-brand-subtext transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                    className={`flex-shrink-0 text-brand-subtext transition-transform duration-200 ${isExpanded ? '' : '-rotate-90'}`}
                   />
                 </button>
 
