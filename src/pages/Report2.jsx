@@ -727,6 +727,7 @@ export default function Report2() {
             </button>
             {menuOpen && (
               <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg z-20 overflow-hidden py-1">
+                {/* View as — commented out
                 <p className="px-3.5 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-brand-subtext">View as</p>
                 {[
                   { value: 'program_admin', label: 'District Admin' },
@@ -742,6 +743,7 @@ export default function Report2() {
                   </button>
                 ))}
                 <div className="h-px bg-brand-border mx-2 my-1" />
+                */}
                 <button
                   className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors"
                   onClick={() => { setSettingsOpen(true); setMenuOpen(false) }}
