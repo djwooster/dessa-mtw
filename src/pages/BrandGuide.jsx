@@ -199,7 +199,7 @@ export default function BrandGuide() {
             <div className="space-y-1.5 text-sm text-brand-subtext">
               <div className="flex items-center gap-2"><span className="text-brand-border">—</span> Buttons: <code className="text-xs bg-brand-bg px-1.5 py-0.5 rounded">rounded-md</code></div>
               <div className="flex items-center gap-2"><span className="text-brand-border">—</span> Primary: <code className="text-xs bg-brand-bg px-1.5 py-0.5 rounded">#F5A623</code></div>
-              <div className="flex items-center gap-2"><span className="text-brand-border">—</span> Accents: teal / coral / green</div>
+              <div className="flex items-center gap-2"><span className="text-brand-border">—</span> Course levels: green / amber / purple / blue</div>
             </div>
           </Card>
         </div>
@@ -229,23 +229,28 @@ export default function BrandGuide() {
 
         {/* MTW */}
         <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-3">MTW</p>
-        <div className="grid grid-cols-6 gap-4 mb-7">
-          <Swatch name="Amber" token="mtw-amber" hex="#F5A623" usage="Primary brand" />
-          <Swatch name="Amber Light" token="mtw-amberLight" hex="#FEF3DC" usage="Amber bg tint" />
-          <Swatch name="Teal" token="mtw-teal" hex="#2D7D78" usage="Accent / complete" />
+        <div className="grid grid-cols-6 gap-4 mb-4">
+          <Swatch name="Amber" token="mtw-amber" hex="#F5A623" usage="Primary brand · Late Elementary courses" />
+          <Swatch name="Amber Light" token="mtw-amberLight" hex="#FEF3DC" usage="Enrolled badge bg · active highlights" />
+          <Swatch name="Teal" token="mtw-teal" hex="#2D7D78" usage="Early Elementary courses · completed state" />
           <Swatch name="Teal Light" token="mtw-tealLight" hex="#E0F0EF" usage="Teal bg tint" />
           <Swatch name="Coral" token="mtw-coral" hex="#E8653A" usage="Accent / energy" />
-          <Swatch name="Green" token="mtw-green" hex="#5B9E4D" usage="Complete state" />
+          <Swatch name="Green" token="mtw-green" hex="#5B9E4D" usage="Completed checkmarks / progress bars" />
+        </div>
+        <div className="grid grid-cols-6 gap-4 mb-7">
+          <Swatch name="Purple" token="mtw-purple" hex="#7B5EA7" usage="Middle School courses" />
+          <Swatch name="Blue" token="mtw-blue" hex="#3B7DD8" usage="High School courses" />
         </div>
 
         {/* Shared */}
         <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-3">Shared Neutrals</p>
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-6 gap-4">
           <Swatch name="Text" token="brand-text" hex="#1B2B4B" usage="Primary body copy" />
           <Swatch name="Subtext" token="brand-subtext" hex="#6B7A8D" usage="Labels, captions" />
           <Swatch name="Background" token="brand-bg" hex="#F0F2F5" usage="Page background" />
           <Swatch name="Border" token="brand-border" hex="#E2E6EA" usage="Card / divider borders" />
           <Swatch name="White" token="—" hex="#FFFFFF" usage="Card surface" />
+          <Swatch name="Interactive Blue" token="interactive-blue" hex="#0061FF" usage="Inline action links" />
         </div>
       </motion.div>
 
@@ -335,25 +340,29 @@ export default function BrandGuide() {
             </thead>
             <tbody className="px-6">
               {[
-                ['dessa-navy',      '#1B2B4B', 'Body text, nav background (dark mode candidate)'],
-                ['dessa-teal',      '#2A7F8F', 'DESSA primary action buttons, focus ring'],
-                ['dessa-tealLight', '#E8F4F6', 'Timeline current badge background'],
-                ['dessa-green',     '#5DB87A', 'Strength band in grade bar chart'],
-                ['dessa-blue',      '#A8C8E8', 'Typical band in grade bar chart'],
-                ['dessa-salmon',    '#F08080', 'Need band in grade bar chart'],
-                ['mtw-amber',       '#F5A623', 'MTW primary brand, filter tab underline'],
-                ['mtw-amberLight',  '#FEF3DC', 'Active unit highlight, NEW badge background'],
-                ['mtw-teal',        '#2D7D78', 'Grade 3 course color, MTW accent'],
-                ['mtw-tealLight',   '#E0F0EF', 'MTW teal bg tint'],
-                ['mtw-coral',       '#E8653A', 'Grade 5 course color, energy accent'],
-                ['mtw-green',       '#5B9E4D', 'Complete state checkmarks and progress bars'],
-                ['mtw-greenLight',  '#EAF4E7', 'Complete state background tints'],
-                ['mtw-purple',      '#7B5EA7', 'Grade 6 course color'],
-                ['brand-text',      '#1B2B4B', 'Primary body copy across all surfaces'],
-                ['brand-subtext',   '#6B7A8D', 'Secondary text, labels, captions, icons'],
-                ['brand-bg',        '#F0F2F5', 'Page background, hover state fills'],
-                ['brand-border',    '#E2E6EA', 'Card borders, dividers, separators'],
-                ['brand-focus',     '#2A7F8F', 'Focus ring color'],
+                ['dessa-navy',         '#1B2B4B', 'Body text, nav background'],
+                ['dessa-teal',         '#2A7F8F', 'DESSA primary action buttons, focus ring, active nav'],
+                ['dessa-tealLight',    '#E8F4F6', 'Timeline current badge background, teal tints'],
+                ['dessa-green',        '#5DB87A', 'Strength band in grade bar chart'],
+                ['dessa-greenDark',    '#26884b', 'Deep green — high engagement bars in reports'],
+                ['dessa-blue',         '#A8C8E8', 'Typical band in grade bar chart'],
+                ['dessa-salmon',       '#F08080', 'Need band in grade bar chart'],
+                ['dessa-magenta',      '#B5179E', 'Active filter chip text / border (report tables)'],
+                ['mtw-amber',          '#F5A623', 'MTW primary brand, Late Elementary course cards, enrolled badge'],
+                ['mtw-amberLight',     '#FEF3DC', 'Active unit highlight, NEW badge background, amber tints'],
+                ['mtw-teal',           '#2D7D78', 'Early Elementary course cards, completed state accents'],
+                ['mtw-tealLight',      '#E0F0EF', 'MTW teal bg tint'],
+                ['mtw-coral',          '#E8653A', 'Accent / lesson energy (not a course level color)'],
+                ['mtw-green',          '#5B9E4D', 'Completed state checkmarks and progress bars'],
+                ['mtw-greenLight',     '#EAF4E7', 'Completed state background tints'],
+                ['mtw-purple',         '#7B5EA7', 'Middle School course cards'],
+                ['mtw-blue',           '#3B7DD8', 'High School course cards'],
+                ['brand-text',         '#1B2B4B', 'Primary body copy across all surfaces'],
+                ['brand-subtext',      '#6B7A8D', 'Secondary text, labels, captions, icons'],
+                ['brand-bg',           '#F0F2F5', 'Page background, hover state fills'],
+                ['brand-border',       '#E2E6EA', 'Card borders, dividers, separators'],
+                ['brand-focus',        '#2A7F8F', 'Focus ring color'],
+                ['interactive-blue',   '#0061FF', 'Inline action links — "Clear", "Back to current week"'],
               ].map(([token, hex, usage]) => (
                 <TokenRow key={token} token={token} hex={hex} usage={usage} />
               ))}
@@ -410,6 +419,63 @@ export default function BrandGuide() {
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: '#EAF4E7', color: '#5B9E4D' }}>Complete</span>
           </div>
         </Card>
+
+        <div className="mt-5">
+          <SectionHeading>MTW Course Cards — Level Color System</SectionHeading>
+          <p className="text-sm text-brand-subtext mb-4 max-w-2xl">
+            Course cards use a solid color banner (not an image) with the grade label as large display text. Color is assigned by school level, not by individual grade — so all cards within a level share the same color.
+          </p>
+          <Card>
+            <div className="grid grid-cols-4 gap-4">
+              {[
+                { level: 'Early Elementary', grades: 'K – 3', color: '#2D7D78', token: 'mtw-teal' },
+                { level: 'Late Elementary',  grades: '4 – 5', color: '#F5A623', token: 'mtw-amber' },
+                { level: 'Middle School',    grades: '6 – 8', color: '#7B5EA7', token: 'mtw-purple' },
+                { level: 'High School',      grades: '9 – 12', color: '#3B7DD8', token: 'mtw-blue' },
+              ].map(({ level, grades, color, token }) => (
+                <div key={level} className="flex flex-col gap-2">
+                  <div className="h-20 rounded-xl flex flex-col items-center justify-center gap-0.5" style={{ background: color }}>
+                    <span className="text-white font-black text-2xl leading-none">Gr. {grades.split(' – ')[0]}</span>
+                    <span className="text-white/60 text-xs font-medium">{level}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-brand-text">{level}</p>
+                    <p className="text-xs font-mono text-brand-subtext">{token} · {color}</p>
+                    <p className="text-xs text-brand-subtext/70 italic">Grades {grades}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        <div className="mt-5">
+          <SectionHeading>MTW Sidebar — Unit States</SectionHeading>
+          <p className="text-sm text-brand-subtext mb-4 max-w-2xl">
+            The lesson sidebar uses three visual states to communicate curriculum progress. Left border color and icon type are the primary signals.
+          </p>
+          <Card>
+            <div className="space-y-3">
+              {[
+                { label: 'Active unit',    border: '#F5A623', borderLabel: 'mtw-amber', iconColor: '#F5A623', iconLabel: 'Circle (amber)', desc: 'The unit currently in progress. Expanded by default.' },
+                { label: 'Completed unit', border: 'rgba(42,127,143,0.4)', borderLabel: 'dessa-teal/40', iconColor: '#2A7F8F', iconLabel: 'CheckCircle2 (dessa-teal)', desc: 'All lessons in this unit finished. Collapsed by default.' },
+                { label: 'Inactive unit',  border: 'transparent', borderLabel: 'transparent', iconColor: '#E2E6EA', iconLabel: 'Circle (brand-border)', desc: 'Not yet reached. Hidden when "Hide inactive units" is on.' },
+              ].map(({ label, border, borderLabel, iconColor, iconLabel, desc }) => (
+                <div key={label} className="flex items-start gap-4 py-2.5 border-b border-brand-border last:border-0">
+                  <div className="w-1 h-10 rounded-full flex-shrink-0 mt-0.5" style={{ background: border }} />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-brand-text mb-0.5">{label}</p>
+                    <p className="text-xs text-brand-subtext">{desc}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xs font-mono text-brand-subtext">border: {borderLabel}</p>
+                    <p className="text-xs font-mono text-brand-subtext">icon: {iconLabel}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
 
         <div className="mt-5">
           <SectionHeading>Card Shell</SectionHeading>
@@ -487,7 +553,8 @@ wrapper: AnimatePresence`}</pre>
               {[
                 ['Max width', 'max-w-screen-xl', 'All page containers'],
                 ['Horizontal padding', 'px-6', 'Page gutters'],
-                ['Vertical padding', 'py-8', 'Page top/bottom'],
+                ['Top padding', 'pt-20', 'Clears 56px sticky nav + breathing room'],
+                ['Bottom padding', 'pb-8', 'Page bottom'],
                 ['Nav height', 'h-14 (56px)', 'Sticky top nav'],
                 ['Lesson sidebar', 'w-80 (320px)', 'Fixed width'],
                 ['Lesson content', 'max-w-3xl', 'Reading column max'],
@@ -507,9 +574,10 @@ wrapper: AnimatePresence`}</pre>
                 ['Section gap', 'mb-7', 'Between page sections'],
                 ['Card padding', 'p-5 / p-6', 'Card inner padding'],
                 ['Card gap', 'gap-4 / gap-5', 'Grid card spacing'],
-                ['Stat card grid', 'grid-cols-3 gap-4', 'Dashboard stats'],
-                ['Divider', 'my-7', 'Lesson content sections'],
+                ['Stat card grid', 'grid-cols-3 gap-4', 'Dashboard / report stats'],
+                ['Divider', 'my-10', 'Lesson content section dividers'],
                 ['Icon size (nav)', '14–16px', 'Nav action icons'],
+                ['Icon size (section)', '24px / 70% opacity', 'Inline section heading icons'],
               ].map(([label, value, use]) => (
                 <div key={label} className="flex items-baseline gap-3">
                   <span className="text-brand-subtext w-40 flex-shrink-0">{label}</span>
@@ -570,6 +638,11 @@ wrapper: AnimatePresence`}</pre>
             },
             {
               num: '08',
+              title: 'Course card color is assigned by school level, not by grade',
+              body: 'All 13 courses (K–12) use one of four level colors: Early Elementary (mtw-teal), Late Elementary (mtw-amber), Middle School (mtw-purple), High School (mtw-blue). Individual grade identity comes from the large grade label inside the card, not a unique color per grade.',
+            },
+            {
+              num: '09',
               title: 'All data is hardcoded — no backend',
               body: 'This is a design prototype, not a product build. Every number, name, and state is mocked in component data arrays. The goal is to demonstrate UX decisions clearly, not to wire up live data.',
             },

@@ -33,6 +33,7 @@ export default {
           green:      '#5B9E4D',
           greenLight: '#EAF4E7',
           purple:     '#7B5EA7',
+          blue:       '#3B7DD8',
           bg:         '#F0F2F5',
           card:       '#FFFFFF',
         },
