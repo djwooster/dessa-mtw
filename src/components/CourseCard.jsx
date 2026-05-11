@@ -69,7 +69,7 @@ export function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onC
 
             {/* Last activity */}
             <p className="text-xs text-brand-subtext mb-4">
-              {isEnrolled ? 'Last Activity: Apr. 18' : 'Not yet enrolled'}
+              {isEnrolled ? 'Last Activity: Apr. 18, 2026' : 'Not yet enrolled'}
             </p>
 
             {/* Actions */}

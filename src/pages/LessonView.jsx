@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Clock, Bookmark, Maximize2, Minimize2, Flame, Check, Eye, EyeOff, Tag, Target, Users, Lightbulb, HelpCircle, Share2, MessageCircle, Globe } from 'lucide-react'
+import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Clock, Bookmark, Maximize2, Minimize2, Flame, Check, Eye, EyeOff, Tag, Target, Users, Lightbulb, HelpCircle, Share2, MessageCircle, Globe, Printer } from 'lucide-react'
 
 
 const units = [
@@ -775,7 +775,16 @@ export default function LessonView({ onBookmark }) {
 
             <Divider />
 
-            <h2 className="text-3xl font-bold text-brand-text mb-6">Facilitation Guide</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-bold text-brand-text">Facilitation Guide</h2>
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-brand-subtext border border-brand-border bg-white hover:bg-brand-bg transition-colors"
+              >
+                <Printer size={14} />
+                Print
+              </button>
+            </div>
 
             {/* ── Main Activity ── */}
             <div className="mb-7">
@@ -859,7 +868,7 @@ export default function LessonView({ onBookmark }) {
                     key={p.context}
                     className="bg-white rounded-xl border border-brand-border p-4"
                   >
-                    <p className="text-xs font-semibold text-brand-subtext mb-2">{p.context}</p>
+                    <p className="text-xs font-semibold mb-2" style={{ color: '#F5A623' }}>{p.context}</p>
                     <p className="text-body text-brand-text leading-relaxed">{p.question}</p>
                   </div>
                 ))}
