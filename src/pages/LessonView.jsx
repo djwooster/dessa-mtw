@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Clock, Bookmark, Maximize2, Minimize2, Flame, Check, Eye, EyeOff, Tag, Target, Users, Lightbulb, HelpCircle, Share2, MessageCircle, Globe, Printer } from 'lucide-react'
+import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Pause, Clock, Bookmark, Maximize2, Minimize2, Flame, Check, Eye, EyeOff, Tag, Target, Users, Lightbulb, HelpCircle, Share2, MessageCircle, Globe, Printer, Headphones } from 'lucide-react'
 
 
 const units = [
@@ -86,6 +86,27 @@ const discussionPrompts = [
   {
     context: 'Going Deeper',
     question: 'Do you think every person feels the same Emogres, or are some people\u2019s more different? What makes you think that?',
+  },
+]
+
+const audioTracks = [
+  {
+    type: 'Welcome',
+    title: 'Welcome to Unit 1',
+    duration: '1:24',
+    description: 'A warm audio welcome from the MTW facilitators to set the tone for the unit.',
+  },
+  {
+    type: 'Ambient',
+    title: 'Emoger Soundscape',
+    duration: '2:45',
+    description: 'Ambient background audio designed for quiet reflection or independent journaling.',
+  },
+  {
+    type: 'Guided',
+    title: 'Guided Pause — 3 Breaths',
+    duration: '1:02',
+    description: 'A short guided breathing exercise to use before or after the main activity.',
   },
 ]
 
@@ -405,6 +426,7 @@ export default function LessonView({ onBookmark }) {
   const [showInactive, setShowInactive] = useState(true)
   const [language, setLanguage] = useState('English')
   const [langOpen, setLangOpen] = useState(false)
+  const [playingAudio, setPlayingAudio] = useState(null)
 
   const grade = course?.grade ?? 'Grade 3'
   const competency = course?.competency ?? 'Self-Awareness'
@@ -860,7 +882,7 @@ export default function LessonView({ onBookmark }) {
             <Divider />
 
             {/* ── Continuing the Conversation ── */}
-            <div className="pb-10">
+            <div className="mb-7">
               <SectionHeading icon={MessageCircle}>Continuing the Conversation</SectionHeading>
               <div className="grid grid-cols-3 gap-4">
                 {discussionPrompts.map((p) => (
@@ -872,6 +894,74 @@ export default function LessonView({ onBookmark }) {
                     <p className="text-body text-brand-text leading-relaxed">{p.question}</p>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            <Divider />
+
+            {/* ── Audio Materials ── */}
+            <div className="pb-10">
+              <SectionHeading icon={Headphones}>Audio Materials</SectionHeading>
+              <div className="space-y-3">
+                {audioTracks.map((track, i) => {
+                  const isPlaying = playingAudio === i
+                  return (
+                    <div
+                      key={i}
+                      className={`flex items-center gap-4 bg-white rounded-xl border p-4 transition-colors ${isPlaying ? 'border-dessa-teal' : 'border-brand-border'}`}
+                    >
+                      {/* Play / Pause button */}
+                      <button
+                        onClick={() => setPlayingAudio(isPlaying ? null : i)}
+                        className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center transition-all hover:brightness-95"
+                        style={{ background: isPlaying ? '#2A7F8F' : '#F0F2F5' }}
+                        aria-label={isPlaying ? 'Pause' : 'Play'}
+                      >
+                        {isPlaying
+                          ? <Pause size={14} fill="white" className="text-white" />
+                          : <Play size={14} fill="#6B7A8D" className="text-brand-subtext ml-0.5" />
+                        }
+                      </button>
+
+                      {/* Waveform bars (decorative) */}
+                      <div className="flex items-end gap-[3px] flex-shrink-0" style={{ height: 20 }}>
+                        {[6, 12, 8, 16, 10, 14, 7, 11, 15, 9].map((h, j) => (
+                          <div
+                            key={j}
+                            className="w-[3px] rounded-full transition-colors"
+                            style={{
+                              height: h,
+                              background: isPlaying ? '#2A7F8F' : '#D1D9E0',
+                              opacity: isPlaying ? 0.7 + (j % 3) * 0.1 : 1,
+                            }}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Title + description */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className={`text-sm font-semibold leading-snug ${isPlaying ? 'text-dessa-teal' : 'text-brand-text'}`}>
+                            {track.title}
+                          </p>
+                          <span
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                            style={{ background: '#FEF3DC', color: '#F5A623' }}
+                          >
+                            {track.type}
+                          </span>
+                        </div>
+                        <p className="text-xs text-brand-subtext leading-relaxed">{track.description}</p>
+                      </div>
+
+                      {/* Duration */}
+                      <div className="flex items-center gap-1 text-xs text-brand-subtext flex-shrink-0">
+                        <Clock size={11} />
+                        {track.duration}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
 
