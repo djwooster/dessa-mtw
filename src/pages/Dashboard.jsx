@@ -284,7 +284,7 @@ export default function Dashboard({ enrolledCourse }) {
                   style={{ background: '#2A7F8F' }}
                 >
                   <Play size={12} fill="currentColor" />
-                  Continue Lesson
+                  Continue Course
                 </button>
               </>
             ) : (
