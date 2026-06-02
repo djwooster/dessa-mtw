@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Play, ChevronRight, BookOpen, GraduationCap } from 'lucide-react'
 import { Card } from './ui/card'
+import { useNavigate } from 'react-router-dom'
 
 const stagger = (i) => ({
   initial: { opacity: 0, y: 8 },
@@ -9,7 +10,7 @@ const stagger = (i) => ({
   transition: { duration: 0.25, delay: i * 0.06 },
 })
 
-export function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onContinue, onUnenroll, index }) {
+export function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onContinue, onUnenroll, onViewCourse, index }) {
   const pct = isEnrolled ? Math.round((completedLessons / course.lessons) * 100) : 0
   const [confirmOpen, setConfirmOpen] = useState(false)
 
@@ -68,18 +69,27 @@ export function CourseCard({ course, isEnrolled, completedLessons, onEnroll, onC
             </div>
 
             {/* Last activity */}
-            <p className="text-xs text-brand-subtext mb-4">
+            <p className="text-xs text-brand-subtext mb-8">
               {isEnrolled ? 'Last Activity: Apr. 18, 2026' : 'Not yet enrolled'}
             </p>
 
             {/* Actions */}
-            <div className={`flex mt-auto items-center ${isEnrolled ? 'justify-between' : 'justify-end'}`}>
-              {isEnrolled && (
+            <div className="flex mt-auto items-center justify-between">
+              {isEnrolled ? (
                 <button
-                  className="text-sm font-medium text-brand-subtext hover:text-brand-text transition-colors"
+                  className="text-sm font-medium px-2 py-1 rounded hover:bg-[#C0392B]/5 transition-colors"
+                  style={{ color: '#C0392B' }}
                   onClick={() => setConfirmOpen(true)}
                 >
                   Unenroll
+                </button>
+              ) : (
+                <button
+                  className="text-sm font-medium px-2 py-1 rounded hover:bg-[#09778d]/5 transition-colors"
+                  style={{ color: '#09778d' }}
+                  onClick={() => onViewCourse(course)}
+                >
+                  View Course
                 </button>
               )}
               <button

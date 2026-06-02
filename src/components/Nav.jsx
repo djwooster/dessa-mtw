@@ -6,7 +6,7 @@ import { Search, HelpCircle } from 'lucide-react'
 const navItems = [
   { label: 'Dashboard',   to: '/' },
   // { label: 'Ratings',     to: '/ratings' },
-  { label: 'Move This World', to: '/mtw' },
+  { label: 'Curriculum', to: '/mtw' },
   // { label: 'MTW 2',       to: '/mtw2' },
   // { label: 'MTW 3',       to: '/mtw4' },
   // { label: 'DCE Report',             to: '/report1' },

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Bookmark, Flame } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
@@ -140,6 +140,8 @@ export default function Curriculum({
   const [bookmarksOpen, setBookmarksOpen] = useState(false)
   const bookmarksRef = useRef(null)
 
+  const [conflictModal, setConflictModal] = useState({ open: false, target: null })
+
   // Close ⋯ menu on outside click
   useEffect(() => {
     if (!menuOpen) return
@@ -161,7 +163,23 @@ export default function Curriculum({
   }, [bookmarksOpen])
 
   const handleEnroll = (course) => {
+    if (enrolledCourse && enrolledCourse.id !== course.id) {
+      setConflictModal({ open: true, target: course })
+      return
+    }
     onEnroll(course)
+    navigate('/mtw/lesson', { state: { course } })
+  }
+
+  const handleConflictConfirm = () => {
+    const course = conflictModal.target
+    setConflictModal({ open: false, target: null })
+    onUnenroll()
+    onEnroll(course)
+    navigate('/mtw/lesson', { state: { course } })
+  }
+
+  const handleViewCourse = (course) => {
     navigate('/mtw/lesson', { state: { course } })
   }
 
@@ -238,6 +256,7 @@ export default function Curriculum({
                         onEnroll={handleEnroll}
                         onContinue={() => navigate('/mtw/lesson', { state: { course: enrolledCourse } })}
                         onUnenroll={onUnenroll}
+                        onViewCourse={handleViewCourse}
                         index={i}
                       />
                     ))}
@@ -250,6 +269,60 @@ export default function Curriculum({
         </motion.div>
 
       </Tabs>
+
+      {/* ── Enrollment conflict modal ── */}
+      <AnimatePresence>
+        {conflictModal.open && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="absolute inset-0 bg-brand-text/40 backdrop-blur-sm"
+              onClick={() => setConflictModal({ open: false, target: null })}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.15 }}
+              className="relative bg-white rounded-2xl border border-brand-border shadow-xl w-full max-w-lg mx-4 z-10 overflow-hidden"
+            >
+              <div className="bg-brand-bg px-6 pt-6 pb-0">
+                <img src="/moving.svg" alt="" className="w-3/4 mx-auto block" draggable={false} />
+              </div>
+              <div className="p-6">
+                <p className="font-semibold text-brand-text mb-2" style={{ fontSize: 22 }}>
+                  You're already enrolled in {enrolledCourse?.grade}.
+                </p>
+                <p className="text-brand-subtext leading-relaxed mb-8" style={{ fontSize: 15 }}>
+                  You can only be enrolled in one course at a time. Would you like to unenroll from{' '}
+                  <span className="font-semibold text-brand-text">{enrolledCourse?.grade}</span>{' '}
+                  and enroll in{' '}
+                  <span className="font-semibold text-brand-text">{conflictModal.target?.grade}</span>?
+                </p>
+                <div className="flex gap-3 justify-start">
+                  <button
+                    className="px-4 py-2 rounded-md text-sm font-semibold border border-brand-border text-brand-subtext flex-1 bg-white hover:bg-brand-bg transition-colors"
+                    onClick={() => setConflictModal({ open: false, target: null })}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 rounded-md text-sm font-semibold text-white flex-1 transition-all hover:brightness-90"
+                    style={{ background: '#2A7F8F' }}
+                    onClick={handleConflictConfirm}
+                  >
+                    Switch Course
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   )
 }
