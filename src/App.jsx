@@ -34,7 +34,7 @@ export default function App() {
   const [bookmarkedLessons, setBookmarkedLessons] = useState([])
 
   const handleEnroll = (course) => {
-    setEnrolledCourse({ ...course, completed: 5 })
+    setEnrolledCourse({ ...course, completed: course.grade === 'Grade 2' ? 30 : 5 })
   }
 
   const handleUnenroll = () => {

@@ -43,6 +43,12 @@ const units = [
   { id: 36, title: 'Unit 36 — Celebration of Growth',        active: false, sub: ['Welcome Video!', 'My Growth Story', 'Strength Spotlight', 'Gratitude Garden', 'Celebration Ritual'] },
 ]
 
+const grade2Units = units.map(u => ({
+  ...u,
+  completed: u.id < 31,
+  active: u.id === 31,
+}))
+
 const lesson4Videos = [
   { title: 'What Is the Power of Pause?', duration: '3:12', description: 'An introduction to the pause technique and why it works in the classroom.' },
   { title: 'Recognizing Your Triggers', duration: '4:45', description: 'How to spot the moments when pausing is most needed — before reacting.' },
@@ -415,9 +421,13 @@ export default function LessonView({ onBookmark }) {
   const navigate = useNavigate()
   const location = useLocation()
   const course = location.state?.course
+  const isGrade2 = course?.grade === 'Grade 2'
+  const activeUnits = isGrade2 ? grade2Units : units
 
-  const [expandedUnit, setExpandedUnit] = useState(5)
-  const [selectedLesson, setSelectedLesson] = useState({ unitId: 5, lessonIndex: 2 })
+  const [expandedUnit, setExpandedUnit] = useState(isGrade2 ? 31 : 5)
+  const [selectedLesson, setSelectedLesson] = useState(
+    isGrade2 ? { unitId: 31, lessonIndex: 3 } : { unitId: 5, lessonIndex: 2 }
+  )
   const [activeVideo, setActiveVideo] = useState(0)
   const [activeContent, setActiveContent] = useState('video')
   const [bookmarked, setBookmarked] = useState(false)
@@ -427,11 +437,16 @@ export default function LessonView({ onBookmark }) {
   const [language, setLanguage] = useState('English')
   const [langOpen, setLangOpen] = useState(false)
   const [playingAudio, setPlayingAudio] = useState(null)
+  const activeUnitRef = useRef(null)
+
+  useEffect(() => {
+    activeUnitRef.current?.scrollIntoView({ block: 'center', behavior: 'instant' })
+  }, [])
 
   const grade = course?.grade ?? 'Grade 3'
   const competency = course?.competency ?? 'Self-Awareness'
 
-  const activeUnit = units.find((u) => u.id === selectedLesson.unitId)
+  const activeUnit = activeUnits.find((u) => u.id === selectedLesson.unitId)
   const currentLessonTitle = activeUnit?.sub[selectedLesson.lessonIndex] ?? 'Welcome Video!'
   const currentUnitTitle = activeUnit?.title ?? 'Unit 1 — Meet the Emogers'
 
@@ -474,12 +489,12 @@ export default function LessonView({ onBookmark }) {
         </div>
 
         <div className="flex-1 overflow-y-auto py-1">
-          {units.filter(unit => showInactive || unit.active).map((unit) => {
+          {activeUnits.filter(unit => showInactive || unit.active).map((unit) => {
             const isExpanded = expandedUnit === unit.id
             const toggle = () => setExpandedUnit(isExpanded ? null : unit.id)
 
             return (
-              <div key={unit.id} className={`border-l-2 ${unit.active ? 'border-mtw-amber' : unit.completed ? 'border-dessa-teal/40' : 'border-transparent'}`}>
+              <div key={unit.id} ref={unit.active ? activeUnitRef : null} className={`border-l-2 ${unit.active ? 'border-mtw-amber' : unit.completed ? 'border-dessa-teal/40' : 'border-transparent'}`}>
                 {/* Unit row */}
                 <button
                   onClick={toggle}
@@ -587,15 +602,68 @@ export default function LessonView({ onBookmark }) {
                   </button>
                   */}
                   {/* Mark as complete */}
-                  <button
-                    onClick={() => setShowCompletion(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold border border-brand-border text-brand-subtext hover:border-dessa-teal hover:text-dessa-teal transition-colors bg-white"
+                  <motion.button
+                    onClick={() => setShowCompletion(v => !v)}
+                    whileTap={{ scale: 0.96 }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold border transition-colors bg-white ${
+                      showCompletion
+                        ? 'border-dessa-teal text-dessa-teal'
+                        : 'border-brand-border text-brand-subtext hover:border-dessa-teal hover:text-dessa-teal'
+                    }`}
+                    style={showCompletion ? undefined : { minWidth: 160 }}
                   >
-                    <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-                      <rect x="0.5" y="0.5" width="14" height="14" rx="3.5" stroke="currentColor"/>
-                    </svg>
-                    Mark as complete
-                  </button>
+                    <AnimatePresence mode="wait" initial={false}>
+                      {showCompletion ? (
+                        <motion.span
+                          key="checked"
+                          initial={{ scale: 0.3, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.3, opacity: 0 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 18 }}
+                          className="flex items-center justify-center rounded-full shrink-0"
+                          style={{ width: 18, height: 18, background: '#2A7F8F' }}
+                        >
+                          <Check size={12} strokeWidth={3} color="white" />
+                        </motion.span>
+                      ) : (
+                        <motion.span
+                          key="unchecked"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.12 }}
+                          className="shrink-0"
+                        >
+                          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <circle cx="9" cy="9" r="8" stroke="currentColor" strokeWidth="1.5"/>
+                          </svg>
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                    <AnimatePresence mode="wait" initial={false}>
+                      {showCompletion ? (
+                        <motion.span
+                          key="done"
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.14 }}
+                        >
+                          Completed
+                        </motion.span>
+                      ) : (
+                        <motion.span
+                          key="mark"
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.14 }}
+                        >
+                          Mark as complete
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
                 </div>
               </div>
             </div>
@@ -970,7 +1038,7 @@ export default function LessonView({ onBookmark }) {
       </main>
 
       {/* ── Completion overlay ── */}
-      <AnimatePresence>
+      {false && <AnimatePresence>
         {showCompletion && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -1054,7 +1122,7 @@ export default function LessonView({ onBookmark }) {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>}
 
     </div>
   )
