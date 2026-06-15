@@ -41,6 +41,7 @@ const units = [
   { id: 34, title: 'Unit 34 — Emotional First Aid',          active: false, sub: ['Welcome Video!', 'First Aid for Feelings', 'Support Toolkit', 'Partner Share', 'Reflection'] },
   { id: 35, title: 'Unit 35 — Looking Back, Moving Forward', active: false, sub: ['Welcome Video!', 'Growth Timeline', 'What I Know Now', 'Class Circle'] },
   { id: 36, title: 'Unit 36 — Celebration of Growth',        active: false, sub: ['Welcome Video!', 'My Growth Story', 'Strength Spotlight', 'Gratitude Garden', 'Celebration Ritual'] },
+  { id: 37, title: 'Unit 37 — Power of Pause Collection',    active: false, sub: [] },
 ]
 
 const grade2Units = units.map(u => ({
@@ -133,6 +134,15 @@ const mindfulAudioTrack = {
   duration: '1:00',
   description: 'Teacher-led guided stillness. Press play when students are settled.',
 }
+
+const powerOfPauseVideos = [
+  { title: 'Breathing Exercises (PoP)',    duration: '2:15', description: 'Lead students through a calming breath cycle before or after an activity.' },
+  { title: 'Embodied Relaxation (PoP)',    duration: '3:30', description: 'A full-body relaxation sequence using progressive muscle tension and release.' },
+  { title: 'Recharge (PoP)',               duration: '2:45', description: 'A short energizing reset — use mid-lesson when the class needs a lift.' },
+  { title: 'Guided Visualization (PoP)',   duration: '4:10', description: 'Guide students to a calm inner place using sensory imagination.' },
+  { title: 'Mindful Reflection (PoP)',     duration: '3:05', description: 'A quiet prompt for students to notice their current emotional state.' },
+  { title: 'Share Outs (PoP)',             duration: '2:30', description: 'Structured pair or circle sharing — a brief check-in to close any lesson.' },
+]
 
 // ── Slide deck data — Feelings Check-In (Unit 2, Lesson 1) ───────────────
 const feelingsCheckInSlides = [
@@ -565,6 +575,77 @@ function AudioLibraryView({ grade, navigate }) {
   )
 }
 
+function PowerOfPauseView({ grade, navigate }) {
+  const [activeEpisode, setActiveEpisode] = useState(0)
+  const episode = powerOfPauseVideos[activeEpisode]
+
+  return (
+    <div className="max-w-[62rem] mx-auto px-8 py-7 pb-10">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.22 }}
+      >
+        <button
+          onClick={() => navigate('/mtw')}
+          className="flex items-center gap-1.5 text-sm font-medium text-brand-subtext hover:text-brand-text transition-colors mb-6"
+        >
+          <ChevronLeft size={14} />
+          Back to Courses
+        </button>
+
+        <h1 className="text-2xl font-semibold text-brand-text mb-1">Power of Pause Collection</h1>
+        <p className="text-sm text-brand-subtext mb-7">{grade} · {powerOfPauseVideos.length} videos</p>
+
+        {/* Video player */}
+        <div
+          className="w-full rounded-2xl overflow-hidden relative mb-4"
+          style={{ aspectRatio: '16/9', background: '#1B2B4B' }}
+        >
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.8) 100%)' }} />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+            <button
+              className="w-14 h-14 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg"
+              style={{ background: '#2A7F8F' }}
+            >
+              <Play size={20} fill="white" className="text-white ml-0.5" />
+            </button>
+            <p className="text-white font-semibold text-sm mb-1">{episode.title}</p>
+            <p className="text-white/50 text-xs leading-relaxed max-w-sm">{episode.description}</p>
+          </div>
+          <div
+            className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white"
+            style={{ background: 'rgba(0,0,0,0.45)' }}
+          >
+            <Clock size={11} />{episode.duration}
+          </div>
+        </div>
+
+        {/* Episode table */}
+        <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
+          {powerOfPauseVideos.map((ep, i) => (
+            <button
+              key={i}
+              onClick={() => setActiveEpisode(i)}
+              className={`w-full flex items-center gap-4 px-5 py-3.5 text-left border-b border-brand-border last:border-0 border-l-2 transition-colors ${
+                i === activeEpisode
+                  ? 'bg-dessa-tealLight border-l-dessa-teal'
+                  : 'border-l-transparent hover:bg-brand-bg'
+              }`}
+            >
+              <span className="text-xs font-medium text-brand-subtext tabular-nums w-4 flex-shrink-0">{i + 1}</span>
+              <span className={`flex-1 text-sm font-medium ${i === activeEpisode ? 'text-dessa-teal' : 'text-brand-text'}`}>
+                {ep.title}
+              </span>
+              <span className="text-xs text-brand-subtext tabular-nums flex-shrink-0">{ep.duration}</span>
+            </button>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
 export default function LessonView({ onBookmark }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -604,6 +685,7 @@ export default function LessonView({ onBookmark }) {
   const isFeelingsChekin = selectedLesson.unitId === 2 && selectedLesson.lessonIndex === 1
   const isMindfulMinute = selectedLesson.unitId === 5 && selectedLesson.lessonIndex === 3
   const isAudioLibrary = selectedLesson.unitId === 'audio'
+  const isPowerOfPause = selectedLesson.unitId === 37
 
   const handleSelectLesson = (unitId, lessonIndex) => {
     setSelectedLesson({ unitId, lessonIndex })
@@ -644,28 +726,37 @@ export default function LessonView({ onBookmark }) {
           {activeUnits.filter(unit => showInactive || unit.active).map((unit) => {
             const isExpanded = expandedUnit === unit.id
             const toggle = () => setExpandedUnit(isExpanded ? null : unit.id)
+            const isLeafUnit = unit.sub.length === 0
+            const isLeafSelected = isLeafUnit && selectedLesson.unitId === unit.id
 
             return (
-              <div key={unit.id} ref={unit.active ? activeUnitRef : null} className={`border-l-2 ${unit.active ? 'border-mtw-amber' : unit.completed ? 'border-dessa-teal/40' : 'border-transparent'}`}>
+              <div key={unit.id} ref={unit.active ? activeUnitRef : null} className={`border-l-2 ${
+                isLeafSelected ? 'border-mtw-amber' :
+                unit.active ? 'border-mtw-amber' :
+                unit.completed ? 'border-dessa-teal/40' :
+                'border-transparent'
+              }`}>
                 {/* Unit row */}
                 <button
-                  onClick={toggle}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors hover:bg-brand-bg"
+                  onClick={isLeafUnit ? () => handleSelectLesson(unit.id, 0) : toggle}
+                  className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors hover:bg-brand-bg ${isLeafSelected ? 'bg-mtw-amberLight' : ''}`}
                 >
                   {unit.completed
                     ? <CheckCircle2 size={14} className="flex-shrink-0 mt-0.5 text-dessa-teal" />
-                    : <Circle size={14} className={`flex-shrink-0 mt-0.5 ${unit.active ? 'text-mtw-amber' : 'text-brand-border'}`} />
+                    : <Circle size={14} className={`flex-shrink-0 mt-0.5 ${unit.active || isLeafSelected ? 'text-mtw-amber' : 'text-brand-border'}`} />
                   }
                   <span
-                    className={`flex-1 text-sm leading-snug ${unit.active ? 'font-bold text-brand-text' : ''}`}
-                    style={unit.active ? undefined : { color: '#4b5465' }}
+                    className={`flex-1 text-sm leading-snug ${unit.active || isLeafSelected ? 'font-bold text-brand-text' : ''}`}
+                    style={unit.active || isLeafSelected ? undefined : { color: '#4b5465' }}
                   >
                     {unit.title}
                   </span>
-                  <ChevronDown
-                    size={13}
-                    className={`flex-shrink-0 text-brand-subtext transition-transform duration-200 ${isExpanded ? '' : '-rotate-90'}`}
-                  />
+                  {!isLeafUnit && (
+                    <ChevronDown
+                      size={13}
+                      className={`flex-shrink-0 text-brand-subtext transition-transform duration-200 ${isExpanded ? '' : '-rotate-90'}`}
+                    />
+                  )}
                 </button>
 
                 {/* Sub-items */}
@@ -734,6 +825,8 @@ export default function LessonView({ onBookmark }) {
       <main className="flex-1 overflow-y-auto bg-brand-bg">
         {isAudioLibrary ? (
           <AudioLibraryView grade={grade} navigate={navigate} />
+        ) : isPowerOfPause ? (
+          <PowerOfPauseView grade={grade} navigate={navigate} />
         ) : (
         <div className="max-w-[62rem] mx-auto px-8 py-7">
 
