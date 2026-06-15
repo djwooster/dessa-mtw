@@ -1121,7 +1121,13 @@ function AudioLibraryView({ grade, navigate }) {
                   "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)",
               }}
             />
-            <div className="absolute inset-0 flex flex-col justify-end px-8 gap-3 py-4">
+            <div className="absolute inset-0 flex flex-col justify-center px-8 gap-3 py-6">
+
+              {/* Podcast image */}
+              <div className="flex justify-center">
+                <img src="/podcast.png" alt="" className="max-h-36 object-contain" />
+              </div>
+
               {/* Controls row: [skip/play/skip + title] justify-between [volume/download/speed] */}
               <div className="flex items-center justify-between">
                 {/* Left: transport + title */}
