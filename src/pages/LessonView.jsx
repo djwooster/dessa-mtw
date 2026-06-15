@@ -41,7 +41,7 @@ const units = [
   { id: 34, title: 'Unit 34 — Emotional First Aid',          active: false, sub: ['Welcome Video!', 'First Aid for Feelings', 'Support Toolkit', 'Partner Share', 'Reflection'] },
   { id: 35, title: 'Unit 35 — Looking Back, Moving Forward', active: false, sub: ['Welcome Video!', 'Growth Timeline', 'What I Know Now', 'Class Circle'] },
   { id: 36, title: 'Unit 36 — Celebration of Growth',        active: false, sub: ['Welcome Video!', 'My Growth Story', 'Strength Spotlight', 'Gratitude Garden', 'Celebration Ritual'] },
-  { id: 37, title: 'Unit 37 — Power of Pause Collection',    active: false, sub: [] },
+  { id: 37, title: 'Power of Pause Collection', active: false, sub: ['Breathing Exercises', 'Embodied Relaxation', 'Recharge', 'Guided Visualization', 'Mindful Reflection', 'Share Outs'] },
 ]
 
 const grade2Units = units.map(u => ({
@@ -135,13 +135,52 @@ const mindfulAudioTrack = {
   description: 'Teacher-led guided stillness. Press play when students are settled.',
 }
 
-const powerOfPauseVideos = [
-  { title: 'Breathing Exercises (PoP)',    duration: '2:15', description: 'Lead students through a calming breath cycle before or after an activity.' },
-  { title: 'Embodied Relaxation (PoP)',    duration: '3:30', description: 'A full-body relaxation sequence using progressive muscle tension and release.' },
-  { title: 'Recharge (PoP)',               duration: '2:45', description: 'A short energizing reset — use mid-lesson when the class needs a lift.' },
-  { title: 'Guided Visualization (PoP)',   duration: '4:10', description: 'Guide students to a calm inner place using sensory imagination.' },
-  { title: 'Mindful Reflection (PoP)',     duration: '3:05', description: 'A quiet prompt for students to notice their current emotional state.' },
-  { title: 'Share Outs (PoP)',             duration: '2:30', description: 'Structured pair or circle sharing — a brief check-in to close any lesson.' },
+const powerOfPauseThemes = [
+  {
+    title: 'Breathing Exercises',
+    videos: [
+      { title: 'Introduction to Breath Awareness', duration: '2:15', description: 'Establish a foundation for breath-based regulation before any lesson.' },
+      { title: 'Box Breathing Practice',           duration: '1:45', description: 'A structured 4-count breath pattern students can use independently.' },
+      { title: '4-7-8 Reset',                      duration: '2:00', description: 'A calming exhale-focused technique for moments of high stress.' },
+    ],
+  },
+  {
+    title: 'Embodied Relaxation',
+    videos: [
+      { title: 'Progressive Muscle Release', duration: '3:30', description: 'Systematically tense and release muscle groups to reduce physical tension.' },
+      { title: 'Full Body Scan',             duration: '4:15', description: 'A slow attention-based scan from feet to head, releasing held stress.' },
+    ],
+  },
+  {
+    title: 'Recharge',
+    videos: [
+      { title: 'Energy Reset',      duration: '1:30', description: 'A quick whole-body shake to discharge excess energy and refocus.' },
+      { title: 'Movement Break',    duration: '2:00', description: 'Guided light movement to re-engage students who have been sitting.' },
+      { title: 'Shake It Out',      duration: '1:15', description: 'Simple shaking movement to release tension stored in the body.' },
+      { title: 'Grounding Stretch', duration: '2:30', description: 'Standing stretches that reconnect students to the present moment.' },
+    ],
+  },
+  {
+    title: 'Guided Visualization',
+    videos: [
+      { title: 'Safe Place Journey',      duration: '4:10', description: 'Guide students to imagine a personal safe and calm inner space.' },
+      { title: 'Calm River Visualization', duration: '3:45', description: 'A flowing nature scene used to reduce anxiety and build focus.' },
+      { title: 'Peaceful Mountain',       duration: '4:30', description: 'A grounding visualization rooted in stillness and strength.' },
+    ],
+  },
+  {
+    title: 'Mindful Reflection',
+    videos: [
+      { title: 'Feelings Check',   duration: '2:45', description: 'A short pause to notice and name the current emotional state.' },
+      { title: 'Gratitude Moment', duration: '3:05', description: 'A brief gratitude practice that shifts attention toward the positive.' },
+    ],
+  },
+  {
+    title: 'Share Outs',
+    videos: [
+      { title: 'Circle Share', duration: '2:30', description: 'Structured pair or circle sharing to close a lesson with connection.' },
+    ],
+  },
 ]
 
 // ── Slide deck data — Feelings Check-In (Unit 2, Lesson 1) ───────────────
@@ -575,77 +614,6 @@ function AudioLibraryView({ grade, navigate }) {
   )
 }
 
-function PowerOfPauseView({ grade, navigate }) {
-  const [activeEpisode, setActiveEpisode] = useState(0)
-  const episode = powerOfPauseVideos[activeEpisode]
-
-  return (
-    <div className="max-w-[62rem] mx-auto px-8 py-7 pb-10">
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.22 }}
-      >
-        <button
-          onClick={() => navigate('/mtw')}
-          className="flex items-center gap-1.5 text-sm font-medium text-brand-subtext hover:text-brand-text transition-colors mb-6"
-        >
-          <ChevronLeft size={14} />
-          Back to Courses
-        </button>
-
-        <h1 className="text-2xl font-semibold text-brand-text mb-1">Power of Pause Collection</h1>
-        <p className="text-sm text-brand-subtext mb-7">{grade} · {powerOfPauseVideos.length} videos</p>
-
-        {/* Video player */}
-        <div
-          className="w-full rounded-2xl overflow-hidden relative mb-4"
-          style={{ aspectRatio: '16/9', background: '#1B2B4B' }}
-        >
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.8) 100%)' }} />
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
-            <button
-              className="w-14 h-14 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg"
-              style={{ background: '#2A7F8F' }}
-            >
-              <Play size={20} fill="white" className="text-white ml-0.5" />
-            </button>
-            <p className="text-white font-semibold text-sm mb-1">{episode.title}</p>
-            <p className="text-white/50 text-xs leading-relaxed max-w-sm">{episode.description}</p>
-          </div>
-          <div
-            className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white"
-            style={{ background: 'rgba(0,0,0,0.45)' }}
-          >
-            <Clock size={11} />{episode.duration}
-          </div>
-        </div>
-
-        {/* Episode table */}
-        <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
-          {powerOfPauseVideos.map((ep, i) => (
-            <button
-              key={i}
-              onClick={() => setActiveEpisode(i)}
-              className={`w-full flex items-center gap-4 px-5 py-3.5 text-left border-b border-brand-border last:border-0 border-l-2 transition-colors ${
-                i === activeEpisode
-                  ? 'bg-dessa-tealLight border-l-dessa-teal'
-                  : 'border-l-transparent hover:bg-brand-bg'
-              }`}
-            >
-              <span className="text-xs font-medium text-brand-subtext tabular-nums w-4 flex-shrink-0">{i + 1}</span>
-              <span className={`flex-1 text-sm font-medium ${i === activeEpisode ? 'text-dessa-teal' : 'text-brand-text'}`}>
-                {ep.title}
-              </span>
-              <span className="text-xs text-brand-subtext tabular-nums flex-shrink-0">{ep.duration}</span>
-            </button>
-          ))}
-        </div>
-      </motion.div>
-    </div>
-  )
-}
-
 export default function LessonView({ onBookmark }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -668,6 +636,7 @@ export default function LessonView({ onBookmark }) {
   const [playingAudio, setPlayingAudio] = useState(null)
   const [mindfulPlaying, setMindfulPlaying] = useState(false)
   const [mindfulSpeed, setMindfulSpeed] = useState('1×')
+  const [activePoPVideo, setActivePoPVideo] = useState(0)
   const activeUnitRef = useRef(null)
 
   useEffect(() => {
@@ -678,18 +647,26 @@ export default function LessonView({ onBookmark }) {
   const competency = course?.competency ?? 'Self-Awareness'
 
   const activeUnit = activeUnits.find((u) => u.id === selectedLesson.unitId)
-  const currentLessonTitle = activeUnit?.sub[selectedLesson.lessonIndex] ?? 'Welcome Video!'
+  const isAudioLibrary = selectedLesson.unitId === 'audio'
+  const isPowerOfPause = selectedLesson.unitId === 37
+  const currentLessonTitle = isPowerOfPause
+    ? 'Power of Pause Collection'
+    : activeUnit?.sub[selectedLesson.lessonIndex] ?? 'Welcome Video!'
   const currentUnitTitle = activeUnit?.title ?? 'Unit 1 — Meet the Emogers'
 
   const isLesson4 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 3
   const isFeelingsChekin = selectedLesson.unitId === 2 && selectedLesson.lessonIndex === 1
   const isMindfulMinute = selectedLesson.unitId === 5 && selectedLesson.lessonIndex === 3
-  const isAudioLibrary = selectedLesson.unitId === 'audio'
-  const isPowerOfPause = selectedLesson.unitId === 37
+
+  const activePoPTheme = isPowerOfPause
+    ? (powerOfPauseThemes[selectedLesson.lessonIndex] ?? powerOfPauseThemes[0])
+    : null
+  const activePoPVid = activePoPTheme?.videos[activePoPVideo] ?? null
 
   const handleSelectLesson = (unitId, lessonIndex) => {
     setSelectedLesson({ unitId, lessonIndex })
     setActiveVideo(0)
+    setActivePoPVideo(0)
     setActiveContent('video')
     setBookmarked(false)
   }
@@ -825,8 +802,6 @@ export default function LessonView({ onBookmark }) {
       <main className="flex-1 overflow-y-auto bg-brand-bg">
         {isAudioLibrary ? (
           <AudioLibraryView grade={grade} navigate={navigate} />
-        ) : isPowerOfPause ? (
-          <PowerOfPauseView grade={grade} navigate={navigate} />
         ) : (
         <div className="max-w-[62rem] mx-auto px-8 py-7">
 
@@ -944,7 +919,7 @@ export default function LessonView({ onBookmark }) {
           >
 
             {/* Single video */}
-            {!isLesson4 && !isFeelingsChekin && !isMindfulMinute && (
+            {!isLesson4 && !isFeelingsChekin && !isMindfulMinute && !isPowerOfPause && (
               <>
                 <div
                   className="w-full rounded-2xl overflow-hidden relative"
@@ -1216,6 +1191,80 @@ export default function LessonView({ onBookmark }) {
               </div>
             )}
 
+            {/* Power of Pause Collection — multi-video split panel or full-width single */}
+            {isPowerOfPause && activePoPTheme && activePoPTheme.videos.length > 1 && (
+              <div className="flex rounded-2xl overflow-hidden border border-brand-border" style={{ height: '360px' }}>
+                {/* Player */}
+                <div className="flex-1 relative" style={{ background: '#1B2B4B' }}>
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)' }} />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+                    <button
+                      className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg"
+                      style={{ background: '#2A7F8F' }}
+                    >
+                      <Play size={16} fill="white" className="text-white ml-0.5" />
+                    </button>
+                    <p className="text-white font-semibold text-sm leading-snug mb-1">{activePoPVid.title}</p>
+                    <p className="text-white/50 text-xs leading-relaxed max-w-xs">{activePoPVid.description}</p>
+                  </div>
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
+                    <Clock size={11} />{activePoPVid.duration}
+                  </div>
+                  <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
+                </div>
+
+                {/* Episode list */}
+                <div className="w-64 bg-white flex-shrink-0 border-l border-brand-border overflow-y-auto">
+                  <div className="px-4 py-2.5 border-b border-brand-border">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">In this lesson</p>
+                  </div>
+                  {activePoPTheme.videos.map((v, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActivePoPVideo(i)}
+                      className={`w-full text-left px-4 py-3 border-b border-brand-border last:border-0 border-l-2 transition-colors ${
+                        i === activePoPVideo
+                          ? 'bg-dessa-tealLight border-l-dessa-teal'
+                          : 'border-l-transparent hover:bg-brand-bg'
+                      }`}
+                    >
+                      <p className="text-xs text-brand-subtext mb-0.5">Episode {i + 1}</p>
+                      <p className={`text-sm font-semibold leading-snug mb-1 ${i === activePoPVideo ? 'text-dessa-teal' : 'text-brand-text'}`}>
+                        {v.title}
+                      </p>
+                      <div className="flex items-center gap-1 text-xs text-brand-subtext">
+                        <Clock size={10} />{v.duration}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Power of Pause — single video (no right panel) */}
+            {isPowerOfPause && activePoPTheme && activePoPTheme.videos.length === 1 && (
+              <div
+                className="w-full rounded-2xl overflow-hidden relative"
+                style={{ aspectRatio: '16/9', background: '#1B2B4B' }}
+              >
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.8) 100%)' }} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+                  <button
+                    className="w-14 h-14 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg"
+                    style={{ background: '#2A7F8F' }}
+                  >
+                    <Play size={20} fill="white" className="text-white ml-0.5" />
+                  </button>
+                  <p className="text-white font-semibold text-sm mb-1">{activePoPVid.title}</p>
+                  <p className="text-white/50 text-xs leading-relaxed max-w-sm">{activePoPVid.description}</p>
+                </div>
+                <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
+                  <Clock size={11} />{activePoPVid.duration}
+                </div>
+                <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
+              </div>
+            )}
+
           </motion.div>
 
           <motion.div
@@ -1225,130 +1274,148 @@ export default function LessonView({ onBookmark }) {
           >
 
             {/* ── Skills & Objective ── */}
-            <div className="grid grid-cols-2 gap-6 mb-7">
-              <div>
-                <SectionLabel>Skills</SectionLabel>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {skills.map((skill) => (
-                    <span
-                      key={skill}
-                      className="text-xs font-medium px-2.5 py-1 rounded-full border border-brand-border text-brand-text bg-white"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <SectionLabel>Objective</SectionLabel>
-                <p className="text-body text-brand-text leading-relaxed mt-2">
-                  Students are introduced to the Emoger characters and begin building a shared
-                  emotional vocabulary that will be used throughout the course.
-                </p>
-              </div>
-            </div>
-
-            <Divider />
-
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-3xl font-bold text-brand-text">Facilitation Guide</h2>
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-brand-subtext border border-brand-border bg-white hover:bg-brand-bg transition-colors"
-              >
-                <Printer size={14} />
-                Print
-              </button>
-            </div>
-
-            {/* ── Main Activity ── */}
-            <div className="mb-7">
-              <SectionHeading>Emoger Introduction Circle</SectionHeading>
-              <div className="pl-4 border-l-4 border-mtw-amber">
-                <p className="text-body text-brand-text leading-relaxed mb-3">
-                  After the video, go around the circle and ask each student to name one
-                  Emogre they recognized in themselves this week — without explaining why.
-                  The class listens without comment. This builds emotional awareness and
-                  psychological safety from lesson one.
-                </p>
-                <div className="flex items-center gap-1.5 text-sm font-medium text-brand-subtext">
-                  <Clock size={12} />
-                  10 minutes
-                </div>
-              </div>
-            </div>
-
-            <Divider />
-
-            {/* ── Facilitation Tips ── */}
-            <div className="mb-7">
-              <SectionHeading icon={Lightbulb}>Before You Begin</SectionHeading>
-              <ul className="space-y-2.5">
-                {tips.map((tip) => (
-                  <li key={tip} className="flex items-center gap-3 text-body text-brand-text">
-                    <span
-                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{ background: '#2D7D78' }}
-                    />
-                    {tip}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <Divider />
-
-            {/* ── Why We Do This ── */}
-            <div className="mb-7">
-              <SectionHeading icon={HelpCircle}>Why We Do This</SectionHeading>
-              <p className="text-body text-brand-text leading-relaxed">
-                Students can't regulate emotions they can't name. The Emoger framework gives
-                children a shared, non-stigmatizing language for the full range of human
-                feeling. Starting here — before any SEL skill-building — means every future
-                lesson lands on prepared ground.
-              </p>
-            </div>
-
-            <Divider />
-
-            {/* ── Ideas for Integration ── */}
-            <div className="mb-7">
-              <SectionHeading icon={Share2}>Ideas for Integration</SectionHeading>
-              <div className="grid grid-cols-3 gap-4">
-                {integrationIdeas.map((item) => (
-                  <div
-                    key={item.subject}
-                    className="bg-white rounded-xl border border-brand-border p-4"
-                  >
-                    <p
-                      className="text-xs font-semibold mb-2"
-                      style={{ color: '#F5A623' }}
-                    >
-                      {item.subject}
+            {!isPowerOfPause && (
+              <>
+                <div className="grid grid-cols-2 gap-6 mb-7">
+                  <div>
+                    <SectionLabel>Skills</SectionLabel>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {skills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="text-xs font-medium px-2.5 py-1 rounded-full border border-brand-border text-brand-text bg-white"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <SectionLabel>Objective</SectionLabel>
+                    <p className="text-body text-brand-text leading-relaxed mt-2">
+                      Students are introduced to the Emoger characters and begin building a shared
+                      emotional vocabulary that will be used throughout the course.
                     </p>
-                    <p className="text-body text-brand-text leading-relaxed">{item.idea}</p>
                   </div>
-                ))}
+                </div>
+                <Divider />
+              </>
+            )}
+
+            {isPowerOfPause && <Divider />}
+
+            {isPowerOfPause ? (
+              <div className="pb-10">
+                <h2 className="text-xl font-semibold text-brand-text mb-3">All Power of Pause in this Course</h2>
+                <p className="text-body text-brand-subtext leading-relaxed max-w-2xl">
+                  This collection brings together every Power of Pause moment from across the course in one place.
+                  Each theme represents a distinct calming technique — select any theme in the sidebar to jump straight
+                  to those videos without navigating unit by unit.
+                </p>
               </div>
-            </div>
-
-            <Divider />
-
-            {/* ── Continuing the Conversation ── */}
-            <div className="pb-10">
-              <SectionHeading icon={MessageCircle}>Continuing the Conversation</SectionHeading>
-              <div className="grid grid-cols-3 gap-4">
-                {discussionPrompts.map((p) => (
-                  <div
-                    key={p.context}
-                    className="bg-white rounded-xl border border-brand-border p-4"
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-3xl font-bold text-brand-text">Facilitation Guide</h2>
+                  <button
+                    onClick={() => window.print()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-brand-subtext border border-brand-border bg-white hover:bg-brand-bg transition-colors"
                   >
-                    <p className="text-xs font-semibold mb-2" style={{ color: '#F5A623' }}>{p.context}</p>
-                    <p className="text-body text-brand-text leading-relaxed">{p.question}</p>
+                    <Printer size={14} />
+                    Print
+                  </button>
+                </div>
+
+                {/* ── Main Activity ── */}
+                <div className="mb-7">
+                  <SectionHeading>Emoger Introduction Circle</SectionHeading>
+                  <div className="pl-4 border-l-4 border-mtw-amber">
+                    <p className="text-body text-brand-text leading-relaxed mb-3">
+                      After the video, go around the circle and ask each student to name one
+                      Emogre they recognized in themselves this week — without explaining why.
+                      The class listens without comment. This builds emotional awareness and
+                      psychological safety from lesson one.
+                    </p>
+                    <div className="flex items-center gap-1.5 text-sm font-medium text-brand-subtext">
+                      <Clock size={12} />
+                      10 minutes
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+
+                <Divider />
+
+                {/* ── Facilitation Tips ── */}
+                <div className="mb-7">
+                  <SectionHeading icon={Lightbulb}>Before You Begin</SectionHeading>
+                  <ul className="space-y-2.5">
+                    {tips.map((tip) => (
+                      <li key={tip} className="flex items-center gap-3 text-body text-brand-text">
+                        <span
+                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ background: '#2D7D78' }}
+                        />
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Divider />
+
+                {/* ── Why We Do This ── */}
+                <div className="mb-7">
+                  <SectionHeading icon={HelpCircle}>Why We Do This</SectionHeading>
+                  <p className="text-body text-brand-text leading-relaxed">
+                    Students can't regulate emotions they can't name. The Emoger framework gives
+                    children a shared, non-stigmatizing language for the full range of human
+                    feeling. Starting here — before any SEL skill-building — means every future
+                    lesson lands on prepared ground.
+                  </p>
+                </div>
+
+                <Divider />
+
+                {/* ── Ideas for Integration ── */}
+                <div className="mb-7">
+                  <SectionHeading icon={Share2}>Ideas for Integration</SectionHeading>
+                  <div className="grid grid-cols-3 gap-4">
+                    {integrationIdeas.map((item) => (
+                      <div
+                        key={item.subject}
+                        className="bg-white rounded-xl border border-brand-border p-4"
+                      >
+                        <p
+                          className="text-xs font-semibold mb-2"
+                          style={{ color: '#F5A623' }}
+                        >
+                          {item.subject}
+                        </p>
+                        <p className="text-body text-brand-text leading-relaxed">{item.idea}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Divider />
+
+                {/* ── Continuing the Conversation ── */}
+                <div className="pb-10">
+                  <SectionHeading icon={MessageCircle}>Continuing the Conversation</SectionHeading>
+                  <div className="grid grid-cols-3 gap-4">
+                    {discussionPrompts.map((p) => (
+                      <div
+                        key={p.context}
+                        className="bg-white rounded-xl border border-brand-border p-4"
+                      >
+                        <p className="text-xs font-semibold mb-2" style={{ color: '#F5A623' }}>{p.context}</p>
+                        <p className="text-body text-brand-text leading-relaxed">{p.question}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
 
 
           </motion.div>
