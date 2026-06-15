@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Pause, Clock, Bookmark, Maximize2, Minimize2, Flame, Check, Eye, EyeOff, Tag, Target, Users, Lightbulb, HelpCircle, Share2, MessageCircle, Globe, Printer, Headphones } from 'lucide-react'
+import { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, Play, Pause, Clock, Bookmark, Maximize2, Minimize2, Flame, Check, Eye, EyeOff, Tag, Target, Users, Lightbulb, HelpCircle, Share2, MessageCircle, Globe, Printer, Headphones, SkipBack, SkipForward, Volume2 } from 'lucide-react'
 
 
 const units = [
@@ -97,24 +97,42 @@ const discussionPrompts = [
 
 const audioTracks = [
   {
-    type: 'Welcome',
     title: 'Welcome to Unit 1',
     duration: '1:24',
-    description: 'A warm audio welcome from the MTW facilitators to set the tone for the unit.',
+    scrubPct: 73,
+    scrubTime: '1:01',
   },
   {
-    type: 'Ambient',
     title: 'Emoger Soundscape',
     duration: '2:45',
-    description: 'Ambient background audio designed for quiet reflection or independent journaling.',
+    scrubPct: 0,
+    scrubTime: '0:00',
   },
   {
-    type: 'Guided',
     title: 'Guided Pause — 3 Breaths',
     duration: '1:02',
-    description: 'A short guided breathing exercise to use before or after the main activity.',
+    scrubPct: 0,
+    scrubTime: '0:00',
+  },
+  {
+    title: 'Guided Mindful Minute',
+    duration: '1:00',
+    scrubPct: 0,
+    scrubTime: '0:00',
+  },
+  {
+    title: 'Calm Corner Soundscape',
+    duration: '5:00',
+    scrubPct: 0,
+    scrubTime: '0:00',
   },
 ]
+
+const mindfulAudioTrack = {
+  title: 'Guided Mindful Minute',
+  duration: '1:00',
+  description: 'Teacher-led guided stillness. Press play when students are settled.',
+}
 
 // ── Slide deck data — Feelings Check-In (Unit 2, Lesson 1) ───────────────
 const feelingsCheckInSlides = [
@@ -417,6 +435,136 @@ function Divider() {
   return <div className="border-t border-brand-border my-10" />
 }
 
+const SPEEDS = ['1×', '1.25×', '1.5×', '0.75×']
+
+function AudioLibraryView({ grade, navigate }) {
+  const [selectedTrack, setSelectedTrack] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [speed, setSpeed] = useState('1×')
+
+  const cycleSpeed = () => {
+    const idx = SPEEDS.indexOf(speed)
+    setSpeed(SPEEDS[(idx + 1) % SPEEDS.length])
+  }
+
+  const handleSelectTrack = (i) => {
+    setSelectedTrack(i)
+    setIsPlaying(false)
+  }
+
+  const track = audioTracks[selectedTrack]
+  const fillColor = '#2A7F8F'
+
+  return (
+    <div className="max-w-[62rem] mx-auto px-8 py-7 pb-10">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.22 }}
+      >
+        <button
+          onClick={() => navigate('/mtw')}
+          className="flex items-center gap-1.5 text-sm font-medium text-brand-subtext hover:text-brand-text transition-colors mb-6"
+        >
+          <ChevronLeft size={14} />
+          Back to Courses
+        </button>
+        <div className="flex items-center gap-3 mb-1">
+          <Headphones size={22} className="text-brand-subtext opacity-70" />
+          <h1 className="text-2xl font-semibold text-brand-text">Audio Library</h1>
+        </div>
+        <p className="text-sm text-brand-subtext mb-7">{grade} · {audioTracks.length} tracks</p>
+
+        {/* Player card */}
+        <div className={`bg-white rounded-xl border px-5 py-4 mb-3 transition-colors ${isPlaying ? 'border-dessa-teal' : 'border-brand-border'}`}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <button
+                onClick={() => handleSelectTrack(Math.max(0, selectedTrack - 1))}
+                className="p-1.5 rounded text-brand-subtext hover:bg-brand-bg transition-colors"
+              >
+                <SkipBack size={16} />
+              </button>
+              <button
+                onClick={() => setIsPlaying(v => !v)}
+                className="w-10 h-10 rounded-lg flex items-center justify-center transition-all hover:brightness-95"
+                style={{ background: isPlaying ? '#2A7F8F' : '#F0F2F5' }}
+                aria-label={isPlaying ? 'Pause' : 'Play'}
+              >
+                {isPlaying
+                  ? <Pause size={15} fill="white" className="text-white" />
+                  : <Play size={15} fill="#2A7F8F" className="text-dessa-teal ml-0.5" />
+                }
+              </button>
+              <button
+                onClick={() => handleSelectTrack(Math.min(audioTracks.length - 1, selectedTrack + 1))}
+                className="p-1.5 rounded text-brand-subtext hover:bg-brand-bg transition-colors"
+              >
+                <SkipForward size={16} />
+              </button>
+            </div>
+
+            <p className={`flex-1 text-base font-semibold min-w-0 truncate ${isPlaying ? 'text-dessa-teal' : 'text-brand-text'}`}>
+              {track.title}
+            </p>
+
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button className="p-1.5 rounded text-brand-subtext hover:bg-brand-bg transition-colors">
+                <Volume2 size={15} />
+              </button>
+              <button
+                onClick={cycleSpeed}
+                className="px-2 py-1 rounded text-xs font-semibold text-brand-subtext hover:bg-brand-bg transition-colors tabular-nums min-w-[36px] text-center"
+              >
+                {speed}
+              </button>
+            </div>
+          </div>
+
+          <div className="relative h-1 rounded-full bg-brand-border mb-2">
+            <div
+              className="absolute inset-y-0 left-0 rounded-full"
+              style={{ width: `${track.scrubPct}%`, background: fillColor }}
+            />
+            {track.scrubPct > 0 && (
+              <div
+                className="absolute top-1/2 w-3 h-3 rounded-full"
+                style={{ left: `${track.scrubPct}%`, transform: 'translate(-50%, -50%)', background: fillColor }}
+              />
+            )}
+          </div>
+
+          <div className="flex justify-between">
+            <span className="text-xs text-brand-subtext tabular-nums">{track.scrubTime}</span>
+            <span className="text-xs text-brand-subtext tabular-nums">{track.duration}</span>
+          </div>
+        </div>
+
+        {/* Episode table */}
+        <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
+          {audioTracks.map((t, i) => (
+            <button
+              key={i}
+              onClick={() => handleSelectTrack(i)}
+              className={`w-full flex items-center gap-4 px-5 py-3.5 text-left border-b border-brand-border last:border-0 border-l-2 transition-colors ${
+                i === selectedTrack
+                  ? 'bg-dessa-tealLight border-l-dessa-teal'
+                  : 'border-l-transparent hover:bg-brand-bg'
+              }`}
+            >
+              <span className="text-xs font-medium text-brand-subtext tabular-nums w-4 flex-shrink-0">{i + 1}</span>
+              <span className={`flex-1 text-sm font-medium ${i === selectedTrack ? 'text-dessa-teal' : 'text-brand-text'}`}>
+                {t.title}
+              </span>
+              <span className="text-xs text-brand-subtext tabular-nums flex-shrink-0">{t.duration}</span>
+            </button>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
 export default function LessonView({ onBookmark }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -452,6 +600,8 @@ export default function LessonView({ onBookmark }) {
 
   const isLesson4 = selectedLesson.unitId === 1 && selectedLesson.lessonIndex === 3
   const isFeelingsChekin = selectedLesson.unitId === 2 && selectedLesson.lessonIndex === 1
+  const isMindfulMinute = selectedLesson.unitId === 5 && selectedLesson.lessonIndex === 3
+  const isAudioLibrary = selectedLesson.unitId === 'audio'
 
   const handleSelectLesson = (unitId, lessonIndex) => {
     setSelectedLesson({ unitId, lessonIndex })
@@ -557,12 +707,32 @@ export default function LessonView({ onBookmark }) {
               </div>
             )
           })}
+
+        </div>
+
+        {/* Audio Library entry — sticky, outside scroll area */}
+        <div className="flex-shrink-0 border-t border-brand-border">
+          <div className={`border-l-2 ${isAudioLibrary ? 'border-mtw-amber' : 'border-transparent'}`}>
+            <button
+              onClick={() => setSelectedLesson({ unitId: 'audio' })}
+              className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors ${isAudioLibrary ? 'bg-mtw-amberLight' : 'hover:bg-brand-bg'}`}
+            >
+              <Headphones size={14} className={`flex-shrink-0 ${isAudioLibrary ? 'text-mtw-amber' : 'text-brand-subtext'}`} />
+              <span className={`flex-1 text-sm leading-snug ${isAudioLibrary ? 'font-bold text-brand-text' : ''}`} style={isAudioLibrary ? undefined : { color: '#4b5465' }}>
+                Audio Library
+              </span>
+              <span className="text-xs text-brand-subtext tabular-nums">{audioTracks.length}</span>
+            </button>
+          </div>
         </div>
 
       </aside>
 
       {/* ── Main content ── */}
       <main className="flex-1 overflow-y-auto bg-brand-bg">
+        {isAudioLibrary ? (
+          <AudioLibraryView grade={grade} navigate={navigate} />
+        ) : (
         <div className="max-w-[62rem] mx-auto px-8 py-7">
 
           {/* Lesson meta */}
@@ -679,7 +849,7 @@ export default function LessonView({ onBookmark }) {
           >
 
             {/* Single video */}
-            {!isLesson4 && !isFeelingsChekin && (
+            {!isLesson4 && !isFeelingsChekin && !isMindfulMinute && (
               <>
                 <div
                   className="w-full rounded-2xl overflow-hidden relative"
@@ -769,6 +939,89 @@ export default function LessonView({ onBookmark }) {
                         <path d="M8 21h8M12 17v4" />
                       </svg>
                       4 slides
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Mindful Minute — video + guided audio with content-type selector */}
+            {isMindfulMinute && (
+              <div className="flex rounded-2xl overflow-hidden border border-brand-border" style={{ height: 360 }}>
+                {/* Left: active content */}
+                <div className="flex-1 relative overflow-hidden">
+                  {activeContent === 'video' && (
+                    <>
+                      <div className="absolute inset-0" style={{ background: '#1B2B4B' }} />
+                      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.8) 100%)' }} />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <button className="w-14 h-14 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: '#2A7F8F' }}>
+                          <Play size={20} fill="white" className="text-white ml-0.5" />
+                        </button>
+                        <p className="text-white/70 text-sm">Mindful Minute — Introduction</p>
+                      </div>
+                      <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
+                        <Clock size={11} />4:22
+                      </div>
+                      <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
+                    </>
+                  )}
+                  {activeContent === 'audio' && (
+                    <>
+                      <div className="absolute inset-0" style={{ background: '#1B2B4B' }} />
+                      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.8) 100%)' }} />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                        <Headphones size={28} className="text-white/50 mb-1" />
+                        <button className="w-14 h-14 rounded-full flex items-center justify-center transition-transform hover:scale-105 shadow-lg" style={{ background: '#2A7F8F' }}>
+                          <Play size={20} fill="white" className="text-white ml-0.5" />
+                        </button>
+                        <p className="text-white font-semibold text-sm mt-2">{mindfulAudioTrack.title}</p>
+                        <p className="text-white/50 text-xs leading-relaxed text-center px-10">{mindfulAudioTrack.description}</p>
+                      </div>
+                      <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
+                        <Clock size={11} />{mindfulAudioTrack.duration}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Right: content-type selector */}
+                <div className="w-56 bg-white flex-shrink-0 border-l border-brand-border flex flex-col">
+                  <div className="px-4 py-2.5 border-b border-brand-border">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">In This Lesson</p>
+                  </div>
+
+                  <button
+                    onClick={() => setActiveContent('video')}
+                    className={`w-full text-left px-4 py-3.5 border-b border-brand-border border-l-2 transition-colors ${
+                      activeContent === 'video'
+                        ? 'bg-dessa-tealLight border-l-dessa-teal'
+                        : 'border-l-transparent hover:bg-brand-bg'
+                    }`}
+                  >
+                    <p className="text-xs text-brand-subtext mb-0.5">Video</p>
+                    <p className={`text-sm font-semibold leading-snug mb-1.5 ${activeContent === 'video' ? 'text-dessa-teal' : 'text-brand-text'}`}>
+                      Mindful Minute — Introduction
+                    </p>
+                    <div className="flex items-center gap-1 text-xs text-brand-subtext">
+                      <Clock size={10} />4:22
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveContent('audio')}
+                    className={`w-full text-left px-4 py-3.5 border-l-2 transition-colors ${
+                      activeContent === 'audio'
+                        ? 'bg-dessa-tealLight border-l-dessa-teal'
+                        : 'border-l-transparent hover:bg-brand-bg'
+                    }`}
+                  >
+                    <p className="text-xs text-brand-subtext mb-0.5">Audio Guide</p>
+                    <p className={`text-sm font-semibold leading-snug mb-1.5 ${activeContent === 'audio' ? 'text-dessa-teal' : 'text-brand-text'}`}>
+                      {mindfulAudioTrack.title}
+                    </p>
+                    <div className="flex items-center gap-1 text-xs text-brand-subtext">
+                      <Headphones size={10} />{mindfulAudioTrack.duration}
                     </div>
                   </button>
                 </div>
@@ -950,7 +1203,7 @@ export default function LessonView({ onBookmark }) {
             <Divider />
 
             {/* ── Continuing the Conversation ── */}
-            <div className="mb-7">
+            <div className="pb-10">
               <SectionHeading icon={MessageCircle}>Continuing the Conversation</SectionHeading>
               <div className="grid grid-cols-3 gap-4">
                 {discussionPrompts.map((p) => (
@@ -965,76 +1218,10 @@ export default function LessonView({ onBookmark }) {
               </div>
             </div>
 
-            <Divider />
-
-            {/* ── Audio Materials ── */}
-            <div className="pb-10">
-              <SectionHeading icon={Headphones}>Audio Materials</SectionHeading>
-              <div className="space-y-3">
-                {audioTracks.map((track, i) => {
-                  const isPlaying = playingAudio === i
-                  return (
-                    <div
-                      key={i}
-                      className={`flex items-center gap-4 bg-white rounded-xl border p-4 transition-colors ${isPlaying ? 'border-dessa-teal' : 'border-brand-border'}`}
-                    >
-                      {/* Play / Pause button */}
-                      <button
-                        onClick={() => setPlayingAudio(isPlaying ? null : i)}
-                        className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center transition-all hover:brightness-95"
-                        style={{ background: isPlaying ? '#2A7F8F' : '#F0F2F5' }}
-                        aria-label={isPlaying ? 'Pause' : 'Play'}
-                      >
-                        {isPlaying
-                          ? <Pause size={14} fill="white" className="text-white" />
-                          : <Play size={14} fill="#6B7A8D" className="text-brand-subtext ml-0.5" />
-                        }
-                      </button>
-
-                      {/* Waveform bars (decorative) */}
-                      <div className="flex items-end gap-[3px] flex-shrink-0" style={{ height: 20 }}>
-                        {[6, 12, 8, 16, 10, 14, 7, 11, 15, 9].map((h, j) => (
-                          <div
-                            key={j}
-                            className="w-[3px] rounded-full transition-colors"
-                            style={{
-                              height: h,
-                              background: isPlaying ? '#2A7F8F' : '#D1D9E0',
-                              opacity: isPlaying ? 0.7 + (j % 3) * 0.1 : 1,
-                            }}
-                          />
-                        ))}
-                      </div>
-
-                      {/* Title + description */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className={`text-sm font-semibold leading-snug ${isPlaying ? 'text-dessa-teal' : 'text-brand-text'}`}>
-                            {track.title}
-                          </p>
-                          <span
-                            className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
-                            style={{ background: '#FEF3DC', color: '#F5A623' }}
-                          >
-                            {track.type}
-                          </span>
-                        </div>
-                        <p className="text-xs text-brand-subtext leading-relaxed">{track.description}</p>
-                      </div>
-
-                      {/* Duration */}
-                      <div className="flex items-center gap-1 text-xs text-brand-subtext flex-shrink-0">
-                        <Clock size={11} />
-                        {track.duration}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
 
           </motion.div>
         </div>
+        )}
       </main>
 
       {/* ── Completion overlay ── */}
