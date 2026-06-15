@@ -1914,15 +1914,9 @@ export default function LessonView({ onBookmark }) {
                           }}
                         />
 
-                        {/* Image + info — centered in space above player bar */}
+                        {/* Image — centered in space above player bar */}
                         <div className="absolute inset-0 flex flex-col items-center justify-center pb-16">
-                          <img src="/podcast.png" alt="" className="max-h-24 object-contain mb-4" />
-                          <p className="text-white font-semibold text-sm mb-1">
-                            {mindfulAudioTrack.title}
-                          </p>
-                          <p className="text-white/50 text-xs leading-relaxed text-center px-10">
-                            {mindfulAudioTrack.description}
-                          </p>
+                          <img src="/podcast.png" alt="" className="max-h-24 object-contain" />
                         </div>
 
                         {/* Player bar */}
