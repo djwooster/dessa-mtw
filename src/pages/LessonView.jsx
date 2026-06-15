@@ -1121,12 +1121,15 @@ function AudioLibraryView({ grade, navigate }) {
                   "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)",
               }}
             />
-            <div className="absolute inset-0 flex flex-col justify-center px-8 gap-3 py-6">
+            <div className="absolute inset-0 flex flex-col px-8 pt-6 pb-4">
 
-              {/* Podcast image */}
-              <div className="flex justify-center">
+              {/* Image — centered in remaining space above controls */}
+              <div className="flex-1 flex items-center justify-center">
                 <img src="/podcast.png" alt="" className="max-h-36 object-contain" />
               </div>
+
+              {/* Controls + progress — pinned to bottom */}
+              <div className="flex flex-col gap-3">
 
               {/* Controls row: [skip/play/skip + title] justify-between [volume/download/speed] */}
               <div className="flex items-center justify-between">
@@ -1253,6 +1256,8 @@ function AudioLibraryView({ grade, navigate }) {
                   </span>
                 </div>
               </div>
+
+              </div>{/* end controls+progress wrapper */}
             </div>
           </div>
 
