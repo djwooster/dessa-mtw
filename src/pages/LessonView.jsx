@@ -1914,12 +1914,9 @@ export default function LessonView({ onBookmark }) {
                           }}
                         />
 
-                        {/* Centered info */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pb-14">
-                          <Headphones
-                            size={28}
-                            className="text-white/50 mb-3"
-                          />
+                        {/* Image + info — centered in space above player bar */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pb-16">
+                          <img src="/podcast.png" alt="" className="max-h-24 object-contain mb-4" />
                           <p className="text-white font-semibold text-sm mb-1">
                             {mindfulAudioTrack.title}
                           </p>
@@ -1944,17 +1941,9 @@ export default function LessonView({ onBookmark }) {
                               }}
                             >
                               {mindfulPlaying ? (
-                                <Pause
-                                  size={13}
-                                  fill="white"
-                                  className="text-white"
-                                />
+                                <Pause size={13} fill="white" className="text-white" />
                               ) : (
-                                <Play
-                                  size={13}
-                                  fill="white"
-                                  className="text-white ml-0.5"
-                                />
+                                <Play size={13} fill="white" className="text-white ml-0.5" />
                               )}
                             </button>
 
@@ -1969,18 +1958,16 @@ export default function LessonView({ onBookmark }) {
                             </div>
 
                             <div className="flex items-center gap-1 flex-shrink-0">
-                              <button
-                                className="p-1 rounded transition-colors"
-                                style={{ color: "rgba(255,255,255,0.55)" }}
-                              >
+                              <button className="p-1 rounded transition-colors" style={{ color: "rgba(255,255,255,0.55)" }}>
                                 <Volume2 size={13} />
+                              </button>
+                              <button className="p-1 rounded transition-colors" style={{ color: "rgba(255,255,255,0.55)" }}>
+                                <Download size={13} />
                               </button>
                               <button
                                 onClick={() => {
                                   const idx = SPEEDS.indexOf(mindfulSpeed);
-                                  setMindfulSpeed(
-                                    SPEEDS[(idx + 1) % SPEEDS.length],
-                                  );
+                                  setMindfulSpeed(SPEEDS[(idx + 1) % SPEEDS.length]);
                                 }}
                                 className="px-1.5 py-0.5 rounded text-xs font-semibold tabular-nums min-w-[32px] text-center transition-colors"
                                 style={{ color: "rgba(255,255,255,0.55)" }}
@@ -1990,22 +1977,9 @@ export default function LessonView({ onBookmark }) {
                             </div>
                           </div>
 
-                          <div
-                            className="flex justify-between"
-                            style={{ paddingLeft: "44px" }}
-                          >
-                            <span
-                              className="text-xs tabular-nums"
-                              style={{ color: "rgba(255,255,255,0.4)" }}
-                            >
-                              0:00
-                            </span>
-                            <span
-                              className="text-xs tabular-nums"
-                              style={{ color: "rgba(255,255,255,0.4)" }}
-                            >
-                              {mindfulAudioTrack.duration}
-                            </span>
+                          <div className="flex justify-between" style={{ paddingLeft: "44px" }}>
+                            <span className="text-xs tabular-nums" style={{ color: "rgba(255,255,255,0.4)" }}>0:00</span>
+                            <span className="text-xs tabular-nums" style={{ color: "rgba(255,255,255,0.4)" }}>{mindfulAudioTrack.duration}</span>
                           </div>
                         </div>
                       </>
@@ -2049,7 +2023,7 @@ export default function LessonView({ onBookmark }) {
                       }`}
                     >
                       <p className="text-xs text-brand-subtext mb-0.5">
-                        Audio Guide
+                        Podcast Episode
                       </p>
                       <p
                         className={`text-sm font-semibold leading-snug mb-1.5 ${activeContent === "audio" ? "text-dessa-teal" : "text-brand-text"}`}
