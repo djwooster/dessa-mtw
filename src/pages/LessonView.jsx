@@ -585,6 +585,8 @@ export default function LessonView({ onBookmark }) {
   const [language, setLanguage] = useState('English')
   const [langOpen, setLangOpen] = useState(false)
   const [playingAudio, setPlayingAudio] = useState(null)
+  const [mindfulPlaying, setMindfulPlaying] = useState(false)
+  const [mindfulSpeed, setMindfulSpeed] = useState('1×')
   const activeUnitRef = useRef(null)
 
   useEffect(() => {
@@ -970,16 +972,53 @@ export default function LessonView({ onBookmark }) {
                     <>
                       <div className="absolute inset-0" style={{ background: '#1B2B4B' }} />
                       <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.8) 100%)' }} />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                        <Headphones size={28} className="text-white/50 mb-1" />
-                        <button className="w-14 h-14 rounded-full flex items-center justify-center transition-transform hover:scale-105 shadow-lg" style={{ background: '#2A7F8F' }}>
-                          <Play size={20} fill="white" className="text-white ml-0.5" />
-                        </button>
-                        <p className="text-white font-semibold text-sm mt-2">{mindfulAudioTrack.title}</p>
+
+                      {/* Centered info */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pb-14">
+                        <Headphones size={28} className="text-white/50 mb-3" />
+                        <p className="text-white font-semibold text-sm mb-1">{mindfulAudioTrack.title}</p>
                         <p className="text-white/50 text-xs leading-relaxed text-center px-10">{mindfulAudioTrack.description}</p>
                       </div>
-                      <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: 'rgba(0,0,0,0.45)' }}>
-                        <Clock size={11} />{mindfulAudioTrack.duration}
+
+                      {/* Player bar */}
+                      <div className="absolute bottom-0 left-0 right-0 px-4 pt-2.5 pb-3" style={{ background: 'rgba(0,0,0,0.38)' }}>
+                        <div className="flex items-center gap-3 mb-1.5">
+                          <button
+                            onClick={() => setMindfulPlaying(v => !v)}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:brightness-110"
+                            style={{ background: mindfulPlaying ? '#2A7F8F' : 'rgba(255,255,255,0.15)' }}
+                          >
+                            {mindfulPlaying
+                              ? <Pause size={13} fill="white" className="text-white" />
+                              : <Play size={13} fill="white" className="text-white ml-0.5" />
+                            }
+                          </button>
+
+                          <div className="flex-1 relative h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                            <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: '0%', background: '#2A7F8F' }} />
+                          </div>
+
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button className="p-1 rounded transition-colors" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                              <Volume2 size={13} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                const idx = SPEEDS.indexOf(mindfulSpeed)
+                                setMindfulSpeed(SPEEDS[(idx + 1) % SPEEDS.length])
+                              }}
+                              className="px-1.5 py-0.5 rounded text-xs font-semibold tabular-nums min-w-[32px] text-center transition-colors"
+                              style={{ color: 'rgba(255,255,255,0.55)' }}
+                            >
+                              {mindfulSpeed}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between" style={{ paddingLeft: '44px' }}>
+                          <span className="text-xs tabular-nums" style={{ color: 'rgba(255,255,255,0.4)' }}>0:00</span>
+                          <span className="text-xs tabular-nums" style={{ color: 'rgba(255,255,255,0.4)' }}>{mindfulAudioTrack.duration}</span>
+                        </div>
                       </div>
                     </>
                   )}
