@@ -1322,13 +1322,23 @@ export default function LessonView({ onBookmark }) {
   const [mindfulPlaying, setMindfulPlaying] = useState(false);
   const [mindfulSpeed, setMindfulSpeed] = useState("1×");
   const [activePoPVideo, setActivePoPVideo] = useState(0);
+  const [showNextLesson, setShowNextLesson] = useState(false);
   const activeUnitRef = useRef(null);
+  const mainRef = useRef(null);
 
   useEffect(() => {
     activeUnitRef.current?.scrollIntoView({
       block: "center",
       behavior: "instant",
     });
+  }, []);
+
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const handleScroll = () => setShowNextLesson(el.scrollTop > 50);
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
   }, []);
 
   const grade = course?.grade ?? "Grade 3";
@@ -1543,7 +1553,7 @@ export default function LessonView({ onBookmark }) {
       </aside>
 
       {/* ── Main content ── */}
-      <main className="flex-1 overflow-y-auto bg-brand-bg">
+      <main ref={mainRef} className="flex-1 overflow-y-auto bg-brand-bg">
         {isAudioLibrary ? (
           <AudioLibraryView grade={grade} navigate={navigate} />
         ) : (
@@ -2437,6 +2447,34 @@ export default function LessonView({ onBookmark }) {
             </motion.div>
           </div>
         )}
+        {/* ── Next Lesson CTA bar ── */}
+        <AnimatePresence>
+          {!isAudioLibrary && showNextLesson && (
+            <motion.div
+              initial={{ y: 64 }}
+              animate={{ y: 0 }}
+              exit={{ y: 64 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="sticky bottom-0 bg-brand-bg border-t border-brand-border px-8 py-4 flex items-center justify-between"
+            >
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-2 px-5 py-2 rounded-md text-sm font-semibold text-brand-subtext border border-brand-border bg-white hover:bg-brand-bg transition-colors"
+              >
+                <ChevronLeft size={16} />
+                Previous Lesson
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-2 px-5 py-2 rounded-md text-sm font-semibold text-white transition-all hover:brightness-95 shadow-sm"
+                style={{ background: "#2A7F8F" }}
+              >
+                Next Lesson
+                <ChevronRight size={16} />
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* ── Completion overlay ── */}
