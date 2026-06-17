@@ -2455,7 +2455,7 @@ export default function LessonView({ onBookmark }) {
               animate={{ y: 0 }}
               exit={{ y: 64 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
-              className="sticky bottom-0 bg-brand-bg border-t border-brand-border px-8 py-4 flex items-center justify-between"
+              className="sticky bottom-0 bg-white border-t border-brand-border px-8 py-4 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.02)]"
             >
               <motion.button
                 whileTap={{ scale: 0.97 }}
