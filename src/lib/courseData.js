@@ -117,3 +117,43 @@ export const courses = [
     lessons: 36,
   },
 ]
+
+// Tier 2 — targeted intervention courses, one per grade band
+export const tier2Courses = [
+  {
+    id: 101,
+    grade: 'Early Elementary',
+    level: 'Tier 2',
+    title: 'Tier 2 — Early Elementary',
+    competency: 'Self-Awareness',
+    color: '#2D7D78',
+    lessons: 18,
+  },
+  {
+    id: 102,
+    grade: 'Late Elementary',
+    level: 'Tier 2',
+    title: 'Tier 2 — Late Elementary',
+    competency: 'Self-Management',
+    color: '#F5A623',
+    lessons: 18,
+  },
+  {
+    id: 103,
+    grade: 'Middle School',
+    level: 'Tier 2',
+    title: 'Tier 2 — Middle School',
+    competency: 'Relationship Skills',
+    color: '#7B5EA7',
+    lessons: 18,
+  },
+  {
+    id: 104,
+    grade: 'High School',
+    level: 'Tier 2',
+    title: 'Tier 2 — High School',
+    competency: 'Responsible Decision-Making',
+    color: '#3B7DD8',
+    lessons: 18,
+  },
+]

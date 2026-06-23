@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Bookmark, Flame } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { CourseCard } from '../components/CourseCard'
-import { courses } from '../lib/courseData'
+import { courses, tier2Courses } from '../lib/courseData'
 
 // ─── Streak calendar data ─────────────────────────────────────────────────────
 
@@ -120,6 +120,7 @@ const filters = [
   { value: 'Late Elementary',  label: 'Late Elementary' },
   { value: 'Middle School',    label: 'Middle School' },
   { value: 'High School',      label: 'High School' },
+  { value: 'Tier 2',           label: 'Tier 2' },
 ]
 
 // ─── Curriculum ───────────────────────────────────────────────────────────────
@@ -219,6 +220,30 @@ export default function Curriculum({
         >
 
           {filters.map((f) => {
+            if (f.value === 'Tier 2') {
+              return (
+                <TabsContent key={f.value} value={f.value}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {tier2Courses.map((course, i) => (
+                      <CourseCard
+                        key={course.id}
+                        course={course}
+                        isEnrolled={enrolledCourse?.id === course.id}
+                        completedLessons={
+                          enrolledCourse?.id === course.id ? enrolledCourse.completed : 0
+                        }
+                        onEnroll={handleEnroll}
+                        onContinue={() => navigate('/mtw/lesson', { state: { course: enrolledCourse } })}
+                        onUnenroll={onUnenroll}
+                        onViewCourse={handleViewCourse}
+                        index={i}
+                      />
+                    ))}
+                  </div>
+                </TabsContent>
+              )
+            }
+
             const filtered =
               f.value === 'all'
                 ? visibleCourses
