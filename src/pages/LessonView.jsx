@@ -31,6 +31,9 @@ import {
   SkipForward,
   Volume2,
   Download,
+  FileText,
+  Files,
+  ExternalLink,
 } from "lucide-react";
 
 const units = [
@@ -461,6 +464,215 @@ const grade2Units = units.map((u) => ({
   completed: u.id < 31,
   active: u.id === 31,
 }));
+
+// Tier 2 — Early Elementary course (course.id 101). Units transcribed from the
+// Tier 2 source. Progress mirrors the existing pattern: early units completed,
+// one active.
+const tier2EarlyElementaryUnits = [
+  { id: 1,  title: "Getting Started",                            sub: ["Tier 2 Training Guide", "Materials"] },
+  { id: 2,  title: "Pick-Up Practices",                          sub: ["Opening Exercises", "Quick Emotional Building Block Practice", "Quick Emoger Practice", "Closing Exercises"] },
+  { id: 3,  title: "Session 1: Recognizing Emotions",            sub: ["Lesson Materials & Printouts", "Session 1 Content"] },
+  { id: 4,  title: "Session 2: Expressing Emotions",             sub: ["Lesson Materials & Printouts", "Session Content 2"] },
+  { id: 5,  title: "Session 3: Managing Emotions",               sub: ["Lesson Materials & Printouts", "Session 3 Content"] },
+  { id: 6,  title: "Session 4: Impulse Control",                 sub: ["Lesson Materials & Printouts", "Session 4 Content"] },
+  { id: 7,  title: "Session 5: Recognizing Our Strengths",       sub: ["Lesson Materials & Printouts", "Session 5 Content"] },
+  { id: 8,  title: "Session 6: Social Perspective Taking",       sub: ["Lesson Materials & Printouts", "Session 6 Content"] },
+  { id: 9,  title: "Session 7: Active Listening",                sub: ["Lesson Materials & Printouts", "Session 7 Content"] },
+  { id: 10, title: "Session 8: Respecting Others",               sub: ["Lesson Materials & Printouts", "Session 8 Content"] },
+  { id: 11, title: "Session 9: Building Positive Relationships", sub: ["Lesson Materials & Printouts", "Session 9 Content"] },
+  { id: 12, title: "Session 10: Forming a Growth Mindset",       sub: ["Lesson Materials & Printouts", "Session 10 Content"] },
+  { id: 13, title: "Session 10: Forming a Growth Mindset",       sub: ["Lesson Materials & Printouts", "Session 10 Content"] },
+].map((u) => ({ ...u, completed: u.id <= 8, active: u.id === 9 }));
+
+// Tier 2 session content — 3 videos shown in the established split-panel player,
+// plus 3 downloadable PDF resources shown as cards.
+const tier2SessionVideos = [
+  {
+    title: "Opening Exercise",
+    duration: "2:40",
+    description:
+      "Warm up the group and set the tone for recognizing emotions together.",
+  },
+  {
+    title: "Video Exercise — Understanding Our Emotions",
+    duration: "5:18",
+    description:
+      "The core lesson video introducing how we notice and name our emotions.",
+  },
+  {
+    title: "Post-Video Practice",
+    duration: "3:05",
+    description:
+      "Guided practice to reinforce the concepts right after the video.",
+  },
+];
+
+const tier2SessionPdfs = [
+  {
+    title: "Facilitator Guide",
+    description:
+      "Step-by-step guidance to support effective classroom instruction.",
+    pages: "18 pages",
+  },
+  {
+    title: "Understanding Emotions Worksheet",
+    description: "A printable student resource for practicing lesson concepts.",
+    pages: "1 page",
+  },
+  {
+    title: "Understanding Emotions Worksheet — Continued",
+    description: "Continuation worksheet for the second part of the activity.",
+    pages: "2 pages",
+  },
+];
+
+function openPlaceholderPdf(title) {
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.write(
+    `<!doctype html><title>${title}</title><body style="font-family:system-ui,sans-serif;margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#F0F2F5;color:#1B2B4B"><div style="text-align:center"><div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#6B7A8D;margin-bottom:8px">PDF Placeholder</div><h1 style="margin:0;font-size:24px">${title}</h1><p style="color:#6B7A8D">Prototype — document preview not available.</p></div></body>`,
+  );
+  w.document.close();
+}
+
+// Established split-panel multi-video player: video stage on the left, an
+// episode list on the right that switches between videos.
+function MultiVideoPlayer({
+  videos,
+  activeVideo,
+  setActiveVideo,
+  language,
+  langOpen,
+  setLanguage,
+  setLangOpen,
+}) {
+  return (
+    <div
+      className="flex rounded-2xl overflow-hidden border border-brand-border"
+      style={{ height: "300px" }}
+    >
+      {/* Player */}
+      <div className="flex-1 relative" style={{ background: "#1B2B4B" }}>
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)",
+          }}
+        />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+          <button
+            className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg"
+            style={{ background: "#2A7F8F" }}
+          >
+            <Play size={16} fill="white" className="text-white ml-0.5" />
+          </button>
+          <p className="text-white font-semibold text-sm leading-snug mb-1">
+            {videos[activeVideo].title}
+          </p>
+          <p className="text-white/50 text-xs leading-relaxed">
+            {videos[activeVideo].description}
+          </p>
+        </div>
+        <div
+          className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white"
+          style={{ background: "rgba(0,0,0,0.45)" }}
+        >
+          <Clock size={11} />
+          {videos[activeVideo].duration}
+        </div>
+        <LanguagePicker
+          language={language}
+          langOpen={langOpen}
+          setLanguage={setLanguage}
+          setLangOpen={setLangOpen}
+        />
+      </div>
+
+      {/* Episode list (tabs) */}
+      <div className="w-64 bg-white flex-shrink-0 border-l border-brand-border overflow-y-auto">
+        <div className="px-4 py-2.5 border-b border-brand-border">
+          <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">
+            In this lesson
+          </p>
+        </div>
+        {videos.map((video, i) => (
+          <button
+            key={i}
+            onClick={() => setActiveVideo(i)}
+            className={`w-full text-left px-4 py-3 border-b border-brand-border last:border-0 border-l-2 transition-colors ${
+              i === activeVideo
+                ? "bg-dessa-tealLight border-l-dessa-teal"
+                : "border-l-transparent hover:bg-brand-bg"
+            }`}
+          >
+            <p className="text-xs text-brand-subtext mb-0.5">Episode {i + 1}</p>
+            <p
+              className={`text-sm font-semibold leading-snug mb-1 ${i === activeVideo ? "text-dessa-teal" : "text-brand-text"}`}
+            >
+              {video.title}
+            </p>
+            <div className="flex items-center gap-1 text-xs text-brand-subtext">
+              <Clock size={10} />
+              {video.duration}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// PDF resource card grid — "Lesson Materials & Printouts".
+function Tier2PdfGrid({ pdfs }) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {pdfs.map((pdf) => (
+        <div
+          key={pdf.title}
+          className="flex items-stretch gap-4 bg-white rounded-2xl border border-brand-border shadow-sm p-4"
+        >
+          {/* Thumbnail */}
+          <div
+            className="w-32 self-stretch rounded-lg flex-shrink-0 flex items-center justify-center"
+            style={{ background: "rgba(42,127,143,0.08)" }}
+          >
+            <FileText size={32} className="text-dessa-teal" />
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            <h3 className="text-base font-bold text-brand-text leading-snug mb-1">
+              {pdf.title}
+            </h3>
+            <p className="text-sm text-brand-subtext leading-relaxed">
+              {pdf.description}
+            </p>
+
+            {/* Bottom row: metadata + action */}
+            <div className="mt-auto pt-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 text-sm text-brand-subtext">
+                <span className="flex items-center gap-1 font-medium text-dessa-teal">
+                  <FileText size={14} /> PDF
+                </span>
+                <span className="flex items-center gap-1">
+                  <Files size={14} /> {pdf.pages}
+                </span>
+              </div>
+              <button
+                onClick={() => openPlaceholderPdf(pdf.title)}
+                className="flex-shrink-0 flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-md transition-all hover:brightness-95 text-white"
+                style={{ background: "#2A7F8F" }}
+              >
+                Open PDF <ExternalLink size={13} />
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const lesson4Videos = [
   {
@@ -1304,11 +1516,22 @@ export default function LessonView({ onBookmark }) {
   const location = useLocation();
   const course = location.state?.course;
   const isGrade2 = course?.grade === "Grade 2";
-  const activeUnits = isGrade2 ? grade2Units : units;
+  const isTier2EE = course?.id === 101;
+  const activeUnits = isTier2EE
+    ? tier2EarlyElementaryUnits
+    : isGrade2
+      ? grade2Units
+      : units;
 
-  const [expandedUnit, setExpandedUnit] = useState(isGrade2 ? 31 : 5);
+  const [expandedUnit, setExpandedUnit] = useState(
+    isTier2EE ? 9 : isGrade2 ? 31 : 5,
+  );
   const [selectedLesson, setSelectedLesson] = useState(
-    isGrade2 ? { unitId: 31, lessonIndex: 3 } : { unitId: 5, lessonIndex: 2 },
+    isTier2EE
+      ? { unitId: 9, lessonIndex: 0 }
+      : isGrade2
+        ? { unitId: 31, lessonIndex: 3 }
+        : { unitId: 5, lessonIndex: 2 },
   );
   const [activeVideo, setActiveVideo] = useState(0);
   const [activeContent, setActiveContent] = useState("video");
@@ -1526,6 +1749,7 @@ export default function LessonView({ onBookmark }) {
         </div>
 
         {/* Audio Library entry — sticky, outside scroll area */}
+        {!isTier2EE && (
         <div className="flex-shrink-0 border-t border-brand-border">
           <div
             className={`border-l-2 ${isAudioLibrary ? "border-mtw-amber" : "border-transparent"}`}
@@ -1550,11 +1774,84 @@ export default function LessonView({ onBookmark }) {
             </button>
           </div>
         </div>
+        )}
       </aside>
 
       {/* ── Main content ── */}
       <main ref={mainRef} className="flex-1 overflow-y-auto bg-brand-bg">
-        {isAudioLibrary ? (
+        {isTier2EE ? (
+          (() => {
+            const unit = activeUnits.find(
+              (u) => u.id === selectedLesson.unitId,
+            );
+            const isSessionUnit = unit && unit.id >= 3 && unit.id <= 13;
+            const showMaterials =
+              isSessionUnit && selectedLesson.lessonIndex === 0;
+            const showContent =
+              isSessionUnit && selectedLesson.lessonIndex === 1;
+            if (!showMaterials && !showContent) return null;
+
+            const title = unit.sub[selectedLesson.lessonIndex];
+
+            return (
+              <div className="max-w-[62rem] mx-auto px-8 py-7">
+                {/* Header */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.22 }}
+                  className="mb-6"
+                >
+                  <button
+                    onClick={() => navigate("/mtw")}
+                    className="flex items-center gap-1.5 text-sm font-medium text-brand-subtext hover:text-brand-text transition-colors mb-3"
+                  >
+                    <ChevronLeft size={14} />
+                    Back to Courses
+                  </button>
+                  <h1 className="text-2xl font-semibold text-brand-text">
+                    {title}
+                  </h1>
+                  {showMaterials && (
+                    <p className="text-sm text-brand-subtext mt-1">
+                      Download printable resources for this lesson.
+                    </p>
+                  )}
+                </motion.div>
+
+                {/* Video player (content view only) */}
+                {showContent && (
+                  <div className="mb-8">
+                    <MultiVideoPlayer
+                      videos={tier2SessionVideos}
+                      activeVideo={activeVideo}
+                      setActiveVideo={setActiveVideo}
+                      language={language}
+                      langOpen={langOpen}
+                      setLanguage={setLanguage}
+                      setLangOpen={setLangOpen}
+                    />
+                  </div>
+                )}
+
+                {/* PDF resources */}
+                <div>
+                  {showContent && (
+                    <h2 className="text-base font-semibold text-brand-text mb-1">
+                      Lesson Materials & Printouts
+                    </h2>
+                  )}
+                  {showContent && (
+                    <p className="text-sm text-brand-subtext mb-4">
+                      Download printable resources for this lesson.
+                    </p>
+                  )}
+                  <Tier2PdfGrid pdfs={tier2SessionPdfs} />
+                </div>
+              </div>
+            );
+          })()
+        ) : isAudioLibrary ? (
           <AudioLibraryView grade={grade} navigate={navigate} />
         ) : (
           <div className="max-w-[62rem] mx-auto px-8 py-7">
