@@ -507,6 +507,32 @@ const tier2SessionVideos = [
   },
 ];
 
+// Pick-Up Practices — "Quick Emotional Building Block Practice" has one short
+// video per emotion (10 total), shown as tabs in the player.
+const tier2EmotionVideos = [
+  "Angry",
+  "Bored",
+  "Excited",
+  "Frustrated",
+  "Nervous",
+  "Okay",
+  "Relaxed",
+  "Sad",
+  "Tired",
+  "Uncomfortable",
+].map((emotion) => ({
+  title: emotion,
+  duration: "1:11",
+  description: `A quick practice exploring the ${emotion.toLowerCase()} emotion.`,
+}));
+
+// "Quick Emoger Practice" — 10 Emoger videos, shown as tabs in the player.
+const tier2EmogerVideos = Array.from({ length: 10 }, (_, i) => ({
+  title: `Emoger #${i + 1}`,
+  duration: "1:03",
+  description: `A quick Emoger practice video (#${i + 1}).`,
+}));
+
 const tier2SessionPdfs = [
   {
     title: "Facilitator Guide",
@@ -522,6 +548,31 @@ const tier2SessionPdfs = [
   {
     title: "Understanding Emotions Worksheet — Continued",
     description: "Continuation worksheet for the second part of the activity.",
+    pages: "2 pages",
+  },
+];
+
+// Getting Started unit — PDF resources.
+const tier2TrainingGuidePdf = [
+  {
+    title: "Tier 2 Training Guide",
+    description:
+      "Everything you need to get started: a guided overview of the Tier 2 platform and approach.",
+    pages: "24 pages",
+  },
+];
+
+const tier2MaterialsPdfs = [
+  {
+    title: "11 Emogers Middle School",
+    description:
+      "Reference guide introducing the 11 Emogers for middle school students.",
+    pages: "1 page",
+  },
+  {
+    title: "Tier 2 Takeaways (MS & HS)",
+    description:
+      "Key takeaways and talking points for middle and high school Tier 2 sessions.",
     pages: "2 pages",
   },
 ];
@@ -1784,14 +1835,28 @@ export default function LessonView({ onBookmark }) {
             const unit = activeUnits.find(
               (u) => u.id === selectedLesson.unitId,
             );
+            const li = selectedLesson.lessonIndex;
             const isSessionUnit = unit && unit.id >= 3 && unit.id <= 13;
-            const showMaterials =
-              isSessionUnit && selectedLesson.lessonIndex === 0;
-            const showContent =
-              isSessionUnit && selectedLesson.lessonIndex === 1;
-            if (!showMaterials && !showContent) return null;
 
-            const title = unit.sub[selectedLesson.lessonIndex];
+            let pdfs = null;
+            let videos = null;
+            if (unit) {
+              if (unit.id === 1 && li === 0) pdfs = tier2TrainingGuidePdf;
+              else if (unit.id === 1 && li === 1) pdfs = tier2MaterialsPdfs;
+              else if (unit.id === 2 && li === 1) videos = tier2EmotionVideos;
+              else if (unit.id === 2 && li === 2) videos = tier2EmogerVideos;
+              else if (isSessionUnit && li === 0) pdfs = tier2SessionPdfs;
+              else {
+                // Everything else duplicates the Session 7 main content.
+                videos = tier2SessionVideos;
+                pdfs = tier2SessionPdfs;
+              }
+            }
+            if (!pdfs && !videos) return null;
+
+            const showVideo = !!videos;
+            const isPdfOnly = !!pdfs && !videos;
+            const title = unit.sub[li];
 
             return (
               <div className="max-w-[62rem] mx-auto px-8 py-7">
@@ -1812,18 +1877,18 @@ export default function LessonView({ onBookmark }) {
                   <h1 className="text-2xl font-semibold text-brand-text">
                     {title}
                   </h1>
-                  {showMaterials && (
+                  {isPdfOnly && (
                     <p className="text-sm text-brand-subtext mt-1">
                       Download printable resources for this lesson.
                     </p>
                   )}
                 </motion.div>
 
-                {/* Video player (content view only) */}
-                {showContent && (
+                {/* Video player */}
+                {showVideo && (
                   <div className="mb-8">
                     <MultiVideoPlayer
-                      videos={tier2SessionVideos}
+                      videos={videos}
                       activeVideo={activeVideo}
                       setActiveVideo={setActiveVideo}
                       language={language}
@@ -1835,19 +1900,21 @@ export default function LessonView({ onBookmark }) {
                 )}
 
                 {/* PDF resources */}
-                <div>
-                  {showContent && (
-                    <h2 className="text-base font-semibold text-brand-text mb-1">
-                      Lesson Materials & Printouts
-                    </h2>
-                  )}
-                  {showContent && (
-                    <p className="text-sm text-brand-subtext mb-4">
-                      Download printable resources for this lesson.
-                    </p>
-                  )}
-                  <Tier2PdfGrid pdfs={tier2SessionPdfs} />
-                </div>
+                {pdfs && (
+                  <div>
+                    {showVideo && (
+                      <>
+                        <h2 className="text-base font-semibold text-brand-text mb-1">
+                          Lesson Materials & Printouts
+                        </h2>
+                        <p className="text-sm text-brand-subtext mb-4">
+                          Download printable resources for this lesson.
+                        </p>
+                      </>
+                    )}
+                    <Tier2PdfGrid pdfs={pdfs} />
+                  </div>
+                )}
               </div>
             );
           })()
