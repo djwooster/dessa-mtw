@@ -564,16 +564,32 @@ const tier2TrainingGuidePdf = [
 
 const tier2MaterialsPdfs = [
   {
-    title: "11 Emogers Middle School",
+    title: "Emotional Building Blocks Early Elementary",
     description:
-      "Reference guide introducing the 11 Emogers for middle school students.",
+      "A foundational reference covering the core emotional building blocks introduced in Tier 2 early elementary sessions.",
     pages: "1 page",
+    image: "/emote-1.jpg",
   },
   {
-    title: "Tier 2 Takeaways (MS & HS)",
+    title: "10 Emogers Poster (PreK-4th)",
     description:
-      "Key takeaways and talking points for middle and high school Tier 2 sessions.",
+      "A classroom display poster featuring all 10 Emogers, designed for PreK through 4th grade environments.",
     pages: "2 pages",
+    image: "/emote-2.jpg",
+  },
+  {
+    title: "Tier 2 Takeaways Template (EE & LE)",
+    description:
+      "A customizable template for capturing key session takeaways for early and late elementary students.",
+    pages: "1 page",
+    image: "/emote-3.jpg",
+  },
+  {
+    title: "CICO Form (Master Template)",
+    description:
+      "The Check-In/Check-Out form used to track daily student progress and support consistent Tier 2 routines.",
+    pages: "3 pages",
+    image: "/emote-4.jpg",
   },
 ];
 
@@ -716,6 +732,106 @@ function Tier2PdfGrid({ pdfs }) {
                 style={{ background: "#2A7F8F" }}
               >
                 Open PDF <ExternalLink size={13} />
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Full-width center-stage card for the Tier 2 Training Guide (Unit 1, lesson 0).
+function Tier2TrainingGuideCard({ pdf }) {
+  return (
+    <div className="bg-white rounded-2xl border border-brand-border shadow-sm overflow-hidden w-full">
+      {/* Full-width cover image */}
+      <div className="w-full aspect-video overflow-hidden">
+        <img
+          src="/student-1.jpg"
+          alt=""
+          className="w-full h-full object-cover"
+        />
+      </div>
+
+      {/* Content — 12px gap below image */}
+      <div className="px-5 pt-3 pb-5">
+        <h3 className="text-xl font-bold text-brand-text leading-snug mb-1">
+          {pdf.title}
+        </h3>
+        <p className="text-sm text-brand-subtext leading-relaxed mb-5">
+          {pdf.description}
+        </p>
+
+        {/* Metadata + action */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 text-sm text-brand-subtext">
+            <span className="flex items-center gap-1 font-medium text-dessa-teal">
+              <FileText size={14} /> PDF
+            </span>
+            <span className="flex items-center gap-1">
+              <Files size={14} /> {pdf.pages}
+            </span>
+          </div>
+          <button
+            onClick={() => openPlaceholderPdf(pdf.title)}
+            className="flex-shrink-0 flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-md transition-all hover:brightness-95 text-white"
+            style={{ background: "#2A7F8F" }}
+          >
+            Open Guide in New Tab <ExternalLink size={13} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 2-col image-top cards for the Materials lesson (Unit 1, lesson 1).
+function Tier2MaterialsGrid({ pdfs, showImages }) {
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      {pdfs.map((pdf) => (
+        <div
+          key={pdf.title}
+          className="bg-white rounded-2xl border border-brand-border shadow-sm overflow-hidden flex flex-col"
+          style={{ height: showImages ? "340px" : "164px" }}
+        >
+          {/* Cover image */}
+          {showImages && (
+          <div className="flex-shrink-0 overflow-hidden" style={{ height: "176px" }}>
+            <img
+              src={pdf.image}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          </div>
+          )}
+
+          {/* Content */}
+          <div className="flex flex-col flex-1 px-4 pt-3 pb-4">
+            <h3 className="text-base font-bold text-brand-text leading-snug mb-1">
+              {pdf.title}
+            </h3>
+            <p className="text-sm text-brand-subtext leading-relaxed line-clamp-2">
+              {pdf.description}
+            </p>
+
+            {/* Metadata + action */}
+            <div className="mt-auto flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 text-sm text-brand-subtext">
+                <span className="flex items-center gap-1 font-medium text-dessa-teal">
+                  <FileText size={14} /> PDF
+                </span>
+                <span className="flex items-center gap-1">
+                  <Files size={14} /> {pdf.pages}
+                </span>
+              </div>
+              <button
+                onClick={() => openPlaceholderPdf(pdf.title)}
+                className="flex-shrink-0 flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-md transition-all hover:brightness-95 text-white"
+                style={{ background: "#2A7F8F" }}
+              >
+                Open in New Tab <ExternalLink size={13} />
               </button>
             </div>
           </div>
@@ -1592,6 +1708,7 @@ export default function LessonView({ onBookmark }) {
   const [showInactive, setShowInactive] = useState(true);
   const [language, setLanguage] = useState("English");
   const [langOpen, setLangOpen] = useState(false);
+  const [showMaterialImages, setShowMaterialImages] = useState(true);
   const [playingAudio, setPlayingAudio] = useState(null);
   const [mindfulPlaying, setMindfulPlaying] = useState(false);
   const [mindfulSpeed, setMindfulSpeed] = useState("1×");
@@ -1856,6 +1973,8 @@ export default function LessonView({ onBookmark }) {
 
             const showVideo = !!videos;
             const isPdfOnly = !!pdfs && !videos;
+            const isTrainingGuide = unit.id === 1 && li === 0;
+            const isMaterials = unit.id === 1 && li === 1;
             const title = unit.sub[li];
 
             return (
@@ -1874,10 +1993,12 @@ export default function LessonView({ onBookmark }) {
                     <ChevronLeft size={14} />
                     Back to Courses
                   </button>
-                  <h1 className="text-2xl font-semibold text-brand-text">
-                    {title}
-                  </h1>
-                  {isPdfOnly && (
+                  {!isTrainingGuide && (
+                    <h1 className="text-2xl font-semibold text-brand-text">
+                      {title}
+                    </h1>
+                  )}
+                  {isPdfOnly && !isTrainingGuide && (
                     <p className="text-sm text-brand-subtext mt-1">
                       Download printable resources for this lesson.
                     </p>
@@ -1912,7 +2033,24 @@ export default function LessonView({ onBookmark }) {
                         </p>
                       </>
                     )}
-                    <Tier2PdfGrid pdfs={pdfs} />
+                    {isTrainingGuide ? (
+                      <Tier2TrainingGuideCard pdf={pdfs[0]} />
+                    ) : isMaterials ? (
+                      <>
+                        <div className="flex justify-end mb-3">
+                          <button
+                            onClick={() => setShowMaterialImages((v) => !v)}
+                            className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors bg-white"
+                          >
+                            {showMaterialImages ? <EyeOff size={13} /> : <Eye size={13} />}
+                            {showMaterialImages ? "Hide images" : "Show images"}
+                          </button>
+                        </div>
+                        <Tier2MaterialsGrid pdfs={pdfs} showImages={showMaterialImages} />
+                      </>
+                    ) : (
+                      <Tier2PdfGrid pdfs={pdfs} />
+                    )}
                   </div>
                 )}
               </div>
