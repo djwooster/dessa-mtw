@@ -582,15 +582,27 @@ const tier2MaterialsPdfs = [
     description:
       "A customizable template for capturing key session takeaways for early and late elementary students.",
     pages: "1 page",
-    image: "/emote-3.jpg",
+    image: "/blob.jpg",
+    objectFit: "contain",
+    bgColor: "#E9F4FC",
   },
   {
     title: "CICO Form (Master Template)",
     description:
       "The Check-In/Check-Out form used to track daily student progress and support consistent Tier 2 routines.",
     pages: "3 pages",
-    image: "/emote-4.jpg",
+    image: "/checklist.jpg",
+    objectFit: "contain",
   },
+];
+
+const session1Content = [
+  { type: "video", title: "Opening Exercise", duration: "2:40", description: "Warm up the group and set the tone for recognizing emotions together." },
+  { type: "pdf", title: "Facilitator Guide", description: "Step-by-step guidance to support effective classroom instruction.", pages: "18 pages" },
+  { type: "video", title: "Video Exercise — Understanding Our Emotions", duration: "5:18", description: "The core lesson video introducing how we notice and name our emotions." },
+  { type: "pdf", title: "Understanding Emotions Worksheet", description: "A printable student resource for practicing lesson concepts.", pages: "1 page" },
+  { type: "video", title: "Post-Video Practice", duration: "3:05", description: "Guided practice to reinforce the concepts right after the video." },
+  { type: "pdf", title: "Understanding Emotions Worksheet — Continued", description: "Continuation worksheet for the second part of the activity.", pages: "2 pages" },
 ];
 
 function openPlaceholderPdf(title) {
@@ -690,6 +702,52 @@ function MultiVideoPlayer({
   );
 }
 
+function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOpen, setLanguage, setLangOpen }) {
+  const item = items[activeItem];
+  const isVideo = item.type === "video";
+  return (
+    <div className="flex rounded-2xl overflow-hidden border border-brand-border" style={{ height: "300px" }}>
+      <div className="flex-1 relative" style={{ background: "#1B2B4B" }}>
+        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+          {isVideo ? (
+            <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
+              <Play size={16} fill="white" className="text-white ml-0.5" />
+            </button>
+          ) : (
+            <FileText size={28} className="mb-3" style={{ color: "rgba(255,255,255,0.5)" }} />
+          )}
+          <p className="text-white font-semibold text-sm leading-snug mb-1">{item.title}</p>
+          <p className="text-white/50 text-xs leading-relaxed mb-4">{item.description}</p>
+          {!isVideo && (
+            <button onClick={() => openPlaceholderPdf(item.title)} className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-md text-white transition-all hover:brightness-110" style={{ background: "#2A7F8F" }}>
+              Open Guide in New Tab <ExternalLink size={13} />
+            </button>
+          )}
+        </div>
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
+          {isVideo ? <><Clock size={11} />{item.duration}</> : <><Files size={11} />{item.pages}</>}
+        </div>
+        {isVideo && <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />}
+      </div>
+      <div className="w-64 bg-white flex-shrink-0 border-l border-brand-border overflow-y-auto">
+        <div className="px-4 py-2.5 border-b border-brand-border">
+          <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">In this lesson</p>
+        </div>
+        {items.map((it, i) => (
+          <button key={i} onClick={() => setActiveItem(i)} className={`w-full text-left px-4 py-3 border-b border-brand-border last:border-0 border-l-2 transition-colors ${i === activeItem ? "bg-dessa-tealLight border-l-dessa-teal" : "border-l-transparent hover:bg-brand-bg"}`}>
+            <p className="text-xs text-brand-subtext mb-0.5">{i + 1}</p>
+            <p className={`text-sm font-semibold leading-snug mb-1 ${i === activeItem ? "text-dessa-teal" : "text-brand-text"}`}>{it.title}</p>
+            <div className="flex items-center gap-1 text-xs text-brand-subtext">
+              {it.type === "video" ? <><Clock size={10} />{it.duration}</> : <><FileText size={10} />{it.pages}</>}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // PDF resource card grid — "Lesson Materials & Printouts".
 function Tier2PdfGrid({ pdfs }) {
   return (
@@ -742,24 +800,26 @@ function Tier2PdfGrid({ pdfs }) {
 }
 
 // Full-width center-stage card for the Tier 2 Training Guide (Unit 1, lesson 0).
-function Tier2TrainingGuideCard({ pdf }) {
+function Tier2TrainingGuideCard({ pdf, showImage }) {
   return (
     <div className="bg-white rounded-2xl border border-brand-border shadow-sm overflow-hidden w-full">
       {/* Full-width cover image */}
-      <div className="w-full aspect-video overflow-hidden">
-        <img
-          src="/student-1.jpg"
-          alt=""
-          className="w-full h-full object-cover"
-        />
-      </div>
+      {showImage && (
+        <div className="w-full aspect-video overflow-hidden">
+          <img
+            src="/student-1.jpg"
+            alt=""
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
 
-      {/* Content — 12px gap below image */}
-      <div className="px-5 pt-3 pb-5">
+      {/* Content */}
+      <div className="p-5">
         <h3 className="text-xl font-bold text-brand-text leading-snug mb-1">
           {pdf.title}
         </h3>
-        <p className="text-sm text-brand-subtext leading-relaxed mb-5">
+        <p className="text-sm text-brand-subtext leading-relaxed mb-5 max-w-[470px]">
           {pdf.description}
         </p>
 
@@ -798,11 +858,14 @@ function Tier2MaterialsGrid({ pdfs, showImages }) {
         >
           {/* Cover image */}
           {showImages && (
-          <div className="flex-shrink-0 overflow-hidden" style={{ height: "176px" }}>
+          <div
+            className="flex-shrink-0 overflow-hidden flex items-center justify-center"
+            style={{ height: "176px", background: pdf.bgColor || "transparent" }}
+          >
             <img
               src={pdf.image}
               alt=""
-              className="w-full h-full object-cover"
+              className={`h-full w-full ${pdf.objectFit === "contain" ? "object-contain" : "object-cover"}`}
             />
           </div>
           )}
@@ -1709,6 +1772,7 @@ export default function LessonView({ onBookmark }) {
   const [language, setLanguage] = useState("English");
   const [langOpen, setLangOpen] = useState(false);
   const [showMaterialImages, setShowMaterialImages] = useState(true);
+  const [showTrainingGuideImage, setShowTrainingGuideImage] = useState(true);
   const [playingAudio, setPlayingAudio] = useState(null);
   const [mindfulPlaying, setMindfulPlaying] = useState(false);
   const [mindfulSpeed, setMindfulSpeed] = useState("1×");
@@ -1957,11 +2021,13 @@ export default function LessonView({ onBookmark }) {
 
             let pdfs = null;
             let videos = null;
+            let mixedContent = null;
             if (unit) {
               if (unit.id === 1 && li === 0) pdfs = tier2TrainingGuidePdf;
               else if (unit.id === 1 && li === 1) pdfs = tier2MaterialsPdfs;
               else if (unit.id === 2 && li === 1) videos = tier2EmotionVideos;
               else if (unit.id === 2 && li === 2) videos = tier2EmogerVideos;
+              else if (unit.id === 3 && li === 1) mixedContent = session1Content;
               else if (isSessionUnit && li === 0) pdfs = tier2SessionPdfs;
               else {
                 // Everything else duplicates the Session 7 main content.
@@ -1969,13 +2035,15 @@ export default function LessonView({ onBookmark }) {
                 pdfs = tier2SessionPdfs;
               }
             }
-            if (!pdfs && !videos) return null;
+            if (!pdfs && !videos && !mixedContent) return null;
 
             const showVideo = !!videos;
             const isPdfOnly = !!pdfs && !videos;
             const isTrainingGuide = unit.id === 1 && li === 0;
             const isMaterials = unit.id === 1 && li === 1;
+            const isSession1Content = !!mixedContent;
             const title = unit.sub[li];
+            const displayTitle = isSession1Content ? "Recognizing Emotions" : title;
 
             return (
               <div className="max-w-[62rem] mx-auto px-8 py-7">
@@ -1993,17 +2061,30 @@ export default function LessonView({ onBookmark }) {
                     <ChevronLeft size={14} />
                     Back to Courses
                   </button>
-                  {!isTrainingGuide && (
+                  {!isTrainingGuide && !isMaterials && (
                     <h1 className="text-2xl font-semibold text-brand-text">
-                      {title}
+                      {displayTitle}
                     </h1>
                   )}
-                  {isPdfOnly && !isTrainingGuide && (
+                  {isPdfOnly && !isTrainingGuide && !isMaterials && (
                     <p className="text-sm text-brand-subtext mt-1">
                       Download printable resources for this lesson.
                     </p>
                   )}
                 </motion.div>
+
+                {/* Mixed sequential content (Session 1) */}
+                {isSession1Content && (
+                  <MixedContentPlayer
+                    items={mixedContent}
+                    activeItem={activeVideo}
+                    setActiveItem={setActiveVideo}
+                    language={language}
+                    langOpen={langOpen}
+                    setLanguage={setLanguage}
+                    setLangOpen={setLangOpen}
+                  />
+                )}
 
                 {/* Video player */}
                 {showVideo && (
@@ -2034,13 +2115,32 @@ export default function LessonView({ onBookmark }) {
                       </>
                     )}
                     {isTrainingGuide ? (
-                      <Tier2TrainingGuideCard pdf={pdfs[0]} />
-                    ) : isMaterials ? (
                       <>
                         <div className="flex justify-end mb-3">
                           <button
-                            onClick={() => setShowMaterialImages((v) => !v)}
+                            onClick={() => setShowTrainingGuideImage((v) => !v)}
                             className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors bg-white"
+                          >
+                            {showTrainingGuideImage ? <EyeOff size={13} /> : <Eye size={13} />}
+                            {showTrainingGuideImage ? "Hide image" : "Show image"}
+                          </button>
+                        </div>
+                        <Tier2TrainingGuideCard pdf={pdfs[0]} showImage={showTrainingGuideImage} />
+                      </>
+                    ) : isMaterials ? (
+                      <>
+                        <div className="flex items-end justify-between mb-3">
+                          <div>
+                            <h1 className="text-2xl font-semibold text-brand-text">
+                              {displayTitle}
+                            </h1>
+                            <p className="text-sm text-brand-subtext mt-1">
+                              Download printable resources for this lesson.
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setShowMaterialImages((v) => !v)}
+                            className="flex-shrink-0 flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors bg-white"
                           >
                             {showMaterialImages ? <EyeOff size={13} /> : <Eye size={13} />}
                             {showMaterialImages ? "Hide images" : "Show images"}
