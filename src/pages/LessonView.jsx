@@ -1714,7 +1714,7 @@ export default function LessonView({ onBookmark }) {
   const location = useLocation();
   const course = location.state?.course;
   const isGrade2 = course?.grade === "Grade 2";
-  const isTier2EE = course?.id === 101;
+  const isTier2EE = course?.level === 'Tier 2';
   const activeUnits = isTier2EE
     ? tier2EarlyElementaryUnits
     : isGrade2
@@ -1739,13 +1739,13 @@ export default function LessonView({ onBookmark }) {
   const [showInactive, setShowInactive] = useState(true);
   const [language, setLanguage] = useState("English");
   const [langOpen, setLangOpen] = useState(false);
+  const [showNextLesson, setShowNextLesson] = useState(false);
   const [showMaterialImages, setShowMaterialImages] = useState(true);
   const [showTrainingGuideImage, setShowTrainingGuideImage] = useState(true);
   const [playingAudio, setPlayingAudio] = useState(null);
   const [mindfulPlaying, setMindfulPlaying] = useState(false);
   const [mindfulSpeed, setMindfulSpeed] = useState("1×");
   const [activePoPVideo, setActivePoPVideo] = useState(0);
-  const [showNextLesson, setShowNextLesson] = useState(false);
   const activeUnitRef = useRef(null);
   const mainRef = useRef(null);
 
@@ -1756,13 +1756,15 @@ export default function LessonView({ onBookmark }) {
     });
   }, []);
 
+
   useEffect(() => {
     const el = mainRef.current;
     if (!el) return;
-    const handleScroll = () => setShowNextLesson(el.scrollTop > 50);
-    el.addEventListener("scroll", handleScroll);
-    return () => el.removeEventListener("scroll", handleScroll);
-  }, []);
+    const update = () => setShowNextLesson(el.scrollTop > 50 || el.scrollHeight <= el.clientHeight);
+    update();
+    el.addEventListener("scroll", update);
+    return () => el.removeEventListener("scroll", update);
+  }, [selectedLesson]);
 
   const grade = course?.grade ?? "Grade 3";
   const competency = course?.competency ?? "Self-Awareness";
@@ -2024,30 +2026,93 @@ export default function LessonView({ onBookmark }) {
               : title;
 
             return (
-              <div className="max-w-[62rem] mx-auto px-8 py-7">
+              <div className="max-w-[62rem] mx-auto px-8 pt-7 pb-32">
                 {/* Header */}
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.22 }}
-                  className="mb-6"
+                  className="mb-6 flex items-end justify-between gap-6"
                 >
-                  <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-3">{grade}</p>
-                  {!isTrainingGuide && !isMaterials && (
-                    <h1 className="text-2xl font-semibold text-brand-text">
-                      {displayTitle}
-                    </h1>
-                  )}
-                  {isSessionContent && (
-                    <p className="text-sm text-brand-subtext mt-1 max-w-[640px]">
-                      A mix of short videos and printable guides. Work through each step in order. The videos introduce the concepts, and the guides are ready to print when you need them.
-                    </p>
-                  )}
-                  {isPdfOnly && !isTrainingGuide && !isMaterials && (
-                    <p className="text-sm text-brand-subtext mt-1">
-                      Download printable resources for this lesson.
-                    </p>
-                  )}
+                  {/* Left: breadcrumb + title */}
+                  <div>
+                    <p className="text-xs font-semibold tracking-wide text-brand-subtext">{grade}</p>
+                    {!isTrainingGuide && (
+                      <h1 className="text-2xl font-semibold text-brand-text">
+                        {displayTitle}
+                      </h1>
+                    )}
+                    {isSessionContent && (
+                      <p className="text-sm text-brand-subtext mt-1 max-w-[640px]">
+                        A mix of short videos and printable guides. Work through each step in order. The videos introduce the concepts, and the guides are ready to print when you need them.
+                      </p>
+                    )}
+                    {(isPdfOnly || isMaterials) && !isTrainingGuide && (
+                      <p className="text-sm text-brand-subtext mt-1">
+                        Download printable resources for this lesson.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Right: competency badge + mark as complete */}
+                  <div className="flex flex-col items-end gap-2.5 flex-shrink-0">
+                    <span
+                      className="text-xs font-semibold px-3 py-1.5 rounded-full"
+                      style={{ background: "#FEF3DC", color: "#F5A623" }}
+                    >
+                      {competency}
+                    </span>
+                    <motion.button
+                      onClick={() => setShowCompletion((v) => !v)}
+                      whileTap={{ scale: 0.96 }}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold border transition-colors bg-white ${
+                        showCompletion
+                          ? "border-dessa-teal text-dessa-teal"
+                          : "border-brand-border text-brand-subtext hover:border-dessa-teal hover:text-dessa-teal"
+                      }`}
+                      style={showCompletion ? undefined : { minWidth: 160 }}
+                    >
+                      <AnimatePresence mode="wait" initial={false}>
+                        {showCompletion ? (
+                          <motion.span
+                            key="checked"
+                            initial={{ scale: 0.3, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.3, opacity: 0 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 18 }}
+                            className="flex items-center justify-center rounded-full shrink-0"
+                            style={{ width: 18, height: 18, background: "#2A7F8F" }}
+                          >
+                            <Check size={12} strokeWidth={3} color="white" />
+                          </motion.span>
+                        ) : (
+                          <motion.span
+                            key="unchecked"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.12 }}
+                            className="shrink-0"
+                          >
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                              <circle cx="9" cy="9" r="8" stroke="currentColor" strokeWidth="1.5" />
+                            </svg>
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                      <AnimatePresence mode="wait" initial={false}>
+                        {showCompletion ? (
+                          <motion.span key="done" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.14 }}>
+                            Completed
+                          </motion.span>
+                        ) : (
+                          <motion.span key="mark" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.14 }}>
+                            Mark as complete
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </motion.button>
+                  </div>
                 </motion.div>
 
                 {/* Mixed sequential content (Session 1) */}
@@ -2093,7 +2158,7 @@ export default function LessonView({ onBookmark }) {
                     )}
                     {isTrainingGuide ? (
                       <>
-                        <div className="flex justify-end mb-3">
+                        {/* <div className="flex justify-end mb-3">
                           <button
                             onClick={() => setShowTrainingGuideImage((v) => !v)}
                             className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors bg-white"
@@ -2101,29 +2166,12 @@ export default function LessonView({ onBookmark }) {
                             {showTrainingGuideImage ? <EyeOff size={13} /> : <Eye size={13} />}
                             {showTrainingGuideImage ? "Hide image" : "Show image"}
                           </button>
-                        </div>
+                        </div> */}
                         <Tier2TrainingGuideCard pdf={pdfs[0]} showImage={showTrainingGuideImage} />
                       </>
                     ) : isMaterials ? (
                       <>
-                        <div className="flex items-end justify-between mb-3">
-                          <div>
-                            <h1 className="text-2xl font-semibold text-brand-text">
-                              {displayTitle}
-                            </h1>
-                            <p className="text-sm text-brand-subtext mt-1">
-                              Download printable resources for this lesson.
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => setShowMaterialImages((v) => !v)}
-                            className="flex-shrink-0 flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors bg-white"
-                          >
-                            {showMaterialImages ? <EyeOff size={13} /> : <Eye size={13} />}
-                            {showMaterialImages ? "Hide images" : "Show images"}
-                          </button>
-                        </div>
-                        <Tier2MaterialsGrid pdfs={pdfs} showImages={showMaterialImages} />
+                        <Tier2MaterialsGrid pdfs={pdfs} showImages={false} />
                       </>
                     ) : (
                       <Tier2MaterialsGrid pdfs={pdfs} showImages={false} />
@@ -3026,7 +3074,7 @@ export default function LessonView({ onBookmark }) {
             </motion.div>
           </div>
         )}
-        {/* ── Next Lesson CTA bar ── */}
+        {/* ── Next / Previous Lesson footer ── */}
         <AnimatePresence>
           {!isAudioLibrary && showNextLesson && (
             <motion.div
@@ -3034,7 +3082,8 @@ export default function LessonView({ onBookmark }) {
               animate={{ y: 0 }}
               exit={{ y: 64 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
-              className="sticky bottom-0 bg-white border-t border-brand-border px-8 py-4 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.02)]"
+              className="bg-white border-t border-brand-border px-8 py-4 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.02)]"
+              style={{ position: "fixed", bottom: 0, left: "20rem", right: 0, zIndex: 10 }}
             >
               <motion.button
                 whileTap={{ scale: 0.97 }}
