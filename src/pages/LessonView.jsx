@@ -521,6 +521,7 @@ const tier2EmotionVideos = [
   "Tired",
   "Uncomfortable",
 ].map((emotion) => ({
+  type: "video",
   title: emotion,
   duration: "1:11",
   description: `A quick practice exploring the ${emotion.toLowerCase()} emotion.`,
@@ -528,6 +529,7 @@ const tier2EmotionVideos = [
 
 // "Quick Emoger Practice" — 10 Emoger videos, shown as tabs in the player.
 const tier2EmogerVideos = Array.from({ length: 10 }, (_, i) => ({
+  type: "video",
   title: `Emoger #${i + 1}`,
   duration: "1:03",
   description: `A quick Emoger practice video (#${i + 1}).`,
@@ -717,8 +719,8 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
           ) : (
             <FileText size={28} className="mb-3" style={{ color: "rgba(255,255,255,0.5)" }} />
           )}
-          <p className="text-white font-semibold text-sm leading-snug mb-1">{item.title}</p>
-          <p className="text-white/50 text-xs leading-relaxed mb-4">{item.description}</p>
+          <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{item.title}</p>
+          <p className="text-white/50 leading-relaxed mb-4" style={{ fontSize: "14px" }}>{item.description}</p>
           {!isVideo && (
             <button onClick={() => openPlaceholderPdf(item.title)} className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-md text-white transition-all hover:brightness-110" style={{ background: "#2A7F8F" }}>
               Open Guide in New Tab <ExternalLink size={13} />
@@ -731,22 +733,32 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
         {isVideo && <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />}
       </div>
       <div className="w-80 bg-white flex-shrink-0 border-l border-brand-border overflow-y-auto">
-        <div className="px-4 py-2.5 border-b border-brand-border">
+        <div className="px-4 py-2.5 border-b border-brand-border" style={{ background: "#f7f7f7" }}>
           <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">In this lesson</p>
         </div>
         {items.map((it, i) => (
           <button key={i} onClick={() => setActiveItem(i)} className={`w-full text-left px-4 py-4 border-b border-brand-border last:border-0 border-l-2 transition-colors ${i === activeItem ? "bg-dessa-tealLight border-l-dessa-teal" : "border-l-transparent hover:bg-brand-bg"}`}>
-            <div className="flex items-center gap-2 mb-1">
-              <p className="text-xs text-brand-subtext">{i + 1}</p>
-              <span className={`flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${it.type === "video" ? "bg-dessa-tealLight text-dessa-teal" : "bg-brand-bg text-brand-subtext"}`}>
-                {it.type === "video" ? <Play size={9} fill="currentColor" /> : <FileText size={9} />}
-                {it.type === "video" ? "Video" : "PDF"}
-              </span>
-            </div>
-            <p className={`text-sm font-semibold leading-snug mb-1 ${i === activeItem ? "text-dessa-teal" : "text-brand-text"}`}>{it.title}</p>
-            <div className="flex items-center gap-1 text-xs text-brand-subtext">
-              {it.type === "video" ? <><Clock size={10} />{it.duration}</> : <><FileText size={10} />{it.pages}</>}
-            </div>
+            {it.type === "video" ? (
+              <>
+                <div className="flex items-start justify-between gap-4 mb-1.5">
+                  <p className="text-sm font-semibold leading-snug min-w-0" style={{ color: i === activeItem ? "#2A7F8F" : "#525252" }}>{i + 1}. {it.title}</p>
+                  <span className="text-xs text-brand-subtext flex-shrink-0">{it.duration}</span>
+                </div>
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 w-fit" style={{ borderRadius: "4px", border: "1px solid #dddddd", background: "#f6f6f6", color: "#696969" }}>
+                  <Play size={9} fill="currentColor" /> Video
+                </span>
+              </>
+            ) : (
+              <>
+                <div className="flex items-start justify-between gap-4 mb-1.5">
+                  <p className="text-sm font-semibold leading-snug min-w-0" style={{ color: i === activeItem ? "#2A7F8F" : "#525252" }}>{i + 1}. {it.title}</p>
+                  <span className="text-xs text-brand-subtext flex-shrink-0">{it.pages}</span>
+                </div>
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 w-fit" style={{ borderRadius: "4px", border: "1px solid #dddddd", background: "#f6f6f6", color: "#696969" }}>
+                  <FileText size={9} /> PDF
+                </span>
+              </>
+            )}
           </button>
         ))}
       </div>
@@ -1991,8 +2003,8 @@ export default function LessonView({ onBookmark }) {
             if (unit) {
               if (unit.id === 1 && li === 0) pdfs = tier2TrainingGuidePdf;
               else if (unit.id === 1 && li === 1) pdfs = tier2MaterialsPdfs;
-              else if (unit.id === 2 && li === 1) videos = tier2EmotionVideos;
-              else if (unit.id === 2 && li === 2) videos = tier2EmogerVideos;
+              else if (unit.id === 2 && li === 1) mixedContent = tier2EmotionVideos;
+              else if (unit.id === 2 && li === 2) mixedContent = tier2EmogerVideos;
               else if (isSessionUnit && li === 0) pdfs = tier2SessionPdfs;
               else if (isSessionUnit && li === 1) mixedContent = session1Content;
               else {
