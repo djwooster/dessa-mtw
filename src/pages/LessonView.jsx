@@ -2032,9 +2032,7 @@ export default function LessonView({ onBookmark }) {
                   transition={{ duration: 0.22 }}
                   className="mb-6"
                 >
-                  <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-3">
-                    {grade}
-                  </p>
+                  <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-3">{grade}</p>
                   {!isTrainingGuide && !isMaterials && (
                     <h1 className="text-2xl font-semibold text-brand-text">
                       {displayTitle}
