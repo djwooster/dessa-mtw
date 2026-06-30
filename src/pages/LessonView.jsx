@@ -1807,9 +1807,19 @@ export default function LessonView({ onBookmark }) {
         style={{ width: "20rem" }}
       >
         <div className="px-4 py-4 border-b border-brand-border flex items-center justify-between">
-          <p className="text-lg font-semibold tracking-tight text-brand-text">
-            {grade}
-          </p>
+          {isTier2EE ? (
+            <button
+              onClick={() => navigate("/mtw")}
+              className="flex items-center gap-1.5 text-sm font-medium transition-colors" style={{ color: "#0f6cbd" }}
+            >
+              <ChevronLeft size={14} />
+              Back
+            </button>
+          ) : (
+            <p className="text-lg font-semibold tracking-tight text-brand-text">
+              {grade}
+            </p>
+          )}
           <button
             onClick={() => setShowInactive((v) => !v)}
             className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors"
@@ -2010,13 +2020,9 @@ export default function LessonView({ onBookmark }) {
                   transition={{ duration: 0.22 }}
                   className="mb-6"
                 >
-                  <button
-                    onClick={() => navigate("/mtw")}
-                    className="flex items-center gap-1.5 text-sm font-medium transition-colors mb-3" style={{ color: "#0f6cbd" }}
-                  >
-                    <ChevronLeft size={14} />
-                    Back to Courses
-                  </button>
+                  <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-3">
+                    {grade}
+                  </p>
                   {!isTrainingGuide && !isMaterials && (
                     <h1 className="text-2xl font-semibold text-brand-text">
                       {displayTitle}
