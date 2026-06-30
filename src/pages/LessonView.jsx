@@ -706,7 +706,7 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
   const item = items[activeItem];
   const isVideo = item.type === "video";
   return (
-    <div className="flex rounded-2xl overflow-hidden border border-brand-border" style={{ height: "300px" }}>
+    <div className="flex rounded-2xl overflow-hidden border border-brand-border" style={{ height: "460px" }}>
       <div className="flex-1 relative" style={{ background: "#1B2B4B" }}>
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
@@ -730,13 +730,19 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
         </div>
         {isVideo && <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />}
       </div>
-      <div className="w-64 bg-white flex-shrink-0 border-l border-brand-border overflow-y-auto">
+      <div className="w-80 bg-white flex-shrink-0 border-l border-brand-border overflow-y-auto">
         <div className="px-4 py-2.5 border-b border-brand-border">
           <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">In this lesson</p>
         </div>
         {items.map((it, i) => (
-          <button key={i} onClick={() => setActiveItem(i)} className={`w-full text-left px-4 py-3 border-b border-brand-border last:border-0 border-l-2 transition-colors ${i === activeItem ? "bg-dessa-tealLight border-l-dessa-teal" : "border-l-transparent hover:bg-brand-bg"}`}>
-            <p className="text-xs text-brand-subtext mb-0.5">{i + 1}</p>
+          <button key={i} onClick={() => setActiveItem(i)} className={`w-full text-left px-4 py-4 border-b border-brand-border last:border-0 border-l-2 transition-colors ${i === activeItem ? "bg-dessa-tealLight border-l-dessa-teal" : "border-l-transparent hover:bg-brand-bg"}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-xs text-brand-subtext">{i + 1}</p>
+              <span className={`flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${it.type === "video" ? "bg-dessa-tealLight text-dessa-teal" : "bg-brand-bg text-brand-subtext"}`}>
+                {it.type === "video" ? <Play size={9} fill="currentColor" /> : <FileText size={9} />}
+                {it.type === "video" ? "Video" : "PDF"}
+              </span>
+            </div>
             <p className={`text-sm font-semibold leading-snug mb-1 ${i === activeItem ? "text-dessa-teal" : "text-brand-text"}`}>{it.title}</p>
             <div className="flex items-center gap-1 text-xs text-brand-subtext">
               {it.type === "video" ? <><Clock size={10} />{it.duration}</> : <><FileText size={10} />{it.pages}</>}
@@ -748,56 +754,6 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
   );
 }
 
-// PDF resource card grid — "Lesson Materials & Printouts".
-function Tier2PdfGrid({ pdfs }) {
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {pdfs.map((pdf) => (
-        <div
-          key={pdf.title}
-          className="flex items-stretch gap-4 bg-white rounded-2xl border border-brand-border shadow-sm p-4"
-        >
-          {/* Thumbnail */}
-          <div
-            className="w-32 self-stretch rounded-lg flex-shrink-0 flex items-center justify-center"
-            style={{ background: "rgba(42,127,143,0.08)" }}
-          >
-            <FileText size={32} className="text-dessa-teal" />
-          </div>
-
-          {/* Body */}
-          <div className="flex-1 min-w-0 flex flex-col">
-            <h3 className="text-base font-bold text-brand-text leading-snug mb-1">
-              {pdf.title}
-            </h3>
-            <p className="text-sm text-brand-subtext leading-relaxed">
-              {pdf.description}
-            </p>
-
-            {/* Bottom row: metadata + action */}
-            <div className="mt-auto pt-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 text-sm text-brand-subtext">
-                <span className="flex items-center gap-1 font-medium text-dessa-teal">
-                  <FileText size={14} /> PDF
-                </span>
-                <span className="flex items-center gap-1">
-                  <Files size={14} /> {pdf.pages}
-                </span>
-              </div>
-              <button
-                onClick={() => openPlaceholderPdf(pdf.title)}
-                className="flex-shrink-0 flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-md transition-all hover:brightness-95 text-white"
-                style={{ background: "#2A7F8F" }}
-              >
-                Open PDF <ExternalLink size={13} />
-              </button>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // Full-width center-stage card for the Tier 2 Training Guide (Unit 1, lesson 0).
 function Tier2TrainingGuideCard({ pdf, showImage }) {
@@ -1534,7 +1490,7 @@ function AudioLibraryView({ grade, navigate }) {
       >
         <button
           onClick={() => navigate("/mtw")}
-          className="flex items-center gap-1.5 text-sm font-medium text-brand-subtext hover:text-brand-text transition-colors mb-6"
+          className="flex items-center gap-1.5 text-sm font-medium transition-colors mb-6" style={{ color: "#0f6cbd" }}
         >
           <ChevronLeft size={14} />
           Back to Courses
@@ -2027,12 +1983,10 @@ export default function LessonView({ onBookmark }) {
               else if (unit.id === 1 && li === 1) pdfs = tier2MaterialsPdfs;
               else if (unit.id === 2 && li === 1) videos = tier2EmotionVideos;
               else if (unit.id === 2 && li === 2) videos = tier2EmogerVideos;
-              else if (unit.id === 3 && li === 1) mixedContent = session1Content;
               else if (isSessionUnit && li === 0) pdfs = tier2SessionPdfs;
+              else if (isSessionUnit && li === 1) mixedContent = session1Content;
               else {
-                // Everything else duplicates the Session 7 main content.
-                videos = tier2SessionVideos;
-                pdfs = tier2SessionPdfs;
+                mixedContent = session1Content;
               }
             }
             if (!pdfs && !videos && !mixedContent) return null;
@@ -2041,9 +1995,11 @@ export default function LessonView({ onBookmark }) {
             const isPdfOnly = !!pdfs && !videos;
             const isTrainingGuide = unit.id === 1 && li === 0;
             const isMaterials = unit.id === 1 && li === 1;
-            const isSession1Content = !!mixedContent;
+            const isSessionContent = !!mixedContent;
             const title = unit.sub[li];
-            const displayTitle = isSession1Content ? "Recognizing Emotions" : title;
+            const displayTitle = isSessionContent
+              ? (unit.title.split(": ")[1] ?? title)
+              : title;
 
             return (
               <div className="max-w-[62rem] mx-auto px-8 py-7">
@@ -2056,7 +2012,7 @@ export default function LessonView({ onBookmark }) {
                 >
                   <button
                     onClick={() => navigate("/mtw")}
-                    className="flex items-center gap-1.5 text-sm font-medium text-brand-subtext hover:text-brand-text transition-colors mb-3"
+                    className="flex items-center gap-1.5 text-sm font-medium transition-colors mb-3" style={{ color: "#0f6cbd" }}
                   >
                     <ChevronLeft size={14} />
                     Back to Courses
@@ -2066,6 +2022,11 @@ export default function LessonView({ onBookmark }) {
                       {displayTitle}
                     </h1>
                   )}
+                  {isSessionContent && (
+                    <p className="text-sm text-brand-subtext mt-1 max-w-[640px]">
+                      A mix of short videos and printable guides. Work through each step in order. The videos introduce the concepts, and the guides are ready to print when you need them.
+                    </p>
+                  )}
                   {isPdfOnly && !isTrainingGuide && !isMaterials && (
                     <p className="text-sm text-brand-subtext mt-1">
                       Download printable resources for this lesson.
@@ -2074,7 +2035,7 @@ export default function LessonView({ onBookmark }) {
                 </motion.div>
 
                 {/* Mixed sequential content (Session 1) */}
-                {isSession1Content && (
+                {isSessionContent && (
                   <MixedContentPlayer
                     items={mixedContent}
                     activeItem={activeVideo}
@@ -2149,7 +2110,7 @@ export default function LessonView({ onBookmark }) {
                         <Tier2MaterialsGrid pdfs={pdfs} showImages={showMaterialImages} />
                       </>
                     ) : (
-                      <Tier2PdfGrid pdfs={pdfs} />
+                      <Tier2MaterialsGrid pdfs={pdfs} showImages={false} />
                     )}
                   </div>
                 )}
@@ -2172,7 +2133,7 @@ export default function LessonView({ onBookmark }) {
                 <div>
                   <button
                     onClick={() => navigate("/mtw")}
-                    className="flex items-center gap-1.5 text-sm font-medium text-brand-subtext hover:text-brand-text transition-colors mb-3"
+                    className="flex items-center gap-1.5 text-sm font-medium transition-colors mb-3" style={{ color: "#0f6cbd" }}
                   >
                     <ChevronLeft size={14} />
                     Back to Courses
