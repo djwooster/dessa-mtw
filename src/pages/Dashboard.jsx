@@ -212,10 +212,10 @@ export default function Dashboard() {
 
             <div className="flex-1 min-w-0">
               <p className="text-white/70 text-xs font-semibold mb-0.5">
-                Move This World
+                Curriculum
               </p>
               <p className="text-white font-semibold text-base">
-                Choose a course to get started with your students
+                Pick up where you left off or explore something new with your students.
               </p>
             </div>
             <button
@@ -223,7 +223,7 @@ export default function Dashboard() {
               className="flex items-center gap-2 px-5 py-2 rounded-md text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-95 flex-shrink-0"
               style={{ background: '#2A7F8F' }}
             >
-              Browse Courses
+              Go to Courses
               <ChevronRight size={14} />
             </button>
           </div>
