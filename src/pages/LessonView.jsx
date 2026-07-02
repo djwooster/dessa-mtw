@@ -606,7 +606,7 @@ const sessionMeta = {
   6:  { objective: "Learn about our own impulses, understand the need to control them, and practice different strategies for doing so.", time: "38 min" },
   7:  { objective: "Identify personal strengths and understand how they support our wellbeing.", time: "35 min" },
   8:  { objective: "Practice understanding situations from another person's point of view.", time: "40 min" },
-  9:  { objective: "Develop and practice active listening skills to strengthen relationships.", time: "38 min" },
+  9:  { objective: "Develop and practice active listening skills to strengthen relationships.", time: "38 min", tip: "If you are not the child's primary teacher, ask their teacher about any impulses the student has shown, like interrupting, not raising their hand, hitting, etc. so that you can use relevant examples during the lesson." },
   10: { objective: "Explore what respect looks and sounds like in everyday interactions.", time: "35 min" },
   11: { objective: "Learn strategies for starting and maintaining positive relationships with peers.", time: "40 min" },
   12: { objective: "Understand the difference between a fixed and growth mindset and practice growth-oriented thinking.", time: "38 min" },
@@ -765,8 +765,12 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
         {isVideo && <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />}
       </div>
       <div className="w-80 bg-white flex-shrink-0 border-l border-brand-border overflow-y-auto">
-        <div className="px-4 py-2.5 border-b border-brand-border" style={{ background: "#f7f7f7" }}>
+        <div className="px-4 py-2.5 border-b border-brand-border flex items-center justify-between" style={{ background: "#f7f7f7" }}>
           <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">In this lesson</p>
+          <span className="flex items-center gap-1 text-xs text-brand-subtext">
+            <Clock size={11} />
+            35 min
+          </span>
         </div>
         {items.map((it, i) => (
           <button key={i} onClick={() => setActiveItem(i)} className={`w-full text-left px-4 py-4 border-b border-brand-border last:border-0 border-l-2 transition-colors ${i === activeItem ? "bg-dessa-tealLight border-l-dessa-teal" : "border-l-transparent hover:bg-brand-bg"}`}>
@@ -1774,6 +1778,7 @@ export default function LessonView({ onBookmark }) {
   const [language, setLanguage] = useState("English");
   const [langOpen, setLangOpen] = useState(false);
   const [showNextLesson, setShowNextLesson] = useState(false);
+  const [showCourseComplete, setShowCourseComplete] = useState(false);
   const [showMaterialImages, setShowMaterialImages] = useState(true);
   const [showTrainingGuideImage, setShowTrainingGuideImage] = useState(true);
   const [playingAudio, setPlayingAudio] = useState(null);
@@ -1805,6 +1810,12 @@ export default function LessonView({ onBookmark }) {
 
   const activeUnit = activeUnits.find((u) => u.id === selectedLesson.unitId);
   const isAudioLibrary = selectedLesson.unitId === "audio";
+  const lastContentUnit = [...activeUnits].reverse().find(u => u.sub && u.sub.length > 0 && u.id !== 37);
+  const isLastLesson =
+    !isAudioLibrary &&
+    !!lastContentUnit &&
+    selectedLesson.unitId === lastContentUnit.id &&
+    selectedLesson.lessonIndex === lastContentUnit.sub.length - 1;
   const isPowerOfPause = selectedLesson.unitId === 37;
   const currentLessonTitle = isPowerOfPause
     ? "Power of Pause Collection"
@@ -2066,11 +2077,11 @@ export default function LessonView({ onBookmark }) {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.22 }}
-                  className="mb-6 flex items-end justify-between gap-6"
+                  className="mb-8 flex items-end justify-between gap-6"
                 >
                   {/* Left: breadcrumb + title */}
                   <div>
-                    <p className="text-xs font-semibold tracking-wide text-brand-subtext">{grade}</p>
+                    <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-6">{grade}</p>
                     {!isTrainingGuide && (
                       <h1 className="text-2xl font-semibold text-brand-text">
                         {displayTitle}
@@ -2166,20 +2177,22 @@ export default function LessonView({ onBookmark }) {
 
                 {/* Objective + time — below player, matches Kindergarten Skills/Objective layout */}
                 {isSessionContent && sessionMeta[unit?.id] && (
-                  <div className="grid grid-cols-2 gap-6 mt-6">
-                    <div>
-                      <SectionLabel>Objective</SectionLabel>
-                      <p className="text-brand-subtext leading-relaxed mt-2" style={{ fontSize: "15px" }}>
+                  <>
+                    <div className="mt-8 flex flex-col gap-2">
+                      <h3 className="text-base font-bold text-brand-text leading-snug flex items-center gap-2"><Target size={16} className="text-brand-subtext opacity-70" />Objective</h3>
+                      <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>
                         {sessionMeta[unit.id].objective}
                       </p>
                     </div>
-                    <div>
-                      <SectionLabel>Estimated Time</SectionLabel>
-                      <p className="text-brand-subtext leading-relaxed mt-2" style={{ fontSize: "15px" }}>
-                        {sessionMeta[unit.id].time}
-                      </p>
-                    </div>
-                  </div>
+                    {sessionMeta[unit.id].tip && (
+                      <div className="mt-8 flex flex-col gap-2">
+                        <h3 className="text-base font-bold text-brand-text leading-snug flex items-center gap-2"><Lightbulb size={16} className="text-brand-subtext opacity-70" />Helpful tip</h3>
+                        <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>
+                          {sessionMeta[unit.id].tip}
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* Video player */}
@@ -3148,16 +3161,56 @@ export default function LessonView({ onBookmark }) {
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.97 }}
+                onClick={isLastLesson ? () => setShowCourseComplete(true) : undefined}
                 className="flex items-center gap-2 px-5 py-2 rounded-md text-sm font-semibold text-white transition-all hover:brightness-95 shadow-sm"
                 style={{ background: "#2A7F8F" }}
               >
-                Next Lesson
+                {isLastLesson ? "Finish Course" : "Next Lesson"}
                 <ChevronRight size={16} />
               </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
       </main>
+
+      {/* ── Course completion overlay ── */}
+      <AnimatePresence>
+        {showCourseComplete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center px-8"
+          >
+            {/* Celebration image */}
+            <img
+              src="/celebrate.png"
+              alt=""
+              className="w-full max-w-lg rounded-2xl mb-8 object-contain"
+              style={{ maxHeight: "260px" }}
+            />
+
+            {/* Heading + subheading */}
+            <h1 className="text-3xl font-bold text-brand-text text-center mb-3">
+              You finished the course!
+            </h1>
+            <p className="text-brand-subtext text-center max-w-lg mb-8" style={{ fontSize: "16px" }}>
+              Amazing work this year. Your students are building real emotional skills they'll carry with them long after the classroom.
+            </p>
+
+            {/* Return to dashboard */}
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("/")}
+              className="flex items-center gap-2 px-6 py-3 rounded-md text-sm font-semibold text-white transition-all hover:brightness-95 shadow-sm"
+              style={{ background: "#2A7F8F" }}
+            >
+              Return to Dashboard
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Completion overlay ── */}
       {false && (

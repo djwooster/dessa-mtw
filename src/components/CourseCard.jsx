@@ -40,6 +40,7 @@ export function CourseCard({ course, onGoToCourse, index }) {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-sm text-brand-subtext">Progress</span>
+              <span className="text-xs text-brand-subtext">Not started</span>
             </div>
             <div className="h-1.5 bg-brand-border rounded-full overflow-hidden">
               <div
