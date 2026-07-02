@@ -600,7 +600,7 @@ const tier2MaterialsPdfs = [
 
 const session1Content = [
   { type: "video", title: "Opening Exercise", duration: "2:40", description: "Warm up the group and set the tone for recognizing emotions together." },
-  { type: "pdf", title: "Facilitator Guide", description: "Step-by-step guidance to support effective classroom instruction.", pages: "18 pages" },
+  { type: "pdf", title: "Pre-Video Practice", description: "Step-by-step guidance to support effective classroom instruction.", pages: "18 pages", image: "/recognize-emotions.png" },
   { type: "video", title: "Video Exercise — Understanding Our Emotions", duration: "5:18", description: "The core lesson video introducing how we notice and name our emotions." },
   { type: "pdf", title: "Understanding Emotions Worksheet", description: "A printable student resource for practicing lesson concepts.", pages: "1 page" },
   { type: "video", title: "Post-Video Practice", duration: "3:05", description: "Guided practice to reinforce the concepts right after the video." },
@@ -708,28 +708,45 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
   const item = items[activeItem];
   const isVideo = item.type === "video";
   return (
+    <>
     <div className="flex rounded-2xl overflow-hidden border border-brand-border" style={{ height: "460px" }}>
       <div className="flex-1 relative" style={{ background: "#1B2B4B" }}>
-        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
-          {isVideo ? (
-            <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
-              <Play size={16} fill="white" className="text-white ml-0.5" />
-            </button>
-          ) : (
-            <FileText size={28} className="mb-3" style={{ color: "rgba(255,255,255,0.5)" }} />
-          )}
-          <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{item.title}</p>
-          <p className="text-white/50 leading-relaxed mb-4" style={{ fontSize: "14px" }}>{item.description}</p>
-          {!isVideo && (
-            <button onClick={() => openPlaceholderPdf(item.title)} className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-md text-white transition-all hover:brightness-110" style={{ background: "#2A7F8F" }}>
-              Open Guide in New Tab <ExternalLink size={13} />
-            </button>
-          )}
-        </div>
-        <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
-          {isVideo ? <><Clock size={11} />{item.duration}</> : <><Files size={11} />{item.pages}</>}
-        </div>
+        {isVideo ? (
+          <>
+            <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+              <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
+                <Play size={16} fill="white" className="text-white ml-0.5" />
+              </button>
+              <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{item.title}</p>
+              <p className="text-white/50 leading-relaxed" style={{ fontSize: "14px" }}>{item.description}</p>
+            </div>
+          </>
+        ) : (
+          <button
+            onClick={() => openPlaceholderPdf(item.title)}
+            className="absolute inset-0 w-full group"
+            style={{ cursor: "pointer" }}
+          >
+            {item.image && <img src={item.image} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+            <div
+              className="absolute inset-0 transition-colors duration-200"
+              style={{ background: "rgba(0,0,0,0.28)" }}
+            />
+            <div
+              className="absolute inset-0 transition-opacity duration-300 opacity-0 group-hover:opacity-100"
+              style={{ background: "rgba(0,0,0,0.18)" }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md bg-white text-brand-text">
+                Open Guide in New Tab <ExternalLink size={14} />
+              </span>
+            </div>
+          </button>
+        )}
+        {isVideo && <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
+          <Clock size={11} />{item.duration}
+        </div>}
         {isVideo && <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />}
       </div>
       <div className="w-80 bg-white flex-shrink-0 border-l border-brand-border overflow-y-auto">
@@ -763,16 +780,18 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
         ))}
       </div>
     </div>
+
+    </>
   );
 }
 
 
 // Full-width center-stage card for the Tier 2 Training Guide (Unit 1, lesson 0).
-function Tier2TrainingGuideCard({ pdf, showImage }) {
+function Tier2TrainingGuideCard({ pdf, showImage, hideAction }) {
   return (
     <div className="bg-white rounded-2xl border border-brand-border shadow-sm overflow-hidden w-full">
       {/* Full-width cover image */}
-      {showImage && (
+      {/* {showImage && (
         <div className="w-full aspect-video overflow-hidden">
           <img
             src="/student-1.jpg"
@@ -780,7 +799,7 @@ function Tier2TrainingGuideCard({ pdf, showImage }) {
             className="w-full h-full object-cover"
           />
         </div>
-      )}
+      )} */}
 
       {/* Content */}
       <div className="p-5">
@@ -2056,12 +2075,14 @@ export default function LessonView({ onBookmark }) {
 
                   {/* Right: competency badge + mark as complete */}
                   <div className="flex flex-col items-end gap-2.5 flex-shrink-0">
-                    <span
-                      className="text-xs font-semibold px-3 py-1.5 rounded-full"
-                      style={{ background: "#FEF3DC", color: "#F5A623" }}
-                    >
-                      {competency}
-                    </span>
+                    {!isTrainingGuide && (
+                      <span
+                        className="text-xs font-semibold px-3 py-1.5 rounded-full"
+                        style={{ background: "#FEF3DC", color: "#F5A623" }}
+                      >
+                        {competency}
+                      </span>
+                    )}
                     <motion.button
                       onClick={() => setShowCompletion((v) => !v)}
                       whileTap={{ scale: 0.96 }}
