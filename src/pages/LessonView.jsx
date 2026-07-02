@@ -598,6 +598,21 @@ const tier2MaterialsPdfs = [
   },
 ];
 
+// Metadata per session unit (unit.id 3–13 = Sessions 1–10).
+const sessionMeta = {
+  3:  { objective: "Learn to identify and name emotions in ourselves and others.", time: "35 min" },
+  4:  { objective: "Explore healthy and appropriate ways to express different emotions.", time: "35 min" },
+  5:  { objective: "Practice strategies for managing strong emotions in the moment.", time: "38 min" },
+  6:  { objective: "Learn about our own impulses, understand the need to control them, and practice different strategies for doing so.", time: "38 min" },
+  7:  { objective: "Identify personal strengths and understand how they support our wellbeing.", time: "35 min" },
+  8:  { objective: "Practice understanding situations from another person's point of view.", time: "40 min" },
+  9:  { objective: "Develop and practice active listening skills to strengthen relationships.", time: "38 min" },
+  10: { objective: "Explore what respect looks and sounds like in everyday interactions.", time: "35 min" },
+  11: { objective: "Learn strategies for starting and maintaining positive relationships with peers.", time: "40 min" },
+  12: { objective: "Understand the difference between a fixed and growth mindset and practice growth-oriented thinking.", time: "38 min" },
+  13: { objective: "Understand the difference between a fixed and growth mindset and practice growth-oriented thinking.", time: "38 min" },
+};
+
 const session1Content = [
   { type: "video", title: "Opening Exercise", duration: "2:40", description: "Warm up the group and set the tone for recognizing emotions together." },
   { type: "pdf", title: "Pre-Video Practice", description: "Step-by-step guidance to support effective classroom instruction.", pages: "18 pages", image: "/recognize-emotions.png" },
@@ -2062,7 +2077,7 @@ export default function LessonView({ onBookmark }) {
                       </h1>
                     )}
                     {isSessionContent && (
-                      <p className="text-sm text-brand-subtext mt-1 max-w-[640px]">
+                      <p className="text-brand-subtext mt-1 max-w-[640px]" style={{ fontSize: "15px" }}>
                         A mix of short videos and printable guides. Work through each step in order. The videos introduce the concepts, and the guides are ready to print when you need them.
                       </p>
                     )}
@@ -2147,6 +2162,24 @@ export default function LessonView({ onBookmark }) {
                     setLanguage={setLanguage}
                     setLangOpen={setLangOpen}
                   />
+                )}
+
+                {/* Objective + time — below player, matches Kindergarten Skills/Objective layout */}
+                {isSessionContent && sessionMeta[unit?.id] && (
+                  <div className="grid grid-cols-2 gap-6 mt-6">
+                    <div>
+                      <SectionLabel>Objective</SectionLabel>
+                      <p className="text-brand-subtext leading-relaxed mt-2" style={{ fontSize: "15px" }}>
+                        {sessionMeta[unit.id].objective}
+                      </p>
+                    </div>
+                    <div>
+                      <SectionLabel>Estimated Time</SectionLabel>
+                      <p className="text-brand-subtext leading-relaxed mt-2" style={{ fontSize: "15px" }}>
+                        {sessionMeta[unit.id].time}
+                      </p>
+                    </div>
+                  </div>
                 )}
 
                 {/* Video player */}
@@ -2939,7 +2972,7 @@ export default function LessonView({ onBookmark }) {
                     </div>
                     <div>
                       <SectionLabel>Objective</SectionLabel>
-                      <p className="text-body text-brand-text leading-relaxed mt-2">
+                      <p className="text-brand-subtext leading-relaxed mt-2" style={{ fontSize: "15px" }}>
                         Students are introduced to the Emoger characters and
                         begin building a shared emotional vocabulary that will
                         be used throughout the course.
