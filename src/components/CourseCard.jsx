@@ -2,6 +2,13 @@ import { motion } from 'framer-motion'
 import { ChevronRight, BookOpen } from 'lucide-react'
 import { Card } from './ui/card'
 
+function cardImage(grade) {
+  if (grade === 'Kindergarten') return '/card-images/kind.png';
+  const match = grade?.match(/^Grade (\d+)$/);
+  if (match) return `/card-images/gr-${match[1]}.png`;
+  return null;
+}
+
 const stagger = (i) => ({
   initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0 },
@@ -13,13 +20,21 @@ export function CourseCard({ course, onGoToCourse, index }) {
     <motion.div {...stagger(index)} className="h-full">
       <Card className="h-full flex flex-col overflow-hidden">
         {/* Course banner */}
-        <div
-          className="w-full h-44 shrink-0 flex flex-col items-center justify-center gap-1"
-          style={{ background: course.color }}
-        >
-          <span className="text-white font-black text-5xl leading-none tracking-tight">{course.grade}</span>
-          <span className="text-white/60 text-sm font-medium">{course.level}</span>
-        </div>
+        {cardImage(course.grade) ? (
+          <img
+            src={cardImage(course.grade)}
+            alt={course.grade}
+            className="w-full h-44 shrink-0 object-cover"
+          />
+        ) : (
+          <div
+            className="w-full h-44 shrink-0 flex flex-col items-center justify-center gap-1"
+            style={{ background: course.color }}
+          >
+            <span className="text-white font-black text-5xl leading-none tracking-tight">{course.grade}</span>
+            <span className="text-white/60 text-sm font-medium">{course.level}</span>
+          </div>
+        )}
 
         <div className="flex flex-col flex-1 px-5 pt-4 pb-5">
           {/* Title */}
