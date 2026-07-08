@@ -2969,6 +2969,22 @@ export default function LessonView({ onBookmark }) {
               {/* ── Skills & Objective ── */}
               {!isPowerOfPause && (
                 <>
+                  {isMindfulMinute && activeContent === "audio" && (
+                    <div
+                      className="flex items-start gap-3 rounded-lg border p-4 mb-7"
+                      style={{ background: "rgba(42, 127, 143, 0.08)", borderColor: "rgba(42, 127, 143, 0.25)" }}
+                    >
+                      <Lightbulb size={18} className="text-dessa-teal shrink-0 mt-0.5" />
+                      <div className="flex flex-col gap-1.5">
+                        <h3 className="text-base font-bold text-dessa-navy leading-snug">
+                          Reflection question
+                        </h3>
+                        <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>
+                          What Emoger would you use when you have big emotions and don't know how to respond?
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-6 mb-7">
                     <div>
                       <SectionLabel>Skills</SectionLabel>
@@ -2992,17 +3008,6 @@ export default function LessonView({ onBookmark }) {
                       </p>
                     </div>
                   </div>
-                  {isMindfulMinute && activeContent === "audio" && (
-                    <div className="flex flex-col gap-2 mb-7">
-                      <h3 className="text-base font-bold text-brand-text leading-snug flex items-center gap-2">
-                        <Lightbulb size={16} className="text-brand-subtext opacity-70" />
-                        Reflection question
-                      </h3>
-                      <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>
-                        What Emoger would you use when you have big emotions and don't know how to respond?
-                      </p>
-                    </div>
-                  )}
                   <Divider />
                 </>
               )}
