@@ -3,9 +3,9 @@ import { ChevronRight, BookOpen } from 'lucide-react'
 import { Card } from './ui/card'
 
 function cardImage(grade) {
-  if (grade === 'Kindergarten') return '/card-images/kind.png';
+  if (grade === 'Kindergarten') return '/new-card-images/kinder.svg';
   const match = grade?.match(/^Grade (\d+)$/);
-  if (match) return `/card-images/gr-${match[1]}.png`;
+  if (match) return `/new-card-images/grade-${match[1]}.svg`;
   return null;
 }
 
@@ -69,7 +69,7 @@ export function CourseCard({ course, onGoToCourse, index }) {
           <div className="flex mt-auto items-center justify-end">
             <button
               className="flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-md transition-all hover:brightness-95 text-white"
-              style={{ background: '#2A7F8F' }}
+              style={{ background: '#267482' }}
               onClick={() => onGoToCourse(course)}
             >
               Go to Course <ChevronRight size={12} />

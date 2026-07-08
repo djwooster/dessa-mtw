@@ -2992,6 +2992,17 @@ export default function LessonView({ onBookmark }) {
                       </p>
                     </div>
                   </div>
+                  {isMindfulMinute && activeContent === "audio" && (
+                    <div className="flex flex-col gap-2 mb-7">
+                      <h3 className="text-base font-bold text-brand-text leading-snug flex items-center gap-2">
+                        <Lightbulb size={16} className="text-brand-subtext opacity-70" />
+                        Reflection question
+                      </h3>
+                      <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>
+                        What Emoger would you use when you have big emotions and don't know how to respond?
+                      </p>
+                    </div>
+                  )}
                   <Divider />
                 </>
               )}
