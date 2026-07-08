@@ -21,6 +21,7 @@ import {
   Target,
   Users,
   Lightbulb,
+  Brain,
   HelpCircle,
   Share2,
   MessageCircle,
@@ -2974,7 +2975,7 @@ export default function LessonView({ onBookmark }) {
                       className="flex items-start gap-3 rounded-lg border p-4 mb-7"
                       style={{ background: "rgba(42, 127, 143, 0.08)", borderColor: "rgba(42, 127, 143, 0.25)" }}
                     >
-                      <Lightbulb size={18} className="text-dessa-teal shrink-0 mt-0.5" />
+                      <Brain size={18} className="text-dessa-teal shrink-0 mt-0.5" />
                       <div className="flex flex-col gap-1.5">
                         <h3 className="text-base font-bold text-dessa-navy leading-snug">
                           Reflection question
