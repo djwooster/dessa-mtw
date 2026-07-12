@@ -118,6 +118,19 @@ export const courses = [
   },
 ]
 
+// Adult Wellness — staff-facing wellness course
+export const adultWellnessCourses = [
+  {
+    id: 201,
+    grade: 'Adult Wellness',
+    level: 'Staff & Educators',
+    title: 'Adult Wellness',
+    competency: 'Self-Awareness',
+    color: '#2A7F8F',
+    lessons: 7,
+  },
+]
+
 // Tier 2 — targeted intervention courses, one per grade band
 export const tier2Courses = [
   {

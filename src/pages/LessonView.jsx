@@ -466,6 +466,63 @@ const grade2Units = units.map((u) => ({
   active: u.id === 31,
 }));
 
+// Adult Wellness course (course.id 201). Lessons transcribed from the source
+// deck — each unit is a mix of "Community" (group facilitation) and
+// "Independent" (self-guided) lessons.
+const adultWellnessUnits = [
+  { id: 1, title: "Getting Started", sub: [
+    "Getting Started Guide",
+  ]},
+  { id: 2, title: "Back to School With a Fresh Start", sub: [
+    "Community: Team Effort", "Community: Rhyme Time", "Community: Drawn to Discovery",
+    "Independent: Time Capsule", "Independent: Reframing", "Independent: Micro-recoveries", "Independent: I Teach Students",
+  ]},
+  { id: 3, title: "Self Care for Personal & Professional Wellbeing", sub: [
+    "Community: Daydream Believer", "Community: Draw You In", "Community: Shake Off",
+    "Independent: Breathe Easier", "Independent: Flight, Fight or Freeze", "Independent: Thought Trains",
+    "Independent: Prioritizing Our Time", "Independent: Digging In", "Independent: Moving Through Fear", "Independent: What Works For You?",
+  ]},
+  { id: 4, title: "Reflect, Reset & Recharge", sub: [
+    "Community: Fab Four", "Community: Story of Your Life", "Community: The Do-Over",
+    "Independent: Write Away", "Independent: Sensational", "Independent: Attachments",
+    "Independent: \"Outlets\"", "Independent: Breathing the Body", "Independent: Other Side of the Door",
+  ]},
+  { id: 5, title: "Team & Community Building", sub: [
+    "Community: Kudos!", "Community: Someone Beside You", "Community: Mirror Mirror",
+    "Independent: The Name Game", "Independent: Wonder Words", "Independent: Good Breath", "Independent: Myself With Others",
+  ]},
+  { id: 6, title: "Leading with Empathy & Personal Sustainability", sub: [
+    "Community: Recharge It", "Community: Take a Hike", "Community: Take the Win",
+    "Independent: It Takes Two", "Independent: Sustaining Routines", "Independent: Letting the Paint Dry",
+    "Independent: Starting vs. Sustaining", "Independent: Signals of Stress",
+  ]},
+  { id: 7, title: "Coming Together in the Face of Crisis: Moving Through Tragedy", sub: [
+    "Community: Taking Care", "Community: Memory Lane", "Community: Connectioning",
+    "Independent: Smile a While", "Independent: Finding Hope", "Independent: Sitting in the Love",
+    "Independent: In Community", "Independent: Planting a Microchip", "Independent: Eruptions",
+    "Independent: Naming It", "Independent: Antidote to Devastation is Creation",
+  ]},
+].map((u) => ({ ...u, completed: false, active: u.id === 1 }));
+
+// Per-lesson content: PDF overview followed by a video, same pattern as Tier 2
+// sessions. Unit 3 / "Independent: Breathe Easier" also includes a guided
+// audio clip, as a demo of the audio media type for dev reference.
+function adultWellnessLessonContent(unitId, lessonTitle) {
+  if (unitId === 1) {
+    return [
+      { type: "pdf", title: lessonTitle, description: "A printable overview of what to expect from this course and how to get started.", pages: "3 pages" },
+    ];
+  }
+  const content = [
+    { type: "pdf", title: `${lessonTitle} — Overview`, description: "Facilitator overview and discussion prompts for this practice.", pages: "2 pages" },
+    { type: "video", title: lessonTitle, duration: "3:30", description: "A short video introducing this practice." },
+  ];
+  if (unitId === 3 && lessonTitle === "Independent: Breathe Easier") {
+    content.push({ type: "audio", title: `${lessonTitle} — Guided Audio`, duration: "5:00", description: "A guided audio practice to use independently." });
+  }
+  return content;
+}
+
 // Tier 2 — Early Elementary course (course.id 101). Units transcribed from the
 // Tier 2 source. Progress mirrors the existing pattern: early units completed,
 // one active.
@@ -723,11 +780,23 @@ function MultiVideoPlayer({
 function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOpen, setLanguage, setLangOpen }) {
   const item = items[activeItem];
   const isVideo = item.type === "video";
+  const isAudio = item.type === "audio";
   return (
     <>
     <div className="flex rounded-2xl overflow-hidden border border-brand-border" style={{ height: "460px" }}>
       <div className="flex-1 relative" style={{ background: "#1B2B4B" }}>
         {isVideo ? (
+          <>
+            <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+              <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
+                <Play size={16} fill="white" className="text-white ml-0.5" />
+              </button>
+              <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{item.title}</p>
+              <p className="text-white/50 leading-relaxed" style={{ fontSize: "14px" }}>{item.description}</p>
+            </div>
+          </>
+        ) : isAudio ? (
           <>
             <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
@@ -760,8 +829,8 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
             </div>
           </button>
         )}
-        {isVideo && <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
-          <Clock size={11} />{item.duration}
+        {(isVideo || isAudio) && <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
+          {isAudio ? <Headphones size={11} /> : <Clock size={11} />}{item.duration}
         </div>}
         {isVideo && <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />}
       </div>
@@ -783,6 +852,16 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
                 </div>
                 <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 w-fit" style={{ borderRadius: "4px", border: "1px solid #dddddd", background: "#f6f6f6", color: "#696969" }}>
                   <Play size={9} fill="currentColor" /> Video
+                </span>
+              </>
+            ) : it.type === "audio" ? (
+              <>
+                <div className="flex items-start justify-between gap-4 mb-1.5">
+                  <p className="text-sm font-semibold leading-snug min-w-0" style={{ color: i === activeItem ? "#2A7F8F" : "#525252" }}>{i + 1}. {it.title}</p>
+                  <span className="text-xs text-brand-subtext flex-shrink-0">{it.duration}</span>
+                </div>
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 w-fit" style={{ borderRadius: "4px", border: "1px solid #dddddd", background: "#f6f6f6", color: "#696969" }}>
+                  <Headphones size={9} /> Audio
                 </span>
               </>
             ) : (
@@ -1754,21 +1833,26 @@ export default function LessonView({ onBookmark }) {
   const course = location.state?.course;
   const isGrade2 = course?.grade === "Grade 2";
   const isTier2EE = course?.level === 'Tier 2';
+  const isAdultWellness = course?.grade === 'Adult Wellness';
   const activeUnits = isTier2EE
     ? tier2EarlyElementaryUnits
-    : isGrade2
-      ? grade2Units
-      : units;
+    : isAdultWellness
+      ? adultWellnessUnits
+      : isGrade2
+        ? grade2Units
+        : units;
 
   const [expandedUnit, setExpandedUnit] = useState(
-    isTier2EE ? 9 : isGrade2 ? 31 : 5,
+    isTier2EE ? 9 : isAdultWellness ? 1 : isGrade2 ? 31 : 5,
   );
   const [selectedLesson, setSelectedLesson] = useState(
     isTier2EE
       ? { unitId: 9, lessonIndex: 0 }
-      : isGrade2
-        ? { unitId: 31, lessonIndex: 3 }
-        : { unitId: 5, lessonIndex: 2 },
+      : isAdultWellness
+        ? { unitId: 1, lessonIndex: 0 }
+        : isGrade2
+          ? { unitId: 31, lessonIndex: 3 }
+          : { unitId: 5, lessonIndex: 2 },
   );
   const [activeVideo, setActiveVideo] = useState(0);
   const [activeContent, setActiveContent] = useState("video");
@@ -2007,7 +2091,7 @@ export default function LessonView({ onBookmark }) {
         </div>
 
         {/* Audio Library entry — sticky, outside scroll area */}
-        {!isTier2EE && (
+        {!isTier2EE && !isAdultWellness && (
         <div className="flex-shrink-0 border-t border-brand-border">
           <div
             className={`border-l-2 ${isAudioLibrary ? "border-mtw-amber" : "border-transparent"}`}
@@ -2251,6 +2335,34 @@ export default function LessonView({ onBookmark }) {
           })()
         ) : isAudioLibrary ? (
           <AudioLibraryView grade={grade} navigate={navigate} />
+        ) : isAdultWellness ? (
+          <div className="max-w-[62rem] mx-auto px-8 py-7">
+            <button
+              onClick={() => navigate("/mtw")}
+              className="flex items-center gap-1.5 text-sm font-medium transition-colors mb-3" style={{ color: "#0f6cbd" }}
+            >
+              <ChevronLeft size={14} />
+              Back to Courses
+            </button>
+            <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-2">
+              {activeUnit?.title ?? "Getting Started"}
+            </p>
+            <h1 className="text-2xl font-semibold text-brand-text mb-5">
+              {activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide"}
+            </h1>
+            <MixedContentPlayer
+              items={adultWellnessLessonContent(
+                activeUnit?.id,
+                activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide",
+              )}
+              activeItem={activeVideo}
+              setActiveItem={setActiveVideo}
+              language={language}
+              langOpen={langOpen}
+              setLanguage={setLanguage}
+              setLangOpen={setLangOpen}
+            />
+          </div>
         ) : (
           <div className="max-w-[62rem] mx-auto px-8 py-7">
             {/* Lesson meta */}
