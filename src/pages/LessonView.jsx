@@ -505,12 +505,19 @@ const adultWellnessUnits = [
 ].map((u) => ({ ...u, completed: false, active: u.id === 1 }));
 
 // Per-lesson content: PDF overview followed by a video, same pattern as Tier 2
-// sessions. Unit 3 / "Independent: Breathe Easier" also includes a guided
-// audio clip, as a demo of the audio media type for dev reference.
+// sessions. A couple of Unit 3 lessons demo the audio media type for dev
+// reference: "Breathe Easier" adds audio alongside the video, while
+// "Flight, Fight or Freeze" is PDF + audio only (no video).
 function adultWellnessLessonContent(unitId, lessonTitle) {
   if (unitId === 1) {
     return [
       { type: "pdf", title: lessonTitle, description: "A printable overview of what to expect from this course and how to get started.", pages: "3 pages" },
+    ];
+  }
+  if (unitId === 3 && lessonTitle === "Independent: Flight, Fight or Freeze") {
+    return [
+      { type: "audio", title: `${lessonTitle} — Guided Audio`, duration: "5:00", description: "A guided audio practice to use independently." },
+      { type: "pdf", title: `${lessonTitle} — Overview`, description: "Facilitator overview and discussion prompts for this practice.", pages: "2 pages" },
     ];
   }
   const content = [
@@ -781,6 +788,12 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
   const item = items[activeItem];
   const isVideo = item.type === "video";
   const isAudio = item.type === "audio";
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [audioSpeed, setAudioSpeed] = useState("1×");
+  const cycleAudioSpeed = () => {
+    const idx = SPEEDS.indexOf(audioSpeed);
+    setAudioSpeed(SPEEDS[(idx + 1) % SPEEDS.length]);
+  };
   return (
     <>
     <div className="flex rounded-2xl overflow-hidden border border-brand-border" style={{ height: "460px" }}>
@@ -799,12 +812,74 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
         ) : isAudio ? (
           <>
             <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
-              <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
-                <Play size={16} fill="white" className="text-white ml-0.5" />
-              </button>
-              <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{item.title}</p>
-              <p className="text-white/50 leading-relaxed" style={{ fontSize: "14px" }}>{item.description}</p>
+            <div className="absolute inset-0 flex flex-col px-8 pt-6 pb-4">
+              {/* Title — centered in remaining space above controls */}
+              <div className="flex-1 flex items-center justify-center text-center px-8">
+                <p className="text-white font-semibold leading-snug" style={{ fontSize: "20px" }}>{item.title}</p>
+              </div>
+
+              {/* Controls + progress — pinned to bottom */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  {/* Left: transport + title */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        className="p-1.5 rounded-full transition-colors"
+                        style={{ color: "rgba(255,255,255,0.55)" }}
+                      >
+                        <SkipBack size={16} />
+                      </button>
+                      <button
+                        onClick={() => setAudioPlaying((v) => !v)}
+                        className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:brightness-110 shadow-lg"
+                        style={{ background: audioPlaying ? "#2A7F8F" : "rgba(255,255,255,0.15)" }}
+                        aria-label={audioPlaying ? "Pause" : "Play"}
+                      >
+                        {audioPlaying ? (
+                          <Pause size={14} fill="white" className="text-white" />
+                        ) : (
+                          <Play size={14} fill="white" className="text-white ml-0.5" />
+                        )}
+                      </button>
+                      <button
+                        className="p-1.5 rounded-full transition-colors"
+                        style={{ color: "rgba(255,255,255,0.55)" }}
+                      >
+                        <SkipForward size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Right: volume, speed, download */}
+                  <div className="flex items-center gap-1">
+                    <button className="p-1.5 rounded transition-colors" style={{ color: "rgba(255,255,255,0.55)" }}>
+                      <Volume2 size={15} />
+                    </button>
+                    <button
+                      onClick={cycleAudioSpeed}
+                      className="px-2 py-1 rounded text-xs font-semibold tabular-nums min-w-[36px] text-center transition-colors"
+                      style={{ color: "rgba(255,255,255,0.55)" }}
+                    >
+                      {audioSpeed}
+                    </button>
+                    <button className="p-1.5 rounded transition-colors" style={{ color: "rgba(255,255,255,0.55)" }}>
+                      <Download size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Progress bar + timestamps */}
+                <div>
+                  <div className="relative h-1 rounded-full mb-2" style={{ background: "rgba(255,255,255,0.2)" }}>
+                    <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: "0%", background: "#2A7F8F" }} />
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-xs tabular-nums" style={{ color: "rgba(255,255,255,0.4)" }}>0:00</span>
+                    <span className="text-xs tabular-nums" style={{ color: "rgba(255,255,255,0.4)" }}>{item.duration}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </>
         ) : (
