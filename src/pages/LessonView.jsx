@@ -3403,23 +3403,23 @@ export default function LessonView({ onBookmark }) {
               Amazing work this year. Your students are building real emotional skills they'll carry with them long after the classroom.
             </p>
 
-            {/* Return to dashboard */}
+            {/* Browse more courses */}
             <motion.button
               whileTap={{ scale: 0.97 }}
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/mtw")}
               className="flex items-center gap-2 px-6 py-3 rounded-md text-sm font-semibold text-white transition-all hover:brightness-95 shadow-sm"
               style={{ background: "#2A7F8F" }}
             >
-              Return to Dashboard
+              Browse more courses
             </motion.button>
 
-            {/* Browse more courses */}
+            {/* Return to dashboard */}
             <button
-              onClick={() => navigate("/mtw")}
+              onClick={() => navigate("/")}
               className="text-sm font-semibold transition-colors hover:brightness-90"
               style={{ color: "#2A7F8F", marginTop: "24px" }}
             >
-              Browse more courses
+              Return to Dashboard
             </button>
           </motion.div>
         )}
