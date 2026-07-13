@@ -3412,6 +3412,15 @@ export default function LessonView({ onBookmark }) {
             >
               Return to Dashboard
             </motion.button>
+
+            {/* Browse more courses */}
+            <button
+              onClick={() => navigate("/mtw")}
+              className="text-sm font-semibold transition-colors hover:brightness-90"
+              style={{ color: "#2A7F8F", marginTop: "24px" }}
+            >
+              Browse more courses
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
