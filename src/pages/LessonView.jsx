@@ -520,12 +520,13 @@ function adultWellnessLessonContent(unitId, lessonTitle) {
       { type: "pdf", title: `${lessonTitle} — Overview`, description: "Facilitator overview and discussion prompts for this practice.", pages: "2 pages" },
     ];
   }
+  const isBreatheEasier = unitId === 3 && lessonTitle === "Independent: Breathe Easier";
   const content = [
-    { type: "pdf", title: `${lessonTitle} — Overview`, description: "Facilitator overview and discussion prompts for this practice.", pages: "2 pages" },
-    { type: "video", title: lessonTitle, duration: "3:30", description: "A short video introducing this practice." },
+    { type: "pdf", title: isBreatheEasier ? "Notes" : `${lessonTitle} — Overview`, description: "Facilitator overview and discussion prompts for this practice.", pages: "2 pages", ...(isBreatheEasier ? { image: "/adult-wellness/notes-image.png" } : {}) },
+    { type: "video", title: isBreatheEasier ? "Video" : lessonTitle, duration: "3:30", description: "A short video introducing this practice." },
   ];
-  if (unitId === 3 && lessonTitle === "Independent: Breathe Easier") {
-    content.push({ type: "audio", title: `${lessonTitle} — Guided Audio`, duration: "5:00", description: "A guided audio practice to use independently." });
+  if (isBreatheEasier) {
+    content.push({ type: "audio", title: "Audio clip", duration: "5:00", description: "A guided audio practice to use independently." });
   }
   return content;
 }
