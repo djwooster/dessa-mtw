@@ -918,12 +918,12 @@ function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen 
     <div className="flex flex-col gap-6">
       {notesItem && (
         <div className="rounded-2xl border border-brand-border bg-white p-5">
-          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#E8653A" }}>
+          <p className="text-lg font-semibold mb-3" style={{ color: "#2A7F8F" }}>
             Synopsis
           </p>
           <p className="text-brand-text leading-relaxed font-medium mb-4" style={{ fontSize: "15px" }}>{notesItem.synopsis}</p>
           <div className="h-px bg-brand-border mb-4" />
-          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#E8653A" }}>
+          <p className="text-lg font-semibold mb-3" style={{ color: "#2A7F8F" }}>
             Tips
           </p>
           <ul className="space-y-2 list-disc pl-5">
