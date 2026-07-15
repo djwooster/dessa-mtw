@@ -734,6 +734,25 @@ const session1Content = [
   { type: "pdf", title: "Understanding Emotions Worksheet — Continued", description: "Continuation worksheet for the second part of the activity.", pages: "2 pages" },
 ];
 
+// Session 7: Active Listening (unit.id 9) — tailored session content, same
+// shape as session1Content but specific to this session's topic. Rendered as
+// a numbered stacked sequence (SequentialStackedLayout) rather than the
+// tabbed MixedContentPlayer.
+const session7Content = [
+  { type: "video", title: "Opening Exercise", duration: "2:20", description: "Warm up the group and introduce the idea of listening with our whole body." },
+  { type: "pdf", title: "Pre-Video Practice", description: "Step-by-step guidance to support effective classroom instruction.", pages: "16 pages", image: "/recognize-emotions.png" },
+  { type: "video", title: "Video Exercise — Active Listening in Action", duration: "4:52", description: "The core lesson video introducing what active listening looks and sounds like." },
+  { type: "pdf", title: "Active Listening Worksheet", description: "A printable student resource for practicing lesson concepts.", pages: "1 page", image: "/recognize-emotions.png" },
+  { type: "video", title: "Post-Video Practice", duration: "3:40", description: "Guided practice to reinforce the concepts right after the video." },
+  { type: "pdf", title: "Active Listening Worksheet — Continued", description: "Continuation worksheet for the second part of the activity.", pages: "2 pages", image: "/recognize-emotions.png" },
+];
+
+// Per-unit session content overrides. Sessions without a tailored entry fall
+// back to session1Content as a placeholder.
+const sessionContentByUnit = {
+  9: session7Content,
+};
+
 function openPlaceholderPdf(title) {
   const w = window.open("", "_blank");
   if (!w) return;
@@ -972,6 +991,61 @@ function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen 
           <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
         </div>
       )}
+    </div>
+  );
+}
+
+// Stacked, numbered layout for content meant to be consumed sequentially
+// (e.g. Session 7: Active Listening) — alternating PDF-overlay and video
+// items, one full-width card per step, instead of the tabbed media switcher.
+function SequentialStackedLayout({ items, language, langOpen, setLanguage, setLangOpen }) {
+  return (
+    <div className="flex flex-col gap-6">
+      {items.map((item, i) => (
+        <div key={i}>
+          <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-2">
+            Step {i + 1} of {items.length}
+          </p>
+          {item.type === "video" ? (
+            <div className="rounded-2xl overflow-hidden border border-brand-border relative" style={{ height: "460px", background: "#1B2B4B" }}>
+              <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+                <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
+                  <Play size={16} fill="white" className="text-white ml-0.5" />
+                </button>
+                <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{item.title}</p>
+                <p className="text-white/50 leading-relaxed" style={{ fontSize: "14px" }}>{item.description}</p>
+              </div>
+              <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
+                <Clock size={11} />{item.duration}
+              </div>
+              <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
+            </div>
+          ) : (
+            <button
+              onClick={() => openPlaceholderPdf(item.title)}
+              className="relative w-full rounded-2xl overflow-hidden border border-brand-border group block"
+              style={{ height: "300px", cursor: "pointer" }}
+            >
+              {item.image && <img src={item.image} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+              <div className="absolute inset-0" style={{ background: "rgba(27,43,75,0.55)" }} />
+              <div
+                className="absolute inset-0 transition-opacity duration-300 opacity-0 group-hover:opacity-100"
+                style={{ background: "rgba(0,0,0,0.18)" }}
+              />
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-8">
+                <p className="text-white font-semibold leading-snug" style={{ fontSize: "18px" }}>{item.title}</p>
+                <span className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md bg-white text-brand-text">
+                  Open in New Tab <ExternalLink size={14} />
+                </span>
+              </div>
+              <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
+                <FileText size={11} />{item.pages}
+              </div>
+            </button>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -2503,9 +2577,9 @@ export default function LessonView({ onBookmark }) {
               else if (unit.id === 2 && li === 1) mixedContent = tier2EmotionVideos;
               else if (unit.id === 2 && li === 2) mixedContent = tier2EmogerVideos;
               else if (isSessionUnit && li === 0) pdfs = tier2SessionPdfs;
-              else if (isSessionUnit && li === 1) mixedContent = session1Content;
+              else if (isSessionUnit && li === 1) mixedContent = sessionContentByUnit[unit.id] ?? session1Content;
               else {
-                mixedContent = session1Content;
+                mixedContent = sessionContentByUnit[unit.id] ?? session1Content;
               }
             }
             if (!pdfs && !videos && !mixedContent) return null;
@@ -2551,7 +2625,7 @@ export default function LessonView({ onBookmark }) {
 
                   {/* Right: competency badge + mark as complete */}
                   <div className="flex flex-col items-end gap-2.5 flex-shrink-0">
-                    {!isTrainingGuide && (
+                    {!isTrainingGuide && !isSessionContent && (
                       <span
                         className="text-xs font-semibold px-3 py-1.5 rounded-full"
                         style={{ background: "#FEF3DC", color: "#F5A623" }}
@@ -2612,8 +2686,36 @@ export default function LessonView({ onBookmark }) {
                   </div>
                 </motion.div>
 
+                {/* Objective + time — above player, matches Kindergarten Skills/Objective layout */}
+                {isSessionContent && sessionMeta[unit?.id] && (
+                  <>
+                    <div className="mb-8 flex flex-col gap-2 rounded-2xl border border-brand-border bg-white p-5">
+                      <h3 className="text-base font-bold text-brand-text leading-snug">Objective</h3>
+                      <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>
+                        {sessionMeta[unit.id].objective}
+                      </p>
+                    </div>
+                    {sessionMeta[unit.id].tip && (
+                      <div className="mb-8 flex flex-col gap-2 rounded-2xl border border-brand-border bg-white p-5">
+                        <h3 className="text-base font-bold text-brand-text leading-snug">Helpful tip</h3>
+                        <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>
+                          {sessionMeta[unit.id].tip}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+
                 {/* Mixed sequential content (Session 1) */}
-                {isSessionContent && (
+                {isSessionContent && unit.id === 9 ? (
+                  <SequentialStackedLayout
+                    items={mixedContent}
+                    language={language}
+                    langOpen={langOpen}
+                    setLanguage={setLanguage}
+                    setLangOpen={setLangOpen}
+                  />
+                ) : isSessionContent && (
                   <MixedContentPlayer
                     items={mixedContent}
                     activeItem={activeVideo}
@@ -2623,26 +2725,6 @@ export default function LessonView({ onBookmark }) {
                     setLanguage={setLanguage}
                     setLangOpen={setLangOpen}
                   />
-                )}
-
-                {/* Objective + time — below player, matches Kindergarten Skills/Objective layout */}
-                {isSessionContent && sessionMeta[unit?.id] && (
-                  <>
-                    <div className="mt-8 flex flex-col gap-2">
-                      <h3 className="text-base font-bold text-brand-text leading-snug flex items-center gap-2"><Target size={16} className="text-brand-subtext opacity-70" />Objective</h3>
-                      <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>
-                        {sessionMeta[unit.id].objective}
-                      </p>
-                    </div>
-                    {sessionMeta[unit.id].tip && (
-                      <div className="mt-8 flex flex-col gap-2">
-                        <h3 className="text-base font-bold text-brand-text leading-snug flex items-center gap-2"><Lightbulb size={16} className="text-brand-subtext opacity-70" />Helpful tip</h3>
-                        <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>
-                          {sessionMeta[unit.id].tip}
-                        </p>
-                      </div>
-                    )}
-                  </>
                 )}
 
                 {/* Video player */}
