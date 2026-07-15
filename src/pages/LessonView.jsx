@@ -747,9 +747,22 @@ const session7Content = [
   { type: "pdf", title: "Active Listening Worksheet — Continued", description: "Continuation worksheet for the second part of the activity.", pages: "2 pages", image: "/recognize-emotions.png" },
 ];
 
+// Session 5: Recognizing Our Strengths (unit.id 7) — tailored session content.
+// Rendered as an expandable nested group in the sidebar ("Session 5 Content"),
+// with each item independently selectable and shown one at a time.
+const session5Content = [
+  { type: "video", title: "Opening Exercise", duration: "2:30", description: "Warm up the group and introduce the idea of naming our personal strengths." },
+  { type: "pdf", title: "Pre-Video Practice", description: "Step-by-step guidance to support effective classroom instruction.", pages: "14 pages", image: "/recognize-emotions.png" },
+  { type: "video", title: "Video Exercise — Recognizing Our Strengths", duration: "4:35", description: "The core lesson video introducing how to identify personal strengths." },
+  { type: "pdf", title: "Strengths Worksheet", description: "A printable student resource for practicing lesson concepts.", pages: "1 page", image: "/recognize-emotions.png" },
+  { type: "video", title: "Post-Video Practice", duration: "3:15", description: "Guided practice to reinforce the concepts right after the video." },
+  { type: "pdf", title: "Strengths Worksheet — Continued", description: "Continuation worksheet for the second part of the activity.", pages: "2 pages", image: "/recognize-emotions.png" },
+];
+
 // Per-unit session content overrides. Sessions without a tailored entry fall
 // back to session1Content as a placeholder.
 const sessionContentByUnit = {
+  7: session5Content,
   9: session7Content,
 };
 
@@ -998,6 +1011,47 @@ function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen 
 // Stacked, numbered layout for content meant to be consumed sequentially
 // (e.g. Session 7: Active Listening) — alternating PDF-overlay and video
 // items, one full-width card per step, instead of the tabbed media switcher.
+function ContentItemCard({ item, language, langOpen, setLanguage, setLangOpen }) {
+  return item.type === "video" ? (
+    <div className="rounded-2xl overflow-hidden border border-brand-border relative" style={{ height: "460px", background: "#1B2B4B" }}>
+      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+        <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
+          <Play size={16} fill="white" className="text-white ml-0.5" />
+        </button>
+        <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{item.title}</p>
+        <p className="text-white/50 leading-relaxed" style={{ fontSize: "14px" }}>{item.description}</p>
+      </div>
+      <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
+        <Clock size={11} />{item.duration}
+      </div>
+      <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
+    </div>
+  ) : (
+    <button
+      onClick={() => openPlaceholderPdf(item.title)}
+      className="relative w-full rounded-2xl overflow-hidden border border-brand-border group block"
+      style={{ height: "300px", cursor: "pointer" }}
+    >
+      {item.image && <img src={item.image} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+      <div className="absolute inset-0" style={{ background: "rgba(27,43,75,0.55)" }} />
+      <div
+        className="absolute inset-0 transition-opacity duration-300 opacity-0 group-hover:opacity-100"
+        style={{ background: "rgba(0,0,0,0.18)" }}
+      />
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-8">
+        <p className="text-white font-semibold leading-snug" style={{ fontSize: "18px" }}>{item.title}</p>
+        <span className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md bg-white text-brand-text">
+          Open in New Tab <ExternalLink size={14} />
+        </span>
+      </div>
+      <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
+        <FileText size={11} />{item.pages}
+      </div>
+    </button>
+  );
+}
+
 function SequentialStackedLayout({ items, language, langOpen, setLanguage, setLangOpen }) {
   return (
     <div className="flex flex-col gap-6">
@@ -1006,44 +1060,7 @@ function SequentialStackedLayout({ items, language, langOpen, setLanguage, setLa
           <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-2">
             Step {i + 1} of {items.length}
           </p>
-          {item.type === "video" ? (
-            <div className="rounded-2xl overflow-hidden border border-brand-border relative" style={{ height: "460px", background: "#1B2B4B" }}>
-              <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
-                <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
-                  <Play size={16} fill="white" className="text-white ml-0.5" />
-                </button>
-                <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{item.title}</p>
-                <p className="text-white/50 leading-relaxed" style={{ fontSize: "14px" }}>{item.description}</p>
-              </div>
-              <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
-                <Clock size={11} />{item.duration}
-              </div>
-              <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
-            </div>
-          ) : (
-            <button
-              onClick={() => openPlaceholderPdf(item.title)}
-              className="relative w-full rounded-2xl overflow-hidden border border-brand-border group block"
-              style={{ height: "300px", cursor: "pointer" }}
-            >
-              {item.image && <img src={item.image} alt="" className="absolute inset-0 w-full h-full object-cover" />}
-              <div className="absolute inset-0" style={{ background: "rgba(27,43,75,0.55)" }} />
-              <div
-                className="absolute inset-0 transition-opacity duration-300 opacity-0 group-hover:opacity-100"
-                style={{ background: "rgba(0,0,0,0.18)" }}
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-8">
-                <p className="text-white font-semibold leading-snug" style={{ fontSize: "18px" }}>{item.title}</p>
-                <span className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md bg-white text-brand-text">
-                  Open in New Tab <ExternalLink size={14} />
-                </span>
-              </div>
-              <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
-                <FileText size={11} />{item.pages}
-              </div>
-            </button>
-          )}
+          <ContentItemCard item={item} language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
         </div>
       ))}
     </div>
@@ -2315,6 +2332,7 @@ export default function LessonView({ onBookmark }) {
   const [mindfulPlaying, setMindfulPlaying] = useState(false);
   const [mindfulSpeed, setMindfulSpeed] = useState("1×");
   const [activePoPVideo, setActivePoPVideo] = useState(0);
+  const [sessionContentExpanded, setSessionContentExpanded] = useState(true);
   const activeUnitRef = useRef(null);
   const mainRef = useRef(null);
 
@@ -2364,8 +2382,10 @@ export default function LessonView({ onBookmark }) {
     : null;
   const activePoPVid = activePoPTheme?.videos[activePoPVideo] ?? null;
 
-  const handleSelectLesson = (unitId, lessonIndex) => {
-    setSelectedLesson({ unitId, lessonIndex });
+  const handleSelectLesson = (unitId, lessonIndex, subIndex) => {
+    setSelectedLesson(
+      subIndex === undefined ? { unitId, lessonIndex } : { unitId, lessonIndex, subIndex },
+    );
     setActiveVideo(0);
     setActivePoPVideo(0);
     setActiveContent("video");
@@ -2487,6 +2507,60 @@ export default function LessonView({ onBookmark }) {
                             const isSelectedLesson =
                               selectedLesson.unitId === unit.id &&
                               selectedLesson.lessonIndex === i;
+                            const isSession5Group =
+                              unit.id === 7 && item === "Session 5 Content";
+
+                            if (isSession5Group) {
+                              return (
+                                <div key={item}>
+                                  <button
+                                    onClick={() => setSessionContentExpanded((v) => !v)}
+                                    className="w-full flex items-center justify-between py-2.5 text-left transition-colors hover:bg-brand-bg"
+                                    style={{ paddingLeft: "56px", paddingRight: "8px" }}
+                                  >
+                                    <span className="text-sm text-brand-text">{item}</span>
+                                    <ChevronDown
+                                      size={13}
+                                      className={`flex-shrink-0 text-brand-subtext transition-transform duration-200 ${sessionContentExpanded ? "" : "-rotate-90"}`}
+                                    />
+                                  </button>
+                                  <AnimatePresence initial={false}>
+                                    {sessionContentExpanded && (
+                                      <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.18, ease: "easeInOut" }}
+                                        className="overflow-hidden"
+                                      >
+                                        <div className="ml-[76px] mb-1">
+                                          {session5Content.map((child, ci) => {
+                                            const isChildSelected =
+                                              selectedLesson.unitId === unit.id &&
+                                              selectedLesson.lessonIndex === i &&
+                                              selectedLesson.subIndex === ci;
+                                            return (
+                                              <button
+                                                key={ci}
+                                                onClick={() => handleSelectLesson(unit.id, i, ci)}
+                                                className={`w-full flex items-center gap-2 text-left py-2 pr-2 text-sm transition-colors ${isChildSelected ? "font-semibold text-mtw-amber" : "text-brand-text hover:text-brand-text"}`}
+                                              >
+                                                <span className="flex-shrink-0 w-6 h-px" style={{ background: "#D8DCE2" }} />
+                                                {child.title}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                  {i < unit.sub.length - 1 && (
+                                    <div className="border-t border-brand-border" />
+                                  )}
+                                </div>
+                              );
+                            }
+
                             return (
                               <div key={item}>
                                 <button
@@ -2514,7 +2588,7 @@ export default function LessonView({ onBookmark }) {
                                     />
                                   )}
                                 </button>
-                                {i < unit.sub.length - 1 && (
+                                {i < unit.sub.length - 1 && unit.id !== 7 && (
                                   <div className="border-t border-brand-border" />
                                 )}
                               </div>
@@ -2707,7 +2781,21 @@ export default function LessonView({ onBookmark }) {
                 )}
 
                 {/* Mixed sequential content (Session 1) */}
-                {isSessionContent && unit.id === 9 ? (
+                {isSessionContent && unit.id === 7 ? (
+                  selectedLesson.subIndex !== undefined && mixedContent[selectedLesson.subIndex] ? (
+                    <ContentItemCard
+                      item={mixedContent[selectedLesson.subIndex]}
+                      language={language}
+                      langOpen={langOpen}
+                      setLanguage={setLanguage}
+                      setLangOpen={setLangOpen}
+                    />
+                  ) : (
+                    <div className="rounded-2xl border border-brand-border bg-white p-8 text-center text-sm text-brand-subtext">
+                      Select an item from "Session 5 Content" in the sidebar to view it here.
+                    </div>
+                  )
+                ) : isSessionContent && unit.id === 9 ? (
                   <SequentialStackedLayout
                     items={mixedContent}
                     language={language}
