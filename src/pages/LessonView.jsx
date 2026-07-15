@@ -826,8 +826,8 @@ function AudioReflectionLayout({ items }) {
         <div className="rounded-2xl border border-brand-border bg-white p-5">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-brand-text leading-snug flex items-center gap-1.5">
-                <Headphones size={13} style={{ color: "#2A7F8F" }} /> {audioItem.title}
+              <p className="text-lg font-semibold leading-snug" style={{ color: "#2A7F8F" }}>
+                {audioItem.title}
               </p>
               {audioItem.speaker && (
                 <p className="text-xs text-brand-subtext mt-1 leading-relaxed">
@@ -886,8 +886,8 @@ function AudioReflectionLayout({ items }) {
 
       {reflectionItem && (
         <div className="rounded-2xl border border-brand-border bg-white p-5">
-          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#2A7F8F" }}>
-            <MessageCircle size={13} /> {reflectionItem.title}
+          <p className="text-lg font-semibold mb-3" style={{ color: "#2A7F8F" }}>
+            {reflectionItem.title}
           </p>
           <p className="text-brand-text leading-relaxed font-medium mb-4" style={{ fontSize: "15px" }}>{reflectionItem.intro}</p>
           <div className="h-px bg-brand-border mb-4" />
@@ -904,6 +904,7 @@ function AudioReflectionLayout({ items }) {
           </div>
         </div>
       )}
+      <div aria-hidden="true" style={{ height: "40px" }} />
     </div>
   );
 }
@@ -2605,7 +2606,7 @@ export default function LessonView({ onBookmark }) {
           <AudioLibraryView grade={grade} />
         ) : isAdultWellness ? (
           <div className="max-w-[62rem] mx-auto px-8 py-7">
-            <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-6">{grade}</p>
+            <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-1">{grade}</p>
             <h1 className="text-2xl font-semibold text-brand-text mb-5">
               {activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide"}
             </h1>
