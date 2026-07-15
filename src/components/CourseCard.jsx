@@ -31,8 +31,12 @@ export function CourseCard({ course, onGoToCourse, index }) {
             className="w-full h-44 shrink-0 flex flex-col items-center justify-center gap-1"
             style={{ background: course.color }}
           >
-            <span className="text-white font-black text-5xl leading-none tracking-tight">{course.grade}</span>
-            <span className="text-white/60 text-sm font-medium">{course.level}</span>
+            {course.level !== 'Tier 2' && (
+              <>
+                <span className="text-white font-black text-5xl leading-none tracking-tight">{course.grade}</span>
+                <span className="text-white/60 text-sm font-medium">{course.level}</span>
+              </>
+            )}
           </div>
         )}
 

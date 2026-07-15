@@ -139,7 +139,7 @@ export const tier2Courses = [
     level: 'Tier 2',
     title: 'Tier 2 — Early Elementary',
     competency: 'Self-Awareness',
-    color: '#2D7D78',
+    color: '#FECD81',
     lessons: 18,
   },
   {
@@ -148,7 +148,7 @@ export const tier2Courses = [
     level: 'Tier 2',
     title: 'Tier 2 — Late Elementary',
     competency: 'Self-Management',
-    color: '#F5A623',
+    color: '#FAA77D',
     lessons: 18,
   },
   {
@@ -157,7 +157,7 @@ export const tier2Courses = [
     level: 'Tier 2',
     title: 'Tier 2 — Middle School',
     competency: 'Relationship Skills',
-    color: '#7B5EA7',
+    color: '#9ECB97',
     lessons: 18,
   },
   {
@@ -166,7 +166,7 @@ export const tier2Courses = [
     level: 'Tier 2',
     title: 'Tier 2 — High School',
     competency: 'Responsible Decision-Making',
-    color: '#3B7DD8',
+    color: '#ABD4D7',
     lessons: 18,
   },
 ]
