@@ -535,14 +535,24 @@ function adultWellnessLessonContent(unitId, lessonTitle) {
     ];
   }
   const isBreatheEasier = unitId === 3 && lessonTitle === "Independent: Breathe Easier";
-  const content = [
-    { type: "pdf", title: isBreatheEasier ? "Notes" : `${lessonTitle} — Overview`, description: "Facilitator overview and discussion prompts for this practice.", pages: "2 pages", ...(isBreatheEasier ? { image: "/adult-wellness/notes-image.png" } : {}) },
-    { type: "video", title: isBreatheEasier ? "Video" : lessonTitle, duration: "3:30", description: "A short video introducing this practice." },
-  ];
   if (isBreatheEasier) {
-    content.push({ type: "audio", title: "Audio clip", duration: "5:00", description: "A guided audio practice to use independently." });
+    return [
+      {
+        type: "notes",
+        title: "Notes",
+        synopsis: "What is something you can do for yourself today? Call it to mind as you take 3 breaths.",
+        tips: [
+          "This exercise is fairly simple in nature, so it can be good for finding a pause as a group when times are especially busy",
+          "If time allows, invite folks to share the thing they are doing for themselves today.",
+        ],
+      },
+      { type: "video", title: "Video", duration: "3:30", description: "A short video introducing this practice." },
+    ];
   }
-  return content;
+  return [
+    { type: "pdf", title: `${lessonTitle} — Overview`, description: "Facilitator overview and discussion prompts for this practice.", pages: "2 pages" },
+    { type: "video", title: lessonTitle, duration: "3:30", description: "A short video introducing this practice." },
+  ];
 }
 
 // Tier 2 — Early Elementary course (course.id 101). Units transcribed from the
@@ -892,6 +902,51 @@ function AudioReflectionLayout({ items }) {
               <p key={i} className="text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>{q}</p>
             ))}
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// One-off layout for "Independent: Breathe Easier" — a notes section (synopsis
+// + tips) stacked above the video player, instead of the tabbed media switcher.
+function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen }) {
+  const notesItem = items.find((it) => it.type === "notes");
+  const videoItem = items.find((it) => it.type === "video");
+  return (
+    <div className="flex flex-col gap-6">
+      {notesItem && (
+        <div className="rounded-2xl border border-brand-border bg-white p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#E8653A" }}>
+            Synopsis
+          </p>
+          <p className="text-brand-text leading-relaxed font-medium mb-4" style={{ fontSize: "15px" }}>{notesItem.synopsis}</p>
+          <div className="h-px bg-brand-border mb-4" />
+          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#E8653A" }}>
+            Tips
+          </p>
+          <ul className="space-y-2 list-disc pl-5">
+            {notesItem.tips.map((t, i) => (
+              <li key={i} className="text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>{t}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {videoItem && (
+        <div className="rounded-2xl overflow-hidden border border-brand-border relative" style={{ height: "460px", background: "#1B2B4B" }}>
+          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+            <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
+              <Play size={16} fill="white" className="text-white ml-0.5" />
+            </button>
+            <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{videoItem.title}</p>
+            <p className="text-white/50 leading-relaxed" style={{ fontSize: "14px" }}>{videoItem.description}</p>
+          </div>
+          <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
+            <Clock size={11} />{videoItem.duration}
+          </div>
+          <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
         </div>
       )}
     </div>
@@ -2551,15 +2606,20 @@ export default function LessonView({ onBookmark }) {
         ) : isAdultWellness ? (
           <div className="max-w-[62rem] mx-auto px-8 py-7">
             <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-6">{grade}</p>
-            <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-2">
-              {activeUnit?.title ?? "Getting Started"}
-            </p>
             <h1 className="text-2xl font-semibold text-brand-text mb-5">
               {activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide"}
             </h1>
             {activeUnit?.id === 3 && activeUnit?.sub[selectedLesson.lessonIndex] === "Independent: Flight, Fight or Freeze" ? (
               <AudioReflectionLayout
                 items={adultWellnessLessonContent(activeUnit.id, activeUnit.sub[selectedLesson.lessonIndex])}
+              />
+            ) : activeUnit?.id === 3 && activeUnit?.sub[selectedLesson.lessonIndex] === "Independent: Breathe Easier" ? (
+              <NotesVideoLayout
+                items={adultWellnessLessonContent(activeUnit.id, activeUnit.sub[selectedLesson.lessonIndex])}
+                language={language}
+                langOpen={langOpen}
+                setLanguage={setLanguage}
+                setLangOpen={setLangOpen}
               />
             ) : (
               <MixedContentPlayer
