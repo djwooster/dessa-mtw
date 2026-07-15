@@ -516,8 +516,22 @@ function adultWellnessLessonContent(unitId, lessonTitle) {
   }
   if (unitId === 3 && lessonTitle === "Independent: Flight, Fight or Freeze") {
     return [
-      { type: "audio", title: `${lessonTitle} — Guided Audio`, duration: "5:00", description: "A guided audio practice to use independently." },
-      { type: "pdf", title: `${lessonTitle} — Overview`, description: "Facilitator overview and discussion prompts for this practice.", pages: "2 pages" },
+      { type: "audio", title: "Audio Clip", duration: "5:00", description: "A guided audio practice to use independently.", speaker: "Dr. Elena Ruiz", speakerBio: "Clinical psychologist specializing in stress response and resilience training." },
+      {
+        type: "reflection",
+        title: "Reflection",
+        intro: "How does your body give you clues about what you are experiencing? What do the signals look and feel like when you’re experiencing stress?",
+        body: "Consider the scenarios below. As you read through each one, try to visualize yourself in each and take notice of what you feel throughout your body. Jot down a couple of notes next to each that describe your experience.",
+        scenarios: [
+          "You are running late for an important appointment and get stuck behind a slow truck.",
+          "You are having a challenging day at work with students acting up and disrupting lesson after lesson. You finally gain a sense of calm and the fire alarm goes off.",
+          "You are feeling overwhelmed by your to-do list your ability to meet certain deadlines on time. Your are trying to come up with a plan when you get a call from an angry parent.",
+        ],
+        followUp: [
+          "What does your body's response to these situations tell you about your body's stress response?",
+          "What is one thing you could do to help alleviate the stress in each situation? How can you hold yourself accountable to using a particular strategy in the future?",
+        ],
+      },
     ];
   }
   const isBreatheEasier = unitId === 3 && lessonTitle === "Independent: Breathe Easier";
@@ -785,10 +799,110 @@ function MultiVideoPlayer({
   );
 }
 
+// One-off layout for "Independent: Flight, Fight or Freeze" — a compact audio
+// player stacked above a reflection prompt, instead of the tabbed media switcher.
+function AudioReflectionLayout({ items }) {
+  const audioItem = items.find((it) => it.type === "audio");
+  const reflectionItem = items.find((it) => it.type === "reflection");
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [audioSpeed, setAudioSpeed] = useState("1×");
+  const cycleAudioSpeed = () => {
+    const idx = SPEEDS.indexOf(audioSpeed);
+    setAudioSpeed(SPEEDS[(idx + 1) % SPEEDS.length]);
+  };
+  return (
+    <div className="flex flex-col gap-6">
+      {audioItem && (
+        <div className="rounded-2xl border border-brand-border bg-white p-5">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-brand-text leading-snug flex items-center gap-1.5">
+                <Headphones size={13} style={{ color: "#2A7F8F" }} /> {audioItem.title}
+              </p>
+              {audioItem.speaker && (
+                <p className="text-xs text-brand-subtext mt-1 leading-relaxed">
+                  Guided by <span className="font-medium text-brand-text">{audioItem.speaker}</span> — {audioItem.speakerBio}
+                </p>
+              )}
+            </div>
+            <span className="flex items-center gap-1 text-xs text-brand-subtext flex-shrink-0">
+              <Clock size={11} />{audioItem.duration}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 mb-2.5">
+            <button
+              onClick={() => setAudioPlaying((v) => !v)}
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:brightness-110 shadow-sm flex-shrink-0"
+              style={{ background: "#2A7F8F" }}
+              aria-label={audioPlaying ? "Pause" : "Play"}
+            >
+              {audioPlaying ? (
+                <Pause size={14} fill="white" className="text-white" />
+              ) : (
+                <Play size={14} fill="white" className="text-white ml-0.5" />
+              )}
+            </button>
+            <button className="p-1.5 rounded-full text-brand-subtext hover:text-brand-text transition-colors">
+              <SkipBack size={16} />
+            </button>
+            <button className="p-1.5 rounded-full text-brand-subtext hover:text-brand-text transition-colors">
+              <SkipForward size={16} />
+            </button>
+            <div className="flex-1" />
+            <button className="p-1.5 rounded text-brand-subtext hover:text-brand-text transition-colors">
+              <Volume2 size={15} />
+            </button>
+            <button
+              onClick={cycleAudioSpeed}
+              className="px-2 py-1 rounded text-xs font-semibold tabular-nums min-w-[36px] text-center text-brand-subtext hover:text-brand-text transition-colors"
+            >
+              {audioSpeed}
+            </button>
+            <button className="p-1.5 rounded text-brand-subtext hover:text-brand-text transition-colors">
+              <Download size={15} />
+            </button>
+          </div>
+
+          <div className="relative h-1 rounded-full" style={{ background: "#E2E6EA" }}>
+            <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: "0%", background: "#2A7F8F" }} />
+          </div>
+          <div className="flex justify-between mt-1.5">
+            <span className="text-xs tabular-nums text-brand-subtext">0:00</span>
+            <span className="text-xs tabular-nums text-brand-subtext">{audioItem.duration}</span>
+          </div>
+        </div>
+      )}
+
+      {reflectionItem && (
+        <div className="rounded-2xl border border-brand-border bg-white p-5">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#2A7F8F" }}>
+            <MessageCircle size={13} /> {reflectionItem.title}
+          </p>
+          <p className="text-brand-text leading-relaxed font-medium mb-4" style={{ fontSize: "15px" }}>{reflectionItem.intro}</p>
+          <div className="h-px bg-brand-border mb-4" />
+          <p className="text-brand-text leading-relaxed mb-3" style={{ fontSize: "15px" }}>{reflectionItem.body}</p>
+          <ul className="space-y-2 list-disc pl-5 mb-4">
+            {reflectionItem.scenarios.map((s, i) => (
+              <li key={i} className="text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>{s}</li>
+            ))}
+          </ul>
+          <div className="space-y-2">
+            {reflectionItem.followUp.map((q, i) => (
+              <p key={i} className="text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>{q}</p>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOpen, setLanguage, setLangOpen }) {
   const item = items[activeItem];
   const isVideo = item.type === "video";
   const isAudio = item.type === "audio";
+  const isReflection = item.type === "reflection";
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioSpeed, setAudioSpeed] = useState("1×");
   const cycleAudioSpeed = () => {
@@ -815,8 +929,13 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
             <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
             <div className="absolute inset-0 flex flex-col px-8 pt-6 pb-4">
               {/* Title — centered in remaining space above controls */}
-              <div className="flex-1 flex items-center justify-center text-center px-8">
+              <div className="flex-1 flex flex-col items-center justify-center text-center px-8 gap-2">
                 <p className="text-white font-semibold leading-snug" style={{ fontSize: "20px" }}>{item.title}</p>
+                {item.speaker && (
+                  <p className="text-white/60 leading-relaxed" style={{ fontSize: "13px" }}>
+                    Guided by <span className="text-white/80 font-medium">{item.speaker}</span> — {item.speakerBio}
+                  </p>
+                )}
               </div>
 
               {/* Controls + progress — pinned to bottom */}
@@ -883,6 +1002,27 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
               </div>
             </div>
           </>
+        ) : isReflection ? (
+          <div className="absolute inset-0 flex items-center justify-center px-10 py-8 overflow-y-auto" style={{ background: "#f7f7f7" }}>
+            <div className="w-full max-w-md">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#2A7F8F" }}>
+                <MessageCircle size={13} /> Reflection
+              </p>
+              <p className="text-brand-text leading-relaxed font-medium mb-4" style={{ fontSize: "15px" }}>{item.intro}</p>
+              <div className="h-px bg-brand-border mb-4" />
+              <p className="text-brand-text leading-relaxed mb-3" style={{ fontSize: "15px" }}>{item.body}</p>
+              <ul className="space-y-2 list-disc pl-5 mb-4">
+                {item.scenarios?.map((s, i) => (
+                  <li key={i} className="text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>{s}</li>
+                ))}
+              </ul>
+              <div className="space-y-2">
+                {item.followUp?.map((q, i) => (
+                  <p key={i} className="text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>{q}</p>
+                ))}
+              </div>
+            </div>
+          </div>
         ) : (
           <button
             onClick={() => openPlaceholderPdf(item.title)}
@@ -938,6 +1078,15 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
                 </div>
                 <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 w-fit" style={{ borderRadius: "4px", border: "1px solid #dddddd", background: "#f6f6f6", color: "#696969" }}>
                   <Headphones size={9} /> Audio
+                </span>
+              </>
+            ) : it.type === "reflection" ? (
+              <>
+                <div className="flex items-start justify-between gap-4 mb-1.5">
+                  <p className="text-sm font-semibold leading-snug min-w-0" style={{ color: i === activeItem ? "#2A7F8F" : "#525252" }}>{i + 1}. {it.title}</p>
+                </div>
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 w-fit" style={{ borderRadius: "4px", border: "1px solid #dddddd", background: "#f6f6f6", color: "#696969" }}>
+                  <MessageCircle size={9} /> Reflection
                 </span>
               </>
             ) : (
@@ -2408,18 +2557,24 @@ export default function LessonView({ onBookmark }) {
             <h1 className="text-2xl font-semibold text-brand-text mb-5">
               {activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide"}
             </h1>
-            <MixedContentPlayer
-              items={adultWellnessLessonContent(
-                activeUnit?.id,
-                activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide",
-              )}
-              activeItem={activeVideo}
-              setActiveItem={setActiveVideo}
-              language={language}
-              langOpen={langOpen}
-              setLanguage={setLanguage}
-              setLangOpen={setLangOpen}
-            />
+            {activeUnit?.id === 3 && activeUnit?.sub[selectedLesson.lessonIndex] === "Independent: Flight, Fight or Freeze" ? (
+              <AudioReflectionLayout
+                items={adultWellnessLessonContent(activeUnit.id, activeUnit.sub[selectedLesson.lessonIndex])}
+              />
+            ) : (
+              <MixedContentPlayer
+                items={adultWellnessLessonContent(
+                  activeUnit?.id,
+                  activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide",
+                )}
+                activeItem={activeVideo}
+                setActiveItem={setActiveVideo}
+                language={language}
+                langOpen={langOpen}
+                setLanguage={setLanguage}
+                setLangOpen={setLangOpen}
+              />
+            )}
           </div>
         ) : (
           <div className="max-w-[62rem] mx-auto px-8 py-7">
