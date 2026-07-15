@@ -511,7 +511,7 @@ const adultWellnessUnits = [
 function adultWellnessLessonContent(unitId, lessonTitle) {
   if (unitId === 1) {
     return [
-      { type: "pdf", title: lessonTitle, description: "A printable overview of what to expect from this course and how to get started.", pages: "3 pages" },
+      { type: "pdf", title: lessonTitle, description: "A printable overview of what to expect from this course and how to get started.", pages: "3 pages", image: "/getting-started.png" },
     ];
   }
   if (unitId === 3 && lessonTitle === "Independent: Flight, Fight or Freeze") {
@@ -532,6 +532,28 @@ function adultWellnessLessonContent(unitId, lessonTitle) {
           "What is one thing you could do to help alleviate the stress in each situation? How can you hold yourself accountable to using a particular strategy in the future?",
         ],
       },
+    ];
+  }
+  if (unitId === 3 && lessonTitle === "Community: Draw You In") {
+    return [
+      {
+        type: "notes",
+        title: "Notes",
+        image: "/draw-notes.png",
+        synopsis: "A low-stakes group drawing activity that opens space for creative expression and connection.",
+        tips: [
+          "Pass out paper and pencils/markers before starting — no artistic skill is needed.",
+          "Encourage folks to keep their pen moving and not worry about the end result.",
+          "If time allows, invite a few volunteers to share what they drew and why.",
+        ],
+      },
+      { type: "video", title: "Video", duration: "3:30", description: "A short video introducing this activity." },
+    ];
+  }
+  if (unitId === 3 && lessonTitle === "Community: Shake Off") {
+    return [
+      { type: "audio", title: "Audio Clip", duration: "3:45", description: "A guided audio prompt to open this community activity.", speaker: "Dr. Elena Ruiz", speakerBio: "Clinical psychologist specializing in stress response and resilience training." },
+      { type: "reflection", title: "Reflection", image: "/shake-reflect.png" },
     ];
   }
   const isBreatheEasier = unitId === 3 && lessonTitle === "Independent: Breathe Easier";
@@ -954,11 +976,40 @@ function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen 
   );
 }
 
+// One-off layout for "Getting Started Guide" — a single full-width image with
+// a hover overlay that opens the PDF in a new tab, instead of the tabbed
+// media switcher (unnecessary for a single-item lesson).
+function GettingStartedLayout({ item }) {
+  return (
+    <button
+      onClick={() => openPlaceholderPdf(item.title)}
+      className="relative w-full rounded-2xl overflow-hidden border border-brand-border group block"
+      style={{ cursor: "pointer" }}
+    >
+      <img src={item.image} alt="" className="w-full h-auto block" />
+      <div
+        className="absolute inset-0 transition-colors duration-200"
+        style={{ background: "rgba(0,0,0,0.28)" }}
+      />
+      <div
+        className="absolute inset-0 transition-opacity duration-300 opacity-0 group-hover:opacity-100"
+        style={{ background: "rgba(0,0,0,0.18)" }}
+      />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md bg-white text-brand-text">
+          Open Guide in New Tab <ExternalLink size={14} />
+        </span>
+      </div>
+    </button>
+  );
+}
+
 function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOpen, setLanguage, setLangOpen }) {
   const item = items[activeItem];
   const isVideo = item.type === "video";
   const isAudio = item.type === "audio";
   const isReflection = item.type === "reflection";
+  const isNotes = item.type === "notes";
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioSpeed, setAudioSpeed] = useState("1×");
   const cycleAudioSpeed = () => {
@@ -1058,6 +1109,24 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
               </div>
             </div>
           </>
+        ) : isReflection && item.image ? (
+          <button
+            onClick={() => openPlaceholderPdf(item.title)}
+            className="absolute inset-0 w-full group"
+            style={{ cursor: "pointer" }}
+          >
+            <img src={item.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0" style={{ background: "rgba(27,43,75,0.55)" }} />
+            <div
+              className="absolute inset-0 transition-opacity duration-300 opacity-0 group-hover:opacity-100"
+              style={{ background: "rgba(0,0,0,0.18)" }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md bg-white text-brand-text">
+                Open Guide in New Tab <ExternalLink size={14} />
+              </span>
+            </div>
+          </button>
         ) : isReflection ? (
           <div className="absolute inset-0 flex items-center justify-center px-10 py-8 overflow-y-auto" style={{ background: "#f7f7f7" }}>
             <div className="w-full max-w-md">
@@ -1079,6 +1148,24 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
               </div>
             </div>
           </div>
+        ) : isNotes ? (
+          <button
+            onClick={() => openPlaceholderPdf(item.title)}
+            className="absolute inset-0 w-full group"
+            style={{ cursor: "pointer" }}
+          >
+            {item.image && <img src={item.image} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+            <div className="absolute inset-0" style={{ background: "rgba(27,43,75,0.55)" }} />
+            <div
+              className="absolute inset-0 transition-opacity duration-300 opacity-0 group-hover:opacity-100"
+              style={{ background: "rgba(0,0,0,0.18)" }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md bg-white text-brand-text">
+                Open Guide in New Tab <ExternalLink size={14} />
+              </span>
+            </div>
+          </button>
         ) : (
           <button
             onClick={() => openPlaceholderPdf(item.title)}
@@ -1143,6 +1230,15 @@ function MixedContentPlayer({ items, activeItem, setActiveItem, language, langOp
                 </div>
                 <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 w-fit" style={{ borderRadius: "4px", border: "1px solid #dddddd", background: "#f6f6f6", color: "#696969" }}>
                   <MessageCircle size={9} /> Reflection
+                </span>
+              </>
+            ) : it.type === "notes" ? (
+              <>
+                <div className="flex items-start justify-between gap-4 mb-1.5">
+                  <p className="text-sm font-semibold leading-snug min-w-0" style={{ color: i === activeItem ? "#2A7F8F" : "#525252" }}>{i + 1}. {it.title}</p>
+                </div>
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 w-fit" style={{ borderRadius: "4px", border: "1px solid #dddddd", background: "#f6f6f6", color: "#696969" }}>
+                  <FileText size={9} /> Notes
                 </span>
               </>
             ) : (
@@ -2610,7 +2706,11 @@ export default function LessonView({ onBookmark }) {
             <h1 className="text-2xl font-semibold text-brand-text mb-5">
               {activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide"}
             </h1>
-            {activeUnit?.id === 3 && activeUnit?.sub[selectedLesson.lessonIndex] === "Independent: Flight, Fight or Freeze" ? (
+            {activeUnit?.id === 1 ? (
+              <GettingStartedLayout
+                item={adultWellnessLessonContent(activeUnit.id, activeUnit.sub[selectedLesson.lessonIndex])[0]}
+              />
+            ) : activeUnit?.id === 3 && activeUnit?.sub[selectedLesson.lessonIndex] === "Independent: Flight, Fight or Freeze" ? (
               <AudioReflectionLayout
                 items={adultWellnessLessonContent(activeUnit.id, activeUnit.sub[selectedLesson.lessonIndex])}
               />
