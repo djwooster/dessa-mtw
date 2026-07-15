@@ -1669,7 +1669,7 @@ function Divider() {
 
 const SPEEDS = ["1×", "1.25×", "1.5×", "0.75×"];
 
-function AudioLibraryView({ grade, navigate }) {
+function AudioLibraryView({ grade }) {
   const [selectedTrack, setSelectedTrack] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState("1×");
@@ -1694,13 +1694,7 @@ function AudioLibraryView({ grade, navigate }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.22 }}
       >
-        <button
-          onClick={() => navigate("/mtw")}
-          className="flex items-center gap-1.5 text-sm font-medium transition-colors mb-6" style={{ color: "#0f6cbd" }}
-        >
-          <ChevronLeft size={14} />
-          Back to Courses
-        </button>
+        <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-6">{grade}</p>
         <div className="flex items-center gap-3 mb-1">
           <Headphones size={22} className="text-brand-subtext opacity-70" />
           <h1 className="text-2xl font-semibold text-brand-text">
@@ -2027,19 +2021,13 @@ export default function LessonView({ onBookmark }) {
         style={{ width: "20rem" }}
       >
         <div className="px-4 py-4 border-b border-brand-border flex items-center justify-between">
-          {isTier2EE ? (
-            <button
-              onClick={() => navigate("/mtw")}
-              className="flex items-center gap-1.5 text-sm font-medium transition-colors" style={{ color: "#0f6cbd" }}
-            >
-              <ChevronLeft size={14} />
-              Back
-            </button>
-          ) : (
-            <p className="text-lg font-semibold tracking-tight text-brand-text">
-              {grade}
-            </p>
-          )}
+          <button
+            onClick={() => navigate("/mtw")}
+            className="flex items-center gap-1.5 text-sm font-medium transition-colors" style={{ color: "#0f6cbd" }}
+          >
+            <ChevronLeft size={14} />
+            Back
+          </button>
           <button
             onClick={() => setShowInactive((v) => !v)}
             className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors"
@@ -2410,16 +2398,10 @@ export default function LessonView({ onBookmark }) {
             );
           })()
         ) : isAudioLibrary ? (
-          <AudioLibraryView grade={grade} navigate={navigate} />
+          <AudioLibraryView grade={grade} />
         ) : isAdultWellness ? (
           <div className="max-w-[62rem] mx-auto px-8 py-7">
-            <button
-              onClick={() => navigate("/mtw")}
-              className="flex items-center gap-1.5 text-sm font-medium transition-colors mb-3" style={{ color: "#0f6cbd" }}
-            >
-              <ChevronLeft size={14} />
-              Back to Courses
-            </button>
+            <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-6">{grade}</p>
             <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-2">
               {activeUnit?.title ?? "Getting Started"}
             </p>
@@ -2449,15 +2431,9 @@ export default function LessonView({ onBookmark }) {
               className="mb-5"
             >
               <div className="flex items-end justify-between">
-                {/* Left: back link + title */}
+                {/* Left: course title + lesson title */}
                 <div>
-                  <button
-                    onClick={() => navigate("/mtw")}
-                    className="flex items-center gap-1.5 text-sm font-medium transition-colors mb-3" style={{ color: "#0f6cbd" }}
-                  >
-                    <ChevronLeft size={14} />
-                    Back to Courses
-                  </button>
+                  <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-6">{grade}</p>
                   <h1 className="text-2xl font-semibold text-brand-text">
                     {currentLessonTitle}
                   </h1>
