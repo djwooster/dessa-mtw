@@ -934,22 +934,36 @@ function AudioReflectionLayout({ items }) {
       )}
 
       {reflectionItem && (
-        <div className="rounded-2xl border border-brand-border bg-white p-5">
-          <p className="text-lg font-semibold mb-3" style={{ color: "#2A7F8F" }}>
-            {reflectionItem.title}
-          </p>
-          <p className="text-brand-text leading-relaxed font-medium mb-4" style={{ fontSize: "15px" }}>{reflectionItem.intro}</p>
-          <div className="h-px bg-brand-border mb-4" />
-          <p className="text-brand-text leading-relaxed mb-3" style={{ fontSize: "15px" }}>{reflectionItem.body}</p>
-          <ul className="space-y-2 list-disc pl-5 mb-4">
-            {reflectionItem.scenarios.map((s, i) => (
-              <li key={i} className="text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>{s}</li>
-            ))}
-          </ul>
-          <div className="space-y-2">
-            {reflectionItem.followUp.map((q, i) => (
-              <p key={i} className="text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>{q}</p>
-            ))}
+        <div>
+          <h2 className="text-xl font-semibold text-brand-text mb-4">{reflectionItem.title}</h2>
+          <div className="pl-4 mb-7" style={{ borderLeft: "4px solid #2A7F8F" }}>
+            <p className="text-brand-text leading-relaxed font-medium" style={{ fontSize: "15px" }}>{reflectionItem.intro}</p>
+          </div>
+
+          <Divider />
+
+          <div className="mb-7">
+            <h3 className="text-xl font-semibold text-brand-text mb-2">Scenarios</h3>
+            <p className="text-brand-subtext leading-relaxed mb-3" style={{ fontSize: "15px" }}>{reflectionItem.body}</p>
+            <ul className="space-y-2.5">
+              {reflectionItem.scenarios.map((s, i) => (
+                <li key={i} className="flex items-start gap-3 text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2" style={{ background: "#2A7F8F" }} />
+                  {s}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <Divider />
+
+          <div>
+            <h3 className="text-xl font-semibold text-brand-text mb-2">Reflect Further</h3>
+            <div className="space-y-3">
+              {reflectionItem.followUp.map((q, i) => (
+                <p key={i} className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>{q}</p>
+              ))}
+            </div>
           </div>
         </div>
       )}
