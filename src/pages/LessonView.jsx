@@ -2625,22 +2625,19 @@ export default function LessonView({ onBookmark }) {
                 {isSessionContent && sessionMeta[unit?.id] && (
                   <>
                     <Divider />
-                    <div className="mb-7">
+                    <div style={{ marginBottom: "40px" }}>
                       <h2 className="text-xl font-semibold text-brand-text mb-2">Objective</h2>
                       <p className="text-body text-brand-subtext leading-relaxed">
                         {sessionMeta[unit.id].objective}
                       </p>
                     </div>
                     {sessionMeta[unit.id].tip && (
-                      <>
-                        <Divider />
-                        <div className="mb-7">
-                          <SectionHeading icon={Lightbulb}>Helpful tip</SectionHeading>
-                          <p className="text-body text-brand-text leading-relaxed">
-                            {sessionMeta[unit.id].tip}
-                          </p>
-                        </div>
-                      </>
+                      <div className="mb-7">
+                        <h2 className="text-xl font-semibold text-brand-text mb-2">Helpful tip</h2>
+                        <p className="text-body text-brand-subtext leading-relaxed">
+                          {sessionMeta[unit.id].tip}
+                        </p>
+                      </div>
                     )}
                   </>
                 )}
