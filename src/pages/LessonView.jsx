@@ -20,6 +20,7 @@ import {
   Tag,
   Target,
   Users,
+  User,
   Lightbulb,
   Brain,
   HelpCircle,
@@ -979,24 +980,6 @@ function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen 
   const videoItem = items.find((it) => it.type === "video");
   return (
     <div className="flex flex-col gap-6">
-      {notesItem && (
-        <div className="rounded-2xl border border-brand-border bg-white p-5">
-          <p className="text-lg font-semibold mb-3" style={{ color: "#2A7F8F" }}>
-            Synopsis
-          </p>
-          <p className="text-brand-text leading-relaxed font-medium mb-4" style={{ fontSize: "15px" }}>{notesItem.synopsis}</p>
-          <div className="h-px bg-brand-border mb-4" />
-          <p className="text-lg font-semibold mb-3" style={{ color: "#2A7F8F" }}>
-            Tips
-          </p>
-          <ul className="space-y-2 list-disc pl-5">
-            {notesItem.tips.map((t, i) => (
-              <li key={i} className="text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>{t}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       {videoItem && (
         <div className="rounded-2xl overflow-hidden border border-brand-border relative" style={{ height: "460px", background: "#1B2B4B" }}>
           <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
@@ -1011,6 +994,29 @@ function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen 
             <Clock size={11} />{videoItem.duration}
           </div>
           <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
+        </div>
+      )}
+
+      {notesItem && (
+        <div>
+          <h2 className="text-xl font-semibold text-brand-text mb-4">Synopsis</h2>
+          <div className="pl-4 mb-7" style={{ borderLeft: "4px solid #2A7F8F" }}>
+            <p className="text-brand-text leading-relaxed font-medium" style={{ fontSize: "15px" }}>{notesItem.synopsis}</p>
+          </div>
+
+          <Divider />
+
+          <div>
+            <h3 className="text-xl font-semibold text-brand-text mb-2">Tips</h3>
+            <ul className="space-y-2.5">
+              {notesItem.tips.map((t, i) => (
+                <li key={i} className="flex items-start gap-3 text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2" style={{ background: "#2A7F8F" }} />
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
     </div>
@@ -2436,7 +2442,7 @@ export default function LessonView({ onBookmark }) {
                                   <span
                                     className={`text-sm ${isSelectedLesson ? "font-semibold text-brand-text" : "text-brand-text"}`}
                                   >
-                                    {item}
+                                    {item.replace(/^(Community|Independent):\s*/, "")}
                                   </span>
                                   {unit.completed ? (
                                     <CheckCircle2
@@ -2713,10 +2719,52 @@ export default function LessonView({ onBookmark }) {
           <AudioLibraryView grade={grade} />
         ) : isAdultWellness ? (
           <div className="max-w-[62rem] mx-auto px-8 py-7">
-            <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-1">{grade}</p>
-            <h1 className="text-2xl font-semibold text-brand-text mb-5">
-              {activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide"}
-            </h1>
+            {(() => {
+              const rawTitle = activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide";
+              const isCommunity = rawTitle.startsWith("Community:");
+              const isIndependent = rawTitle.startsWith("Independent:");
+              const displayTitle = isCommunity || isIndependent
+                ? rawTitle.replace(/^(Community|Independent):\s*/, "")
+                : rawTitle;
+              return (
+                <div className="flex items-end justify-between gap-6 mb-5">
+                  <div>
+                    <p className="flex items-center gap-1 text-xs font-semibold tracking-wide text-brand-subtext mb-1">
+                      {grade}
+                      {activeUnit?.title && (
+                        <>
+                          <ChevronRight size={11} className="flex-shrink-0" />
+                          {activeUnit.title}
+                        </>
+                      )}
+                    </p>
+                    <h1 className="text-2xl font-semibold text-brand-text">
+                      {displayTitle}
+                    </h1>
+                  </div>
+                  {(isCommunity || isIndependent) && (
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                      <span
+                        className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
+                        style={
+                          isCommunity
+                            ? { background: "#FDECE5", color: "#E8653A" }
+                            : { background: "#E9F4FC", color: "#2A7F8F" }
+                        }
+                      >
+                        {isCommunity ? <Users size={12} /> : <User size={12} />}
+                        {isCommunity ? "Group Exercise" : "Independent Practice"}
+                      </span>
+                      <span className="text-sm text-brand-subtext text-right">
+                        {isCommunity
+                          ? "Best done together as a group."
+                          : "Complete this on your own, at your own pace."}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             {activeUnit?.id === 1 ? (
               <GettingStartedLayout
                 item={adultWellnessLessonContent(activeUnit.id, activeUnit.sub[selectedLesson.lessonIndex])[0]}
