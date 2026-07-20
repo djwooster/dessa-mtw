@@ -934,7 +934,28 @@ function AudioReflectionLayout({ items }) {
         </div>
       )}
 
-      {reflectionItem && (
+      {reflectionItem && reflectionItem.image ? (
+        <div>
+          <h2 className="text-xl font-semibold text-brand-text mb-4">{reflectionItem.title}</h2>
+          <button
+            onClick={() => openPlaceholderPdf(reflectionItem.title)}
+            className="relative w-full rounded-2xl overflow-hidden border border-brand-border group block"
+            style={{ height: "300px", cursor: "pointer" }}
+          >
+            <img src={reflectionItem.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0" style={{ background: "rgba(27,43,75,0.55)" }} />
+            <div
+              className="absolute inset-0 transition-opacity duration-300 opacity-0 group-hover:opacity-100"
+              style={{ background: "rgba(0,0,0,0.18)" }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center px-8">
+              <span className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md bg-white text-brand-text">
+                Open Guide in New Tab <ExternalLink size={14} />
+              </span>
+            </div>
+          </button>
+        </div>
+      ) : reflectionItem && (
         <div>
           <h2 className="text-xl font-semibold text-brand-text mb-4">{reflectionItem.title}</h2>
           <div className="pl-4 mb-7" style={{ borderLeft: "4px solid #2A7F8F" }}>
@@ -1017,6 +1038,57 @@ function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen 
               ))}
             </ul>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// On-page flow layout for the generic Adult Wellness lesson content mix
+// (a PDF overview + video), matching NotesVideoLayout's structure — video on
+// top, PDF overview below — instead of the tabbed media switcher.
+function PdfVideoLayout({ items, language, langOpen, setLanguage, setLangOpen }) {
+  const pdfItem = items.find((it) => it.type === "pdf");
+  const videoItem = items.find((it) => it.type === "video");
+  return (
+    <div className="flex flex-col gap-6">
+      {videoItem && (
+        <div className="rounded-2xl overflow-hidden border border-brand-border relative" style={{ height: "460px", background: "#1B2B4B" }}>
+          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+            <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
+              <Play size={16} fill="white" className="text-white ml-0.5" />
+            </button>
+            <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{videoItem.title}</p>
+            <p className="text-white/50 leading-relaxed" style={{ fontSize: "14px" }}>{videoItem.description}</p>
+          </div>
+          <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
+            <Clock size={11} />{videoItem.duration}
+          </div>
+          <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
+        </div>
+      )}
+
+      {pdfItem && (
+        <div>
+          <h2 className="text-xl font-semibold text-brand-text mb-4">Overview</h2>
+          <button
+            onClick={() => openPlaceholderPdf(pdfItem.title)}
+            className="relative w-full rounded-2xl overflow-hidden border border-brand-border group block"
+            style={{ height: "300px", cursor: "pointer" }}
+          >
+            <img src={pdfItem.image || "/recognize-emotions.png"} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0" style={{ background: "rgba(27,43,75,0.55)" }} />
+            <div
+              className="absolute inset-0 transition-opacity duration-300 opacity-0 group-hover:opacity-100"
+              style={{ background: "rgba(0,0,0,0.18)" }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center px-8">
+              <span className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md bg-white text-brand-text">
+                Open Guide in New Tab <ExternalLink size={14} />
+              </span>
+            </div>
+          </button>
         </div>
       )}
     </div>
@@ -2765,36 +2837,41 @@ export default function LessonView({ onBookmark }) {
                 </div>
               );
             })()}
-            {activeUnit?.id === 1 ? (
-              <GettingStartedLayout
-                item={adultWellnessLessonContent(activeUnit.id, activeUnit.sub[selectedLesson.lessonIndex])[0]}
-              />
-            ) : activeUnit?.id === 3 && activeUnit?.sub[selectedLesson.lessonIndex] === "Independent: Flight, Fight or Freeze" ? (
-              <AudioReflectionLayout
-                items={adultWellnessLessonContent(activeUnit.id, activeUnit.sub[selectedLesson.lessonIndex])}
-              />
-            ) : activeUnit?.id === 3 && activeUnit?.sub[selectedLesson.lessonIndex] === "Independent: Breathe Easier" ? (
-              <NotesVideoLayout
-                items={adultWellnessLessonContent(activeUnit.id, activeUnit.sub[selectedLesson.lessonIndex])}
-                language={language}
-                langOpen={langOpen}
-                setLanguage={setLanguage}
-                setLangOpen={setLangOpen}
-              />
-            ) : (
-              <MixedContentPlayer
-                items={adultWellnessLessonContent(
-                  activeUnit?.id,
-                  activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide",
-                )}
-                activeItem={activeVideo}
-                setActiveItem={setActiveVideo}
-                language={language}
-                langOpen={langOpen}
-                setLanguage={setLanguage}
-                setLangOpen={setLangOpen}
-              />
-            )}
+            {(() => {
+              const items = adultWellnessLessonContent(
+                activeUnit?.id,
+                activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide",
+              );
+              const hasAudio = items.some((it) => it.type === "audio");
+              const hasNotes = items.some((it) => it.type === "notes");
+
+              if (items.length === 1 && items[0].type === "pdf") {
+                return <GettingStartedLayout item={items[0]} />;
+              }
+              if (hasAudio) {
+                return <AudioReflectionLayout items={items} />;
+              }
+              if (hasNotes) {
+                return (
+                  <NotesVideoLayout
+                    items={items}
+                    language={language}
+                    langOpen={langOpen}
+                    setLanguage={setLanguage}
+                    setLangOpen={setLangOpen}
+                  />
+                );
+              }
+              return (
+                <PdfVideoLayout
+                  items={items}
+                  language={language}
+                  langOpen={langOpen}
+                  setLanguage={setLanguage}
+                  setLangOpen={setLangOpen}
+                />
+              );
+            })()}
           </div>
         ) : (
           <div className="max-w-[62rem] mx-auto px-8 py-7">
@@ -2808,7 +2885,15 @@ export default function LessonView({ onBookmark }) {
               <div className="flex items-end justify-between">
                 {/* Left: course title + lesson title */}
                 <div>
-                  <p className="text-xs font-semibold tracking-wide text-brand-subtext mb-6">{grade}</p>
+                  <p className="flex items-center gap-1 text-xs font-semibold tracking-wide text-brand-subtext mb-6">
+                    {grade}
+                    {currentUnitTitle && (
+                      <>
+                        <ChevronRight size={11} className="flex-shrink-0" />
+                        {currentUnitTitle.replace(/^Unit\s*\d+\s*—\s*/, "")}
+                      </>
+                    )}
+                  </p>
                   <h1 className="text-2xl font-semibold text-brand-text">
                     {currentLessonTitle}
                   </h1>
