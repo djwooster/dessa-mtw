@@ -466,6 +466,135 @@ const grade2Units = units.map((u) => ({
   active: u.id === 31,
 }));
 
+// Family — parent/guardian-facing series, one per grade band (course.level
+// 'Family'). Each Series contains a single Unit. Older bands (Middle School,
+// High School) use Stornaway video lessons — same video card, just a
+// different "common language" title shared across English/Spanish.
+const familyUnitsByGrade = {
+  "Early Elementary": [
+    {
+      id: 1,
+      title: "Family Series — Early Elementary",
+      active: true,
+      completed: false,
+      sub: [
+        "Welcome Guide",
+        "Emotional Building Blocks",
+        "Naming Our Feelings",
+        "Working Together",
+        "Understanding Our Emotions",
+        "Power of Pause",
+      ],
+    },
+  ],
+  "Late Elementary": [
+    {
+      id: 1,
+      title: "Family Series — Late Elementary",
+      active: true,
+      completed: false,
+      sub: [
+        "Welcome Guide",
+        "Self-Management in Action",
+        "Building Responsible Decisions",
+        "Making Thoughtful Choices",
+        "Power of Pause",
+      ],
+    },
+  ],
+  "Middle School": [
+    {
+      id: 1,
+      title: "Family Series — Middle School",
+      active: true,
+      completed: false,
+      sub: [
+        "Welcome Guide",
+        "Social Awareness & Empathy",
+        "Relationship Skills",
+        "Goal-Directed Behavior",
+        "Power of Pause",
+      ],
+    },
+  ],
+  "High School": [
+    {
+      id: 1,
+      title: "Family Series — High School",
+      active: true,
+      completed: false,
+      sub: [
+        "Welcome Guide",
+        "Identity & Resilience",
+        "Navigating Relationships",
+        "Responsible Decision-Making",
+        "Power of Pause",
+      ],
+    },
+  ],
+};
+
+// Older grade bands render their videos via Stornaway — same video card look,
+// just a shared "common language" title used regardless of selected language.
+const familyUsesStornaway = (grade) => grade === "Middle School" || grade === "High School";
+
+function familyLessonContent(grade, lessonTitle) {
+  const stornaway = familyUsesStornaway(grade);
+
+  if (lessonTitle === "Welcome Guide") {
+    return {
+      type: "welcome",
+      intro: `Welcome to the ${grade} Family Series! This series brings the same SEL language your child is learning in school into your home, in short, easy-to-use lessons designed for busy families.`,
+      expect: [
+        "A short video for each topic — most are 3–5 minutes long",
+        "Videos are available in English and Spanish — switch anytime using the language button on the player",
+        "A Power of Pause video with calming techniques you can use together at home",
+        "No sign-up or prep needed — just press play when you're ready",
+      ],
+      gettingStarted:
+        "Work through the lessons in any order that fits your family's schedule. There's no need to finish them all at once — come back whenever you'd like a shared moment of connection.",
+    };
+  }
+
+  if (lessonTitle === "Power of Pause") {
+    return {
+      type: "pop",
+      englishVideo: { title: "Power of Pause — Family Edition", duration: "2:45", description: "A guided calming practice families can use together, anytime things feel like a lot." },
+      spanishVideo: { title: "Power of Pause — Edición Familiar", duration: "2:50", description: "Una práctica guiada de calma que las familias pueden usar juntas, en cualquier momento." },
+    };
+  }
+
+  // SEL competency lesson (default) — Facilitation Guide + English/Spanish video.
+  const isEmotionalBuildingBlocks = lessonTitle === "Emotional Building Blocks";
+  const commonTitle = `${lessonTitle} — Family Video`;
+  return {
+    type: "facilitation",
+    activityTitle: lessonTitle,
+    activityBody: `Watch together, then talk about a time your family experienced this. There are no wrong answers — the goal is simply to build a shared vocabulary around ${lessonTitle.toLowerCase()}.`,
+    activityTime: "10 minutes",
+    tips: [
+      "Watch the video together as a family before discussing",
+      "Let everyone share, including younger children — simple answers count",
+      "Revisit this topic during the week using the same language from the video",
+    ],
+    whyWeDoThis:
+      "Kids build emotional skills faster when the language they hear at school is reinforced at home. A few minutes of shared practice each week helps these ideas stick.",
+    stornaway: stornaway,
+    englishVideo: stornaway
+      ? { title: commonTitle, duration: "4:00", description: "An interactive Stornaway video experience for this topic." }
+      : { title: `${lessonTitle} — English`, duration: "3:45", description: "A short video introducing this topic in English." },
+    spanishVideo: stornaway
+      ? { title: commonTitle, duration: "4:00", description: "Una experiencia de video interactiva de Stornaway para este tema." }
+      : { title: `${lessonTitle} — Español`, duration: "3:50", description: "Un breve video que presenta este tema en español." },
+    supplementalPdfs: isEmotionalBuildingBlocks
+      ? [
+          { title: "Emotional Building Blocks — Family Poster", description: "A printable poster of the Emotional Building Blocks for your fridge or wall.", pages: "1 page" },
+          { title: "Feelings Check-In Card", description: "A quick reference card to help name feelings together at home.", pages: "1 page" },
+        ]
+      : null,
+  };
+}
+
 // Adult Wellness course (course.id 201). Lessons transcribed from the source
 // deck — each unit is a mix of "Community" (group facilitation) and
 // "Independent" (self-guided) lessons.
@@ -1092,6 +1221,159 @@ function PdfVideoLayout({ items, language, langOpen, setLanguage, setLangOpen })
         </div>
       )}
     </div>
+  );
+}
+
+// Shared video card for Family lessons — swaps between the English and
+// Spanish video (or the same Stornaway video, relabeled) based on the
+// current language selection.
+function FamilyVideoCard({ englishVideo, spanishVideo, language, langOpen, setLanguage, setLangOpen }) {
+  const video = language === "Spanish" ? spanishVideo : englishVideo;
+  return (
+    <div className="rounded-2xl overflow-hidden border border-brand-border relative" style={{ height: "460px", background: "#1B2B4B" }}>
+      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+        <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
+          <Play size={16} fill="white" className="text-white ml-0.5" />
+        </button>
+        <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{video.title}</p>
+        <p className="text-white/50 leading-relaxed" style={{ fontSize: "14px" }}>{video.description}</p>
+      </div>
+      <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
+        <Clock size={11} />{video.duration}
+      </div>
+      <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
+    </div>
+  );
+}
+
+// Family Welcome Guide — broken-out web sections (intro callout, "What to
+// Expect" bullets, "Getting Started" paragraph) instead of a PDF.
+function FamilyWelcomeLayout({ item }) {
+  return (
+    <div>
+      <div className="pl-4 mb-7" style={{ borderLeft: "4px solid #2A7F8F" }}>
+        <p className="text-brand-text leading-relaxed font-medium" style={{ fontSize: "15px" }}>{item.intro}</p>
+      </div>
+
+      <Divider />
+
+      <div className="mb-7">
+        <h3 className="text-xl font-semibold text-brand-text mb-2">What to Expect</h3>
+        <ul className="space-y-2.5">
+          {item.expect.map((e, i) => (
+            <li key={i} className="flex items-start gap-3 text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>
+              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2" style={{ background: "#2A7F8F" }} />
+              {e}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <Divider />
+
+      <div>
+        <h3 className="text-xl font-semibold text-brand-text mb-2">Getting Started</h3>
+        <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>{item.gettingStarted}</p>
+      </div>
+    </div>
+  );
+}
+
+// Family SEL competency lesson — Facilitation Guide (broken-out web
+// sections) above an English/Spanish video, with an optional Supplemental
+// Materials list (Emotional Building Blocks).
+function FamilyFacilitationLayout({ item, language, langOpen, setLanguage, setLangOpen }) {
+  return (
+    <div>
+      <div className="mb-7">
+        <h2 className="text-xl font-semibold text-brand-text mb-4">{item.activityTitle}</h2>
+        <div className="pl-4 mb-3" style={{ borderLeft: "4px solid #2A7F8F" }}>
+          <p className="text-brand-text leading-relaxed font-medium" style={{ fontSize: "15px" }}>{item.activityBody}</p>
+        </div>
+        <span className="flex items-center gap-1 text-xs text-brand-subtext">
+          <Clock size={11} />{item.activityTime}
+        </span>
+      </div>
+
+      <Divider />
+
+      <div className="mb-7">
+        <h3 className="text-xl font-semibold text-brand-text mb-2">Before You Begin</h3>
+        <ul className="space-y-2.5">
+          {item.tips.map((t, i) => (
+            <li key={i} className="flex items-start gap-3 text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>
+              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2" style={{ background: "#2A7F8F" }} />
+              {t}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <Divider />
+
+      <div className="mb-7">
+        <h3 className="text-xl font-semibold text-brand-text mb-2">Why We Do This</h3>
+        <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>{item.whyWeDoThis}</p>
+      </div>
+
+      <Divider />
+
+      <div className={item.supplementalPdfs ? "mb-7" : ""}>
+        <FamilyVideoCard
+          englishVideo={item.englishVideo}
+          spanishVideo={item.spanishVideo}
+          language={language}
+          langOpen={langOpen}
+          setLanguage={setLanguage}
+          setLangOpen={setLangOpen}
+        />
+      </div>
+
+      {item.supplementalPdfs && (
+        <>
+          <Divider />
+          <div>
+            <h3 className="text-xl font-semibold text-brand-text mb-4">Supplemental Materials</h3>
+            <div className="flex flex-col">
+              {item.supplementalPdfs.map((pdf, i) => (
+                <div key={i}>
+                  <button
+                    onClick={() => openPlaceholderPdf(pdf.title)}
+                    className="w-full flex items-center justify-between gap-4 py-4 text-left group"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <FileText size={18} className="flex-shrink-0 mt-0.5 text-brand-subtext" />
+                      <div className="min-w-0">
+                        <p className="font-semibold leading-snug text-brand-text transition-colors group-hover:text-dessa-teal" style={{ fontSize: "15px" }}>{pdf.title}</p>
+                        <p className="text-sm text-brand-subtext leading-relaxed mt-0.5">{pdf.description}</p>
+                      </div>
+                    </div>
+                    <span className="flex items-center gap-1 text-xs text-brand-subtext flex-shrink-0">{pdf.pages}</span>
+                  </button>
+                  {i < item.supplementalPdfs.length - 1 && <div className="border-t border-brand-border" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Family Power of Pause — shared pattern across all 4 grade bands: just the
+// bilingual video, no facilitation guide.
+function FamilyPowerOfPauseLayout({ item, language, langOpen, setLanguage, setLangOpen }) {
+  return (
+    <FamilyVideoCard
+      englishVideo={item.englishVideo}
+      spanishVideo={item.spanishVideo}
+      language={language}
+      langOpen={langOpen}
+      setLanguage={setLanguage}
+      setLangOpen={setLangOpen}
+    />
   );
 }
 
@@ -2293,25 +2575,30 @@ export default function LessonView({ onBookmark }) {
   const isGrade2 = course?.grade === "Grade 2";
   const isTier2EE = course?.level === 'Tier 2';
   const isAdultWellness = course?.grade === 'Adult Wellness';
+  const isFamily = course?.level === 'Family';
   const activeUnits = isTier2EE
     ? tier2EarlyElementaryUnits
     : isAdultWellness
       ? adultWellnessUnits
-      : isGrade2
-        ? grade2Units
-        : units;
+      : isFamily
+        ? (familyUnitsByGrade[course.grade] ?? familyUnitsByGrade["Early Elementary"])
+        : isGrade2
+          ? grade2Units
+          : units;
 
   const [expandedUnit, setExpandedUnit] = useState(
-    isTier2EE ? 9 : isAdultWellness ? 1 : isGrade2 ? 31 : 5,
+    isTier2EE ? 9 : isAdultWellness ? 1 : isFamily ? 1 : isGrade2 ? 31 : 5,
   );
   const [selectedLesson, setSelectedLesson] = useState(
     isTier2EE
       ? { unitId: 9, lessonIndex: 0 }
       : isAdultWellness
         ? { unitId: 1, lessonIndex: 0 }
-        : isGrade2
-          ? { unitId: 31, lessonIndex: 3 }
-          : { unitId: 5, lessonIndex: 2 },
+        : isFamily
+          ? { unitId: 1, lessonIndex: 0 }
+          : isGrade2
+            ? { unitId: 31, lessonIndex: 3 }
+            : { unitId: 5, lessonIndex: 2 },
   );
   const [activeVideo, setActiveVideo] = useState(0);
   const [activeContent, setActiveContent] = useState("video");
@@ -2815,24 +3102,17 @@ export default function LessonView({ onBookmark }) {
                     </h1>
                   </div>
                   {(isCommunity || isIndependent) && (
-                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                      <span
-                        className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
-                        style={
-                          isCommunity
-                            ? { background: "#FDECE5", color: "#E8653A" }
-                            : { background: "#E9F4FC", color: "#2A7F8F" }
-                        }
-                      >
-                        {isCommunity ? <Users size={12} /> : <User size={12} />}
-                        {isCommunity ? "Group Exercise" : "Independent Practice"}
-                      </span>
-                      <span className="text-sm text-brand-subtext text-right">
-                        {isCommunity
-                          ? "Best done together as a group."
-                          : "Complete this on your own, at your own pace."}
-                      </span>
-                    </div>
+                    <span
+                      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0"
+                      style={
+                        isCommunity
+                          ? { background: "#FDECE5", color: "#E8653A" }
+                          : { background: "#E9F4FC", color: "#2A7F8F" }
+                      }
+                    >
+                      {isCommunity ? <Users size={12} /> : <User size={12} />}
+                      {isCommunity ? "Group Exercise" : "Independent Practice"}
+                    </span>
                   )}
                 </div>
               );
@@ -2870,6 +3150,58 @@ export default function LessonView({ onBookmark }) {
                   setLanguage={setLanguage}
                   setLangOpen={setLangOpen}
                 />
+              );
+            })()}
+          </div>
+        ) : isFamily ? (
+          <div className="max-w-[62rem] mx-auto px-8 py-7">
+            {(() => {
+              const lessonTitle = activeUnit?.sub[selectedLesson.lessonIndex] ?? "Welcome Guide";
+              const item = familyLessonContent(course.grade, lessonTitle);
+              const showCompetencyTag = item.type === "facilitation";
+              return (
+                <>
+                  <div className="flex items-end justify-between gap-6 mb-5">
+                    <div>
+                      <p className="flex items-center gap-1 text-xs font-semibold tracking-wide text-brand-subtext mb-1">
+                        Family
+                        <ChevronRight size={11} className="flex-shrink-0" />
+                        {grade}
+                      </p>
+                      <h1 className="text-2xl font-semibold text-brand-text">
+                        {lessonTitle}
+                      </h1>
+                    </div>
+                    {showCompetencyTag && (
+                      <span
+                        className="text-xs font-semibold px-3 py-1.5 rounded-full flex-shrink-0"
+                        style={{ background: "#FEF3DC", color: "#F5A623" }}
+                      >
+                        {competency}
+                      </span>
+                    )}
+                  </div>
+
+                  {item.type === "welcome" ? (
+                    <FamilyWelcomeLayout item={item} />
+                  ) : item.type === "pop" ? (
+                    <FamilyPowerOfPauseLayout
+                      item={item}
+                      language={language}
+                      langOpen={langOpen}
+                      setLanguage={setLanguage}
+                      setLangOpen={setLangOpen}
+                    />
+                  ) : (
+                    <FamilyFacilitationLayout
+                      item={item}
+                      language={language}
+                      langOpen={langOpen}
+                      setLanguage={setLanguage}
+                      setLangOpen={setLangOpen}
+                    />
+                  )}
+                </>
               );
             })()}
           </div>

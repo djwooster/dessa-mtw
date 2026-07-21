@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Bookmark, Flame } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { CourseCard } from '../components/CourseCard'
-import { courses, tier2Courses, adultWellnessCourses } from '../lib/courseData'
+import { courses, tier2Courses, adultWellnessCourses, familyCourses } from '../lib/courseData'
 
 // ─── Streak calendar data ─────────────────────────────────────────────────────
 
@@ -121,6 +121,7 @@ const filters = [
   { value: 'Middle School',    label: 'Middle School' },
   { value: 'High School',      label: 'High School' },
   { value: 'Tier 2',           label: 'Tier 2' },
+  { value: 'Family',           label: 'Family' },
   { value: 'Adult Wellness',   label: 'Adult Wellness' },
 ]
 
@@ -167,6 +168,23 @@ export default function Curriculum() {
                 <TabsContent key={f.value} value={f.value}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {tier2Courses.map((course, i) => (
+                      <CourseCard
+                        key={course.id}
+                        course={course}
+                        onGoToCourse={handleGoToCourse}
+                        index={i}
+                      />
+                    ))}
+                  </div>
+                </TabsContent>
+              )
+            }
+
+            if (f.value === 'Family') {
+              return (
+                <TabsContent key={f.value} value={f.value}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {familyCourses.map((course, i) => (
                       <CourseCard
                         key={course.id}
                         course={course}

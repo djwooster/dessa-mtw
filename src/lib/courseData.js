@@ -170,3 +170,46 @@ export const tier2Courses = [
     lessons: 18,
   },
 ]
+
+// Family — parent/guardian-facing series, one per grade band. Each Series
+// contains a single Unit with a Welcome guide, SEL competency lessons, a
+// Power of Pause lesson, and (Early Elementary) a Supplemental Materials
+// lesson for the Emotional Building Blocks PDFs.
+export const familyCourses = [
+  {
+    id: 301,
+    grade: 'Early Elementary',
+    level: 'Family',
+    title: 'Early Elementary Family Series',
+    competency: 'Self-Awareness',
+    color: '#F4A672',
+    lessons: 6,
+  },
+  {
+    id: 302,
+    grade: 'Late Elementary',
+    level: 'Family',
+    title: 'Late Elementary Family Series',
+    competency: 'Self-Management',
+    color: '#F4A672',
+    lessons: 5,
+  },
+  {
+    id: 303,
+    grade: 'Middle School',
+    level: 'Family',
+    title: 'Middle School Family Series',
+    competency: 'Relationship Skills',
+    color: '#F4A672',
+    lessons: 5,
+  },
+  {
+    id: 304,
+    grade: 'High School',
+    level: 'Family',
+    title: 'High School Family Series',
+    competency: 'Responsible Decision-Making',
+    color: '#F4A672',
+    lessons: 5,
+  },
+]
