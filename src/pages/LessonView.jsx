@@ -679,6 +679,9 @@ function familyLessonContent(grade, lessonTitle, unitTitle, lessonIndex) {
 // fall back to the generic template below.
 const earlyElementaryFacilitationGuides = {
   "Emoger #1: Tighten and Release": {
+    // Design comparison: top tab language switcher instead of the corner
+    // LanguagePicker used everywhere else — scoped to this lesson only.
+    topLanguageTabs: true,
     skills: ["Emotional Management", "Impulse Control", "Stress Management"],
     objective: "Identify how we can use the emotional management strategy: Tighten and Release.",
     activityBody:
@@ -692,6 +695,25 @@ const earlyElementaryFacilitationGuides = {
       "Have a discussion about the different versions of Tighten and Release practiced in this exercise. Which one did you like the best and why?",
       "Engage in the Tighten and Release Emoger when you feel you can benefit from this strategy throughout the day. Do it together as a family for additional practice.",
     ],
+    es: {
+      activityTitle: "Emoger® #1: Compresión y Liberación",
+      skills: ["Gestión de Emociones", "Control de Impulsos", "Manejo del Estrés"],
+      objective: "Identificar cómo se puede emplear la estrategia de gestión emocional: Apretar y Liberar.",
+      activityBody:
+        "Los estudiantes llevarán a cabo la actividad \"Apretar y Soltar\". Los estudiantes elegidos dirigirán a la clase en una discusión sobre cómo utilizar el apretar y soltar. Los estudiantes demostrarán la acción de apretar y soltar. Los estudiantes compartirán situaciones en las que podrían emplear este gesto.",
+      whyWeDoThisHeading: "¿Por qué se realiza esto?",
+      whyWeDoThis:
+        "Practicamos la Emoción #1: Presionar y Soltar para fortalecer nuestra comprensión de cómo podemos usar esta Emoción y las situaciones apropiadas para hacerlo. Presionar y Soltar puede ayudarnos cuando nos sentimos emocionados, enojados, frustrados o cuando nos sentimos impulsivos y necesitamos recuperar algo de control. Practicamos Presionar y Soltar juntos como una comunidad de clase y compartimos formas en que esta Emoción puede ayudarnos.",
+      atHomeTipsHeading: "Consejos Domésticos",
+      atHomeTips: [
+        "Se solicitará a algunos estudiantes que muestren y expliquen al resto de la clase una forma de apretar y soltar hoy. En su lugar, roten para compartir sus ideas con sus compañeros.",
+      ],
+      continuingConversationHeading: "Prosiguiendo la Charla",
+      continuingConversation: [
+        "Participe en un debate sobre las distintas versiones de Apretar y Liberar que se llevan a cabo en este ejercicio. ¿Cuál prefirió y por qué?",
+        "Participación en el ejercicio de apretar y liberar cuando se sienta que se puede beneficiar de esta estrategia a lo largo del día. Hágalo en familia para practicar más.",
+      ],
+    },
   },
 };
 
@@ -1417,6 +1439,45 @@ function FamilyVideoCard({ englishVideo, spanishVideo, language, langOpen, setLa
   );
 }
 
+// Alternate to FamilyVideoCard for design comparison on one lesson
+// (Emoger #1: Tighten and Release) — English/Spanish switcher as tabs above
+// the video instead of the floating corner language picker.
+function FamilyVideoCardTopTabs({ englishVideo, spanishVideo, language, setLanguage }) {
+  const video = language === "Spanish" ? spanishVideo : englishVideo;
+  return (
+    <div>
+      <div className="flex items-center gap-1 mb-3 border-b border-brand-border">
+        {["English", "Spanish"].map((lang) => (
+          <button
+            key={lang}
+            onClick={() => setLanguage(lang)}
+            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+              language === lang
+                ? "border-dessa-teal text-dessa-teal"
+                : "border-transparent text-brand-subtext hover:text-brand-text"
+            }`}
+          >
+            {lang === "Spanish" ? "Español" : lang}
+          </button>
+        ))}
+      </div>
+      <div className="rounded-2xl overflow-hidden border border-brand-border relative" style={{ height: "460px", background: "#1B2B4B" }}>
+        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+          <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
+            <Play size={16} fill="white" className="text-white ml-0.5" />
+          </button>
+          <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{video.title}</p>
+          <p className="text-white/50 leading-relaxed" style={{ fontSize: "14px" }}>{video.description}</p>
+        </div>
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
+          <Clock size={11} />{video.duration}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Family Welcome Guide — broken-out web sections (intro callout, "What to
 // Expect" bullets, "Getting Started" paragraph) instead of a PDF.
 function FamilyWelcomeLayout({ item }) {
@@ -1474,31 +1535,54 @@ function FamilyTipCards({ items }) {
 // source PDFs) or the older generic template ("Before You Begin" tips),
 // depending on which fields are present on `item`.
 function FamilyFacilitationLayout({ item, language, langOpen, setLanguage, setLangOpen }) {
-  const homeTips = item.atHomeTips ?? item.tips;
-  const homeTipsLabel = item.atHomeTips ? "At Home Tips" : "Before You Begin";
+  const useEs = language === "Spanish" && item.es;
+  const es = item.es;
+  const activityTitle = useEs ? es.activityTitle ?? item.activityTitle : item.activityTitle;
+  const skills = useEs ? es.skills ?? item.skills : item.skills;
+  const objective = useEs ? es.objective ?? item.objective : item.objective;
+  const activityBody = useEs ? es.activityBody ?? item.activityBody : item.activityBody;
+  const whyWeDoThisHeading = useEs ? es.whyWeDoThisHeading ?? "Why We Do This" : "Why We Do This";
+  const whyWeDoThis = useEs ? es.whyWeDoThis ?? item.whyWeDoThis : item.whyWeDoThis;
+  const homeTips = useEs ? es.atHomeTips ?? item.atHomeTips ?? item.tips : item.atHomeTips ?? item.tips;
+  const homeTipsLabel = useEs
+    ? es.atHomeTipsHeading ?? (item.atHomeTips ? "At Home Tips" : "Before You Begin")
+    : item.atHomeTips ? "At Home Tips" : "Before You Begin";
+  const continuingConversationHeading = useEs
+    ? es.continuingConversationHeading ?? "Continuing the Conversation"
+    : "Continuing the Conversation";
+  const continuingConversation = useEs ? es.continuingConversation ?? item.continuingConversation : item.continuingConversation;
   return (
     <div>
       <div className="mb-7">
-        <FamilyVideoCard
-          englishVideo={item.englishVideo}
-          spanishVideo={item.spanishVideo}
-          language={language}
-          langOpen={langOpen}
-          setLanguage={setLanguage}
-          setLangOpen={setLangOpen}
-        />
+        {item.topLanguageTabs ? (
+          <FamilyVideoCardTopTabs
+            englishVideo={item.englishVideo}
+            spanishVideo={item.spanishVideo}
+            language={language}
+            setLanguage={setLanguage}
+          />
+        ) : (
+          <FamilyVideoCard
+            englishVideo={item.englishVideo}
+            spanishVideo={item.spanishVideo}
+            language={language}
+            langOpen={langOpen}
+            setLanguage={setLanguage}
+            setLangOpen={setLangOpen}
+          />
+        )}
       </div>
 
       <Divider />
 
-      {(item.skills || item.objective) && (
+      {(skills || objective) && (
         <>
           <div className="grid grid-cols-2 gap-6 mb-7">
-            {item.skills && (
+            {skills && (
               <div>
-                <SectionLabel>Skills</SectionLabel>
+                <SectionLabel>{useEs ? "Habilidades" : "Skills"}</SectionLabel>
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {item.skills.map((skill) => (
+                  {skills.map((skill) => (
                     <span
                       key={skill}
                       className="text-xs font-medium px-2.5 py-1 rounded-full border border-brand-border text-brand-text bg-white"
@@ -1509,10 +1593,10 @@ function FamilyFacilitationLayout({ item, language, langOpen, setLanguage, setLa
                 </div>
               </div>
             )}
-            {item.objective && (
+            {objective && (
               <div>
-                <SectionLabel>Objective</SectionLabel>
-                <p className="text-brand-subtext leading-relaxed mt-2" style={{ fontSize: "15px" }}>{item.objective}</p>
+                <SectionLabel>{useEs ? "Objetivo" : "Objective"}</SectionLabel>
+                <p className="text-brand-subtext leading-relaxed mt-2" style={{ fontSize: "15px" }}>{objective}</p>
               </div>
             )}
           </div>
@@ -1521,9 +1605,9 @@ function FamilyFacilitationLayout({ item, language, langOpen, setLanguage, setLa
       )}
 
       <div className="mb-7">
-        <h2 className="text-xl font-semibold text-brand-text mb-2">{item.activityTitle}</h2>
+        <h2 className="text-xl font-semibold text-brand-text mb-2">{activityTitle}</h2>
         <div className="pl-4 mb-3" style={{ borderLeft: "4px solid #2A7F8F" }}>
-          <p className="text-brand-text leading-relaxed font-medium" style={{ fontSize: "15px" }}>{item.activityBody}</p>
+          <p className="text-brand-text leading-relaxed font-medium" style={{ fontSize: "15px" }}>{activityBody}</p>
         </div>
         {item.activityTime && (
           <span className="flex items-center gap-1 text-xs text-brand-subtext">
@@ -1535,13 +1619,13 @@ function FamilyFacilitationLayout({ item, language, langOpen, setLanguage, setLa
       <Divider />
 
       <div className="mb-7">
-        <h3 className="text-xl font-semibold text-brand-text mb-2">Why We Do This</h3>
-        <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>{item.whyWeDoThis}</p>
+        <h3 className="text-xl font-semibold text-brand-text mb-2">{whyWeDoThisHeading}</h3>
+        <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>{whyWeDoThis}</p>
       </div>
 
       <Divider />
 
-      <div className={item.continuingConversation || item.supplementalPdfs ? "mb-7" : ""}>
+      <div className={continuingConversation || item.supplementalPdfs ? "mb-7" : ""}>
         {item.atHomeTips ? (
           <>
             <SectionHeading icon={Lightbulb}>{homeTipsLabel}</SectionHeading>
@@ -1562,12 +1646,12 @@ function FamilyFacilitationLayout({ item, language, langOpen, setLanguage, setLa
         )}
       </div>
 
-      {item.continuingConversation && (
+      {continuingConversation && (
         <>
           <Divider />
           <div className={item.supplementalPdfs ? "mb-7" : ""}>
-            <SectionHeading icon={MessageCircle}>Continuing the Conversation</SectionHeading>
-            <FamilyTipCards items={item.continuingConversation} />
+            <SectionHeading icon={MessageCircle}>{continuingConversationHeading}</SectionHeading>
+            <FamilyTipCards items={continuingConversation} />
           </div>
         </>
       )}
