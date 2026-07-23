@@ -183,7 +183,7 @@ export const familyCourses = [
     title: 'Early Elementary Family Series',
     competency: 'Self-Awareness',
     color: '#F4A672',
-    lessons: 6,
+    lessons: 38,
   },
   {
     id: 302,
