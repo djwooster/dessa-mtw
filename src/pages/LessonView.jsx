@@ -823,7 +823,7 @@ const adultWellnessUnits = [
     "Independent: Breathe Easier", "Independent: Flight, Fight or Freeze", "Independent: Thought Trains",
     "Independent: Prioritizing Our Time", "Independent: Digging In", "Independent: Moving Through Fear", "Independent: What Works For You?",
   ]},
-  { id: 4, title: "Reflect, Reset & Recharge", sub: [
+  { id: 4, title: "Reflect, Reset & Recharge", groupSubfolders: true, sub: [
     "Community: Fab Four", "Community: Story of Your Life", "Community: The Do-Over",
     "Independent: Write Away", "Independent: Sensational", "Independent: Attachments",
     "Independent: \"Outlets\"", "Independent: Breathing the Body", "Independent: Other Side of the Door",
@@ -868,7 +868,15 @@ function adultWellnessLessonContent(unitId, lessonTitle) {
   }
   if (unitId === 3 && lessonTitle === "Independent: Flight, Fight or Freeze") {
     return [
-      { type: "audio", title: "Audio Clip", duration: "5:00", description: "A guided audio practice to use independently.", speaker: "Dr. Elena Ruiz", speakerBio: "Clinical psychologist specializing in stress response and resilience training." },
+      {
+        type: "audio",
+        title: "Managing Stress Through Mindfulness",
+        duration: "5:00",
+        description: "A guided audio practice to use independently.",
+        speaker: "Dina Nunziato",
+        speakerBio: "Director of Counseling & Psychological Services, Health & Wellness Center at Sarah Lawrence College",
+        speakerImage: "/dina-face.png",
+      },
       {
         type: "reflection",
         title: "Reflection",
@@ -1247,15 +1255,24 @@ function AudioReflectionLayout({ items }) {
       {audioItem && (
         <div className="rounded-2xl border border-brand-border bg-white p-5">
           <div className="flex items-start justify-between gap-4 mb-4">
-            <div className="min-w-0">
-              <p className="text-lg font-semibold leading-snug" style={{ color: "#2A7F8F" }}>
-                {audioItem.title}
-              </p>
-              {audioItem.speaker && (
-                <p className="text-xs text-brand-subtext mt-1 leading-relaxed">
-                  Guided by <span className="font-medium text-brand-text">{audioItem.speaker}</span> — {audioItem.speakerBio}
-                </p>
+            <div className="min-w-0 flex items-start gap-3">
+              {audioItem.speakerImage && (
+                <img
+                  src={audioItem.speakerImage}
+                  alt={audioItem.speaker}
+                  className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                />
               )}
+              <div className="min-w-0">
+                <p className="text-lg font-semibold leading-snug" style={{ color: "#2A7F8F" }}>
+                  {audioItem.title}
+                </p>
+                {audioItem.speaker && (
+                  <p className="text-xs text-brand-subtext mt-1 leading-relaxed">
+                    Guided by <span className="font-medium text-brand-text">{audioItem.speaker}</span> — {audioItem.speakerBio}
+                  </p>
+                )}
+              </div>
             </div>
             <span className="flex items-center gap-1 text-xs text-brand-subtext flex-shrink-0">
               <Clock size={11} />{audioItem.duration}
@@ -2961,6 +2978,9 @@ export default function LessonView({ onBookmark }) {
   const [expandedUnit, setExpandedUnit] = useState(
     isTier2EE ? 9 : isAdultWellness ? 1 : isFamily ? 1 : isGrade2 ? 31 : 5,
   );
+  // Scoped to Adult Wellness Unit 4 ("Reflect, Reset & Recharge") only —
+  // which subfolder (Community/Independent) is expanded in the sidebar.
+  const [expandedSubfolder, setExpandedSubfolder] = useState(null);
   const [selectedLesson, setSelectedLesson] = useState(
     isTier2EE
       ? { unitId: 9, lessonIndex: 0 }
@@ -3156,43 +3176,120 @@ export default function LessonView({ onBookmark }) {
                         className="overflow-hidden"
                       >
                         <div className="mr-3 mb-1">
-                          {unit.sub.map((item, i) => {
-                            const isSelectedLesson =
-                              selectedLesson.unitId === unit.id &&
-                              selectedLesson.lessonIndex === i;
-                            return (
-                              <div key={item}>
-                                <button
-                                  onClick={() => handleSelectLesson(unit.id, i)}
-                                  className={`w-full flex items-center justify-between py-2.5 text-left transition-colors ${isSelectedLesson ? "bg-mtw-amberLight rounded-lg" : "hover:bg-brand-bg"}`}
-                                  style={{
-                                    paddingLeft: "56px",
-                                    paddingRight: "8px",
-                                  }}
-                                >
-                                  <span
-                                    className={`text-sm ${isSelectedLesson ? "font-semibold text-brand-text" : "text-brand-text"}`}
+                          {unit.groupSubfolders ? (
+                            ["Community", "Independent"].map((folderName) => {
+                              const folderItems = unit.sub
+                                .map((item, i) => ({ item, i }))
+                                .filter(({ item }) => item.startsWith(`${folderName}:`));
+                              const isFolderExpanded = expandedSubfolder === folderName;
+                              return (
+                                <div key={folderName}>
+                                  <button
+                                    onClick={() =>
+                                      setExpandedSubfolder(isFolderExpanded ? null : folderName)
+                                    }
+                                    className="w-full flex items-center gap-2 py-2.5 text-left transition-colors hover:bg-brand-bg"
+                                    style={{ paddingLeft: "40px", paddingRight: "8px" }}
                                   >
-                                    {item.replace(/^(Community|Independent):\s*/, "")}
-                                  </span>
-                                  {unit.completed ? (
-                                    <CheckCircle2
-                                      size={18}
-                                      className="flex-shrink-0 text-dessa-teal"
+                                    <span className="flex-1 text-sm text-brand-text">
+                                      {folderName} Exercises
+                                    </span>
+                                    <ChevronDown
+                                      size={12}
+                                      className={`flex-shrink-0 text-brand-subtext transition-transform duration-200 ${isFolderExpanded ? "" : "-rotate-90"}`}
                                     />
-                                  ) : (
-                                    <Circle
-                                      size={18}
-                                      className={`flex-shrink-0 ${isSelectedLesson ? "text-mtw-amber" : "text-brand-border"}`}
-                                    />
+                                  </button>
+                                  <AnimatePresence initial={false}>
+                                    {isFolderExpanded && (
+                                      <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.18, ease: "easeInOut" }}
+                                        className="overflow-hidden"
+                                      >
+                                        {folderItems.map(({ item, i }, idx) => {
+                                          const isSelectedLesson =
+                                            selectedLesson.unitId === unit.id &&
+                                            selectedLesson.lessonIndex === i;
+                                          return (
+                                            <div key={item}>
+                                              <button
+                                                onClick={() => handleSelectLesson(unit.id, i)}
+                                                className={`w-full flex items-center justify-between py-2.5 text-left transition-colors ${isSelectedLesson ? "bg-mtw-amberLight rounded-lg" : "hover:bg-brand-bg"}`}
+                                                style={{
+                                                  paddingLeft: "72px",
+                                                  paddingRight: "8px",
+                                                }}
+                                              >
+                                                <span
+                                                  className={`text-sm ${isSelectedLesson ? "font-semibold text-brand-text" : "text-brand-text"}`}
+                                                >
+                                                  {item.replace(/^(Community|Independent):\s*/, "")}
+                                                </span>
+                                                {unit.completed ? (
+                                                  <CheckCircle2
+                                                    size={18}
+                                                    className="flex-shrink-0 text-dessa-teal"
+                                                  />
+                                                ) : (
+                                                  <Circle
+                                                    size={18}
+                                                    className={`flex-shrink-0 ${isSelectedLesson ? "text-mtw-amber" : "text-brand-border"}`}
+                                                  />
+                                                )}
+                                              </button>
+                                              {idx < folderItems.length - 1 && (
+                                                <div className="border-t border-brand-border" />
+                                              )}
+                                            </div>
+                                          );
+                                        })}
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            unit.sub.map((item, i) => {
+                              const isSelectedLesson =
+                                selectedLesson.unitId === unit.id &&
+                                selectedLesson.lessonIndex === i;
+                              return (
+                                <div key={item}>
+                                  <button
+                                    onClick={() => handleSelectLesson(unit.id, i)}
+                                    className={`w-full flex items-center justify-between py-2.5 text-left transition-colors ${isSelectedLesson ? "bg-mtw-amberLight rounded-lg" : "hover:bg-brand-bg"}`}
+                                    style={{
+                                      paddingLeft: "56px",
+                                      paddingRight: "8px",
+                                    }}
+                                  >
+                                    <span
+                                      className={`text-sm ${isSelectedLesson ? "font-semibold text-brand-text" : "text-brand-text"}`}
+                                    >
+                                      {item.replace(/^(Community|Independent):\s*/, "")}
+                                    </span>
+                                    {unit.completed ? (
+                                      <CheckCircle2
+                                        size={18}
+                                        className="flex-shrink-0 text-dessa-teal"
+                                      />
+                                    ) : (
+                                      <Circle
+                                        size={18}
+                                        className={`flex-shrink-0 ${isSelectedLesson ? "text-mtw-amber" : "text-brand-border"}`}
+                                      />
+                                    )}
+                                  </button>
+                                  {i < unit.sub.length - 1 && (
+                                    <div className="border-t border-brand-border" />
                                   )}
-                                </button>
-                                {i < unit.sub.length - 1 && (
-                                  <div className="border-t border-brand-border" />
-                                )}
-                              </div>
-                            );
-                          })}
+                                </div>
+                              );
+                            })
+                          )}
                         </div>
                       </motion.div>
                     )}
