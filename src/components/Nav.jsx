@@ -8,6 +8,7 @@ const navItems = [
   { label: 'Curriculum', to: '/mtw' },
   { label: 'DCE Report',             to: '/report1c' },
   { label: 'Site Engagement',          to: '/report2' },
+  { label: 'Settings', to: '/settings' },
   { label: 'Brand Guide', to: '/brand' },
 ]
 
