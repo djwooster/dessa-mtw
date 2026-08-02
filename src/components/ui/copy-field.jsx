@@ -3,7 +3,7 @@ import { Copy, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '../../lib/utils'
 
-export function CopyField({ value, className }) {
+export function CopyField({ value, className, variant = 'boxed' }) {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
@@ -15,6 +15,21 @@ export function CopyField({ value, className }) {
     setCopied(true)
     toast.success('Copied to clipboard')
     setTimeout(() => setCopied(false), 1500)
+  }
+
+  if (variant === 'bare') {
+    return (
+      <div className={cn('inline-flex items-center gap-2', className)}>
+        <span className="text-xs font-mono text-brand-text whitespace-nowrap">{value}</span>
+        <button
+          onClick={handleCopy}
+          aria-label="Copy"
+          className="flex-shrink-0 p-1 rounded text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors"
+        >
+          {copied ? <Check size={13} className="text-dessa-teal" /> : <Copy size={13} />}
+        </button>
+      </div>
+    )
   }
 
   return (

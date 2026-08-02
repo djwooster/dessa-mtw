@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table'
 import { CopyField } from '../../components/ui/copy-field'
 import { schools, SITE_LEADER_SCHOOL, getSiteJoinUrl } from '../../lib/familyAccessData'
 
@@ -29,18 +30,26 @@ export default function FamilyAccessCodes({ role }) {
         </p>
       </div>
       <div className="px-6 py-3">
-        <div className="flex items-center justify-between px-1 pb-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">Site</span>
-          <span className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">Registration link</span>
-        </div>
-        <div className="divide-y divide-brand-border">
-          {schools.map((school) => (
-            <div key={school.id} className="flex items-center justify-between py-1.5">
-              <span className="text-sm text-brand-text">{school.name}</span>
-              <CopyField value={getSiteJoinUrl(school)} />
-            </div>
-          ))}
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="h-8 px-3 text-sm text-brand-text normal-case tracking-normal">Site</TableHead>
+              <TableHead className="h-8 px-3 text-sm text-brand-text normal-case tracking-normal text-right">Registration link</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {schools.map((school) => (
+              <TableRow key={school.id}>
+                <TableCell className="px-3 py-2 text-sm whitespace-nowrap">{school.name}</TableCell>
+                <TableCell className="px-3 py-2">
+                  <div className="flex justify-end">
+                    <CopyField value={getSiteJoinUrl(school)} variant="bare" />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     </>
   )
