@@ -1,6 +1,27 @@
-import { schools } from './report2Data'
+const PLACE_WORDS = [
+  'River', 'Oak', 'Summit', 'Cedar', 'Maple', 'Pine', 'Valley', 'Sunset', 'Meadow', 'Lake',
+  'Hill', 'West', 'North', 'East', 'Creek', 'Fair', 'Heritage', 'Franklin', 'Spring', 'Autumn',
+  'Winter', 'Summer', 'Green', 'Blue', 'Silver', 'Gold', 'Stone', 'Birch', 'Elm', 'Willow',
+  'Fox', 'Deer', 'Iron', 'Copper', 'Crystal', 'Ash', 'Cherry', 'Chestnut', 'Walnut', 'Magnolia',
+  'Laurel', 'Ivy', 'Rose', 'Juniper', 'Cypress', 'Redwood', 'Aspen', 'Poplar', 'Sycamore', 'Hazel',
+]
+const SUFFIX_WORDS = ['side', 'wood', 'brook', 'field', 'view', 'ridge', 'grove', 'park', 'dale', 'ford']
+const TYPES = ['Elementary', 'Middle', 'High', 'Academy']
 
-export { schools }
+// Deterministic, unique fictitious site names — cycles type fastest, then suffix, then place,
+// so nearby entries read as related ("Riverside Elementary", "Riverside Middle", ...).
+function generateSchools(count) {
+  const result = []
+  for (let i = 0; i < count; i++) {
+    const type = TYPES[i % TYPES.length]
+    const suffix = SUFFIX_WORDS[Math.floor(i / TYPES.length) % SUFFIX_WORDS.length]
+    const place = PLACE_WORDS[Math.floor(i / (TYPES.length * SUFFIX_WORDS.length)) % PLACE_WORDS.length]
+    result.push({ id: i + 1, name: `${place}${suffix} ${type}` })
+  }
+  return result
+}
+
+export const schools = generateSchools(150)
 
 export const SITE_LEADER_SCHOOL = schools[0]
 

@@ -90,10 +90,7 @@ export default function CurriculumSetup() {
 
     <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
       <div className="p-6 pb-0">
-        <h1 className="text-2xl font-semibold text-brand-text mb-1">Family Access</h1>
-        <p className="text-sm text-brand-subtext mb-4">
-          Give families the tools to register for MTW Family curriculum on their own account.
-        </p>
+        <h1 className="text-2xl font-semibold text-brand-text mb-4">Family Access</h1>
         <div className="flex items-center gap-5 border-b border-brand-border">
           {FAMILY_ACCESS_TABS.map((t) => (
             <button
