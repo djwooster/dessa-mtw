@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { ArrowUp, ArrowDown, ArrowUpDown, Search, X } from 'lucide-react'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table'
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext,
@@ -29,12 +29,18 @@ export default function FamilyAccessCodes({ role }) {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [sortDir, setSortDir] = useState('asc')
+  const [search, setSearch] = useState('')
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return q ? schools.filter((s) => s.name.toLowerCase().includes(q)) : schools
+  }, [search])
 
   const sorted = useMemo(
-    () => [...schools].sort((a, b) =>
+    () => [...filtered].sort((a, b) =>
       sortDir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
     ),
-    [sortDir]
+    [filtered, sortDir]
   )
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
@@ -42,7 +48,7 @@ export default function FamilyAccessCodes({ role }) {
   const rangeStart = sorted.length === 0 ? 0 : (page - 1) * pageSize + 1
   const rangeEnd = Math.min(page * pageSize, sorted.length)
 
-  useEffect(() => { setPage(1) }, [pageSize, sortDir])
+  useEffect(() => { setPage(1) }, [pageSize, sortDir, search])
 
   if (role === 'site_leader') {
     return (
@@ -63,12 +69,32 @@ export default function FamilyAccessCodes({ role }) {
 
   return (
     <>
-      <div className="bg-brand-bg px-6 py-4">
-        <p className="text-sm font-semibold text-brand-text">Registration links</p>
-        <p className="text-sm text-brand-subtext mt-0.5">
-          Every site in your district has its own link — families use it during registration to connect to the right site.
-          Site Leaders only see the link for their own site.
-        </p>
+      <div className="bg-brand-bg px-6 py-4 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-brand-text">Registration links</p>
+          <p className="text-sm text-brand-subtext mt-0.5">
+            Every site in your district has its own link — families use it during registration to connect to the right site.
+            Site Leaders only see the link for their own site.
+          </p>
+        </div>
+        <div className="relative flex-shrink-0">
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search schools…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-7 pr-6 h-8 text-xs border border-brand-border rounded-md bg-white w-52 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
       </div>
       <div className="px-6 py-3">
         <Table>
@@ -81,16 +107,24 @@ export default function FamilyAccessCodes({ role }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pagedSchools.map((school) => (
-              <TableRow key={school.id}>
-                <TableCell className="px-3 py-2 text-sm whitespace-nowrap">{school.name}</TableCell>
-                <TableCell className="px-3 py-2">
-                  <div className="flex justify-end">
-                    <CopyField value={getSiteJoinUrl(school)} variant="bare" />
-                  </div>
+            {pagedSchools.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={2} className="px-3 py-6 text-sm text-brand-subtext text-center">
+                  No sites match "{search}"
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              pagedSchools.map((school) => (
+                <TableRow key={school.id}>
+                  <TableCell className="px-3 py-2 text-sm whitespace-nowrap">{school.name}</TableCell>
+                  <TableCell className="px-3 py-2">
+                    <div className="flex justify-end">
+                      <CopyField value={getSiteJoinUrl(school)} variant="bare" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
 

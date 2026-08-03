@@ -35,6 +35,9 @@ import {
   Download,
   FileText,
   ExternalLink,
+  Info,
+  X,
+  PartyPopper,
 } from "lucide-react";
 
 const units = [
@@ -314,15 +317,9 @@ const units = [
   },
   {
     id: 25,
-    title: "Unit 25 — Setting Intentions",
+    title: "Unit 25 — Working Towards Goals",
     active: false,
-    sub: [
-      "Welcome Video!",
-      "What Do I Want?",
-      "The Intention Setter",
-      "Partner Share",
-      "Reflection",
-    ],
+    sub: ["Practice Your Path", "The Scoreboard", "Jinx!", "Power of Pause"],
   },
   {
     id: 26,
@@ -679,9 +676,9 @@ function familyLessonContent(grade, lessonTitle, unitTitle, lessonIndex) {
 // fall back to the generic template below.
 const earlyElementaryFacilitationGuides = {
   "Emoger #1: Tighten and Release": {
-    // Design comparison: top tab language switcher instead of the corner
-    // LanguagePicker used everywhere else — scoped to this lesson only.
-    topLanguageTabs: true,
+    // Overrides the course-level competency badge ("Self-Awareness") —
+    // this lesson specifically covers Self-Management.
+    competency: "Self-Management",
     skills: ["Emotional Management", "Impulse Control", "Stress Management"],
     objective: "Identify how we can use the emotional management strategy: Tighten and Release.",
     activityBody:
@@ -1241,7 +1238,40 @@ function MultiVideoPlayer({
 
 // One-off layout for "Independent: Flight, Fight or Freeze" — a compact audio
 // player stacked above a reflection prompt, instead of the tabbed media switcher.
-function AudioReflectionLayout({ items }) {
+// Explains what "Community" (group facilitation) vs. "Independent" (self-
+// guided) means for an Adult Wellness lesson — replaces the old top-right
+// pill, which only labeled the distinction without explaining it, and which
+// would otherwise collide with a competency pill in that same corner.
+function PracticeTypeCallout({ isCommunity }) {
+  return (
+    <div
+      className="flex items-start gap-3 rounded-lg border p-4"
+      style={
+        isCommunity
+          ? { background: "rgba(232,101,58,0.08)", borderColor: "rgba(232,101,58,0.25)" }
+          : { background: "rgba(42,127,143,0.08)", borderColor: "rgba(42,127,143,0.25)" }
+      }
+    >
+      {isCommunity ? (
+        <Users size={18} className="shrink-0 mt-0.5" style={{ color: "#E8653A" }} />
+      ) : (
+        <User size={18} className="shrink-0 mt-0.5 text-dessa-teal" />
+      )}
+      <div className="flex flex-col gap-1.5">
+        <h3 className="text-base font-bold text-dessa-navy leading-snug">
+          {isCommunity ? "Group Exercise" : "Independent Practice"}
+        </h3>
+        <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>
+          {isCommunity
+            ? "Facilitate this activity live with your team or classroom — it's designed for group discussion and shared reflection."
+            : "Complete this on your own, at your own pace — no facilitation needed, just press play whenever it fits your day."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AudioReflectionLayout({ items, isCommunity, isIndependent }) {
   const audioItem = items.find((it) => it.type === "audio");
   const reflectionItem = items.find((it) => it.type === "reflection");
   const [audioPlaying, setAudioPlaying] = useState(false);
@@ -1323,6 +1353,8 @@ function AudioReflectionLayout({ items }) {
         </div>
       )}
 
+      {(isCommunity || isIndependent) && <PracticeTypeCallout isCommunity={isCommunity} />}
+
       {reflectionItem && reflectionItem.image ? (
         <div>
           <h2 className="text-xl font-semibold text-brand-text mb-4">{reflectionItem.title}</h2>
@@ -1385,7 +1417,7 @@ function AudioReflectionLayout({ items }) {
 
 // One-off layout for "Independent: Breathe Easier" — a notes section (synopsis
 // + tips) stacked above the video player, instead of the tabbed media switcher.
-function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen }) {
+function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen, isCommunity, isIndependent }) {
   const notesItem = items.find((it) => it.type === "notes");
   const videoItem = items.find((it) => it.type === "video");
   return (
@@ -1406,6 +1438,8 @@ function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen 
           <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
         </div>
       )}
+
+      {(isCommunity || isIndependent) && <PracticeTypeCallout isCommunity={isCommunity} />}
 
       {notesItem && (
         <div>
@@ -1436,13 +1470,17 @@ function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen 
 // Shared video card for Family lessons — swaps between the English and
 // Spanish video (or the same Stornaway video, relabeled) based on the
 // current language selection.
-function FamilyVideoCard({ englishVideo, spanishVideo, language, langOpen, setLanguage, setLangOpen }) {
+function FamilyVideoCard({ englishVideo, spanishVideo, language, langOpen, setLanguage, setLangOpen, onPlay }) {
   const video = language === "Spanish" ? spanishVideo : englishVideo;
   return (
     <div className="rounded-2xl overflow-hidden border border-brand-border relative" style={{ height: "460px", background: "#1B2B4B" }}>
       <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
-        <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
+        <button
+          onClick={onPlay}
+          className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg"
+          style={{ background: "#2A7F8F" }}
+        >
           <Play size={16} fill="white" className="text-white ml-0.5" />
         </button>
         <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{video.title}</p>
@@ -1452,45 +1490,6 @@ function FamilyVideoCard({ englishVideo, spanishVideo, language, langOpen, setLa
         <Clock size={11} />{video.duration}
       </div>
       <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
-    </div>
-  );
-}
-
-// Alternate to FamilyVideoCard for design comparison on one lesson
-// (Emoger #1: Tighten and Release) — English/Spanish switcher as tabs above
-// the video instead of the floating corner language picker.
-function FamilyVideoCardTopTabs({ englishVideo, spanishVideo, language, setLanguage }) {
-  const video = language === "Spanish" ? spanishVideo : englishVideo;
-  return (
-    <div>
-      <div className="flex items-center gap-1 mb-3 border-b border-brand-border">
-        {["English", "Spanish"].map((lang) => (
-          <button
-            key={lang}
-            onClick={() => setLanguage(lang)}
-            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
-              language === lang
-                ? "border-dessa-teal text-dessa-teal"
-                : "border-transparent text-brand-subtext hover:text-brand-text"
-            }`}
-          >
-            {lang === "Spanish" ? "Español" : lang}
-          </button>
-        ))}
-      </div>
-      <div className="rounded-2xl overflow-hidden border border-brand-border relative" style={{ height: "460px", background: "#1B2B4B" }}>
-        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
-          <button className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg" style={{ background: "#2A7F8F" }}>
-            <Play size={16} fill="white" className="text-white ml-0.5" />
-          </button>
-          <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{video.title}</p>
-          <p className="text-white/50 leading-relaxed" style={{ fontSize: "14px" }}>{video.description}</p>
-        </div>
-        <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
-          <Clock size={11} />{video.duration}
-        </div>
-      </div>
     </div>
   );
 }
@@ -1544,6 +1543,118 @@ function FamilyTipCards({ items }) {
   );
 }
 
+// AP-4893 — Stornaway videos can't auto-track completion, so Stornaway-flagged
+// Family lessons (Middle School / High School) need an explicit prompt telling
+// educators they must click "Mark as complete" themselves. Two review
+// concepts, switchable via a small demo-only toggle (not real product chrome):
+//   C — post-video nudge modal
+//   D — exit-intent modal (intercepts leaving the lesson before it's marked complete)
+function StornawayCompletionPrompt({ showCompletion, setShowCompletion, watched, concept, setConcept }) {
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    if (concept === "C" && watched && !showCompletion) setShowModal(true);
+  }, [concept, watched, showCompletion]);
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-brand-subtext">
+          Design review — concept
+        </span>
+        <div className="flex items-center gap-1">
+          {["C", "D"].map((c) => (
+            <button
+              key={c}
+              onClick={() => setConcept(c)}
+              className={`w-6 h-6 rounded text-xs font-semibold transition-colors ${
+                concept === c ? "bg-brand-text text-white" : "bg-brand-bg text-brand-subtext hover:text-brand-text"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {concept === "D" && !showCompletion && (
+        <p className="flex items-center gap-1.5 text-xs text-brand-subtext">
+          <Info size={12} className="flex-shrink-0" style={{ color: "#F5A623" }} />
+          This video can't automatically track completion — you'll be asked to confirm before you leave this lesson.
+        </p>
+      )}
+      {concept === "D" && showCompletion && (
+        <div
+          className="rounded-xl border p-4 flex items-center gap-2.5"
+          style={{ borderColor: "rgba(42,127,143,0.3)", background: "rgba(42,127,143,0.06)" }}
+        >
+          <Check size={16} className="text-dessa-teal flex-shrink-0" />
+          <p className="text-sm font-medium text-brand-text">Lesson marked complete</p>
+        </div>
+      )}
+
+      {concept === "C" && !showCompletion && (
+        <div
+          className="rounded-xl border p-4 flex items-start gap-3"
+          style={{ background: "#FEF3DC", borderColor: "rgba(245,166,35,0.35)" }}
+        >
+          <Info size={18} className="flex-shrink-0 mt-0.5" style={{ color: "#F5A623" }} />
+          <p className="text-brand-text leading-relaxed" style={{ fontSize: "14px" }}>
+            Press play above — once you finish watching, we'll remind you to mark this lesson complete.
+          </p>
+        </div>
+      )}
+      {concept === "C" && showCompletion && (
+        <div className="rounded-xl border p-4 flex items-center gap-2.5" style={{ borderColor: "rgba(42,127,143,0.3)", background: "rgba(42,127,143,0.06)" }}>
+          <Check size={16} className="text-dessa-teal flex-shrink-0" />
+          <p className="text-sm font-medium text-brand-text">Lesson marked complete</p>
+        </div>
+      )}
+
+      <AnimatePresence>
+        {concept === "C" && showModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.97 }}
+              className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 relative"
+            >
+              <button
+                onClick={() => setShowModal(false)}
+                className="absolute top-4 right-4 text-brand-subtext hover:text-brand-text"
+                aria-label="Dismiss"
+              >
+                <X size={16} />
+              </button>
+              <PartyPopper size={40} style={{ color: "#F5A623" }} className="mb-3" />
+              <h3 className="text-lg font-semibold text-brand-text mb-1.5">Nice work!</h3>
+              <p className="text-sm text-brand-subtext leading-relaxed mb-5">
+                This video can't automatically track completion — don't forget to mark this lesson complete to get
+                credit.
+              </p>
+              <button
+                onClick={() => {
+                  setShowCompletion(true);
+                  setShowModal(false);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors"
+              >
+                Mark this lesson complete
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // Family SEL competency lesson — Facilitation Guide (broken-out web
 // sections) above an English/Spanish video, with an optional Supplemental
 // Materials list (Emotional Building Blocks).
@@ -1551,7 +1662,19 @@ function FamilyTipCards({ items }) {
 // "At Home Tips", "Continuing the Conversation" — transcribed from the
 // source PDFs) or the older generic template ("Before You Begin" tips),
 // depending on which fields are present on `item`.
-function FamilyFacilitationLayout({ item, language, langOpen, setLanguage, setLangOpen }) {
+function FamilyFacilitationLayout({
+  item,
+  language,
+  langOpen,
+  setLanguage,
+  setLangOpen,
+  showCompletion,
+  setShowCompletion,
+  stornawayConcept,
+  setStornawayConcept,
+  stornawayWatched,
+  onPlayStornaway,
+}) {
   const useEs = language === "Spanish" && item.es;
   const es = item.es;
   const activityTitle = useEs ? es.activityTitle ?? item.activityTitle : item.activityTitle;
@@ -1568,24 +1691,26 @@ function FamilyFacilitationLayout({ item, language, langOpen, setLanguage, setLa
     ? es.continuingConversationHeading ?? "Continuing the Conversation"
     : "Continuing the Conversation";
   const continuingConversation = useEs ? es.continuingConversation ?? item.continuingConversation : item.continuingConversation;
+
   return (
     <div>
       <div className="mb-7">
-        {item.topLanguageTabs ? (
-          <FamilyVideoCardTopTabs
-            englishVideo={item.englishVideo}
-            spanishVideo={item.spanishVideo}
-            language={language}
-            setLanguage={setLanguage}
-          />
-        ) : (
-          <FamilyVideoCard
-            englishVideo={item.englishVideo}
-            spanishVideo={item.spanishVideo}
-            language={language}
-            langOpen={langOpen}
-            setLanguage={setLanguage}
-            setLangOpen={setLangOpen}
+        <FamilyVideoCard
+          englishVideo={item.englishVideo}
+          spanishVideo={item.spanishVideo}
+          language={language}
+          langOpen={langOpen}
+          setLanguage={setLanguage}
+          setLangOpen={setLangOpen}
+          onPlay={onPlayStornaway}
+        />
+        {item.stornaway && (
+          <StornawayCompletionPrompt
+            showCompletion={showCompletion}
+            setShowCompletion={setShowCompletion}
+            watched={stornawayWatched}
+            concept={stornawayConcept}
+            setConcept={setStornawayConcept}
           />
         )}
       </div>
@@ -2159,6 +2284,28 @@ const skills = [
   "Community Building",
   "Active Listening",
 ];
+
+// "Practice Your Path" — column-layout example: Skills + Expectations tags
+// (two columns only), Objective moved below as its own full-width section
+// rather than a third column.
+const practiceYourPathSkills = [
+  "Problem Solving",
+  "Goal Setting",
+  "Self-Reflection",
+  "Growth Mindset",
+  "Perseverance",
+  "Action Planning",
+];
+const practiceYourPathExpectations = [
+  "Analyze situations and set achievable goals",
+  "Identify obstacles and plan around them",
+  "Reflect on personal strengths",
+  "Practice self-monitoring",
+  "Celebrate small wins",
+  "Adjust plans when needed",
+];
+const practiceYourPathObjective =
+  "Identify a personal goal we would like to achieve based on our interests or skills. Describe action steps and strategies we can use to reach our goal.";
 
 const tips = [
   "Introduce yourself and set a warm, welcoming tone before pressing play",
@@ -2997,6 +3144,10 @@ export default function LessonView({ onBookmark }) {
   const [bookmarked, setBookmarked] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
+  const [stornawayConcept, setStornawayConcept] = useState("C");
+  const [stornawayWatched, setStornawayWatched] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [pendingNavigate, setPendingNavigate] = useState(null);
   const [showInactive, setShowInactive] = useState(true);
   const [language, setLanguage] = useState("English");
   const [langOpen, setLangOpen] = useState(false);
@@ -3018,6 +3169,10 @@ export default function LessonView({ onBookmark }) {
     });
   }, []);
 
+
+  useEffect(() => {
+    setStornawayWatched(false);
+  }, [selectedLesson]);
 
   useEffect(() => {
     const el = mainRef.current;
@@ -3051,6 +3206,33 @@ export default function LessonView({ onBookmark }) {
     selectedLesson.unitId === 2 && selectedLesson.lessonIndex === 1;
   const isMindfulMinute =
     selectedLesson.unitId === 5 && selectedLesson.lessonIndex === 3;
+  // AP-4893 — "Practice Your Path" uses a Stornaway interactive video, same as
+  // the Family MS/HS lessons; needs the same manual-completion prompt.
+  const isPracticeYourPath =
+    selectedLesson.unitId === 25 && selectedLesson.lessonIndex === 0;
+  const currentFamilyItem = isFamily
+    ? familyLessonContent(
+        course?.grade,
+        activeUnit?.sub[selectedLesson.lessonIndex] ?? "Welcome Guide",
+        activeUnit?.title,
+        selectedLesson.lessonIndex,
+      )
+    : null;
+  const isStornawayLesson = isPracticeYourPath || !!currentFamilyItem?.stornaway;
+
+  function handleStornawayPlay() {
+    setTimeout(() => setStornawayWatched(true), 1200);
+  }
+
+  // Concept D — intercept navigation away from an unmarked Stornaway lesson.
+  function attemptLeave(action) {
+    if (isStornawayLesson && stornawayConcept === "D" && !showCompletion) {
+      setPendingNavigate(() => action);
+      setShowLeaveModal(true);
+    } else {
+      action();
+    }
+  }
 
   const activePoPTheme = isPowerOfPause
     ? (powerOfPauseThemes[selectedLesson.lessonIndex] ?? powerOfPauseThemes[0])
@@ -3058,11 +3240,18 @@ export default function LessonView({ onBookmark }) {
   const activePoPVid = activePoPTheme?.videos[activePoPVideo] ?? null;
 
   const handleSelectLesson = (unitId, lessonIndex) => {
-    setSelectedLesson({ unitId, lessonIndex });
-    setActiveVideo(0);
-    setActivePoPVideo(0);
-    setActiveContent("video");
-    setBookmarked(false);
+    const doSelect = () => {
+      setSelectedLesson({ unitId, lessonIndex });
+      setActiveVideo(0);
+      setActivePoPVideo(0);
+      setActiveContent("video");
+      setBookmarked(false);
+    };
+    if (unitId === selectedLesson.unitId && lessonIndex === selectedLesson.lessonIndex) {
+      doSelect();
+      return;
+    }
+    attemptLeave(doSelect);
   };
 
   const handleBookmark = () => {
@@ -3090,7 +3279,7 @@ export default function LessonView({ onBookmark }) {
       >
         <div className="px-4 py-4 border-b border-brand-border flex items-center justify-between">
           <button
-            onClick={() => navigate("/mtw")}
+            onClick={() => attemptLeave(() => navigate("/mtw"))}
             className="flex items-center gap-1.5 text-sm font-medium transition-colors" style={{ color: "#0f6cbd" }}
           >
             <ChevronLeft size={14} />
@@ -3546,67 +3735,47 @@ export default function LessonView({ onBookmark }) {
         ) : isAudioLibrary ? (
           <AudioLibraryView grade={grade} />
         ) : isAdultWellness ? (
-          <div className="max-w-[62rem] mx-auto px-8 py-7">
-            {(() => {
-              const rawTitle = activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide";
-              const isCommunity = rawTitle.startsWith("Community:");
-              const isIndependent = rawTitle.startsWith("Independent:");
-              const displayTitle = isCommunity || isIndependent
-                ? rawTitle.replace(/^(Community|Independent):\s*/, "")
-                : rawTitle;
-              return (
-                <div className="flex items-end justify-between gap-6 mb-5">
-                  <div>
-                    <p className="flex items-center gap-1 text-xs font-semibold tracking-wide text-brand-subtext mb-1">
-                      {grade}
-                      {activeUnit?.title && (
-                        <>
-                          <ChevronRight size={11} className="flex-shrink-0" />
-                          {activeUnit.title}
-                        </>
-                      )}
-                    </p>
-                    <h1 className="text-2xl font-semibold text-brand-text">
-                      {displayTitle}
-                    </h1>
-                  </div>
-                  {(isCommunity || isIndependent) && (
-                    <span
-                      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0"
-                      style={
-                        isCommunity
-                          ? { background: "#FDECE5", color: "#E8653A" }
-                          : { background: "#E9F4FC", color: "#2A7F8F" }
-                      }
-                    >
-                      {isCommunity ? <Users size={12} /> : <User size={12} />}
-                      {isCommunity ? "Group Exercise" : "Independent Practice"}
-                    </span>
-                  )}
+          (() => {
+            const rawTitle = activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide";
+            const isCommunity = rawTitle.startsWith("Community:");
+            const isIndependent = rawTitle.startsWith("Independent:");
+            const displayTitle = isCommunity || isIndependent
+              ? rawTitle.replace(/^(Community|Independent):\s*/, "")
+              : rawTitle;
+            const items = adultWellnessLessonContent(activeUnit?.id, rawTitle);
+            const hasAudio = items.some((it) => it.type === "audio");
+            return (
+              <div className="max-w-[62rem] mx-auto px-8 py-7">
+                <div className="mb-5">
+                  <p className="flex items-center gap-1 text-xs font-semibold tracking-wide text-brand-subtext mb-1">
+                    {grade}
+                    {activeUnit?.title && (
+                      <>
+                        <ChevronRight size={11} className="flex-shrink-0" />
+                        {activeUnit.title}
+                      </>
+                    )}
+                  </p>
+                  <h1 className="text-2xl font-semibold text-brand-text">
+                    {displayTitle}
+                  </h1>
                 </div>
-              );
-            })()}
-            {(() => {
-              const items = adultWellnessLessonContent(
-                activeUnit?.id,
-                activeUnit?.sub[selectedLesson.lessonIndex] ?? "Getting Started Guide",
-              );
-              const hasAudio = items.some((it) => it.type === "audio");
-
-              if (hasAudio) {
-                return <AudioReflectionLayout items={items} />;
-              }
-              return (
-                <NotesVideoLayout
-                  items={items}
-                  language={language}
-                  langOpen={langOpen}
-                  setLanguage={setLanguage}
-                  setLangOpen={setLangOpen}
-                />
-              );
-            })()}
-          </div>
+                {hasAudio ? (
+                  <AudioReflectionLayout items={items} isCommunity={isCommunity} isIndependent={isIndependent} />
+                ) : (
+                  <NotesVideoLayout
+                    items={items}
+                    language={language}
+                    langOpen={langOpen}
+                    setLanguage={setLanguage}
+                    setLangOpen={setLangOpen}
+                    isCommunity={isCommunity}
+                    isIndependent={isIndependent}
+                  />
+                )}
+              </div>
+            );
+          })()
         ) : isFamily ? (
           <div className="max-w-[62rem] mx-auto px-8 py-7">
             {(() => {
@@ -3638,7 +3807,7 @@ export default function LessonView({ onBookmark }) {
                         className="text-xs font-semibold px-3 py-1.5 rounded-full flex-shrink-0"
                         style={{ background: "#FEF3DC", color: "#F5A623" }}
                       >
-                        {competency}
+                        {item.competency ?? competency}
                       </span>
                     )}
                   </div>
@@ -3676,6 +3845,12 @@ export default function LessonView({ onBookmark }) {
                       langOpen={langOpen}
                       setLanguage={setLanguage}
                       setLangOpen={setLangOpen}
+                      showCompletion={showCompletion}
+                      setShowCompletion={setShowCompletion}
+                      stornawayConcept={stornawayConcept}
+                      setStornawayConcept={setStornawayConcept}
+                      stornawayWatched={stornawayWatched}
+                      onPlayStornaway={handleStornawayPlay}
                     />
                   )}
                 </>
@@ -3836,6 +4011,9 @@ export default function LessonView({ onBookmark }) {
                       />
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
                         <button
+                          onClick={() => {
+                            if (isPracticeYourPath) handleStornawayPlay();
+                          }}
                           className="w-14 h-14 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg"
                           style={{ background: "#2A7F8F" }}
                         >
@@ -3846,7 +4024,7 @@ export default function LessonView({ onBookmark }) {
                           />
                         </button>
                         <p className="text-white/70 text-sm">
-                          Unit 1 — Welcome Video
+                          {isPracticeYourPath ? "Practice Your Path" : "Unit 1 — Welcome Video"}
                         </p>
                       </div>
                       <div
@@ -3863,6 +4041,15 @@ export default function LessonView({ onBookmark }) {
                         setLangOpen={setLangOpen}
                       />
                     </div>
+                    {isPracticeYourPath && (
+                      <StornawayCompletionPrompt
+                        showCompletion={showCompletion}
+                        setShowCompletion={setShowCompletion}
+                        watched={stornawayWatched}
+                        concept={stornawayConcept}
+                        setConcept={setStornawayConcept}
+                      />
+                    )}
                   </>
                 )}
 
@@ -4423,7 +4610,7 @@ export default function LessonView({ onBookmark }) {
                     <div>
                       <SectionLabel>Skills</SectionLabel>
                       <div className="flex flex-wrap gap-1.5 mt-2">
-                        {skills.map((skill) => (
+                        {(isPracticeYourPath ? practiceYourPathSkills : skills).map((skill) => (
                           <span
                             key={skill}
                             className="text-xs font-medium px-2.5 py-1 rounded-full border border-brand-border text-brand-text bg-white"
@@ -4433,15 +4620,39 @@ export default function LessonView({ onBookmark }) {
                         ))}
                       </div>
                     </div>
-                    <div>
+                    {isPracticeYourPath ? (
+                      <div>
+                        <SectionLabel>Expectations</SectionLabel>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {practiceYourPathExpectations.map((expectation) => (
+                            <span
+                              key={expectation}
+                              className="text-xs font-medium px-2.5 py-1 rounded-full border border-brand-border text-brand-text bg-white"
+                            >
+                              {expectation}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <SectionLabel>Objective</SectionLabel>
+                        <p className="text-brand-subtext leading-relaxed mt-2" style={{ fontSize: "15px" }}>
+                          Students are introduced to the Emoger characters and
+                          begin building a shared emotional vocabulary that will
+                          be used throughout the course.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {isPracticeYourPath && (
+                    <div className="mb-7">
                       <SectionLabel>Objective</SectionLabel>
                       <p className="text-brand-subtext leading-relaxed mt-2" style={{ fontSize: "15px" }}>
-                        Students are introduced to the Emoger characters and
-                        begin building a shared emotional vocabulary that will
-                        be used throughout the course.
+                        {practiceYourPathObjective}
                       </p>
                     </div>
-                  </div>
+                  )}
                   <Divider />
                 </>
               )}
@@ -4788,6 +4999,69 @@ export default function LessonView({ onBookmark }) {
           )}
         </AnimatePresence>
       )}
+
+      {/* AP-4893 Concept D — exit-intent modal, intercepts leaving an unmarked Stornaway lesson */}
+      <AnimatePresence>
+        {showLeaveModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.97 }}
+              className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6"
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center mb-3"
+                style={{ background: "#FEF3DC" }}
+              >
+                <Info size={18} style={{ color: "#F5A623" }} />
+              </div>
+              <h3 className="text-lg font-semibold text-brand-text mb-1.5">Mark this lesson complete?</h3>
+              <p className="text-sm text-brand-subtext leading-relaxed mb-5">
+                This video can't automatically track completion. If you leave now without marking it complete, you
+                won't get credit and may be sent back to finish it later.
+              </p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => {
+                    setShowCompletion(true);
+                    setShowLeaveModal(false);
+                    pendingNavigate?.();
+                    setPendingNavigate(null);
+                  }}
+                  className="w-full px-4 py-3 rounded-lg text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors"
+                >
+                  Mark complete and leave
+                </button>
+                <button
+                  onClick={() => {
+                    setShowLeaveModal(false);
+                    pendingNavigate?.();
+                    setPendingNavigate(null);
+                  }}
+                  className="w-full px-4 py-2.5 rounded-lg text-sm font-medium text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors"
+                >
+                  Leave without marking
+                </button>
+                <button
+                  onClick={() => {
+                    setShowLeaveModal(false);
+                    setPendingNavigate(null);
+                  }}
+                  className="w-full px-4 py-2 rounded-lg text-xs font-medium text-brand-subtext hover:text-brand-text transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
