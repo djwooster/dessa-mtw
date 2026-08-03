@@ -18,6 +18,7 @@ export default function CurriculumSetup() {
   const [tab, setTab] = useState('engagement')
   const [goal, setGoal] = useState(3)
   const [familyAccessTab, setFamilyAccessTab] = useState('codes')
+  const [isSiteLeaderView, setIsSiteLeaderView] = useState(false)
 
   return (
     <div className="flex flex-col gap-8">
@@ -90,7 +91,19 @@ export default function CurriculumSetup() {
 
     <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
       <div className="p-6 pb-0">
-        <h1 className="text-2xl font-semibold text-brand-text mb-4">Family Access</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-semibold text-brand-text">Family Access</h1>
+          <button
+            onClick={() => setIsSiteLeaderView((v) => !v)}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium text-brand-text border border-gray-300 transition-all ${
+              isSiteLeaderView
+                ? 'shadow-[inset_0_1px_3px_rgba(0,0,0,0.18)] bg-gradient-to-b from-gray-200 to-white'
+                : 'shadow-[0_1px_2px_rgba(0,0,0,0.08)] bg-gradient-to-b from-white to-gray-100 hover:from-gray-50 hover:to-gray-100'
+            }`}
+          >
+            Site Leader View
+          </button>
+        </div>
         <div className="flex items-center gap-5 border-b border-brand-border">
           {FAMILY_ACCESS_TABS.map((t) => (
             <button
@@ -109,7 +122,9 @@ export default function CurriculumSetup() {
       </div>
 
       {/* familyAccessTab === 'url' && <FamilyAccessUrl /> */}
-      {familyAccessTab === 'codes' && <FamilyAccessCodes role="program_admin" />}
+      {familyAccessTab === 'codes' && (
+        <FamilyAccessCodes role={isSiteLeaderView ? 'site_leader' : 'program_admin'} />
+      )}
     </div>
     </div>
   )
