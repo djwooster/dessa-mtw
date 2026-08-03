@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowUp, ArrowDown, ArrowUpDown, Search, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowUp, ArrowDown, ArrowUpDown, Search, X, MoreHorizontal, Download, ChevronDown } from 'lucide-react'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table'
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext,
@@ -25,11 +25,27 @@ function SiteSortHeader({ sortDir, onSort }) {
   )
 }
 
+function exportSitesCsv(siteList) {
+  const rows = [['Site', 'Registration Link'], ...siteList.map((s) => [s.name, getSiteJoinUrl(s)])]
+  const url = URL.createObjectURL(new Blob([rows.map((r) => r.join(',')).join('\n')], { type: 'text/csv' }))
+  Object.assign(document.createElement('a'), { href: url, download: 'family-access-registration-links.csv' }).click()
+  URL.revokeObjectURL(url)
+}
+
 export default function FamilyAccessCodes({ role }) {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [sortDir, setSortDir] = useState('asc')
   const [search, setSearch] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -45,8 +61,6 @@ export default function FamilyAccessCodes({ role }) {
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   const pagedSchools = sorted.slice((page - 1) * pageSize, page * pageSize)
-  const rangeStart = sorted.length === 0 ? 0 : (page - 1) * pageSize + 1
-  const rangeEnd = Math.min(page * pageSize, sorted.length)
 
   useEffect(() => { setPage(1) }, [pageSize, sortDir, search])
 
@@ -69,19 +83,21 @@ export default function FamilyAccessCodes({ role }) {
 
   return (
     <>
-      <div className="bg-brand-bg px-6 py-4 flex items-end justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-brand-text">Registration links</p>
-          <p className="text-sm text-brand-subtext mt-0.5">
-            Every site in your district has its own link — families use it during registration to connect to the right site.
-            Site Leaders only see the link for their own site.
-          </p>
-        </div>
-        <div className="relative flex-shrink-0">
+      <div className="bg-brand-bg px-6 py-4">
+        <p className="text-sm font-semibold text-brand-text">Registration links</p>
+        <p className="text-sm text-brand-subtext mt-0.5">
+          Every site in your district has its own link — families use it during registration to connect to the right site.
+          Site Leaders only see the link for their own site.
+        </p>
+      </div>
+
+      {/* Toolbar — search on the left, room for more actions/filters to the right of it */}
+      <div className="px-6 py-3 border-b border-brand-border flex items-center justify-between gap-4">
+        <div className="relative">
           <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
           <input
             type="text"
-            placeholder="Search schools…"
+            placeholder="Search sites…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-7 pr-6 h-8 text-xs border border-brand-border rounded-md bg-white w-52 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
@@ -95,7 +111,28 @@ export default function FamilyAccessCodes({ role }) {
             </button>
           )}
         </div>
+
+        <div className="relative flex-shrink-0" ref={menuRef}>
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex items-center justify-center w-8 h-8 rounded-md text-brand-text hover:bg-brand-bg transition-colors"
+          >
+            <MoreHorizontal size={14} />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-44 bg-white border border-brand-border rounded-lg z-20 overflow-hidden py-1 shadow-sm">
+              <button
+                onClick={() => { exportSitesCsv(sorted); setMenuOpen(false) }}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-brand-text hover:bg-brand-bg transition-colors"
+              >
+                <Download size={13} className="text-brand-subtext" />
+                Export as CSV
+              </button>
+            </div>
+          )}
+        </div>
       </div>
+
       <div className="px-6 py-3">
         <Table>
           <TableHeader>
@@ -128,38 +165,49 @@ export default function FamilyAccessCodes({ role }) {
           </TableBody>
         </Table>
 
-        <div className="flex items-center justify-between pt-3">
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-brand-subtext">
-              {sorted.length === 0 ? '0 sites' : `${rangeStart}–${rangeEnd} of ${sorted.length} sites`}
-            </span>
+        <div className="flex items-center justify-between pt-4">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="w-8 h-8 p-0 justify-center rounded-lg"
+                >
+                  {''}
+                </PaginationPrevious>
+              </PaginationItem>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <PaginationItem key={p}>
+                  <PaginationLink isActive={p === page} onClick={() => setPage(p)} className="w-9 h-9 rounded-lg">
+                    {p}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="w-8 h-8 p-0 justify-center rounded-lg"
+                >
+                  {''}
+                </PaginationNext>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+
+          <div className="relative">
             <select
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
-              className="text-xs border border-brand-border rounded-md bg-white px-2 py-1 text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+              className="appearance-none pl-3 pr-8 h-9 text-sm border border-brand-border rounded-md bg-white text-brand-text focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
             >
               {[10, 25, 50, 100].map((n) => (
-                <option key={n} value={n}>{n} per page</option>
+                <option key={n} value={n}>{n}</option>
               ))}
             </select>
+            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
           </div>
-          {totalPages > 1 && (
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} />
-                </PaginationItem>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <PaginationItem key={p}>
-                    <PaginationLink isActive={p === page} onClick={() => setPage(p)}>{p}</PaginationLink>
-                  </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
         </div>
       </div>
     </>

@@ -28,7 +28,7 @@ const PaginationLink = ({ className, isActive, disabled, ...props }) => (
   />
 )
 
-const PaginationPrevious = ({ className, ...props }) => (
+const PaginationPrevious = ({ className, children, ...props }) => (
   <button
     className={cn(
       'flex items-center gap-1.5 px-3 h-8 rounded-md text-xs text-brand-subtext hover:bg-brand-border/60 hover:text-brand-text transition-colors disabled:opacity-40 disabled:cursor-default',
@@ -37,11 +37,11 @@ const PaginationPrevious = ({ className, ...props }) => (
     {...props}
   >
     <ChevronLeft size={13} />
-    Previous
+    {children !== undefined ? children : 'Previous'}
   </button>
 )
 
-const PaginationNext = ({ className, ...props }) => (
+const PaginationNext = ({ className, children, ...props }) => (
   <button
     className={cn(
       'flex items-center gap-1.5 px-3 h-8 rounded-md text-xs text-brand-subtext hover:bg-brand-border/60 hover:text-brand-text transition-colors disabled:opacity-40 disabled:cursor-default',
@@ -49,7 +49,7 @@ const PaginationNext = ({ className, ...props }) => (
     )}
     {...props}
   >
-    Next
+    {children !== undefined ? children : 'Next'}
     <ChevronRight size={13} />
   </button>
 )
