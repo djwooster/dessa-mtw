@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { Info } from 'lucide-react'
 // import FamilyAccessUrl from './FamilyAccessUrl'
 import FamilyAccessCodes from './FamilyAccessCodes'
+import { SidePanel } from '../../components/ui/side-panel'
 
 const TABS = [
   { key: 'engagement', label: 'Engagement' },
@@ -19,8 +21,10 @@ export default function CurriculumSetup() {
   const [goal, setGoal] = useState(3)
   const [familyAccessTab, setFamilyAccessTab] = useState('codes')
   const [isSiteLeaderView, setIsSiteLeaderView] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   return (
+    <>
     <div className="flex flex-col gap-8">
     <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
       <div className="p-6 pb-0">
@@ -92,7 +96,16 @@ export default function CurriculumSetup() {
     <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
       <div className="p-6 pb-0">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-semibold text-brand-text">Family Access</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold text-brand-text">Family Access</h1>
+            <button
+              onClick={() => setHelpOpen(true)}
+              aria-label="About Family Access"
+              className="text-brand-subtext hover:text-brand-text transition-colors"
+            >
+              <Info size={17} />
+            </button>
+          </div>
           <button
             onClick={() => setIsSiteLeaderView((v) => !v)}
             className={`px-3 py-1.5 rounded-md text-xs font-medium text-brand-text border border-gray-300 transition-all ${
@@ -127,5 +140,53 @@ export default function CurriculumSetup() {
       )}
     </div>
     </div>
+
+    <SidePanel open={helpOpen} onClose={() => setHelpOpen(false)} title="About Family Access">
+      <div className="flex flex-col gap-6">
+        <div>
+          <h3 className="text-sm font-semibold text-brand-text mb-1.5">What is Family Access?</h3>
+          <p className="text-sm text-brand-subtext leading-relaxed">
+            Family Access gives families a way to create their own account and connect it to your
+            site, so they can complete supportive SEL activities at home with their student —
+            without sharing a single login across your whole district.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-brand-text mb-1.5">How families get access</h3>
+          <ol className="flex flex-col gap-3">
+            <li className="flex gap-2.5 text-sm text-brand-subtext leading-relaxed">
+              <span className="font-semibold text-brand-text">1.</span>
+              Share the registration link with a family.
+            </li>
+            <li className="flex gap-2.5 text-sm text-brand-subtext leading-relaxed">
+              <span className="font-semibold text-brand-text">2.</span>
+              They enter the code for their site to connect their account.
+            </li>
+            <li className="flex gap-2.5 text-sm text-brand-subtext leading-relaxed">
+              <span className="font-semibold text-brand-text">3.</span>
+              Once registered, they can access Family curriculum activities anytime.
+            </li>
+          </ol>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-brand-text mb-1.5">Program Admin vs. Site Leader</h3>
+          <p className="text-sm text-brand-subtext leading-relaxed">
+            Program Admins see registration links for every site in the district. Site Leaders
+            only see the link for their own site.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-brand-text mb-1.5">Access expiration</h3>
+          <p className="text-sm text-brand-subtext leading-relaxed">
+            Family access follows your district's account — if it doesn't renew, Family logins
+            provisioned under it lose access automatically.
+          </p>
+        </div>
+      </div>
+    </SidePanel>
+    </>
   )
 }
