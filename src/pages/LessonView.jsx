@@ -1558,31 +1558,14 @@ function StornawayCompletionPrompt({ showCompletion, setShowCompletion, watched,
 
   return (
     <div className="mt-4">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-brand-subtext">
-          Design review — concept
-        </span>
-        <div className="flex items-center gap-1">
-          {["C", "D"].map((c) => (
-            <button
-              key={c}
-              onClick={() => setConcept(c)}
-              className={`w-6 h-6 rounded text-xs font-semibold transition-colors ${
-                concept === c ? "bg-brand-text text-white" : "bg-brand-bg text-brand-subtext hover:text-brand-text"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-      </div>
-
+      {/* Idle hint hidden per review feedback — copy TBD
       {concept === "D" && !showCompletion && (
         <p className="flex items-center gap-1.5 text-xs text-brand-subtext">
           <Info size={12} className="flex-shrink-0" style={{ color: "#F5A623" }} />
           This video can't automatically track completion — you'll be asked to confirm before you leave this lesson.
         </p>
       )}
+      */}
       {concept === "D" && showCompletion && (
         <div
           className="rounded-xl border p-4 flex items-center gap-2.5"
@@ -1593,6 +1576,7 @@ function StornawayCompletionPrompt({ showCompletion, setShowCompletion, watched,
         </div>
       )}
 
+      {/* Concept C (post-video nudge modal) — commented out per review feedback
       {concept === "C" && !showCompletion && (
         <div
           className="rounded-xl border p-4 flex items-start gap-3"
@@ -1651,6 +1635,7 @@ function StornawayCompletionPrompt({ showCompletion, setShowCompletion, watched,
           </motion.div>
         )}
       </AnimatePresence>
+      */}
     </div>
   );
 }
@@ -3144,7 +3129,7 @@ export default function LessonView({ onBookmark }) {
   const [bookmarked, setBookmarked] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
-  const [stornawayConcept, setStornawayConcept] = useState("C");
+  const [stornawayConcept, setStornawayConcept] = useState("D");
   const [stornawayWatched, setStornawayWatched] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [pendingNavigate, setPendingNavigate] = useState(null);
@@ -3234,25 +3219,57 @@ export default function LessonView({ onBookmark }) {
     }
   }
 
+  // Concept D — intercept the browser Back button too. While on an unmarked
+  // Stornaway lesson, a real back navigation gets "undone" (re-pushed) and the
+  // leave modal takes over; confirming/dismissing there decides what happens.
+  useEffect(() => {
+    if (!(isStornawayLesson && stornawayConcept === "D" && !showCompletion)) return;
+    window.history.pushState(null, "", window.location.href);
+    function handlePopState() {
+      window.history.pushState(null, "", window.location.href);
+      attemptLeave(() => navigate("/mtw"));
+    }
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [isStornawayLesson, stornawayConcept, showCompletion]);
+
   const activePoPTheme = isPowerOfPause
     ? (powerOfPauseThemes[selectedLesson.lessonIndex] ?? powerOfPauseThemes[0])
     : null;
   const activePoPVid = activePoPTheme?.videos[activePoPVideo] ?? null;
 
+  const selectLesson = (unitId, lessonIndex) => {
+    setSelectedLesson({ unitId, lessonIndex });
+    setActiveVideo(0);
+    setActivePoPVideo(0);
+    setActiveContent("video");
+    setBookmarked(false);
+  };
+
   const handleSelectLesson = (unitId, lessonIndex) => {
-    const doSelect = () => {
-      setSelectedLesson({ unitId, lessonIndex });
-      setActiveVideo(0);
-      setActivePoPVideo(0);
-      setActiveContent("video");
-      setBookmarked(false);
-    };
     if (unitId === selectedLesson.unitId && lessonIndex === selectedLesson.lessonIndex) {
-      doSelect();
+      selectLesson(unitId, lessonIndex);
       return;
     }
-    attemptLeave(doSelect);
+    attemptLeave(() => selectLesson(unitId, lessonIndex));
   };
+
+  // Finds the next lesson in reading order (next lesson in this unit, or the
+  // first lesson of the next non-empty unit) for the bottom "Next Lesson" bar.
+  function getNextLesson() {
+    const idx = activeUnits.findIndex((u) => u.id === selectedLesson.unitId);
+    if (idx === -1) return null;
+    const unit = activeUnits[idx];
+    if (unit && selectedLesson.lessonIndex < unit.sub.length - 1) {
+      return { unitId: unit.id, lessonIndex: selectedLesson.lessonIndex + 1 };
+    }
+    for (let i = idx + 1; i < activeUnits.length; i++) {
+      if (activeUnits[i].sub && activeUnits[i].sub.length > 0 && activeUnits[i].id !== 37) {
+        return { unitId: activeUnits[i].id, lessonIndex: 0 };
+      }
+    }
+    return null;
+  }
 
   const handleBookmark = () => {
     if (bookmarked) return;
@@ -4822,7 +4839,14 @@ export default function LessonView({ onBookmark }) {
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={isLastLesson ? () => setShowCourseComplete(true) : undefined}
+                onClick={() => {
+                  if (isLastLesson) {
+                    attemptLeave(() => setShowCourseComplete(true));
+                    return;
+                  }
+                  const next = getNextLesson();
+                  if (next) attemptLeave(() => selectLesson(next.unitId, next.lessonIndex));
+                }}
                 className="flex items-center gap-2 px-5 py-2 rounded-md text-sm font-semibold text-white transition-all hover:brightness-95 shadow-sm"
                 style={{ background: "#2A7F8F" }}
               >
