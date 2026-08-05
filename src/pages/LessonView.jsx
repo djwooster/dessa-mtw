@@ -5037,49 +5037,45 @@ export default function LessonView({ onBookmark }) {
               initial={{ opacity: 0, y: 12, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.97 }}
-              className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6"
+              className="bg-white rounded-2xl shadow-xl max-w-[525px] w-full p-6"
             >
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center mb-3"
-                style={{ background: "#FEF3DC" }}
-              >
-                <Info size={18} style={{ color: "#F5A623" }} />
-              </div>
-              <h3 className="text-lg font-semibold text-brand-text mb-1.5">Mark this lesson complete?</h3>
-              <p className="text-sm text-brand-subtext leading-relaxed mb-5">
-                This video can't automatically track completion. If you leave now without marking it complete, you
-                won't get credit and may be sent back to finish it later.
+              <CheckCircle2 size={32} className="text-dessa-teal mb-3" strokeWidth={1.75} />
+              <h3 className="text-lg font-semibold text-brand-text mb-1.5">Mark lesson as complete?</h3>
+              <p className="text-sm text-brand-subtext leading-relaxed mb-8">
+                Mark this lesson as complete to track your progress through the course.
               </p>
-              <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setShowCompletion(true);
+                      setShowLeaveModal(false);
+                      pendingNavigate?.();
+                      setPendingNavigate(null);
+                    }}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors"
+                  >
+                    Mark Complete
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowLeaveModal(false);
+                      pendingNavigate?.();
+                      setPendingNavigate(null);
+                    }}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-brand-text border border-brand-border hover:bg-brand-bg transition-colors"
+                  >
+                    Leave and don't mark
+                  </button>
+                </div>
                 <button
                   onClick={() => {
-                    setShowCompletion(true);
-                    setShowLeaveModal(false);
-                    pendingNavigate?.();
-                    setPendingNavigate(null);
-                  }}
-                  className="w-full px-4 py-3 rounded-lg text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors"
-                >
-                  Mark complete and leave
-                </button>
-                <button
-                  onClick={() => {
-                    setShowLeaveModal(false);
-                    pendingNavigate?.();
-                    setPendingNavigate(null);
-                  }}
-                  className="w-full px-4 py-2.5 rounded-lg text-sm font-medium text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors"
-                >
-                  Leave without marking
-                </button>
-                <button
-                  onClick={() => {
                     setShowLeaveModal(false);
                     setPendingNavigate(null);
                   }}
-                  className="w-full px-4 py-2 rounded-lg text-xs font-medium text-brand-subtext hover:text-brand-text transition-colors"
+                  className="px-3 py-2 rounded-lg text-sm font-medium text-dessa-teal hover:text-dessa-teal/80 transition-colors"
                 >
-                  Cancel
+                  Stay
                 </button>
               </div>
             </motion.div>

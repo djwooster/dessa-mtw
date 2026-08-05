@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronRight, Play } from 'lucide-react'
 
@@ -96,9 +97,46 @@ function TokenRow({ token, hex, usage }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+const GUIDE_TABS = [
+  { key: 'prototype', label: 'Prototype Guide' },
+  { key: 'official', label: 'Official Style Guide (PDF)' },
+]
+
 export default function BrandGuide() {
+  const [tab, setTab] = useState('prototype')
+
   return (
     <div className="max-w-screen-xl mx-auto px-6 pt-20 pb-8">
+
+      {/* ── Tab switcher ── */}
+      <div className="flex items-center gap-5 border-b border-brand-border mb-8">
+        {GUIDE_TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`pb-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              tab === t.key
+                ? 'text-brand-text border-dessa-teal'
+                : 'text-brand-subtext border-transparent hover:text-brand-text'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'official' && (
+        <div className="rounded-2xl border border-brand-border overflow-hidden" style={{ height: 'calc(100vh - 220px)' }}>
+          <iframe
+            src="/DESSA%20x%20MTW%20Brand%20Style%20Guide%20June%202026.pdf"
+            title="Official DESSA x MTW Brand Style Guide"
+            className="w-full h-full"
+          />
+        </div>
+      )}
+
+      {tab === 'prototype' && (
+        <>
 
       {/* ── Hero ── */}
       <motion.div {...stagger(0)} className="mb-10">
@@ -679,6 +717,9 @@ wrapper: AnimatePresence`}</pre>
           </div>
         </div>
       </motion.div>
+
+        </>
+      )}
 
     </div>
   )
