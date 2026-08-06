@@ -626,10 +626,14 @@ function familyLessonContent(grade, lessonTitle, unitTitle, lessonIndex) {
   }
 
   if (lessonTitle === "Power of Pause") {
+    // Same tabbed multi-video pattern as Early Elementary's Power of Pause
+    // unit, for consistency across grade bands — placeholder variant names.
     return {
-      type: "pop",
-      englishVideo: { title: "Power of Pause — Family Edition", duration: "2:45", description: "A guided calming practice families can use together, anytime things feel like a lot." },
-      spanishVideo: { title: "Power of Pause — Edición Familiar", duration: "2:50", description: "Una práctica guiada de calma que las familias pueden usar juntas, en cualquier momento." },
+      type: "tabbedVideo",
+      videos: ["Ballooning", "Heart to Heart", "Deep Breath"].map((name) => ({
+        englishVideo: { title: name, duration: "2:45", description: "A guided calming practice families can use together, anytime things feel like a lot." },
+        spanishVideo: { title: name, duration: "2:50", description: "Una práctica guiada de calma que las familias pueden usar juntas, en cualquier momento." },
+      })),
     };
   }
 
@@ -712,6 +716,21 @@ const earlyElementaryFacilitationGuides = {
       ],
     },
   },
+  "Emoger #2: Count to 10": {
+    competency: "Self-Management",
+    skills: ["Emotional Management", "Stress Management"],
+    objective: "Identify how we can use the emotional management strategy: Count to 10.",
+    activityBody:
+      "In Emoger #2: Count to 10, we practice the Emoger Count to 10 by practicing calming down from a really big emotion.",
+    whyWeDoThis:
+      "This exercise strengthens our understanding of opportunities to use Count to 10 as a strategy. Count to 10 can help us when we are experiencing really big emotions and need to check in with ourselves — whether we are feeling excited, angry, sad, or scared. As we count up to 10, we calm our minds, changing the intensity of our emotions. The more we practice the 10 Emogers, the better equipped we can be to use them in real world situations.",
+    atHomeTips: [
+      "Towards the end of the exercise, you will be prompted to choose a few students to share with the rest of the class how they might count to 10 today. Instead, take turns sharing ideas with your student, completing this portion of the video as a discussion.",
+    ],
+    continuingConversation: [
+      "Have a discussion about the ways that Counting to 10 can affect their mood; instruct students to recall a situation involving use of this Emoger. Then, instruct students to reflect through drawing, on their feeling(s) before using Count to 10, and then after using Count to 10. Compare the images and discuss!",
+    ],
+  },
 };
 
 // Example pattern #3 for team review: a tabbed video player — the first
@@ -735,6 +754,17 @@ const earlyElementaryEmogerVideos = [
   duration: "1:00",
   description: `A quick overview of the ${name} Emoger.`,
 }));
+
+// Power of Pause video variants per lesson — matches the real product's
+// pill-tab pattern (confirmed via screenshot for "Breathing Exercises").
+// Other lessons' variant names are placeholders for team review.
+const earlyElementaryPowerOfPauseVariants = {
+  "Breathing Exercises": ["Ballooning", "Easy Breezy 1", "Heart to Heart", "Mountain Climbing"],
+  "Embodied Relaxation": ["Shake It Out", "Melting", "Statue Freeze"],
+  "Recharge": ["Power Nap", "Stretch Break", "Deep Breath"],
+  "Guided Visualization": ["Peaceful Place", "Ocean Waves", "Starlit Sky"],
+  "Mindful Reflection": ["Gratitude Moment", "Body Scan", "Quiet Mind"],
+};
 
 function earlyElementaryFamilyContent(unitTitle, lessonTitle, lessonIndex) {
   // Example pattern #1 for team review: a resource PDF that opens in a new
@@ -774,7 +804,18 @@ function earlyElementaryFamilyContent(unitTitle, lessonTitle, lessonIndex) {
     };
   }
 
-  if (unitTitle === "Welcome to Move This World!" || unitTitle === "Power of Pause" || unitTitle === "The Emotional Building Blocks® & 10 Emogers®") {
+  if (unitTitle === "Power of Pause") {
+    const variantNames = earlyElementaryPowerOfPauseVariants[lessonTitle];
+    return {
+      type: "tabbedVideo",
+      videos: variantNames.map((name) => ({
+        englishVideo: { title: name, duration: "2:00", description: "A short guided calming video in English." },
+        spanishVideo: { title: name, duration: "2:05", description: "Un breve video guiado de calma en español." },
+      })),
+    };
+  }
+
+  if (unitTitle === "Welcome to Move This World!" || unitTitle === "The Emotional Building Blocks® & 10 Emogers®") {
     return {
       type: "video",
       englishVideo: { title: `${lessonTitle} — English`, duration: "2:30", description: "A short video introducing this topic in English." },
@@ -1150,7 +1191,15 @@ function openPlaceholderPdf(title) {
 }
 
 // Established split-panel multi-video player: video stage on the left, an
-// episode list on the right that switches between videos.
+// episode list on the right that switches between videos. Videos may either
+// be single-language (Tier 2, Emoger) or bilingual pairs (Family) — when a
+// video provides englishVideo/spanishVideo, the active language picks which
+// one is shown instead of a flat title/duration/description.
+function resolveMultiVideo(video, language) {
+  if (!video.englishVideo) return video;
+  return language === "Spanish" ? video.spanishVideo : video.englishVideo;
+}
+
 function MultiVideoPlayer({
   videos,
   activeVideo,
@@ -1160,6 +1209,7 @@ function MultiVideoPlayer({
   setLanguage,
   setLangOpen,
 }) {
+  const current = resolveMultiVideo(videos[activeVideo], language);
   return (
     <div
       className="flex rounded-2xl overflow-hidden border border-brand-border"
@@ -1182,10 +1232,10 @@ function MultiVideoPlayer({
             <Play size={16} fill="white" className="text-white ml-0.5" />
           </button>
           <p className="text-white font-semibold text-sm leading-snug mb-1">
-            {videos[activeVideo].title}
+            {current.title}
           </p>
           <p className="text-white/50 text-xs leading-relaxed">
-            {videos[activeVideo].description}
+            {current.description}
           </p>
         </div>
         <div
@@ -1193,7 +1243,7 @@ function MultiVideoPlayer({
           style={{ background: "rgba(0,0,0,0.45)" }}
         >
           <Clock size={11} />
-          {videos[activeVideo].duration}
+          {current.duration}
         </div>
         <LanguagePicker
           language={language}
@@ -1210,28 +1260,31 @@ function MultiVideoPlayer({
             In this lesson
           </p>
         </div>
-        {videos.map((video, i) => (
-          <button
-            key={i}
-            onClick={() => setActiveVideo(i)}
-            className={`w-full text-left px-4 py-3 border-b border-brand-border last:border-0 border-l-2 transition-colors ${
-              i === activeVideo
-                ? "bg-dessa-tealLight border-l-dessa-teal"
-                : "border-l-transparent hover:bg-brand-bg"
-            }`}
-          >
-            <p className="text-xs text-brand-subtext mb-0.5">Episode {i + 1}</p>
-            <p
-              className={`text-sm font-semibold leading-snug mb-1 ${i === activeVideo ? "text-dessa-teal" : "text-brand-text"}`}
+        {videos.map((video, i) => {
+          const resolved = resolveMultiVideo(video, language);
+          return (
+            <button
+              key={i}
+              onClick={() => setActiveVideo(i)}
+              className={`w-full text-left px-4 py-3 border-b border-brand-border last:border-0 border-l-2 transition-colors ${
+                i === activeVideo
+                  ? "bg-dessa-tealLight border-l-dessa-teal"
+                  : "border-l-transparent hover:bg-brand-bg"
+              }`}
             >
-              {video.title}
-            </p>
-            <div className="flex items-center gap-1 text-xs text-brand-subtext">
-              <Clock size={10} />
-              {video.duration}
-            </div>
-          </button>
-        ))}
+              <p className="text-xs text-brand-subtext mb-0.5">Episode {i + 1}</p>
+              <p
+                className={`text-sm font-semibold leading-snug mb-1 ${i === activeVideo ? "text-dessa-teal" : "text-brand-text"}`}
+              >
+                {resolved.title}
+              </p>
+              <div className="flex items-center gap-1 text-xs text-brand-subtext">
+                <Clock size={10} />
+                {resolved.duration}
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -1771,24 +1824,10 @@ function FamilyFacilitationLayout({
       <Divider />
 
       <div className={continuingConversation || item.supplementalPdfs ? "mb-7" : ""}>
-        {item.atHomeTips ? (
-          <>
-            <SectionHeading icon={Lightbulb}>{homeTipsLabel}</SectionHeading>
-            <FamilyTipCards items={homeTips} />
-          </>
-        ) : (
-          <>
-            <h3 className="text-xl font-semibold text-brand-text mb-2">{homeTipsLabel}</h3>
-            <ul className="space-y-2.5">
-              {homeTips.map((t, i) => (
-                <li key={i} className="flex items-start gap-3 text-brand-text leading-relaxed" style={{ fontSize: "15px" }}>
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2" style={{ background: "#2A7F8F" }} />
-                  {t}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+        <h3 className="text-xl font-semibold text-brand-text mb-2">{homeTipsLabel}</h3>
+        {homeTips.map((t, i) => (
+          <p key={i} className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>{t}</p>
+        ))}
       </div>
 
       {continuingConversation && (
@@ -1835,7 +1874,9 @@ function FamilyFacilitationLayout({
 }
 
 // Family Power of Pause — shared pattern across all 4 grade bands: just the
-// bilingual video, no facilitation guide.
+// bilingual video, no facilitation guide. Lessons with multiple video
+// variants (e.g. "Breathing Exercises" — Ballooning, Heart to Heart, etc.)
+// use MultiVideoPlayer's tabbed episode list instead of this layout.
 function FamilyPowerOfPauseLayout({ item, language, langOpen, setLanguage, setLangOpen }) {
   return (
     <FamilyVideoCard
