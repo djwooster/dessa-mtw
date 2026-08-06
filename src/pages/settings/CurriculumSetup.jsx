@@ -1,15 +1,39 @@
 import { useState } from 'react'
-import { Info } from 'lucide-react'
+import { Info, Plus, Pencil, Trash2, Check, X } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { toast } from 'sonner'
 // import FamilyAccessUrl from './FamilyAccessUrl'
 import FamilyAccessCodes from './FamilyAccessCodes'
 import { SidePanel } from '../../components/ui/side-panel'
+import { DatePicker } from '../../components/ui/date-picker'
 
 const TABS = [
   { key: 'engagement', label: 'Engagement' },
   { key: 'school-year', label: 'School year' },
+  { key: 'blackout', label: 'Blackout periods' },
 ]
 
 const GOAL_OPTIONS = [1, 2, 3, 4, 5]
+
+const DEFAULT_BLACKOUT_PERIODS = [
+  { id: 1, name: 'Fall Break',   from: '2025-10-13', to: '2025-10-17' },
+  { id: 2, name: 'Thanksgiving', from: '2025-11-24', to: '2025-11-28' },
+  { id: 3, name: 'Winter Break', from: '2025-12-22', to: '2026-01-02' },
+  { id: 4, name: 'MLK Day',      from: '2026-01-19', to: '2026-01-19' },
+  { id: 5, name: 'Spring Break', from: '2026-03-16', to: '2026-03-20' },
+  { id: 6, name: 'Memorial Day', from: '2026-05-25', to: '2026-05-25' },
+]
+
+function formatRange(from, to) {
+  const start = parseISO(from)
+  const end = parseISO(to)
+  if (from === to) return format(start, 'MMM d, yyyy')
+  const sameYear = format(start, 'yyyy') === format(end, 'yyyy')
+  const sameMonth = sameYear && format(start, 'MMM') === format(end, 'MMM')
+  if (sameMonth) return `${format(start, 'MMM d')} – ${format(end, 'd')}, ${format(end, 'yyyy')}`
+  if (sameYear) return `${format(start, 'MMM d')} – ${format(end, 'MMM d')}, ${format(end, 'yyyy')}`
+  return `${format(start, 'MMM d, yyyy')} – ${format(end, 'MMM d, yyyy')}`
+}
 
 const FAMILY_ACCESS_TABS = [
   // { key: 'url', label: 'Registration Link' },
@@ -23,9 +47,76 @@ export default function CurriculumSetup() {
   const [isSiteLeaderView, setIsSiteLeaderView] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
 
+  const [periods, setPeriods] = useState(DEFAULT_BLACKOUT_PERIODS)
+  const [isAdding, setIsAdding] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newFrom, setNewFrom] = useState('')
+  const [newTo, setNewTo] = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editName, setEditName] = useState('')
+  const [editFrom, setEditFrom] = useState('')
+  const [editTo, setEditTo] = useState('')
+
+  const canAdd = newName.trim() && newFrom && newTo && newFrom <= newTo
+
+  function startAdd() {
+    setIsAdding(true)
+  }
+
+  function cancelAdd() {
+    setIsAdding(false)
+    setNewName(''); setNewFrom(''); setNewTo('')
+  }
+
+  function saveNewPeriod() {
+    if (!canAdd) return
+    setPeriods((ps) => [...ps, { id: Date.now(), name: newName.trim(), from: newFrom, to: newTo }]
+      .sort((a, b) => a.from.localeCompare(b.from)))
+    setNewName(''); setNewFrom(''); setNewTo('')
+    setIsAdding(false)
+    toast.success('Blackout period added')
+  }
+
+  function startEdit(p) {
+    setEditingId(p.id); setEditName(p.name); setEditFrom(p.from); setEditTo(p.to)
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+  }
+
+  function saveEdit() {
+    if (!editName.trim() || !editFrom || !editTo || editFrom > editTo) return
+    setPeriods((ps) => ps.map((p) => p.id === editingId
+      ? { ...p, name: editName.trim(), from: editFrom, to: editTo }
+      : p
+    ).sort((a, b) => a.from.localeCompare(b.from)))
+    setEditingId(null)
+    toast.success('Blackout period updated')
+  }
+
+  function deletePeriod(id) {
+    setPeriods((ps) => ps.filter((p) => p.id !== id))
+    toast.success('Blackout period removed')
+  }
+
   return (
     <>
     <div className="flex flex-col gap-8">
+    <div className="flex items-center justify-end">
+      <button
+        onClick={() => setIsSiteLeaderView((v) => !v)}
+        className={`px-3 py-1.5 rounded-md text-xs font-medium text-brand-text border border-gray-300 transition-all ${
+          isSiteLeaderView
+            ? 'shadow-[inset_0_1px_3px_rgba(0,0,0,0.18)] bg-gradient-to-b from-gray-200 to-white'
+            : 'shadow-[0_1px_2px_rgba(0,0,0,0.08)] bg-gradient-to-b from-white to-gray-100 hover:from-gray-50 hover:to-gray-100'
+        }`}
+      >
+        Site Leader View
+      </button>
+    </div>
+
+    {!isSiteLeaderView && (
     <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
       <div className="p-6 pb-0">
         <h1 className="text-2xl font-semibold text-brand-text mb-4">Curriculum Setup</h1>
@@ -46,7 +137,7 @@ export default function CurriculumSetup() {
         </div>
       </div>
 
-      {tab === 'engagement' ? (
+      {tab === 'engagement' && (
         <>
           <div className="bg-brand-bg px-6 py-4">
             <p className="text-sm font-semibold text-brand-text">Engagement settings</p>
@@ -86,35 +177,139 @@ export default function CurriculumSetup() {
             </button>
           </div>
         </>
-      ) : (
+      )}
+
+      {tab === 'school-year' && (
         <div className="px-6 py-12 text-center">
           <p className="text-sm text-brand-subtext">Coming soon in a future prototype iteration.</p>
         </div>
       )}
+
+      {tab === 'blackout' && (
+        <>
+          <div className="bg-brand-bg px-6 py-4">
+            <p className="text-sm font-semibold text-brand-text">Blackout periods</p>
+            <p className="text-sm text-brand-subtext mt-0.5">
+              Mark non-instructional days so they're excluded from engagement calculations.
+            </p>
+          </div>
+
+          <div className="px-6">
+            {periods.length === 0 ? (
+              <p className="text-sm text-brand-subtext py-8 text-center">No blackout periods yet.</p>
+            ) : (
+              periods.map((p) => (
+                <div key={p.id} className="flex items-center gap-3 py-3 border-b border-brand-border last:border-b-0">
+                  {editingId === p.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="flex-1 h-9 text-sm border border-brand-border rounded-lg px-3 text-brand-text focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                      />
+                      <div className="w-36">
+                        <DatePicker value={editFrom} onChange={setEditFrom} placeholder="From" max={editTo || undefined} />
+                      </div>
+                      <div className="w-36">
+                        <DatePicker value={editTo} onChange={setEditTo} placeholder="To" min={editFrom || undefined} />
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={saveEdit}
+                          className="p-2 rounded-md text-dessa-teal hover:bg-brand-bg transition-colors"
+                        >
+                          <Check size={15} />
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="p-2 rounded-md text-brand-subtext hover:bg-brand-bg transition-colors"
+                        >
+                          <X size={15} />
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="flex-1 text-sm font-medium text-brand-text">{p.name}</p>
+                      <p className="text-sm text-brand-subtext w-52 text-right">{formatRange(p.from, p.to)}</p>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => startEdit(p)}
+                          className="p-2 rounded-md text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => deletePeriod(p.id)}
+                          className="p-2 rounded-md text-brand-subtext hover:text-red-600 hover:bg-brand-bg transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 px-6 py-4 border-t border-brand-border">
+            {isAdding && (
+              <>
+                <input
+                  type="text"
+                  placeholder="Period name"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  autoFocus
+                  className="flex-1 h-9 text-sm border border-brand-border rounded-lg px-3 text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                />
+                <div className="w-36">
+                  <DatePicker value={newFrom} onChange={setNewFrom} placeholder="From" max={newTo || undefined} />
+                </div>
+                <div className="w-36">
+                  <DatePicker value={newTo} onChange={setNewTo} placeholder="To" min={newFrom || undefined} />
+                </div>
+              </>
+            )}
+            <div className={`flex items-center gap-1 shrink-0 ${isAdding ? '' : 'ml-auto'}`}>
+              {isAdding && (
+                <button
+                  onClick={cancelAdd}
+                  className="h-9 px-4 rounded-md text-sm font-medium text-brand-text border border-dashed border-brand-border hover:bg-brand-bg transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                onClick={isAdding ? saveNewPeriod : startAdd}
+                disabled={isAdding && !canAdd}
+                className="flex items-center gap-1.5 h-9 px-4 rounded-md text-sm font-medium text-white bg-dessa-teal hover:bg-dessa-teal/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {isAdding ? (
+                  <>Save</>
+                ) : (
+                  <><Plus size={14} /> Add period</>
+                )}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
+    )}
 
     <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
       <div className="p-6 pb-0">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold text-brand-text">Family Access</h1>
-            <button
-              onClick={() => setHelpOpen(true)}
-              aria-label="About Family Access"
-              className="text-brand-subtext hover:text-brand-text transition-colors"
-            >
-              <Info size={17} />
-            </button>
-          </div>
+        <div className="flex items-center gap-2 mb-4">
+          <h1 className="text-2xl font-semibold text-brand-text">Family Access</h1>
           <button
-            onClick={() => setIsSiteLeaderView((v) => !v)}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium text-brand-text border border-gray-300 transition-all ${
-              isSiteLeaderView
-                ? 'shadow-[inset_0_1px_3px_rgba(0,0,0,0.18)] bg-gradient-to-b from-gray-200 to-white'
-                : 'shadow-[0_1px_2px_rgba(0,0,0,0.08)] bg-gradient-to-b from-white to-gray-100 hover:from-gray-50 hover:to-gray-100'
-            }`}
+            onClick={() => setHelpOpen(true)}
+            aria-label="About Family Access"
+            className="text-brand-subtext hover:text-brand-text transition-colors"
           >
-            Site Leader View
+            <Info size={17} />
           </button>
         </div>
         <div className="flex items-center gap-5 border-b border-brand-border">
