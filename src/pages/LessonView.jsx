@@ -820,7 +820,7 @@ const adultWellnessUnits = [
     "Independent: Breathe Easier", "Independent: Flight, Fight or Freeze", "Independent: Thought Trains",
     "Independent: Prioritizing Our Time", "Independent: Digging In", "Independent: Moving Through Fear", "Independent: What Works For You?",
   ]},
-  { id: 4, title: "Reflect, Reset & Recharge", groupSubfolders: true, sub: [
+  { id: 4, title: "Reflect, Reset & Recharge", sub: [
     "Community: Fab Four", "Community: Story of Your Life", "Community: The Do-Over",
     "Independent: Write Away", "Independent: Sensational", "Independent: Attachments",
     "Independent: \"Outlets\"", "Independent: Breathing the Body", "Independent: Other Side of the Door",
@@ -860,6 +860,7 @@ function adultWellnessLessonContent(unitId, lessonTitle) {
         title: "Notes",
         synopsis: "A printable overview of what to expect from this course and how to get started.",
         tips: adultWellnessPlaceholderTips,
+        guideImage: "/getting-started.png",
       },
     ];
   }
@@ -1441,7 +1442,24 @@ function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen,
 
       {(isCommunity || isIndependent) && <PracticeTypeCallout isCommunity={isCommunity} />}
 
-      {notesItem && (
+      {notesItem && notesItem.guideImage ? (
+        <a
+          href={notesItem.guideImage}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block rounded-2xl overflow-hidden border border-brand-border relative group"
+          style={{ aspectRatio: "16/9" }}
+        >
+          <img src={notesItem.guideImage} alt={notesItem.title} className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0 transition-colors duration-200" style={{ background: "rgba(0,0,0,0.28)" }} />
+          <div className="absolute inset-0 transition-opacity duration-300 opacity-0 group-hover:opacity-100" style={{ background: "rgba(0,0,0,0.18)" }} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md bg-white text-brand-text">
+              Open Guide in New Tab <ExternalLink size={14} />
+            </span>
+          </div>
+        </a>
+      ) : notesItem ? (
         <div>
           <h2 className="text-xl font-semibold text-brand-text mb-4">Synopsis</h2>
           <div className="pl-4 mb-7" style={{ borderLeft: "4px solid #2A7F8F" }}>
@@ -1462,7 +1480,7 @@ function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen,
             </ul>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -3110,9 +3128,6 @@ export default function LessonView({ onBookmark }) {
   const [expandedUnit, setExpandedUnit] = useState(
     isTier2EE ? 9 : isAdultWellness ? 1 : isFamily ? 1 : isGrade2 ? 31 : 5,
   );
-  // Scoped to Adult Wellness Unit 4 ("Reflect, Reset & Recharge") only —
-  // which subfolder (Community/Independent) is expanded in the sidebar.
-  const [expandedSubfolder, setExpandedSubfolder] = useState(null);
   const [selectedLesson, setSelectedLesson] = useState(
     isTier2EE
       ? { unitId: 9, lessonIndex: 0 }
@@ -3382,83 +3397,7 @@ export default function LessonView({ onBookmark }) {
                         className="overflow-hidden"
                       >
                         <div className="mr-3 mb-1">
-                          {unit.groupSubfolders ? (
-                            ["Community", "Independent"].map((folderName) => {
-                              const folderItems = unit.sub
-                                .map((item, i) => ({ item, i }))
-                                .filter(({ item }) => item.startsWith(`${folderName}:`));
-                              const isFolderExpanded = expandedSubfolder === folderName;
-                              return (
-                                <div key={folderName}>
-                                  <button
-                                    onClick={() =>
-                                      setExpandedSubfolder(isFolderExpanded ? null : folderName)
-                                    }
-                                    className="w-full flex items-center gap-2 py-2.5 text-left transition-colors hover:bg-brand-bg"
-                                    style={{ paddingLeft: "40px", paddingRight: "8px" }}
-                                  >
-                                    <span className="flex-1 text-sm text-brand-text">
-                                      {folderName} Exercises
-                                    </span>
-                                    <ChevronDown
-                                      size={12}
-                                      className={`flex-shrink-0 text-brand-subtext transition-transform duration-200 ${isFolderExpanded ? "" : "-rotate-90"}`}
-                                    />
-                                  </button>
-                                  <AnimatePresence initial={false}>
-                                    {isFolderExpanded && (
-                                      <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: "auto", opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        transition={{ duration: 0.18, ease: "easeInOut" }}
-                                        className="overflow-hidden"
-                                      >
-                                        {folderItems.map(({ item, i }, idx) => {
-                                          const isSelectedLesson =
-                                            selectedLesson.unitId === unit.id &&
-                                            selectedLesson.lessonIndex === i;
-                                          return (
-                                            <div key={item}>
-                                              <button
-                                                onClick={() => handleSelectLesson(unit.id, i)}
-                                                className={`w-full flex items-center justify-between py-2.5 text-left transition-colors ${isSelectedLesson ? "bg-mtw-amberLight rounded-lg" : "hover:bg-brand-bg"}`}
-                                                style={{
-                                                  paddingLeft: "72px",
-                                                  paddingRight: "8px",
-                                                }}
-                                              >
-                                                <span
-                                                  className={`text-sm ${isSelectedLesson ? "font-semibold text-brand-text" : "text-brand-text"}`}
-                                                >
-                                                  {item.replace(/^(Community|Independent):\s*/, "")}
-                                                </span>
-                                                {unit.completed ? (
-                                                  <CheckCircle2
-                                                    size={18}
-                                                    className="flex-shrink-0 text-dessa-teal"
-                                                  />
-                                                ) : (
-                                                  <Circle
-                                                    size={18}
-                                                    className={`flex-shrink-0 ${isSelectedLesson ? "text-mtw-amber" : "text-brand-border"}`}
-                                                  />
-                                                )}
-                                              </button>
-                                              {idx < folderItems.length - 1 && (
-                                                <div className="border-t border-brand-border" />
-                                              )}
-                                            </div>
-                                          );
-                                        })}
-                                      </motion.div>
-                                    )}
-                                  </AnimatePresence>
-                                </div>
-                              );
-                            })
-                          ) : (
-                            unit.sub.map((item, i) => {
+                          {unit.sub.map((item, i) => {
                               const isSelectedLesson =
                                 selectedLesson.unitId === unit.id &&
                                 selectedLesson.lessonIndex === i;
@@ -3494,8 +3433,7 @@ export default function LessonView({ onBookmark }) {
                                   )}
                                 </div>
                               );
-                            })
-                          )}
+                            })}
                         </div>
                       </motion.div>
                     )}
