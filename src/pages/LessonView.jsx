@@ -1771,8 +1771,6 @@ function FamilyFacilitationLayout({
         )}
       </div>
 
-      <Divider />
-
       {(skills || objective) && (
         <>
           <div className="grid grid-cols-2 gap-6 mb-7">
@@ -3485,7 +3483,7 @@ export default function LessonView({ onBookmark }) {
         </div>
 
         {/* Audio Library entry — sticky, outside scroll area */}
-        {!isTier2EE && !isAdultWellness && (
+        {!isTier2EE && !isAdultWellness && !isFamily && (
         <div className="flex-shrink-0 border-t border-brand-border">
           <div
             className={`border-l-2 ${isAudioLibrary ? "border-mtw-amber" : "border-transparent"}`}
