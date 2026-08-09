@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Search, X, Video, FileText, Headphones } from 'lucide-react'
+import { Search, X, Video, FileText, Mic, ChevronDown, ChevronRight, GraduationCap, Target, Layers } from 'lucide-react'
 import {
   resources, CATEGORIES, TYPES, ALL_GRADES, ALL_COMPETENCIES, courseFor,
 } from '../lib/resourcesData'
@@ -9,34 +9,61 @@ import {
   Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext,
 } from '../components/ui/pagination'
 
+// Layered flat-icon look — a bold colored icon floating over an offset amber
+// accent square, no container/background shape. Used as a fallback until a
+// real illustration exists for that type in /public/file-types.
 const TYPE_META = {
-  video: { icon: Video, label: 'Video' },
-  pdf: { icon: FileText, label: 'PDF' },
-  audio: { icon: Headphones, label: 'Audio' },
+  video: { icon: Video, label: 'Video', color: 'text-dessa-magenta' },
+  pdf: { icon: FileText, label: 'PDF', color: 'text-mtw-purple' },
+  audio: { icon: Mic, label: 'Audio', color: 'text-mtw-blue' },
+}
+
+// Real illustrated file-type icons, dropped in by design.
+const TYPE_IMAGES = {
+  video: '/file-types/video.png',
+  pdf: '/file-types/PDF.png',
+  audio: '/file-types/audio.png',
 }
 
 const PAGE_SIZE = 20
 
-function FacetGroup({ title, options, selected, onToggle, scrollable }) {
+function FacetGroup({ title, options, selected, onToggle, scrollable, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="py-4 border-b border-brand-border last:border-b-0">
-      <p className="text-sm font-semibold text-brand-text mb-2 px-4">{title}</p>
-      <div className={`flex flex-col ${scrollable ? 'max-h-48 overflow-y-auto' : ''}`}>
-        {options.map((opt) => (
-          <label
-            key={opt}
-            className="flex items-center gap-2.5 px-4 py-1.5 text-sm text-brand-text cursor-pointer hover:bg-brand-bg transition-colors"
-          >
-            <input
-              type="checkbox"
-              checked={selected.includes(opt)}
-              onChange={() => onToggle(opt)}
-              className="accent-dessa-teal w-3.5 h-3.5"
-            />
-            {opt}
-          </label>
-        ))}
-      </div>
+    <div className="border-b border-brand-border last:border-b-0">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-brand-bg transition-colors"
+      >
+        <span className="flex items-center gap-2 text-sm font-semibold text-brand-text">
+          {title}
+          {selected.length > 0 && (
+            <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold bg-dessa-teal text-white">
+              {selected.length}
+            </span>
+          )}
+        </span>
+        <ChevronDown size={14} className={`text-brand-subtext shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className={`flex flex-col pb-3 ${scrollable ? 'max-h-48 overflow-y-auto' : ''}`}>
+          {options.map((opt) => (
+            <label
+              key={opt}
+              className="flex items-center gap-2.5 px-4 py-1.5 text-sm text-brand-text cursor-pointer hover:bg-brand-bg transition-colors"
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(opt)}
+                onChange={() => onToggle(opt)}
+                className="accent-dessa-teal w-3.5 h-3.5"
+              />
+              {opt}
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -52,14 +79,11 @@ function Chip({ label, onRemove }) {
   )
 }
 
-function Pill({ label, tone }) {
-  const tones = {
-    grade: 'bg-mtw-amberLight text-brand-text',
-    competency: 'bg-dessa-tealLight text-dessa-navy',
-    category: 'bg-brand-bg text-brand-subtext border border-brand-border',
-  }
+function IconTag({ icon, label }) {
+  const Icon = icon
   return (
-    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${tones[tone]}`}>
+    <span className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext">
+      <Icon size={13} />
       {label}
     </span>
   )
@@ -135,8 +159,10 @@ export default function Resources() {
       </p>
 
       <div className="flex gap-6 items-start">
-        {/* Facet rail */}
-        <div className="w-64 flex-shrink-0 bg-white rounded-xl border border-brand-border overflow-hidden sticky top-20">
+        {/* Facet rail — each section collapses so all four are always reachable
+            without scrolling the results; capped height + internal scroll is a
+            backstop in case everything is expanded at once. */}
+        <div className="w-64 flex-shrink-0 bg-white rounded-xl border border-brand-border overflow-y-auto sticky top-20 max-h-[calc(100vh-6rem)]">
           <FacetGroup
             title="Category"
             options={CATEGORIES}
@@ -149,12 +175,14 @@ export default function Resources() {
             selected={selectedGrades}
             onToggle={(v) => toggle(setSelectedGrades, v)}
             scrollable
+            defaultOpen={false}
           />
           <FacetGroup
             title="Competency"
             options={ALL_COMPETENCIES}
             selected={selectedCompetencies}
             onToggle={(v) => toggle(setSelectedCompetencies, v)}
+            defaultOpen={false}
           />
           <FacetGroup
             title="Type"
@@ -211,17 +239,32 @@ export default function Resources() {
                   <button
                     key={r.id}
                     onClick={() => openResource(r)}
-                    className="w-full flex items-start gap-3 px-5 py-4 border-b border-brand-border last:border-b-0 text-left hover:bg-brand-bg transition-colors"
+                    className="w-full flex items-center gap-6 px-5 py-4 border-b border-brand-border last:border-b-0 text-left hover:bg-brand-bg transition-colors"
                   >
-                    <TypeIcon size={16} className="text-brand-subtext mt-0.5 shrink-0" />
+                    {TYPE_IMAGES[r.type] ? (
+                      <img
+                        src={TYPE_IMAGES[r.type]}
+                        alt={TYPE_META[r.type].label}
+                        className="h-[90px] w-auto object-contain shrink-0"
+                      />
+                    ) : (
+                      <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
+                        <div className="absolute top-0.5 right-0.5 w-4 h-4 rounded-md bg-mtw-amber rotate-12" />
+                        <TypeIcon size={22} strokeWidth={2.25} className={`relative z-10 ${TYPE_META[r.type].color}`} />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-brand-text mb-1.5">{r.title}</p>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <Pill label={r.grade} tone="grade" />
-                        <Pill label={r.competency} tone="competency" />
-                        <Pill label={r.category} tone="category" />
+                      <p className="text-lg font-semibold text-brand-text mb-1">{r.title}</p>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <IconTag icon={GraduationCap} label={r.grade} />
+                        <IconTag icon={Target} label={r.competency} />
+                        <IconTag icon={Layers} label={r.category} />
                       </div>
                     </div>
+                    <span className="flex items-center gap-1 text-sm font-semibold text-dessa-teal shrink-0">
+                      View
+                      <ChevronRight size={15} />
+                    </span>
                   </button>
                 )
               })

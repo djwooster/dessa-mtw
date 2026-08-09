@@ -45,10 +45,57 @@ function flattenCourse({ course, unitsList, category }) {
   return rows
 }
 
+// Tier 1 lessons render as a video plus a printable Facilitation Guide
+// (LessonView.jsx's "Facilitation Guide" section with a Print button) — every
+// lesson gets one except Power of Pause, which shows a video collection
+// instead. Each video's companion guide is generated right alongside it.
+function flattenTier1Course({ course, unitsList, category }) {
+  const rows = []
+  for (const video of flattenCourse({ course, unitsList, category })) {
+    rows.push(video)
+    if (video.title !== 'Power of Pause') {
+      rows.push({ ...video, title: `${video.title} — Facilitation Guide`, type: 'pdf' })
+    }
+  }
+  return rows
+}
+
+// Two Adult Wellness lessons carry more than one media type in LessonView.jsx
+// (a dev-reference demo of the audio media type): "Breathe Easier" adds audio
+// alongside its video, and "Flight, Fight or Freeze" is PDF + audio with no
+// video at all. Overriding here keeps the index honest to what's really there.
+const ADULT_WELLNESS_MEDIA_OVERRIDES = {
+  'Independent: Breathe Easier': ['video', 'audio'],
+  'Independent: Flight, Fight or Freeze': ['pdf', 'audio'],
+}
+
+function flattenAdultWellnessCourse({ course, unitsList, category }) {
+  const rows = []
+  for (const unit of unitsList) {
+    for (const lessonTitle of unit.sub) {
+      const types = ADULT_WELLNESS_MEDIA_OVERRIDES[lessonTitle] ?? [inferType(lessonTitle)]
+      for (const type of types) {
+        rows.push({
+          title: lessonTitle,
+          type,
+          category,
+          grade: course.grade,
+          competency: course.competency,
+          courseId: course.id,
+          courseTitle: course.title,
+          unitId: unit.id,
+          unitTitle: unit.title,
+        })
+      }
+    }
+  }
+  return rows
+}
+
 const rows = [
-  ...courses.flatMap((course) => flattenCourse({ course, unitsList: tier1Units, category: 'Tier 1' })),
+  ...courses.flatMap((course) => flattenTier1Course({ course, unitsList: tier1Units, category: 'Tier 1' })),
   ...tier2Courses.flatMap((course) => flattenCourse({ course, unitsList: tier2EarlyElementaryUnits, category: 'Tier 2' })),
-  ...adultWellnessCourses.flatMap((course) => flattenCourse({ course, unitsList: adultWellnessUnits, category: 'Adult Wellness' })),
+  ...adultWellnessCourses.flatMap((course) => flattenAdultWellnessCourse({ course, unitsList: adultWellnessUnits, category: 'Adult Wellness' })),
   ...familyCourses.flatMap((course) => flattenCourse({
     course,
     unitsList: familyUnitsByGrade[course.grade] ?? [],
@@ -56,7 +103,17 @@ const rows = [
   })),
 ]
 
-export const resources = rows.map((r, i) => ({ id: i + 1, ...r }))
+// Sorted with rare types (audio has only 3 rows total) floated to the very
+// front, then everything else alphabetically by title — rather than left in
+// data-generation order (which would otherwise dump all ~4,000 Tier 1 rows
+// first, burying rare types past page 200 even alphabetically).
+const RARE_TYPES = new Set(['audio'])
+export const resources = [...rows]
+  .sort((a, b) => {
+    const rareDiff = (RARE_TYPES.has(b.type) ? 1 : 0) - (RARE_TYPES.has(a.type) ? 1 : 0)
+    return rareDiff !== 0 ? rareDiff : a.title.localeCompare(b.title)
+  })
+  .map((r, i) => ({ id: i + 1, ...r }))
 
 function sortByGradeOrder(values) {
   return [...values].sort((a, b) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b))
