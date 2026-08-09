@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
+import { familyUnitsByGrade, adultWellnessUnits, tier2EarlyElementaryUnits } from "../lib/lessonUnitsData";
 import {
   CheckCircle2,
   Circle,
@@ -463,143 +464,6 @@ const grade2Units = units.map((u) => ({
   active: u.id === 31,
 }));
 
-// Family — parent/guardian-facing series, one per grade band (course.level
-// 'Family'). Each Series contains a single Unit. Older bands (Middle School,
-// High School) use Stornaway video lessons — same video card, just a
-// different "common language" title shared across English/Spanish.
-const familyUnitsByGrade = {
-  "Early Elementary": [
-    {
-      id: 1,
-      title: "Welcome to Move This World!",
-      active: true,
-      completed: false,
-      sub: ["How it Works", "Overview of MTW Competencies"],
-    },
-    {
-      id: 2,
-      title: "The Emotional Building Blocks® & 10 Emogers®",
-      active: false,
-      completed: false,
-      sub: [
-        "Emotional Building Blocks Poster_PreK-2nd (English & Spanish)",
-        "10 Emogers Elementary School",
-        "10 Emogers Elementary School",
-      ],
-    },
-    {
-      id: 3,
-      title: "Power of Pause",
-      active: false,
-      completed: false,
-      sub: ["Breathing Exercises", "Embodied Relaxation", "Recharge", "Guided Visualization", "Mindful Reflection"],
-    },
-    {
-      id: 4,
-      title: "Self-Awareness Videos",
-      active: false,
-      completed: false,
-      sub: ["Emotional Building Blocks", "Emotion Motion", "Emogometer", "Saving Faces", "Sweet Potato"],
-    },
-    {
-      id: 5,
-      title: "Self-Management Videos",
-      active: false,
-      completed: false,
-      sub: [
-        "10 Emogers",
-        "Emoger #1: Tighten and Release",
-        "Emoger #2: Count to 10",
-        "Emoger #3: Breathe 5 Times",
-        "Emoger #4: Walk Away Quietly",
-        "Emoger #5: Smile, Give a Hug or a Fist Bump",
-        "Emoger #6: Drink a Glass of Water",
-        "The Oooh Aaah Song",
-      ],
-    },
-    {
-      id: 6,
-      title: "Social Awareness Videos",
-      active: false,
-      completed: false,
-      sub: ["Parts of Me", "The Culture Club", "Circle of Trust", "The Feel Wheel"],
-    },
-    {
-      id: 7,
-      title: "Relationship Skills Videos",
-      active: false,
-      completed: false,
-      sub: [
-        "Emoger #7: Look for Help",
-        "Emoger #8: Active Listening",
-        "Emoger #9: Meet In The Middle",
-        "Emoger #10: Put Yourself in Someone Else's Shoes",
-        "Picture Perfect",
-        "The Help Line 1-2",
-      ],
-    },
-    {
-      id: 8,
-      title: "Responsible Decision Making Videos",
-      active: false,
-      completed: false,
-      sub: ["Mistake Erase", "Wooly Bully", "Putting Down Roots", "Live and Learn"],
-    },
-    {
-      id: 9,
-      title: "Emotion Motion Podcast",
-      active: false,
-      completed: false,
-      sub: ["Emotion Motion Podcast®"],
-    },
-  ],
-  "Late Elementary": [
-    {
-      id: 1,
-      title: "Family Series — Late Elementary",
-      active: true,
-      completed: false,
-      sub: [
-        "Welcome Guide",
-        "Self-Management in Action",
-        "Building Responsible Decisions",
-        "Making Thoughtful Choices",
-        "Power of Pause",
-      ],
-    },
-  ],
-  "Middle School": [
-    {
-      id: 1,
-      title: "Family Series — Middle School",
-      active: true,
-      completed: false,
-      sub: [
-        "Welcome Guide",
-        "Social Awareness & Empathy",
-        "Relationship Skills",
-        "Goal-Directed Behavior",
-        "Power of Pause",
-      ],
-    },
-  ],
-  "High School": [
-    {
-      id: 1,
-      title: "Family Series — High School",
-      active: true,
-      completed: false,
-      sub: [
-        "Welcome Guide",
-        "Identity & Resilience",
-        "Navigating Relationships",
-        "Responsible Decision-Making",
-        "Power of Pause",
-      ],
-    },
-  ],
-};
-
 // Older grade bands render their videos via Stornaway — same video card look,
 // just a shared "common language" title used regardless of selected language.
 const familyUsesStornaway = (grade) => grade === "Middle School" || grade === "High School";
@@ -845,44 +709,6 @@ function earlyElementaryFamilyContent(unitTitle, lessonTitle, lessonIndex) {
   };
 }
 
-// Adult Wellness course (course.id 201). Lessons transcribed from the source
-// deck — each unit is a mix of "Community" (group facilitation) and
-// "Independent" (self-guided) lessons.
-const adultWellnessUnits = [
-  { id: 1, title: "Getting Started", sub: [
-    "Getting Started Guide",
-  ]},
-  { id: 2, title: "Back to School With a Fresh Start", sub: [
-    "Community: Team Effort", "Community: Rhyme Time", "Community: Drawn to Discovery",
-    "Independent: Time Capsule", "Independent: Reframing", "Independent: Micro-recoveries", "Independent: I Teach Students",
-  ]},
-  { id: 3, title: "Self Care for Personal & Professional Wellbeing", sub: [
-    "Community: Daydream Believer", "Community: Draw You In", "Community: Shake Off",
-    "Independent: Breathe Easier", "Independent: Flight, Fight or Freeze", "Independent: Thought Trains",
-    "Independent: Prioritizing Our Time", "Independent: Digging In", "Independent: Moving Through Fear", "Independent: What Works For You?",
-  ]},
-  { id: 4, title: "Reflect, Reset & Recharge", sub: [
-    "Community: Fab Four", "Community: Story of Your Life", "Community: The Do-Over",
-    "Independent: Write Away", "Independent: Sensational", "Independent: Attachments",
-    "Independent: \"Outlets\"", "Independent: Breathing the Body", "Independent: Other Side of the Door",
-  ]},
-  { id: 5, title: "Team & Community Building", sub: [
-    "Community: Kudos!", "Community: Someone Beside You", "Community: Mirror Mirror",
-    "Independent: The Name Game", "Independent: Wonder Words", "Independent: Good Breath", "Independent: Myself With Others",
-  ]},
-  { id: 6, title: "Leading with Empathy & Personal Sustainability", sub: [
-    "Community: Recharge It", "Community: Take a Hike", "Community: Take the Win",
-    "Independent: It Takes Two", "Independent: Sustaining Routines", "Independent: Letting the Paint Dry",
-    "Independent: Starting vs. Sustaining", "Independent: Signals of Stress",
-  ]},
-  { id: 7, title: "Coming Together in the Face of Crisis: Moving Through Tragedy", sub: [
-    "Community: Taking Care", "Community: Memory Lane", "Community: Connectioning",
-    "Independent: Smile a While", "Independent: Finding Hope", "Independent: Sitting in the Love",
-    "Independent: In Community", "Independent: Planting a Microchip", "Independent: Eruptions",
-    "Independent: Naming It", "Independent: Antidote to Devastation is Creation",
-  ]},
-].map((u) => ({ ...u, completed: false, active: u.id === 1 }));
-
 // Per-lesson content: PDF overview followed by a video, same pattern as Tier 2
 // sessions. A couple of Unit 3 lessons demo the audio media type for dev
 // reference: "Breathe Easier" adds audio alongside the video, while
@@ -995,25 +821,6 @@ function adultWellnessLessonContent(unitId, lessonTitle) {
     { type: "video", title: lessonTitle, duration: "3:30", description: "A short video introducing this practice." },
   ];
 }
-
-// Tier 2 — Early Elementary course (course.id 101). Units transcribed from the
-// Tier 2 source. Progress mirrors the existing pattern: early units completed,
-// one active.
-const tier2EarlyElementaryUnits = [
-  { id: 1,  title: "Getting Started",                            sub: ["Tier 2 Training Guide", "Materials"] },
-  { id: 2,  title: "Pick-Up Practices",                          sub: ["Opening Exercises", "Quick Emotional Building Block Practice", "Quick Emoger Practice", "Closing Exercises"] },
-  { id: 3,  title: "Session 1: Recognizing Emotions",            sub: ["Lesson Materials & Printouts", "Session 1 Content"] },
-  { id: 4,  title: "Session 2: Expressing Emotions",             sub: ["Lesson Materials & Printouts", "Session Content 2"] },
-  { id: 5,  title: "Session 3: Managing Emotions",               sub: ["Lesson Materials & Printouts", "Session 3 Content"] },
-  { id: 6,  title: "Session 4: Impulse Control",                 sub: ["Lesson Materials & Printouts", "Session 4 Content"] },
-  { id: 7,  title: "Session 5: Recognizing Our Strengths",       sub: ["Lesson Materials & Printouts", "Session 5 Content"] },
-  { id: 8,  title: "Session 6: Social Perspective Taking",       sub: ["Lesson Materials & Printouts", "Session 6 Content"] },
-  { id: 9,  title: "Session 7: Active Listening",                sub: ["Lesson Materials & Printouts", "Session 7 Content"] },
-  { id: 10, title: "Session 8: Respecting Others",               sub: ["Lesson Materials & Printouts", "Session 8 Content"] },
-  { id: 11, title: "Session 9: Building Positive Relationships", sub: ["Lesson Materials & Printouts", "Session 9 Content"] },
-  { id: 12, title: "Session 10: Forming a Growth Mindset",       sub: ["Lesson Materials & Printouts", "Session 10 Content"] },
-  { id: 13, title: "Session 10: Forming a Growth Mindset",       sub: ["Lesson Materials & Printouts", "Session 10 Content"] },
-].map((u) => ({ ...u, completed: u.id <= 8, active: u.id === 9 }));
 
 // Tier 2 session content — 3 videos shown in the established split-panel player,
 // plus 3 downloadable PDF resources shown as cards.

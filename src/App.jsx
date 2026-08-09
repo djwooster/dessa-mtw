@@ -4,6 +4,7 @@ import { Toaster } from 'sonner'
 import Nav from './components/Nav'
 import Dashboard from './pages/Dashboard'
 import Curriculum from './pages/Curriculum'
+import Resources from './pages/Resources'
 import LessonView from './pages/LessonView'
 import Ratings from './pages/Ratings'
 import BrandGuide from './pages/BrandGuide'
@@ -54,6 +55,7 @@ function AppShell({ handleBookmark }) {
         <Route path="/" element={<Dashboard />} />
         <Route path="/mtw" element={<Curriculum />} />
         <Route path="/mtw/lesson" element={<LessonView onBookmark={handleBookmark} />} />
+        <Route path="/resources" element={<Resources />} />
         <Route path="/ratings" element={<Ratings />} />
         <Route path="/report1c" element={<Report1C />} />
         <Route path="/report2" element={<Report2 />} />
