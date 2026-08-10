@@ -4,18 +4,18 @@
 // living inline in LessonView.jsx) so both can import the same source of
 // truth without a lib file depending on a page component.
 
-// Family — parent/guardian-facing series, one per grade band (course.level
-// 'Family'). Each Series contains a single Unit. Older bands (Middle School,
-// High School) use Stornaway video lessons — same video card, just a
-// different "common language" title shared across English/Spanish.
-export const familyUnitsByGrade = {
-  "Early Elementary": [
+// Family — parent/guardian-facing series. All 4 grade bands (course.level
+// 'Family') share the same 9-unit structure, transcribed from the real MTW
+// Early Elementary curriculum — Middle School/High School render the
+// competency videos via Stornaway (same video card, just a shared "common
+// language" title instead of separate English/Spanish titles).
+const familySeriesUnits = [
     {
       id: 1,
       title: "Welcome to Move This World!",
       active: true,
       completed: false,
-      sub: ["How it Works", "Overview of MTW Competencies"],
+      sub: ["Overview of MTW Competencies"],
     },
     {
       id: 2,
@@ -93,52 +93,13 @@ export const familyUnitsByGrade = {
       completed: false,
       sub: ["Emotion Motion Podcast®"],
     },
-  ],
-  "Late Elementary": [
-    {
-      id: 1,
-      title: "Family Series — Late Elementary",
-      active: true,
-      completed: false,
-      sub: [
-        "Welcome Guide",
-        "Self-Management in Action",
-        "Building Responsible Decisions",
-        "Making Thoughtful Choices",
-        "Power of Pause",
-      ],
-    },
-  ],
-  "Middle School": [
-    {
-      id: 1,
-      title: "Family Series — Middle School",
-      active: true,
-      completed: false,
-      sub: [
-        "Welcome Guide",
-        "Social Awareness & Empathy",
-        "Relationship Skills",
-        "Goal-Directed Behavior",
-        "Power of Pause",
-      ],
-    },
-  ],
-  "High School": [
-    {
-      id: 1,
-      title: "Family Series — High School",
-      active: true,
-      completed: false,
-      sub: [
-        "Welcome Guide",
-        "Identity & Resilience",
-        "Navigating Relationships",
-        "Responsible Decision-Making",
-        "Power of Pause",
-      ],
-    },
-  ],
+];
+
+export const familyUnitsByGrade = {
+  "Early Elementary": familySeriesUnits,
+  "Late Elementary": familySeriesUnits,
+  "Middle School": familySeriesUnits,
+  "High School": familySeriesUnits,
 };
 
 // Adult Wellness course (course.id 201). Lessons transcribed from the source

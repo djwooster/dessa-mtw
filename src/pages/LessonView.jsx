@@ -468,81 +468,37 @@ const grade2Units = units.map((u) => ({
 // just a shared "common language" title used regardless of selected language.
 const familyUsesStornaway = (grade) => grade === "Middle School" || grade === "High School";
 
+// All 4 grade bands share the same unit/lesson structure and content
+// (see familySeriesUnits in lessonUnitsData.js) — Middle School/High School
+// only differ in how the competency videos are delivered: Stornaway,
+// relabeled with a shared "common language" title instead of separate
+// English/Spanish titles.
 function familyLessonContent(grade, lessonTitle, unitTitle, lessonIndex) {
-  if (grade === "Early Elementary") {
-    return earlyElementaryFamilyContent(unitTitle, lessonTitle, lessonIndex);
-  }
-  const stornaway = familyUsesStornaway(grade);
+  const content = familySeriesContent(unitTitle, lessonTitle, lessonIndex);
+  if (content.type !== "facilitation" || !familyUsesStornaway(grade)) return content;
 
-  if (lessonTitle === "Welcome Guide") {
-    return {
-      type: "welcome",
-      intro: `Welcome to the ${grade} Family Series! This series brings the same SEL language your child is learning in school into your home, in short, easy-to-use lessons designed for busy families.`,
-      expect: [
-        "A short video for each topic — most are 3–5 minutes long",
-        "Videos are available in English and Spanish — switch anytime using the language button on the player",
-        "A Power of Pause video with calming techniques you can use together at home",
-        "No sign-up or prep needed — just press play when you're ready",
-      ],
-      gettingStarted:
-        "Work through the lessons in any order that fits your family's schedule. There's no need to finish them all at once — come back whenever you'd like a shared moment of connection.",
-    };
-  }
-
-  if (lessonTitle === "Power of Pause") {
-    // Same tabbed multi-video pattern as Early Elementary's Power of Pause
-    // unit, for consistency across grade bands — placeholder variant names.
-    return {
-      type: "tabbedVideo",
-      videos: ["Ballooning", "Heart to Heart", "Deep Breath"].map((name) => ({
-        englishVideo: { title: name, duration: "2:45", description: "A guided calming practice families can use together, anytime things feel like a lot." },
-        spanishVideo: { title: name, duration: "2:50", description: "Una práctica guiada de calma que las familias pueden usar juntas, en cualquier momento." },
-      })),
-    };
-  }
-
-  // SEL competency lesson (default) — Facilitation Guide + English/Spanish video.
-  const isEmotionalBuildingBlocks = lessonTitle === "Emotional Building Blocks";
   const commonTitle = `${lessonTitle} — Family Video`;
   return {
-    type: "facilitation",
-    activityTitle: lessonTitle,
-    activityBody: `Watch together, then talk about a time your family experienced this. There are no wrong answers — the goal is simply to build a shared vocabulary around ${lessonTitle.toLowerCase()}.`,
-    activityTime: "10 minutes",
-    tips: [
-      "Watch the video together as a family before discussing",
-      "Let everyone share, including younger children — simple answers count",
-      "Revisit this topic during the week using the same language from the video",
-    ],
-    whyWeDoThis:
-      "Kids build emotional skills faster when the language they hear at school is reinforced at home. A few minutes of shared practice each week helps these ideas stick.",
-    stornaway: stornaway,
-    englishVideo: stornaway
-      ? { title: commonTitle, duration: "4:00", description: "An interactive Stornaway video experience for this topic." }
-      : { title: `${lessonTitle} — English`, duration: "3:45", description: "A short video introducing this topic in English." },
-    spanishVideo: stornaway
-      ? { title: commonTitle, duration: "4:00", description: "Una experiencia de video interactiva de Stornaway para este tema." }
-      : { title: `${lessonTitle} — Español`, duration: "3:50", description: "Un breve video que presenta este tema en español." },
-    supplementalPdfs: isEmotionalBuildingBlocks
-      ? [
-          { title: "Emotional Building Blocks — Family Poster", description: "A printable poster of the Emotional Building Blocks for your fridge or wall.", pages: "1 page" },
-          { title: "Feelings Check-In Card", description: "A quick reference card to help name feelings together at home.", pages: "1 page" },
-        ]
-      : null,
+    ...content,
+    stornaway: true,
+    englishVideo: { title: commonTitle, duration: "4:00", description: "An interactive Stornaway video experience for this topic." },
+    spanishVideo: { title: commonTitle, duration: "4:00", description: "Una experiencia de video interactiva de Stornaway para este tema." },
   };
 }
 
-// Early Elementary Family Series — 9 units transcribed from the MTW course
-// library (see project memory). Welcome, Power of Pause, and the Emogers
-// overview videos are bilingual-video-only; the competency video units
-// (Self-Awareness, Self-Management, Social Awareness, Relationship Skills,
-// Responsible Decision-Making) pair a Facilitation Guide (broken into web
-// sections, no PDF overlay) with a bilingual video; the Poster is a
-// broken-out text resource; the Podcast is a standalone audio lesson.
+// Family Series — 9 units transcribed from the MTW course library (see
+// project memory), shared by all 4 grade bands. Welcome, Power of Pause, and
+// the Emogers overview videos are bilingual-video-only; the competency video
+// units (Self-Awareness, Self-Management, Social Awareness, Relationship
+// Skills, Responsible Decision-Making) pair a Facilitation Guide (broken
+// into web sections, no PDF overlay) with a bilingual video (Stornaway +
+// shared title for Middle School/High School, per familyLessonContent
+// above); the Poster is a broken-out text resource; the Podcast is a
+// standalone audio lesson.
 // Real Family Facilitation Guide content, transcribed from the source PDFs
 // as they're shared — keyed by lesson title. Lessons not yet transcribed
 // fall back to the generic template below.
-const earlyElementaryFacilitationGuides = {
+const familyFacilitationGuides = {
   "Emoger #1: Tighten and Release": {
     // Overrides the course-level competency badge ("Self-Awareness") —
     // this lesson specifically covers Self-Management.
@@ -601,7 +557,7 @@ const earlyElementaryFacilitationGuides = {
 // "10 Emogers Elementary School" lesson shows all 10 Emoger videos as tabs
 // (contrast with the second lesson of the same title, which stays a single
 // bilingual video via the "video" type below).
-const earlyElementaryEmogerVideos = [
+const familyEmogerVideos = [
   "Tighten and Release",
   "Count to 10",
   "Breathe 5 Times",
@@ -622,7 +578,7 @@ const earlyElementaryEmogerVideos = [
 // Power of Pause video variants per lesson — matches the real product's
 // pill-tab pattern (confirmed via screenshot for "Breathing Exercises").
 // Other lessons' variant names are placeholders for team review.
-const earlyElementaryPowerOfPauseVariants = {
+const familyPowerOfPauseVariants = {
   "Breathing Exercises": ["Ballooning", "Easy Breezy 1", "Heart to Heart", "Mountain Climbing"],
   "Embodied Relaxation": ["Shake It Out", "Melting", "Statue Freeze"],
   "Recharge": ["Power Nap", "Stretch Break", "Deep Breath"],
@@ -630,7 +586,7 @@ const earlyElementaryPowerOfPauseVariants = {
   "Mindful Reflection": ["Gratitude Moment", "Body Scan", "Quiet Mind"],
 };
 
-function earlyElementaryFamilyContent(unitTitle, lessonTitle, lessonIndex) {
+function familySeriesContent(unitTitle, lessonTitle, lessonIndex) {
   // Example pattern #1 for team review: a resource PDF that opens in a new
   // tab (contrast with "Overview of MTW Competencies" below, which extracts
   // a comparable resource into on-page text — pattern #2).
@@ -654,22 +610,21 @@ function earlyElementaryFamilyContent(unitTitle, lessonTitle, lessonIndex) {
 
   if (lessonTitle === "Overview of MTW Competencies") {
     return {
-      type: "poster",
+      type: "pdf",
       title: lessonTitle,
-      synopsis:
-        "An overview of the MTW competencies your child is learning at school — Self-Awareness, Self-Management, Social Awareness, Relationship Skills, and Responsible Decision-Making — and how they build on each other.",
+      image: "/competencies.png",
     };
   }
 
   if (lessonTitle === "10 Emogers Elementary School" && lessonIndex === 1) {
     return {
       type: "tabbedVideo",
-      videos: earlyElementaryEmogerVideos,
+      videos: familyEmogerVideos,
     };
   }
 
   if (unitTitle === "Power of Pause") {
-    const variantNames = earlyElementaryPowerOfPauseVariants[lessonTitle];
+    const variantNames = familyPowerOfPauseVariants[lessonTitle];
     return {
       type: "tabbedVideo",
       videos: variantNames.map((name) => ({
@@ -690,7 +645,7 @@ function earlyElementaryFamilyContent(unitTitle, lessonTitle, lessonIndex) {
   // Competency video units (Self-Awareness, Self-Management, Social
   // Awareness, Relationship Skills, Responsible Decision-Making) — a
   // Facilitation Guide broken into web sections, paired with a bilingual video.
-  const realGuide = earlyElementaryFacilitationGuides[lessonTitle];
+  const realGuide = familyFacilitationGuides[lessonTitle];
   return {
     type: "facilitation",
     activityTitle: lessonTitle,
@@ -1695,24 +1650,14 @@ function FamilyPowerOfPauseLayout({ item, language, langOpen, setLanguage, setLa
   );
 }
 
-// Early Elementary "Poster" resource — broken-out web text instead of a PDF
-// overlay (per the same no-PDF-in-new-tab convention as Adult Wellness).
-function FamilyPosterLayout({ item }) {
-  return (
-    <div className="pl-4" style={{ borderLeft: "4px solid #2A7F8F" }}>
-      <p className="text-brand-text leading-relaxed font-medium" style={{ fontSize: "15px" }}>{item.synopsis}</p>
-    </div>
-  );
-}
-
-// Example pattern #1 for team review: a resource PDF that opens in a new
-// tab, rather than being broken out into web-based text (contrast with
-// FamilyPosterLayout below, which is the same kind of resource extracted
-// into on-page text — pattern #2).
+// Family resource that opens as an image in a new tab — same convention as
+// Adult Wellness's "Getting Started" guide.
 function FamilyPdfLayout({ item }) {
   return (
-    <button
-      onClick={() => openPlaceholderPdf(item.title)}
+    <a
+      href={item.image || "/recognize-emotions.png"}
+      target="_blank"
+      rel="noopener noreferrer"
       className="relative w-full rounded-2xl overflow-hidden border border-brand-border group block"
       style={{ height: "340px", cursor: "pointer" }}
     >
@@ -1727,7 +1672,7 @@ function FamilyPdfLayout({ item }) {
           Open Guide in New Tab <ExternalLink size={14} />
         </span>
       </div>
-    </button>
+    </a>
   );
 }
 
@@ -3623,8 +3568,6 @@ export default function LessonView({ onBookmark }) {
                       setLanguage={setLanguage}
                       setLangOpen={setLangOpen}
                     />
-                  ) : item.type === "poster" ? (
-                    <FamilyPosterLayout item={item} />
                   ) : item.type === "podcast" ? (
                     <FamilyPodcastLayout item={item} />
                   ) : item.type === "pdf" ? (

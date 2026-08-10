@@ -19,8 +19,13 @@ const GRADE_ORDER = [
   'Adult Wellness',
 ]
 
+// Titles that don't otherwise match the pdf/audio keyword patterns below but
+// render as an image-link-out resource in LessonView.jsx, not a video.
+const PDF_TITLE_OVERRIDES = new Set(['Overview of MTW Competencies'])
+
 function inferType(title) {
   if (/podcast/i.test(title)) return 'audio'
+  if (PDF_TITLE_OVERRIDES.has(title)) return 'pdf'
   if (/guide|materials|printouts|poster|notes|worksheet/i.test(title)) return 'pdf'
   return 'video'
 }

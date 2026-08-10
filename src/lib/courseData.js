@@ -192,7 +192,7 @@ export const familyCourses = [
     title: 'Late Elementary Family Series',
     competency: 'Self-Management',
     color: '#F4A672',
-    lessons: 5,
+    lessons: 38,
   },
   {
     id: 303,
@@ -201,7 +201,7 @@ export const familyCourses = [
     title: 'Middle School Family Series',
     competency: 'Relationship Skills',
     color: '#F4A672',
-    lessons: 5,
+    lessons: 38,
   },
   {
     id: 304,
@@ -210,6 +210,6 @@ export const familyCourses = [
     title: 'High School Family Series',
     competency: 'Responsible Decision-Making',
     color: '#F4A672',
-    lessons: 5,
+    lessons: 38,
   },
 ]
