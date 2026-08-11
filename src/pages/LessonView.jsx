@@ -587,14 +587,15 @@ const familyPowerOfPauseVariants = {
 };
 
 function familySeriesContent(unitTitle, lessonTitle, lessonIndex) {
-  // Example pattern #1 for team review: a resource PDF that opens in a new
-  // tab (contrast with "Overview of MTW Competencies" below, which extracts
-  // a comparable resource into on-page text — pattern #2).
+  // Resource that opens as an image in a new tab, rather than being broken
+  // out into on-page text — imageAspect matches the real file's dimensions
+  // so FamilyPdfLayout can show it uncropped.
   if (lessonTitle.includes("Poster")) {
     return {
       type: "pdf",
       title: lessonTitle,
       image: "/emotions-image.png",
+      imageAspect: "2140/1412",
     };
   }
 
@@ -613,6 +614,7 @@ function familySeriesContent(unitTitle, lessonTitle, lessonIndex) {
       type: "pdf",
       title: lessonTitle,
       image: "/competencies.png",
+      imageAspect: "1781/883",
     };
   }
 
@@ -1659,7 +1661,7 @@ function FamilyPdfLayout({ item }) {
       target="_blank"
       rel="noopener noreferrer"
       className="relative w-full rounded-2xl overflow-hidden border border-brand-border group block"
-      style={{ height: "340px", cursor: "pointer" }}
+      style={{ aspectRatio: item.imageAspect || "16/9", cursor: "pointer" }}
     >
       <img src={item.image || "/recognize-emotions.png"} alt="" className="absolute inset-0 w-full h-full object-cover" />
       <div className="absolute inset-0" style={{ background: "rgba(27,43,75,0.55)" }} />
