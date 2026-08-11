@@ -976,12 +976,9 @@ function MultiVideoPlayer({
 }) {
   const current = resolveMultiVideo(videos[activeVideo], language);
   return (
-    <div
-      className="flex rounded-2xl overflow-hidden border border-brand-border"
-      style={{ height: "460px" }}
-    >
+    <div className="flex flex-col md:flex-row rounded-2xl overflow-hidden border border-brand-border">
       {/* Player */}
-      <div className="flex-1 relative" style={{ background: "#1B2B4B" }}>
+      <div className="relative h-[220px] md:h-[460px] md:flex-1" style={{ background: "#1B2B4B" }}>
         <div
           className="absolute inset-0"
           style={{
@@ -989,7 +986,7 @@ function MultiVideoPlayer({
               "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)",
           }}
         />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 md:px-8">
           <button
             className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg"
             style={{ background: "#2A7F8F" }}
@@ -1018,9 +1015,10 @@ function MultiVideoPlayer({
         />
       </div>
 
-      {/* Episode list (tabs) */}
-      <div className="w-64 bg-white flex-shrink-0 border-l border-brand-border overflow-y-auto">
-        <div className="px-4 py-2.5 border-b border-brand-border">
+      {/* Episode list — a horizontal scrollable tab strip below the video on
+          mobile, the established vertical rail to the right at md+. */}
+      <div className="flex md:block gap-2 p-3 md:p-0 overflow-x-auto md:overflow-y-auto md:w-64 md:flex-shrink-0 bg-white border-t md:border-t-0 md:border-l border-brand-border">
+        <div className="hidden md:block px-4 py-2.5 border-b border-brand-border">
           <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">
             In this lesson
           </p>
@@ -1031,10 +1029,10 @@ function MultiVideoPlayer({
             <button
               key={i}
               onClick={() => setActiveVideo(i)}
-              className={`w-full text-left px-4 py-3 border-b border-brand-border last:border-0 border-l-2 transition-colors ${
+              className={`flex-shrink-0 w-40 md:w-full text-left rounded-lg md:rounded-none px-3 py-2.5 md:px-4 md:py-3 transition-colors border-b-2 md:border-b md:border-b-brand-border md:last:border-b-0 md:border-l-2 ${
                 i === activeVideo
-                  ? "bg-dessa-tealLight border-l-dessa-teal"
-                  : "border-l-transparent hover:bg-brand-bg"
+                  ? "bg-dessa-tealLight border-b-dessa-teal md:border-l-dessa-teal"
+                  : "border-b-transparent md:border-l-transparent hover:bg-brand-bg"
               }`}
             >
               <p className="text-xs text-brand-subtext mb-0.5">Episode {i + 1}</p>
