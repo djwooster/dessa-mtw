@@ -1029,19 +1029,35 @@ function MultiVideoPlayer({
             <button
               key={i}
               onClick={() => setActiveVideo(i)}
-              className={`flex-shrink-0 w-40 md:w-full text-left rounded-lg md:rounded-none px-3 py-2.5 md:px-4 md:py-3 transition-colors border-b-2 md:border-b md:border-b-brand-border md:last:border-b-0 md:border-l-2 ${
-                i === activeVideo
-                  ? "bg-dessa-tealLight border-b-dessa-teal md:border-l-dessa-teal"
-                  : "border-b-transparent md:border-l-transparent hover:bg-brand-bg"
+              className={`flex-shrink-0 w-24 md:w-full text-left transition-colors md:px-4 md:py-3 md:border-b md:border-b-brand-border md:last:border-b-0 md:border-l-2 ${
+                i === activeVideo ? "md:bg-dessa-tealLight md:border-l-dessa-teal" : "md:border-l-transparent hover:bg-brand-bg"
               }`}
             >
-              <p className="text-xs text-brand-subtext mb-0.5">Episode {i + 1}</p>
+              {/* Mobile — compact filmstrip thumbnail + one-line caption,
+                  no real per-video frame to show so this is a generic
+                  placeholder matching the hero player's dark gradient. */}
+              <div
+                className={`md:hidden w-24 h-16 rounded-lg overflow-hidden mb-1.5 flex items-center justify-center border-2 transition-colors ${
+                  i === activeVideo ? "border-dessa-teal" : "border-transparent"
+                }`}
+                style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.5) 0%, rgba(27,43,75,0.95) 100%)" }}
+              >
+                <Play size={12} fill="white" className="text-white ml-0.5" />
+              </div>
               <p
-                className={`text-sm font-semibold leading-snug mb-1 ${i === activeVideo ? "text-dessa-teal" : "text-brand-text"}`}
+                className={`md:hidden text-xs leading-snug truncate w-24 ${i === activeVideo ? "font-semibold text-dessa-teal" : "text-brand-text"}`}
               >
                 {resolved.title}
               </p>
-              <div className="flex items-center gap-1 text-xs text-brand-subtext">
+
+              {/* Desktop — unchanged vertical rail with full detail */}
+              <p className="hidden md:block text-xs text-brand-subtext mb-0.5">Episode {i + 1}</p>
+              <p
+                className={`hidden md:block text-sm font-semibold leading-snug mb-1 ${i === activeVideo ? "text-dessa-teal" : "text-brand-text"}`}
+              >
+                {resolved.title}
+              </p>
+              <div className="hidden md:flex items-center gap-1 text-xs text-brand-subtext">
                 <Clock size={10} />
                 {resolved.duration}
               </div>
