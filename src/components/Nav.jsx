@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
-import { Search, HelpCircle } from 'lucide-react'
+import { Search, HelpCircle, Menu } from 'lucide-react'
+import { useMobileMenu } from '../lib/MobileMenuContext'
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 
@@ -14,17 +15,31 @@ const navItems = [
 ]
 
 export default function Nav() {
+  const { action: mobileMenuAction } = useMobileMenu() ?? {}
+
   return (
     <nav className="bg-white border-b border-brand-border shadow-sm sticky top-0 z-50">
       <div className="max-w-screen-xl mx-auto px-6 h-14 flex items-center gap-6">
 
-        {/* Logo */}
-        <div className="flex items-center mr-4 flex-shrink-0">
+        {/* Logo — hidden on mobile in favor of the page's menu button when
+            one is registered (e.g. the Family lesson view's lesson drawer) */}
+        <div className={`items-center mr-4 flex-shrink-0 ${mobileMenuAction ? "hidden md:flex" : "flex"}`}>
           <img src="/dessa-logo.svg" alt="DESSA" className="h-5 w-auto" />
         </div>
 
+        {/* Mobile menu action — takes the logo's place on mobile */}
+        {mobileMenuAction && (
+          <button
+            onClick={mobileMenuAction.onClick}
+            className="md:hidden flex items-center gap-1.5 text-sm font-medium text-brand-text border border-brand-border rounded-md px-3 py-1.5 hover:bg-brand-bg transition-colors"
+          >
+            <Menu size={14} />
+            {mobileMenuAction.label}
+          </button>
+        )}
+
         {/* Nav items */}
-        <div className="flex items-center gap-0.5 flex-1">
+        <div className="hidden md:flex items-center gap-0.5 flex-1">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -44,7 +59,7 @@ export default function Nav() {
         </div>
 
         {/* Right actions */}
-        <div className="flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-2">
           <button className="text-brand-subtext hover:text-brand-text transition-colors p-1.5 rounded hover:bg-brand-bg">
             <Search size={16} />
           </button>

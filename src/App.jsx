@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
+import { MobileMenuProvider } from './lib/MobileMenuContext'
 import Nav from './components/Nav'
 import Dashboard from './pages/Dashboard'
 import Curriculum from './pages/Curriculum'
@@ -39,7 +40,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-center" richColors />
-      <AppShell handleBookmark={handleBookmark} />
+      <MobileMenuProvider>
+        <AppShell handleBookmark={handleBookmark} />
+      </MobileMenuProvider>
     </BrowserRouter>
   )
 }

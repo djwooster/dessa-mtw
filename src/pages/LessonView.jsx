@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { familyUnitsByGrade, adultWellnessUnits, tier2EarlyElementaryUnits } from "../lib/lessonUnitsData";
+import { useMobileMenu } from "../lib/MobileMenuContext";
 import {
   CheckCircle2,
   Circle,
@@ -1308,9 +1309,9 @@ function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen,
 function FamilyVideoCard({ englishVideo, spanishVideo, language, langOpen, setLanguage, setLangOpen, onPlay }) {
   const video = language === "Spanish" ? spanishVideo : englishVideo;
   return (
-    <div className="rounded-2xl overflow-hidden border border-brand-border relative" style={{ height: "460px", background: "#1B2B4B" }}>
+    <div className="rounded-2xl overflow-hidden border border-brand-border relative h-[280px] md:h-[460px]" style={{ background: "#1B2B4B" }}>
       <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }} />
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 md:px-8">
         <button
           onClick={onPlay}
           className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg"
@@ -1318,8 +1319,8 @@ function FamilyVideoCard({ englishVideo, spanishVideo, language, langOpen, setLa
         >
           <Play size={16} fill="white" className="text-white ml-0.5" />
         </button>
-        <p className="text-white font-semibold leading-snug mb-1" style={{ fontSize: "18px" }}>{video.title}</p>
-        <p className="text-white/50 leading-relaxed" style={{ fontSize: "14px" }}>{video.description}</p>
+        <p className="text-white font-semibold leading-snug mb-1 text-base md:text-lg">{video.title}</p>
+        <p className="text-white/50 leading-relaxed text-sm">{video.description}</p>
       </div>
       <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
         <Clock size={11} />{video.duration}
@@ -1366,9 +1367,9 @@ function FamilyWelcomeLayout({ item }) {
 // Conversation" pattern (~line 4265), minus the small context label per card
 // — Family tips don't have a per-item label like Tier 1's "ELA"/"At Home".
 function FamilyTipCards({ items }) {
-  const cols = items.length >= 3 ? "grid-cols-3" : items.length === 2 ? "grid-cols-2" : "grid-cols-1";
+  const cols = items.length >= 3 ? "md:grid-cols-3" : items.length === 2 ? "md:grid-cols-2" : "";
   return (
-    <div className={`grid ${cols} gap-4`}>
+    <div className={`grid grid-cols-1 ${cols} gap-4`}>
       {items.map((t, i) => (
         <div key={i} className="bg-white rounded-xl border border-brand-border p-4">
           <p className="text-body text-brand-text leading-relaxed">{t}</p>
@@ -1537,7 +1538,7 @@ function FamilyFacilitationLayout({
 
       {(skills || objective) && (
         <>
-          <div className="grid grid-cols-2 gap-6 mb-7">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-7">
             {skills && (
               <div>
                 <SectionLabel>{useEs ? "Habilidades" : "Skills"}</SectionLabel>
@@ -2942,6 +2943,21 @@ export default function LessonView({ onBookmark }) {
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [pendingNavigate, setPendingNavigate] = useState(null);
   const [showInactive, setShowInactive] = useState(true);
+  // Mobile-only sidebar drawer, currently scoped to Family (see the `isFamily`
+  // check on the <aside> below) — other course types keep the fixed desktop
+  // sidebar until they get their own mobile pass.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { setAction: setMobileMenuAction } = useMobileMenu() ?? {};
+
+  // Registers the Nav's mobile "Menu" button to open this page's lesson
+  // drawer while a Family lesson is mounted; clears it on unmount so other
+  // pages don't inherit a stale action.
+  useEffect(() => {
+    if (!isFamily || !setMobileMenuAction) return;
+    setMobileMenuAction({ label: "Menu", onClick: () => setSidebarOpen((v) => !v) });
+    return () => setMobileMenuAction(null);
+  }, [isFamily, setMobileMenuAction]);
+
   const [language, setLanguage] = useState("English");
   const [langOpen, setLangOpen] = useState(false);
   const [showNextLesson, setShowNextLesson] = useState(false);
@@ -3052,6 +3068,7 @@ export default function LessonView({ onBookmark }) {
     setActivePoPVideo(0);
     setActiveContent("video");
     setBookmarked(false);
+    setSidebarOpen(false);
   };
 
   const handleSelectLesson = (unitId, lessonIndex) => {
@@ -3097,22 +3114,39 @@ export default function LessonView({ onBookmark }) {
     <div className="flex h-[calc(100vh-56px)] overflow-hidden">
       {/* ── Bookmark toast — commented out ── */}
 
+      {/* Mobile sidebar backdrop — Family only, dismisses the drawer on tap */}
+      {isFamily && sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* ── Left sidebar ── */}
       <aside
-        className="flex-shrink-0 bg-white border-r border-brand-border flex flex-col overflow-hidden"
-        style={{ width: "20rem" }}
+        className={
+          isFamily
+            ? `fixed top-14 left-0 bottom-0 z-40 w-72 flex-shrink-0 bg-white border-r border-brand-border flex flex-col overflow-hidden transition-transform duration-300 ease-in-out md:static md:w-80 md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`
+            : "flex-shrink-0 bg-white border-r border-brand-border flex flex-col overflow-hidden"
+        }
+        style={isFamily ? undefined : { width: "20rem" }}
       >
-        <div className="px-4 py-4 border-b border-brand-border flex items-center justify-between">
-          <button
-            onClick={() => attemptLeave(() => navigate("/mtw"))}
-            className="flex items-center gap-1.5 text-sm font-medium transition-colors" style={{ color: "#0f6cbd" }}
-          >
-            <ChevronLeft size={14} />
-            Back
-          </button>
+        <div
+          className={`px-4 py-4 border-b border-brand-border items-center ${isFamily ? "hidden md:flex justify-end" : "flex justify-between"}`}
+        >
+          {!isFamily && (
+            <button
+              onClick={() => attemptLeave(() => navigate("/mtw"))}
+              className="flex items-center gap-1.5 text-sm font-medium transition-colors" style={{ color: "#0f6cbd" }}
+            >
+              <ChevronLeft size={14} />
+              Back
+            </button>
+          )}
           <button
             onClick={() => setShowInactive((v) => !v)}
-            className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors"
+            className="hidden md:flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors"
           >
             {showInactive ? <Eye size={13} /> : <EyeOff size={13} />}
             {showInactive ? "Hide inactive units" : "Show inactive units"}
@@ -3262,6 +3296,20 @@ export default function LessonView({ onBookmark }) {
             </button>
           </div>
         </div>
+        )}
+
+        {/* Back to Courses — ghost button, sticky at the bottom of the sidebar */}
+        {isFamily && (
+          <div className="flex-shrink-0 border-t border-brand-border p-3">
+            <button
+              onClick={() => attemptLeave(() => navigate("/mtw"))}
+              className="w-full flex items-center justify-center gap-1.5 text-sm font-medium hover:bg-brand-bg rounded-md px-4 py-2.5 transition-colors"
+              style={{ color: "#0f6cbd" }}
+            >
+              <ChevronLeft size={14} />
+              Back to Courses
+            </button>
+          </div>
         )}
       </aside>
 
@@ -3525,7 +3573,7 @@ export default function LessonView({ onBookmark }) {
             );
           })()
         ) : isFamily ? (
-          <div className="max-w-[62rem] mx-auto px-8 py-7">
+          <div className="max-w-[62rem] mx-auto px-4 md:px-8 py-5 md:py-7">
             {(() => {
               const lessonTitle = activeUnit?.sub[selectedLesson.lessonIndex] ?? "Welcome Guide";
               const item = familyLessonContent(course.grade, lessonTitle, activeUnit?.title, selectedLesson.lessonIndex);
@@ -3533,9 +3581,9 @@ export default function LessonView({ onBookmark }) {
               const showUnitCrumb = activeUnits.length > 1 && activeUnit?.title;
               return (
                 <>
-                  <div className="flex items-end justify-between gap-6 mb-5">
+                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 md:gap-6 mb-5">
                     <div>
-                      <p className="flex items-center gap-1 text-xs font-semibold tracking-wide text-brand-subtext mb-1">
+                      <p className="hidden md:flex items-center gap-1 text-xs font-semibold tracking-wide text-brand-subtext mb-1">
                         Family
                         <ChevronRight size={11} className="flex-shrink-0" />
                         {grade}
@@ -3546,13 +3594,13 @@ export default function LessonView({ onBookmark }) {
                           </>
                         )}
                       </p>
-                      <h1 className="text-2xl font-semibold text-brand-text">
+                      <h1 className="text-xl md:text-2xl font-semibold text-brand-text">
                         {lessonTitle}
                       </h1>
                     </div>
                     {showCompetencyTag && (
                       <span
-                        className="text-xs font-semibold px-3 py-1.5 rounded-full flex-shrink-0"
+                        className="text-xs font-semibold px-3 py-1.5 rounded-full flex-shrink-0 self-start"
                         style={{ background: "#FEF3DC", color: "#F5A623" }}
                       >
                         {item.competency ?? competency}
@@ -4556,8 +4604,7 @@ export default function LessonView({ onBookmark }) {
               animate={{ y: 0 }}
               exit={{ y: 64 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
-              className="bg-white border-t border-brand-border px-8 py-4 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.02)]"
-              style={{ position: "fixed", bottom: 0, left: "20rem", right: 0, zIndex: 10 }}
+              className="fixed bottom-0 left-0 md:left-80 right-0 z-10 bg-white border-t border-brand-border px-4 md:px-8 py-4 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.02)]"
             >
               <motion.button
                 whileTap={{ scale: 0.97 }}
