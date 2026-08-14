@@ -976,96 +976,135 @@ function MultiVideoPlayer({
 }) {
   const current = resolveMultiVideo(videos[activeVideo], language);
   return (
-    <div className="flex flex-col md:flex-row rounded-2xl overflow-hidden border border-brand-border">
-      {/* Player */}
-      <div className="relative h-[220px] md:h-[460px] md:flex-1" style={{ background: "#1B2B4B" }}>
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)",
-          }}
-        />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 md:px-8">
-          <button
-            className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg"
-            style={{ background: "#2A7F8F" }}
-          >
-            <Play size={16} fill="white" className="text-white ml-0.5" />
-          </button>
-          <p className="text-white font-semibold text-sm leading-snug mb-1">
-            {current.title}
-          </p>
-          <p className="text-white/50 text-xs leading-relaxed">
-            {current.description}
-          </p>
-        </div>
-        <div
-          className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white"
-          style={{ background: "rgba(0,0,0,0.45)" }}
-        >
-          <Clock size={11} />
-          {current.duration}
-        </div>
-        <LanguagePicker
-          language={language}
-          langOpen={langOpen}
-          setLanguage={setLanguage}
-          setLangOpen={setLangOpen}
-        />
-      </div>
-
-      {/* Episode list — a horizontal scrollable tab strip below the video on
-          mobile, the established vertical rail to the right at md+. */}
-      <div className="flex md:block gap-2 p-3 md:p-0 overflow-x-auto md:overflow-y-auto md:w-64 md:flex-shrink-0 bg-white border-t md:border-t-0 md:border-l border-brand-border">
-        <div className="hidden md:block px-4 py-2.5 border-b border-brand-border">
+    <>
+      {/* Mobile experiment — every video is its own full-width block, stacked
+          vertically, instead of one hero player + a filmstrip/rail selector.
+          Title/description/time live below the video, not overlaid on it. */}
+      <div className="md:hidden flex flex-col" style={{ gap: "24px" }}>
+        <div className="flex items-center justify-between px-1">
           <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">
             In this lesson
           </p>
+          <InlineLanguageToggle
+            language={language}
+            langOpen={langOpen}
+            setLanguage={setLanguage}
+            setLangOpen={setLangOpen}
+          />
         </div>
         {videos.map((video, i) => {
           const resolved = resolveMultiVideo(video, language);
+          const isActive = i === activeVideo;
           return (
-            <button
-              key={i}
-              onClick={() => setActiveVideo(i)}
-              className={`flex-shrink-0 w-24 md:w-full text-left transition-colors md:px-4 md:py-3 md:border-b md:border-b-brand-border md:last:border-b-0 md:border-l-2 ${
-                i === activeVideo ? "md:bg-dessa-tealLight md:border-l-dessa-teal" : "md:border-l-transparent hover:bg-brand-bg"
-              }`}
-            >
-              {/* Mobile — compact filmstrip thumbnail + one-line caption,
-                  no real per-video frame to show so this is a generic
-                  placeholder matching the hero player's dark gradient. */}
-              <div
-                className={`md:hidden w-24 h-16 rounded-lg overflow-hidden mb-1.5 flex items-center justify-center border-2 transition-colors ${
-                  i === activeVideo ? "border-dessa-teal" : "border-transparent"
+            <div key={i}>
+              <button
+                onClick={() => setActiveVideo(i)}
+                className={`relative w-full rounded-2xl overflow-hidden border-2 flex items-center justify-center transition-colors ${
+                  isActive ? "border-dessa-teal" : "border-transparent"
                 }`}
-                style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.5) 0%, rgba(27,43,75,0.95) 100%)" }}
+                style={{ minHeight: "320px", background: "#1B2B4B" }}
               >
-                <Play size={12} fill="white" className="text-white ml-0.5" />
+                <div
+                  className="absolute inset-0"
+                  style={{ background: "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)" }}
+                />
+                <span
+                  className="relative w-12 h-12 rounded-full flex items-center justify-center shadow-lg"
+                  style={{ background: "#2A7F8F" }}
+                >
+                  <Play size={16} fill="white" className="text-white ml-0.5" />
+                </span>
+              </button>
+              <div className="flex items-start justify-between gap-3" style={{ marginTop: "8px" }}>
+                <p className="text-sm font-semibold text-brand-text leading-snug">
+                  {resolved.title}
+                </p>
+                <span className="flex items-center gap-1 text-xs text-brand-subtext flex-shrink-0 mt-0.5">
+                  <Clock size={11} />
+                  {resolved.duration}
+                </span>
               </div>
-              <p
-                className={`md:hidden text-xs leading-snug truncate w-24 ${i === activeVideo ? "font-semibold text-dessa-teal" : "text-brand-text"}`}
-              >
-                {resolved.title}
+              <p className="text-sm text-brand-subtext leading-relaxed mt-1">
+                {resolved.description}
               </p>
-
-              {/* Desktop — unchanged vertical rail with full detail */}
-              <p className="hidden md:block text-xs text-brand-subtext mb-0.5">Episode {i + 1}</p>
-              <p
-                className={`hidden md:block text-sm font-semibold leading-snug mb-1 ${i === activeVideo ? "text-dessa-teal" : "text-brand-text"}`}
-              >
-                {resolved.title}
-              </p>
-              <div className="hidden md:flex items-center gap-1 text-xs text-brand-subtext">
-                <Clock size={10} />
-                {resolved.duration}
-              </div>
-            </button>
+            </div>
           );
         })}
       </div>
-    </div>
+
+      {/* Desktop — unchanged hero player + vertical episode rail */}
+      <div className="hidden md:flex rounded-2xl overflow-hidden border border-brand-border">
+        <div className="relative h-[460px] flex-1" style={{ background: "#1B2B4B" }}>
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(45,125,120,0.3) 0%, rgba(27,43,75,0.85) 100%)",
+            }}
+          />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+            <button
+              className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105 shadow-lg"
+              style={{ background: "#2A7F8F" }}
+            >
+              <Play size={16} fill="white" className="text-white ml-0.5" />
+            </button>
+            <p className="text-white font-semibold text-sm leading-snug mb-1">
+              {current.title}
+            </p>
+            <p className="text-white/50 text-xs leading-relaxed">
+              {current.description}
+            </p>
+          </div>
+          <div
+            className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white"
+            style={{ background: "rgba(0,0,0,0.45)" }}
+          >
+            <Clock size={11} />
+            {current.duration}
+          </div>
+          <LanguagePicker
+            language={language}
+            langOpen={langOpen}
+            setLanguage={setLanguage}
+            setLangOpen={setLangOpen}
+          />
+        </div>
+
+        <div className="w-64 flex-shrink-0 bg-white border-l border-brand-border overflow-y-auto">
+          <div className="px-4 py-2.5 border-b border-brand-border">
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">
+              In this lesson
+            </p>
+          </div>
+          {videos.map((video, i) => {
+            const resolved = resolveMultiVideo(video, language);
+            return (
+              <button
+                key={i}
+                onClick={() => setActiveVideo(i)}
+                className={`w-full text-left px-4 py-3 border-b border-brand-border last:border-0 border-l-2 transition-colors ${
+                  i === activeVideo
+                    ? "bg-dessa-tealLight border-l-dessa-teal"
+                    : "border-l-transparent hover:bg-brand-bg"
+                }`}
+              >
+                <p className="text-xs text-brand-subtext mb-0.5">Episode {i + 1}</p>
+                <p
+                  className={`text-sm font-semibold leading-snug mb-1 ${i === activeVideo ? "text-dessa-teal" : "text-brand-text"}`}
+                >
+                  {resolved.title}
+                </p>
+                <div className="flex items-center gap-1 text-xs text-brand-subtext">
+                  <Clock size={10} />
+                  {resolved.duration}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -2638,6 +2677,46 @@ function LanguagePicker({ language, langOpen, setLanguage, setLangOpen }) {
       {langOpen && (
         <div
           className="absolute bottom-full right-0 mb-1.5 bg-white rounded-lg shadow-lg border border-brand-border overflow-hidden"
+          style={{ minWidth: "100px" }}
+        >
+          {["English", "Spanish"].map((lang) => (
+            <button
+              key={lang}
+              onClick={() => {
+                setLanguage(lang);
+                setLangOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                language === lang
+                  ? "font-semibold text-brand-text bg-brand-bg"
+                  : "text-brand-text hover:bg-brand-bg"
+              }`}
+            >
+              {lang}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Same language toggle as LanguagePicker, but positioned in normal flow
+// instead of absolute — for contexts with no single video card to anchor to,
+// like a header above a vertical stack of video cards.
+function InlineLanguageToggle({ language, langOpen, setLanguage, setLangOpen }) {
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setLangOpen((o) => !o)}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-brand-text border border-brand-border hover:bg-brand-bg transition-colors"
+      >
+        <Globe size={11} />
+        {language}
+      </button>
+      {langOpen && (
+        <div
+          className="absolute top-full right-0 mt-1.5 z-10 bg-white rounded-lg shadow-lg border border-brand-border overflow-hidden"
           style={{ minWidth: "100px" }}
         >
           {["English", "Spanish"].map((lang) => (

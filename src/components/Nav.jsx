@@ -21,17 +21,18 @@ export default function Nav() {
     <nav className="bg-white border-b border-brand-border shadow-sm sticky top-0 z-50">
       <div className="max-w-screen-xl mx-auto px-6 h-14 flex items-center gap-6">
 
-        {/* Logo — hidden on mobile in favor of the page's menu button when
-            one is registered (e.g. the Family lesson view's lesson drawer) */}
-        <div className={`items-center mr-4 flex-shrink-0 ${mobileMenuAction ? "hidden md:flex" : "flex"}`}>
+        {/* Logo */}
+        <div className="flex items-center mr-4 flex-shrink-0">
           <img src="/dessa-logo.svg" alt="DESSA" className="h-5 w-auto" />
         </div>
 
-        {/* Mobile menu action — takes the logo's place on mobile */}
+        {/* Mobile menu action — registered by the current page via
+            useMobileMenu (e.g. the Family lesson view's lesson drawer),
+            pushed to the right edge on mobile */}
         {mobileMenuAction && (
           <button
             onClick={mobileMenuAction.onClick}
-            className="md:hidden flex items-center gap-1.5 text-sm font-medium text-brand-text border border-brand-border rounded-md px-3 py-1.5 hover:bg-brand-bg transition-colors"
+            className="md:hidden ml-auto flex items-center gap-1.5 text-sm font-medium text-brand-text border border-brand-border rounded-md px-3 py-1.5 hover:bg-brand-bg transition-colors"
           >
             <Menu size={14} />
             {mobileMenuAction.label}
