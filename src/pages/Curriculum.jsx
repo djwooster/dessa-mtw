@@ -135,7 +135,7 @@ export default function Curriculum() {
   }
 
   return (
-    <div className="max-w-screen-xl mx-auto px-6 pt-20 pb-8">
+    <div className="max-w-screen-xl mx-auto px-6 pt-8 pb-8">
 
       <Tabs defaultValue="all">
 
@@ -144,22 +144,36 @@ export default function Curriculum() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
-          className="flex items-center justify-between mb-6"
+          className="flex items-center justify-between mb-4"
         >
           <div>
             <h1 className="text-2xl font-semibold text-brand-text">Curriculum</h1>
           </div>
-          <TabsList>
+          <TabsList className="hidden md:inline-flex">
             {filters.map((f) => (
               <TabsTrigger key={f.value} value={f.value}>{f.label}</TabsTrigger>
             ))}
           </TabsList>
         </motion.div>
 
+        {/* Mobile — Family is the only mobile-ready course experience so far;
+            the other course types (and the tab switcher above) are desktop-only. */}
+        <div className="md:hidden grid grid-cols-1 gap-5">
+          {familyCourses.map((course, i) => (
+            <CourseCard
+              key={course.id}
+              course={course}
+              onGoToCourse={handleGoToCourse}
+              index={i}
+            />
+          ))}
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: 0.05 }}
+          className="hidden md:block"
         >
 
           {filters.map((f) => {
