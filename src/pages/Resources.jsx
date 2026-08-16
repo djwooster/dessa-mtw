@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Search, X, Video, FileText, Mic, ChevronDown, ChevronRight, GraduationCap, Target } from 'lucide-react'
+import {
+  Search, X, Video, FileText, Mic, ChevronDown, ChevronRight, GraduationCap, Target,
+  BookOpen, Layers, HeartHandshake, Users, Smile, Anchor, MessageCircle, Handshake, Flag,
+} from 'lucide-react'
 import {
   resources, CATEGORIES, TYPES, ALL_GRADES, ALL_COMPETENCIES, courseFor,
 } from '../lib/resourcesData'
@@ -31,6 +34,25 @@ function FileTypeBadge({ type }) {
     </div>
   )
 }
+
+// Browse tiles — deliberately just two axes (Category, Competency) rather
+// than mixing in Type: Category is the library's core organizing structure
+// and Competency is the axis an educator actually thinks in ("something for
+// Self-Management"), so together they're a more useful browse entry point
+// than gluing every facet into one flat tile row. Each tile maps to a real,
+// non-empty filter — no categories invented beyond what the data supports.
+const CATEGORY_TILES = [
+  { group: 'category', value: 'Tier 1', icon: BookOpen },
+  { group: 'category', value: 'Tier 2', icon: Layers },
+  { group: 'category', value: 'Adult Wellness', icon: HeartHandshake },
+  { group: 'category', value: 'Family', icon: Users },
+  { group: 'competency', value: 'Self-Awareness', icon: Smile },
+  { group: 'competency', value: 'Self-Management', icon: Anchor },
+  { group: 'competency', value: 'Social Awareness', icon: MessageCircle },
+  { group: 'competency', value: 'Relationship Skills', icon: Handshake },
+  { group: 'competency', value: 'Responsible Decision-Making', icon: Target },
+  { group: 'competency', value: 'Goal-Directed Behavior', icon: Flag },
+]
 
 const PAGE_SIZE = 20
 
@@ -139,6 +161,7 @@ export default function Resources() {
   const [selectedTypes, setSelectedTypes] = useState([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
+  const [showAllTiles, setShowAllTiles] = useState(false)
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -182,6 +205,11 @@ export default function Resources() {
     setSelectedGrades([])
     setSelectedCompetencies([])
     setSelectedTypes([])
+  }
+
+  function selectTile(tile) {
+    if (tile.group === 'category') setSelectedCategories([tile.value])
+    if (tile.group === 'competency') setSelectedCompetencies([tile.value])
   }
 
   function openResource(r) {
@@ -236,6 +264,31 @@ export default function Resources() {
 
         {/* Search + results */}
         <div className="flex-1 min-w-0">
+          {/* Browse categories */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-brand-text">Browse by category</h2>
+              <button
+                onClick={() => setShowAllTiles((v) => !v)}
+                className="text-sm font-semibold text-dessa-teal hover:text-dessa-navy transition-colors"
+              >
+                {showAllTiles ? 'Show less' : 'See all'}
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {(showAllTiles ? CATEGORY_TILES : CATEGORY_TILES.slice(0, 6)).map((tile) => (
+                <button
+                  key={`${tile.group}-${tile.value}`}
+                  onClick={() => selectTile(tile)}
+                  className="relative h-28 flex items-end rounded-xl border border-brand-border bg-brand-border/30 px-4 py-3 text-left hover:border-dessa-teal/50 transition-colors"
+                >
+                  <tile.icon size={16} className="absolute top-3 right-3 text-brand-subtext" />
+                  <span className="text-sm font-semibold text-brand-text">{tile.value}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="relative mb-3">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
             <input
@@ -265,6 +318,19 @@ export default function Resources() {
             </div>
           )}
 
+          {!hasFilters ? (
+            <div className="px-6 py-16 text-center">
+              <img src="/Search/search-empty.svg" alt="" className="mx-auto h-56 w-auto mb-6" />
+              <p className="text-base font-semibold text-brand-text mb-1">
+                Search or pick a category to get started
+              </p>
+              <p className="text-sm text-brand-subtext max-w-sm mx-auto">
+                Browse thousands of videos, guides, and printables across the curriculum
+                library — use the categories above, the filters on the left, or search by title.
+              </p>
+            </div>
+          ) : (
+            <>
           <p className="text-sm text-brand-subtext mb-3">
             {filtered.length.toLocaleString()} result{filtered.length === 1 ? '' : 's'}
           </p>
@@ -360,6 +426,8 @@ export default function Resources() {
                 <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
       </div>
