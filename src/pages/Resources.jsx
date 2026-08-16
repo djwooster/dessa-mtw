@@ -9,20 +9,27 @@ import {
   Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext,
 } from '../components/ui/pagination'
 
-// Layered flat-icon look — a bold colored icon floating over an offset amber
-// accent square, no container/background shape. Used as a fallback until a
-// real illustration exists for that type in /public/file-types.
+// Simple placeholder: lucide icon over a low-opacity colored rectangle.
 const TYPE_META = {
-  video: { icon: Video, label: 'Video', color: 'text-dessa-magenta' },
-  pdf: { icon: FileText, label: 'PDF', color: 'text-mtw-purple' },
-  audio: { icon: Mic, label: 'Audio', color: 'text-mtw-blue' },
+  video: { icon: Video, label: 'Video', color: 'text-dessa-magenta', bg: 'bg-dessa-magenta' },
+  pdf: { icon: FileText, label: 'PDF', color: 'text-mtw-purple', bg: 'bg-mtw-purple' },
+  audio: { icon: Mic, label: 'Audio', color: 'text-mtw-blue', bg: 'bg-mtw-blue' },
 }
 
 // Real illustrated file-type icons, dropped in by design.
 const TYPE_IMAGES = {
-  video: '/file-types/video.png',
-  pdf: '/file-types/PDF.png',
-  audio: '/file-types/audio.png',
+  video: '/file-types/video-newly.png',
+  pdf: '/file-types/PDF-newly.png',
+  audio: '/file-types/audio-newly.png',
+}
+
+function FileTypeBadge({ type }) {
+  const { icon: Icon, color, bg } = TYPE_META[type]
+  return (
+    <div className={`w-14 h-16 rounded-lg ${bg} bg-opacity-15 flex items-center justify-center shrink-0`}>
+      <Icon size={22} strokeWidth={2} className={color} />
+    </div>
+  )
 }
 
 const PAGE_SIZE = 20
@@ -234,7 +241,6 @@ export default function Resources() {
               </div>
             ) : (
               paged.map((r) => {
-                const TypeIcon = TYPE_META[r.type].icon
                 return (
                   <button
                     key={r.id}
@@ -245,13 +251,10 @@ export default function Resources() {
                       <img
                         src={TYPE_IMAGES[r.type]}
                         alt={TYPE_META[r.type].label}
-                        className="h-[90px] w-auto object-contain shrink-0"
+                        className="h-14 w-14 object-contain shrink-0"
                       />
                     ) : (
-                      <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
-                        <div className="absolute top-0.5 right-0.5 w-4 h-4 rounded-md bg-mtw-amber rotate-12" />
-                        <TypeIcon size={22} strokeWidth={2.25} className={`relative z-10 ${TYPE_META[r.type].color}`} />
-                      </div>
+                      <FileTypeBadge type={r.type} />
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-lg font-semibold text-brand-text mb-1">{r.title}</p>
@@ -262,7 +265,7 @@ export default function Resources() {
                       </div>
                     </div>
                     <span className="flex items-center gap-1 text-sm font-semibold text-dessa-teal shrink-0">
-                      View
+                      Go to content
                       <ChevronRight size={15} />
                     </span>
                   </button>
