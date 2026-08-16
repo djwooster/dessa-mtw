@@ -29,11 +29,11 @@ const REPORT_GROUPS = [
     ],
   },
   {
-    label: 'Completion Reports',
+    label: 'Completion reports',
     items: ['Rating Completion', 'EdSERT Completion'],
   },
   {
-    label: 'Student Portal',
+    label: 'Student portal',
     items: ['Student Portal Usage', 'Login Activity'],
   },
 ]
@@ -50,7 +50,7 @@ export default function ReportsLayout() {
         <nav className="flex flex-col pb-6">
           {REPORT_GROUPS.map((group) => (
             <div key={group.label} className="mb-4">
-              <p className="px-5 mb-1 text-xs font-semibold uppercase tracking-wider text-brand-subtext">
+              <p className="px-5 mb-3 text-[15px] font-semibold text-brand-text">
                 {group.label}
               </p>
               {group.items.map((item) =>
