@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Search, X, Video, FileText, Mic, ChevronDown, ChevronRight, GraduationCap, Target, Layers } from 'lucide-react'
+import { Search, X, Video, FileText, Mic, ChevronDown, ChevronRight, GraduationCap, Target } from 'lucide-react'
 import {
   resources, CATEGORIES, TYPES, ALL_GRADES, ALL_COMPETENCIES, courseFor,
 } from '../lib/resourcesData'
 import {
-  Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext,
+  Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis,
 } from '../components/ui/pagination'
 
 // Simple placeholder: lucide icon over a low-opacity colored rectangle.
@@ -75,6 +75,19 @@ function FacetGroup({ title, options, selected, onToggle, scrollable, defaultOpe
   )
 }
 
+// Windowed page list (first, last, current ±1) with gaps marked by '…' —
+// results can span 100+ pages, so listing every page number isn't viable.
+function pageWindow(current, total) {
+  const shown = new Set([1, total, current - 1, current, current + 1])
+  const pages = [...shown].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b)
+  const withGaps = []
+  pages.forEach((p, i) => {
+    if (i > 0 && p - pages[i - 1] > 1) withGaps.push('ellipsis')
+    withGaps.push(p)
+  })
+  return withGaps
+}
+
 function Chip({ label, onRemove }) {
   return (
     <span className="flex items-center gap-1.5 pl-3 pr-2 py-1 rounded-full text-xs font-medium bg-dessa-navy text-white">
@@ -96,6 +109,27 @@ function IconTag({ icon, label }) {
   )
 }
 
+function CompetencyTag({ primary, extra }) {
+  return (
+    <span className="relative flex items-center gap-1.5 text-xs font-medium text-brand-subtext group/comp">
+      <Target size={13} />
+      {primary}
+      {extra.length > 0 && (
+        <>
+          <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-brand-bg text-[11px] font-semibold text-brand-subtext">
+            +{extra.length} more
+          </span>
+          <div className="absolute left-0 top-full mt-1.5 hidden group-hover/comp:flex flex-col gap-1 bg-dessa-navy text-white text-xs rounded-lg px-3 py-2 shadow-lg z-20 whitespace-nowrap">
+            {extra.map((c) => (
+              <span key={c}>{c}</span>
+            ))}
+          </div>
+        </>
+      )}
+    </span>
+  )
+}
+
 export default function Resources() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
@@ -104,6 +138,7 @@ export default function Resources() {
   const [selectedCompetencies, setSelectedCompetencies] = useState([])
   const [selectedTypes, setSelectedTypes] = useState([])
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(PAGE_SIZE)
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -116,17 +151,17 @@ export default function Resources() {
     )
   }, [search, selectedCategories, selectedGrades, selectedCompetencies, selectedTypes])
 
-  // Reset to page 1 whenever the filter set changes — adjusted during render
-  // (not in an effect) so it takes effect in the same commit as the filter change.
-  const filterKey = JSON.stringify([search, selectedCategories, selectedGrades, selectedCompetencies, selectedTypes])
+  // Reset to page 1 whenever the filter set or page size changes — adjusted
+  // during render (not in an effect) so it takes effect in the same commit.
+  const filterKey = JSON.stringify([search, selectedCategories, selectedGrades, selectedCompetencies, selectedTypes, pageSize])
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
   if (filterKey !== prevFilterKey) {
     setPrevFilterKey(filterKey)
     setPage(1)
   }
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   function toggle(setFn, value) {
     setFn((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]))
@@ -257,11 +292,11 @@ export default function Resources() {
                       <FileTypeBadge type={r.type} />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-lg font-semibold text-brand-text mb-1">{r.title}</p>
-                      <div className="flex items-center gap-3 flex-wrap">
+                      <p className="text-lg font-semibold text-brand-text mb-0">{r.title}</p>
+                      <p className="text-sm text-brand-subtext mb-6 line-clamp-1 max-w-[580px]">{r.description}</p>
+                      <div className="flex items-center gap-4 flex-wrap">
                         <IconTag icon={GraduationCap} label={r.grade} />
-                        <IconTag icon={Target} label={r.competency} />
-                        <IconTag icon={Layers} label={r.category} />
+                        <CompetencyTag primary={r.competency} extra={r.extraCompetencies} />
                       </div>
                     </div>
                     <span className="flex items-center gap-1 text-sm font-semibold text-dessa-teal shrink-0">
@@ -276,17 +311,54 @@ export default function Resources() {
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-4">
-              <p className="text-xs text-brand-subtext">Page {page} of {totalPages}</p>
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} />
+                    <PaginationPrevious
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="w-8 h-8 p-0 justify-center rounded-lg text-dessa-teal"
+                    >
+                      {''}
+                    </PaginationPrevious>
                   </PaginationItem>
+                  {pageWindow(page, totalPages).map((p, i) =>
+                    p === 'ellipsis' ? (
+                      <PaginationItem key={`ellipsis-${i}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={p}>
+                        <PaginationLink isActive={p === page} onClick={() => setPage(p)} className="w-9 h-9 rounded-lg">
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
                   <PaginationItem>
-                    <PaginationNext onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} />
+                    <PaginationNext
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      className="w-8 h-8 p-0 justify-center rounded-lg text-dessa-teal"
+                    >
+                      {''}
+                    </PaginationNext>
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
+
+              <div className="relative">
+                <select
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  className="appearance-none pl-3 pr-8 h-9 text-sm border border-brand-border rounded-md bg-white text-brand-text focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                >
+                  {[10, 20, 50, 100].map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+              </div>
             </div>
           )}
         </div>

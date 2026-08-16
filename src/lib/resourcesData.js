@@ -30,6 +30,15 @@ function inferType(title) {
   return 'video'
 }
 
+// Placeholder summary text standing in for real Facilitation Guide copy
+// (not yet authored per-lesson) — generated from each row's own category/
+// competency/grade so results read as distinct, sensible blurbs rather than
+// one repeated sentence.
+const TYPE_VERB = { video: 'walks through', pdf: 'outlines', audio: 'introduces' }
+function placeholderDescription({ title, type, category, competency, grade }) {
+  return `This ${category.toLowerCase()} resource ${TYPE_VERB[type]} "${title}", building ${competency} skills for ${grade}.`
+}
+
 function flattenCourse({ course, unitsList, category }) {
   const rows = []
   for (const unit of unitsList) {
@@ -112,13 +121,27 @@ const rows = [
 // front, then everything else alphabetically by title — rather than left in
 // data-generation order (which would otherwise dump all ~4,000 Tier 1 rows
 // first, burying rare types past page 200 even alphabetically).
+// A handful of rows also touch on secondary competencies (e.g. a Relationship
+// Skills lesson that also builds Self-Awareness) — surfaced in the UI as a
+// "+N more" badge next to the primary competency tag. Assigned deterministically
+// by id so the set is stable across renders, not randomly on every load.
+const COMPETENCY_POOL = [...new Set(rows.map((r) => r.competency))].sort()
+function extraCompetenciesFor(id, primary) {
+  const pool = COMPETENCY_POOL.filter((c) => c !== primary)
+  const count = id % 5 === 0 ? 2 : id % 5 === 1 ? 1 : 0
+  return Array.from({ length: count }, (_, k) => pool[(id + k) % pool.length])
+}
+
 const RARE_TYPES = new Set(['audio'])
 export const resources = [...rows]
   .sort((a, b) => {
     const rareDiff = (RARE_TYPES.has(b.type) ? 1 : 0) - (RARE_TYPES.has(a.type) ? 1 : 0)
     return rareDiff !== 0 ? rareDiff : a.title.localeCompare(b.title)
   })
-  .map((r, i) => ({ id: i + 1, ...r }))
+  .map((r, i) => {
+    const id = i + 1
+    return { id, ...r, description: placeholderDescription(r), extraCompetencies: extraCompetenciesFor(id, r.competency) }
+  })
 
 function sortByGradeOrder(values) {
   return [...values].sort((a, b) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b))
