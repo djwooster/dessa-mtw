@@ -7,6 +7,9 @@ import Curriculum from './pages/Curriculum'
 import Resources from './pages/Resources'
 import LessonView from './pages/LessonView'
 import Ratings from './pages/Ratings'
+import ClassRatingsLayout from './pages/ClassRatingsLayout'
+import RecommendedContent from './pages/RecommendedContent'
+import RatingSummary from './pages/RatingSummary'
 import BrandGuide from './pages/BrandGuide'
 import Report1C from './pages/Report1C'
 import Report2 from './pages/Report2'
@@ -57,6 +60,11 @@ function AppShell({ handleBookmark }) {
         <Route path="/mtw/lesson" element={<LessonView onBookmark={handleBookmark} />} />
         <Route path="/resources" element={<Resources />} />
         <Route path="/ratings" element={<Ratings />} />
+        <Route path="/class-ratings" element={<ClassRatingsLayout />}>
+          <Route index element={<Navigate to="recommended" replace />} />
+          <Route path="recommended" element={<RecommendedContent />} />
+          <Route path="summary" element={<RatingSummary />} />
+        </Route>
         <Route path="/report1c" element={<Report1C />} />
         <Route path="/report2" element={<Report2 />} />
         <Route path="/settings" element={<SettingsLayout />}>
