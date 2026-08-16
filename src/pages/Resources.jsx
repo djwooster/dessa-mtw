@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Search, X, Video, FileText, Mic, ChevronDown, ChevronRight, GraduationCap, Target,
-  BookOpen, Layers, HeartHandshake, Users, Smile, Anchor, MessageCircle, Handshake, Flag,
+  Rocket, Monitor, Puzzle, Users, Heart, Mountain,
 } from 'lucide-react'
 import {
   resources, CATEGORIES, TYPES, ALL_GRADES, ALL_COMPETENCIES, courseFor,
@@ -35,23 +35,30 @@ function FileTypeBadge({ type }) {
   )
 }
 
-// Browse tiles — deliberately just two axes (Category, Competency) rather
-// than mixing in Type: Category is the library's core organizing structure
-// and Competency is the axis an educator actually thinks in ("something for
-// Self-Management"), so together they're a more useful browse entry point
-// than gluing every facet into one flat tile row. Each tile maps to a real,
-// non-empty filter — no categories invented beyond what the data supports.
+// Elementary vs. secondary grade bands, used by the worksheet tiles below —
+// spans both the individual K-12 grades (Tier 1) and the band labels used by
+// Tier 2 / Family courses.
+const ELEMENTARY_GRADES = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Early Elementary', 'Late Elementary']
+const SECONDARY_GRADES = ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12', 'Middle School', 'High School']
+
+// Browse tiles matching the real product's current category names. Several
+// of those (Getting Started Tools, Webinars, MTW Common Language Resources,
+// Implementation & Engagement, Research) don't correspond to anything in our
+// mocked resource index, so they're rendered as decorative (no `filter`,
+// non-clickable) — same convention already used for the Ratings roster and
+// Reports sidebar. The rest apply a real filter combination on click.
 const CATEGORY_TILES = [
-  { group: 'category', value: 'Tier 1', icon: BookOpen },
-  { group: 'category', value: 'Tier 2', icon: Layers },
-  { group: 'category', value: 'Adult Wellness', icon: HeartHandshake },
-  { group: 'category', value: 'Family', icon: Users },
-  { group: 'competency', value: 'Self-Awareness', icon: Smile },
-  { group: 'competency', value: 'Self-Management', icon: Anchor },
-  { group: 'competency', value: 'Social Awareness', icon: MessageCircle },
-  { group: 'competency', value: 'Relationship Skills', icon: Handshake },
-  { group: 'competency', value: 'Responsible Decision-Making', icon: Target },
-  { group: 'competency', value: 'Goal-Directed Behavior', icon: Flag },
+  { label: 'Getting Started Tools', icon: Rocket },
+  { label: 'K-12 Worksheets', icon: GraduationCap, filter: { types: ['pdf'] } },
+  { label: 'Elementary Worksheets', icon: GraduationCap, filter: { types: ['pdf'], grades: ELEMENTARY_GRADES } },
+  { label: 'Secondary Worksheets', icon: GraduationCap, filter: { types: ['pdf'], grades: SECONDARY_GRADES } },
+  { label: 'MTW Videos', icon: Video, filter: { types: ['video'] } },
+  { label: 'Webinars', icon: Monitor },
+  { label: 'MTW Common Language Resources', icon: Puzzle },
+  { label: 'Family Resources', icon: Users, filter: { categories: ['Family'] } },
+  { label: 'Implementation & Engagement', icon: Heart },
+  { label: 'Research', icon: Search },
+  { label: 'Tier 2', icon: Mountain, filter: { categories: ['Tier 2'] } },
 ]
 
 const PAGE_SIZE = 20
@@ -161,7 +168,6 @@ export default function Resources() {
   const [selectedTypes, setSelectedTypes] = useState([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
-  const [showAllTiles, setShowAllTiles] = useState(false)
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -208,8 +214,11 @@ export default function Resources() {
   }
 
   function selectTile(tile) {
-    if (tile.group === 'category') setSelectedCategories([tile.value])
-    if (tile.group === 'competency') setSelectedCompetencies([tile.value])
+    if (!tile.filter) return
+    setSelectedCategories(tile.filter.categories ?? [])
+    setSelectedGrades(tile.filter.grades ?? [])
+    setSelectedCompetencies(tile.filter.competencies ?? [])
+    setSelectedTypes(tile.filter.types ?? [])
   }
 
   function openResource(r) {
@@ -264,31 +273,6 @@ export default function Resources() {
 
         {/* Search + results */}
         <div className="flex-1 min-w-0">
-          {/* Browse categories */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-brand-text">Browse by category</h2>
-              <button
-                onClick={() => setShowAllTiles((v) => !v)}
-                className="text-sm font-semibold text-dessa-teal hover:text-dessa-navy transition-colors"
-              >
-                {showAllTiles ? 'Show less' : 'See all'}
-              </button>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              {(showAllTiles ? CATEGORY_TILES : CATEGORY_TILES.slice(0, 6)).map((tile) => (
-                <button
-                  key={`${tile.group}-${tile.value}`}
-                  onClick={() => selectTile(tile)}
-                  className="relative h-28 flex items-end rounded-xl border border-brand-border bg-brand-border/30 px-4 py-3 text-left hover:border-dessa-teal/50 transition-colors"
-                >
-                  <tile.icon size={16} className="absolute top-3 right-3 text-brand-subtext" />
-                  <span className="text-sm font-semibold text-brand-text">{tile.value}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="relative mb-3">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
             <input
@@ -298,6 +282,24 @@ export default function Resources() {
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 h-11 text-sm border border-brand-border rounded-lg bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
             />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {CATEGORY_TILES.map((tile) => {
+              const Tag = tile.filter ? 'button' : 'div'
+              return (
+                <Tag
+                  key={tile.label}
+                  onClick={tile.filter ? () => selectTile(tile) : undefined}
+                  className={`flex items-center gap-1.5 rounded-xl border border-brand-border bg-brand-border/30 px-3 py-1.5 text-[12px] font-semibold text-brand-text transition-colors ${
+                    tile.filter ? 'hover:border-dessa-teal/50' : 'cursor-default'
+                  }`}
+                >
+                  <tile.icon size={14} className="text-brand-subtext" />
+                  {tile.label}
+                </Tag>
+              )
+            })}
           </div>
 
           {hasFilters && (
@@ -338,7 +340,18 @@ export default function Resources() {
           <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
             {paged.length === 0 ? (
               <div className="px-6 py-16 text-center">
-                <p className="text-sm text-brand-subtext">No resources match your filters.</p>
+                <img src="/Search/no-found.png" alt="" className="mx-auto h-64 w-auto mb-6" />
+                <p className="text-lg font-semibold text-brand-text mb-1.5">No resources found</p>
+                <p className="text-sm text-brand-subtext max-w-sm mx-auto mb-5">
+                  We couldn't find any resources matching your search. Try adjusting your
+                  keywords or clearing the filters.
+                </p>
+                <button
+                  onClick={clearAll}
+                  className="px-4 py-2 rounded-md text-sm font-semibold border border-brand-border text-brand-text hover:bg-brand-bg transition-colors"
+                >
+                  Clear filters
+                </button>
               </div>
             ) : (
               paged.map((r) => {
