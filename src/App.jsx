@@ -13,6 +13,7 @@ import RatingSummary from './pages/RatingSummary'
 import BrandGuide from './pages/BrandGuide'
 import Report1C from './pages/Report1C'
 import Report2 from './pages/Report2'
+import ReportsLayout from './pages/ReportsLayout'
 import SettingsLayout from './pages/settings/SettingsLayout'
 import SettingsPlaceholder from './pages/settings/SettingsPlaceholder'
 import CurriculumSetup from './pages/settings/CurriculumSetup'
@@ -65,8 +66,11 @@ function AppShell({ handleBookmark }) {
           <Route path="recommended" element={<RecommendedContent />} />
           <Route path="summary" element={<RatingSummary />} />
         </Route>
-        <Route path="/report1c" element={<Report1C />} />
-        <Route path="/report2" element={<Report2 />} />
+        <Route path="/reports" element={<ReportsLayout />}>
+          <Route index element={<Navigate to="site-engagement" replace />} />
+          <Route path="site-engagement" element={<Report2 />} />
+          <Route path="dce" element={<Report1C />} />
+        </Route>
         <Route path="/settings" element={<SettingsLayout />}>
           <Route index element={<Navigate to="curriculum-setup" replace />} />
           <Route path="curriculum-setup" element={<CurriculumSetup />} />
@@ -83,6 +87,7 @@ function AppShell({ handleBookmark }) {
         <Route path="/join" element={<JoinPage />} />
         <Route path="/insights" element={<Placeholder title="Data & Insights" />} />
         <Route path="/strategies" element={<Placeholder title="Strategies" />} />
+        <Route path="/training" element={<Placeholder title="Training" />} />
         <Route path="/brand" element={<BrandGuide />} />
       </Routes>
     </div>

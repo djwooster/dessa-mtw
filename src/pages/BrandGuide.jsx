@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ChevronRight, Play } from 'lucide-react'
+import { ChevronRight, Play, Search, Bookmark, Flame, Target, GraduationCap } from 'lucide-react'
 
 const stagger = (i) => ({
   initial: { opacity: 0, y: 8 },
@@ -95,15 +95,209 @@ function TokenRow({ token, hex, usage }) {
   )
 }
 
+// ─── Brand merger concept detail ──────────────────────────────────────────────
+
+function PendingConceptDetail({ concept }) {
+  return (
+    <Card className="text-center py-14">
+      <div className="flex justify-center -space-x-1.5 mb-4">
+        {concept.chips.map((hex, i) => (
+          <span
+            key={hex + i}
+            className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
+            style={{ background: hex }}
+          />
+        ))}
+      </div>
+      <p className="text-lg font-semibold text-brand-text mb-1">{concept.name}</p>
+      <p className="text-sm text-brand-subtext italic mb-3">“{concept.tagline}”</p>
+      <p className="text-sm text-brand-subtext max-w-xl mx-auto leading-relaxed mb-5">{concept.summary}</p>
+      <span className="inline-block text-xs font-semibold text-brand-subtext bg-brand-bg px-3 py-1 rounded-full">
+        Tone, color system, typography, iconography, and look &amp; feel to follow once this direction is greenlit
+      </span>
+    </Card>
+  )
+}
+
+function ConceptFoundationDetail() {
+  return (
+    <div className="flex flex-col gap-10">
+
+      {/* Tone & Voice */}
+      <div>
+        <SectionHeading>Tone &amp; Voice</SectionHeading>
+        <p className="text-sm text-brand-subtext mb-4 max-w-2xl">
+          The product shifts register room-to-room, but a single screen never mixes both voices in one sentence.
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <Card>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#2A7F8F' }}>
+              Assessment contexts — DESSA-led
+            </p>
+            <p className="text-sm text-brand-subtext mb-3">Precise, data-confident, calm authority. Third person, measured.</p>
+            <p className="text-sm text-brand-text italic border-l-2 pl-3" style={{ borderColor: '#2A7F8F' }}>
+              “3 students moved from Need to Typical in Self-Management this quarter.”
+            </p>
+          </Card>
+          <Card>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#F5A623' }}>
+              Curriculum contexts — MTW-led
+            </p>
+            <p className="text-sm text-brand-subtext mb-3">Encouraging, energetic, second person. Celebrates effort.</p>
+            <p className="text-sm text-brand-text italic border-l-2 pl-3" style={{ borderColor: '#F5A623' }}>
+              “Nice work, Tara — your class just finished Unit 4!”
+            </p>
+          </Card>
+        </div>
+      </div>
+
+      {/* Identity & Architecture */}
+      <div>
+        <SectionHeading>Identity &amp; Brand Architecture</SectionHeading>
+        <Card>
+          <p className="text-sm text-brand-subtext leading-relaxed max-w-2xl">
+            An <span className="font-semibold text-brand-text">endorsed-brand</span> model: DESSA is the primary,
+            parent identity — the lockup leads with DESSA — and MTW is a named, visually distinct product living
+            inside it, the way Instagram is endorsed by Meta. Not a fully separate brand, and not fully absorbed
+            into DESSA either.
+          </p>
+        </Card>
+      </div>
+
+      {/* Color System */}
+      <div>
+        <SectionHeading>Color System</SectionHeading>
+        <p className="text-sm text-brand-subtext mb-4 max-w-2xl">
+          DESSA teal carries every primary action, everywhere. MTW amber is reserved for curriculum-context
+          accents only — never a page-wide repaint.
+        </p>
+        <Card>
+          <div className="grid grid-cols-4 gap-4">
+            <Swatch name="Navy" token="dessa-navy" hex="#1B2B4B" usage="Structure, body text, nav" />
+            <Swatch name="Teal" token="dessa-teal" hex="#2A7F8F" usage="Every primary action, both brands" />
+            <Swatch name="Amber" token="mtw-amber" hex="#F5A623" usage="MTW-scoped accents only" />
+            <Swatch name="Coral" token="mtw-coral" hex="#E8653A" usage="Rare — celebratory moments" />
+          </div>
+        </Card>
+      </div>
+
+      {/* Typography */}
+      <div>
+        <SectionHeading>Typography</SectionHeading>
+        <p className="text-sm text-brand-subtext mb-4 max-w-2xl">
+          One typeface family throughout — Inter, no separate MTW display font. Personality shifts through
+          weight and scale, not a second font, so the two contexts never feel like different apps.
+        </p>
+        <Card>
+          <TypeRow label="DESSA data label" size="12px" weight="600" sample="STUDENTS RATED · 25-26 MID" />
+          <TypeRow label="DESSA body" size="14px" weight="400" sample="6 of 30 students rated Need in Self-Management." />
+          <TypeRow label="MTW headline" size="24px" weight="700" sample="Nice work — Unit 4 complete!" />
+          <TypeRow label="MTW body" size="14px" weight="500" sample="Let’s warm up with a strengths activity." />
+        </Card>
+      </div>
+
+      {/* Iconography */}
+      <div>
+        <SectionHeading>Iconography</SectionHeading>
+        <p className="text-sm text-brand-subtext mb-4 max-w-2xl">
+          One icon language everywhere — Lucide, 1.5–2px stroke, no fill. A shared icon set is one of the
+          fastest ways to make two brands read as one product, even while color usage differs by context.
+        </p>
+        <Card>
+          <div className="flex flex-wrap gap-4">
+            {[Search, Bookmark, Flame, Target, GraduationCap, Play, ChevronRight].map((Icon, i) => (
+              <div
+                key={i}
+                className="w-11 h-11 rounded-xl bg-brand-bg flex items-center justify-center text-brand-text"
+              >
+                <Icon size={18} strokeWidth={1.75} />
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      {/* Look & Feel */}
+      <div>
+        <SectionHeading>Look &amp; Feel</SectionHeading>
+        <p className="text-sm text-brand-subtext mb-4 max-w-2xl">
+          Same white card shell everywhere. Button shape carries the split:{' '}
+          <code className="text-xs bg-brand-bg px-1.5 py-0.5 rounded">rounded-md</code> for DESSA’s structured
+          primary actions, <code className="text-xs bg-brand-bg px-1.5 py-0.5 rounded">rounded-full</code> for
+          MTW’s playful ones. DESSA screens keep motion subtle; MTW screens earn a little more bounce.
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <Card>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#2A7F8F' }}>
+              Assessment mode
+            </p>
+            <p className="text-sm font-semibold text-brand-text mb-1">My Student’s DESSA Ratings</p>
+            <p className="text-xs text-brand-subtext mb-4">25-26 Mid · 30 students</p>
+            <button className="px-4 py-2 rounded-md text-sm font-semibold text-white" style={{ background: '#2A7F8F' }}>
+              View Details
+            </button>
+          </Card>
+          <Card>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#F5A623' }}>
+              Curriculum mode
+            </p>
+            <p className="text-sm font-semibold text-brand-text mb-1">Unit 4 — Finding Your Calm</p>
+            <p className="text-xs text-brand-subtext mb-4">4 lessons · 2 complete</p>
+            <button className="px-4 py-2 rounded-full text-sm font-semibold text-white" style={{ background: '#F5A623' }}>
+              Continue Lesson
+            </button>
+          </Card>
+        </div>
+      </div>
+
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const GUIDE_TABS = [
   { key: 'prototype', label: 'Prototype Guide' },
   { key: 'official', label: 'Official Style Guide (PDF)' },
+  { key: 'merger', label: 'Brand Merger Concepts' },
+]
+
+// Three candidate directions for how DESSA and MTW's identities could merge.
+// Concept A is fully scaffolded (see the detail render below) so we can agree
+// on the comparison structure before fleshing out B and C to the same depth.
+const MERGER_CONCEPTS = [
+  {
+    key: 'foundation',
+    letter: 'A',
+    name: 'Trusted Foundation, Human Delivery',
+    tagline: 'DESSA’s rigor holds the frame; MTW’s warmth lives inside it.',
+    summary: 'DESSA stays the dominant structural voice — navy/teal, data-forward, restrained — while MTW’s amber energy is scoped to curriculum-specific moments rather than repainting the whole product.',
+    chips: ['#1B2B4B', '#2A7F8F', '#F5A623'],
+    scaffolded: true,
+  },
+  {
+    key: 'unified',
+    letter: 'B',
+    name: 'One Unified System',
+    tagline: 'One brand, one voice — assessment and curriculum feel like the same product.',
+    summary: 'A single shared palette and voice blends DESSA’s trust with MTW’s energy everywhere, rather than two personalities coexisting. The bigger identity investment — signals full merger, not host and guest.',
+    chips: ['#1B2B4B', '#2A7F8F', '#F5A623', '#E8653A'],
+    scaffolded: false,
+  },
+  {
+    key: 'adaptive',
+    letter: 'C',
+    name: 'Adaptive Dual-Mode Brand',
+    tagline: 'Same house, two rooms — the brand flexes with what you’re doing.',
+    summary: 'A shared spine — logo lockup, typography, spacing, motion — wraps two deliberately distinct color modes: a calm Assessment Mode and an energetic Curriculum Mode, so the interface itself signals the context shift.',
+    chips: ['#1B2B4B', '#2A7F8F', '#F5A623', '#7B5EA7'],
+    scaffolded: false,
+  },
 ]
 
 export default function BrandGuide() {
   const [tab, setTab] = useState('prototype')
+  const [mergerConcept, setMergerConcept] = useState('foundation')
 
   return (
     <div className="max-w-screen-xl mx-auto px-6 pt-20 pb-8">
@@ -716,6 +910,75 @@ wrapper: AnimatePresence`}</pre>
             <div className="w-3 h-3 rounded-full" style={{ background: '#F5A623' }} />
           </div>
         </div>
+      </motion.div>
+
+        </>
+      )}
+
+      {tab === 'merger' && (
+        <>
+
+      {/* ── Intro ── */}
+      <motion.div {...stagger(0)} className="mb-8">
+        <SectionLabel>Brand Strategy</SectionLabel>
+        <SectionHeading>Brand Merger Concepts</SectionHeading>
+        <p className="text-sm text-brand-subtext max-w-2xl">
+          Three directions for how DESSA and Move This World's identities could come together into
+          one educator-facing brand. Concept A is fully scaffolded below — tone, identity, color,
+          typography, iconography, and look &amp; feel — so we can lock in the comparison structure
+          before fleshing out Concepts B and C to the same depth.
+        </p>
+      </motion.div>
+
+      {/* ── 3-card comparator ── */}
+      <motion.div {...stagger(1)} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+        {MERGER_CONCEPTS.map((c) => (
+          <button
+            key={c.key}
+            onClick={() => setMergerConcept(c.key)}
+            className={`text-left rounded-2xl border p-5 transition-all bg-white ${
+              mergerConcept === c.key
+                ? 'border-dessa-teal shadow-md'
+                : 'border-brand-border hover:border-dessa-teal/40'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-brand-subtext">
+                Concept {c.letter}
+              </span>
+              <div className="flex -space-x-1">
+                {c.chips.map((hex, i) => (
+                  <span
+                    key={hex + i}
+                    className="w-5 h-5 rounded-full border-2 border-white"
+                    style={{ background: hex }}
+                  />
+                ))}
+              </div>
+            </div>
+            <p className="text-base font-semibold text-brand-text mb-1.5 leading-snug">{c.name}</p>
+            <p className="text-sm text-brand-subtext italic mb-3 leading-snug">“{c.tagline}”</p>
+            <p className="text-xs text-brand-subtext leading-relaxed mb-3">{c.summary}</p>
+            {c.scaffolded ? (
+              <span className="inline-block text-[11px] font-semibold text-dessa-teal bg-dessa-tealLight px-2 py-0.5 rounded-full">
+                Fully scaffolded
+              </span>
+            ) : (
+              <span className="inline-block text-[11px] font-semibold text-brand-subtext bg-brand-bg px-2 py-0.5 rounded-full">
+                Direction locked · detail pending
+              </span>
+            )}
+          </button>
+        ))}
+      </motion.div>
+
+      {/* ── Detail panel ── */}
+      <motion.div {...stagger(2)}>
+        {mergerConcept === 'foundation' ? (
+          <ConceptFoundationDetail />
+        ) : (
+          <PendingConceptDetail concept={MERGER_CONCEPTS.find((c) => c.key === mergerConcept)} />
+        )}
       </motion.div>
 
         </>
