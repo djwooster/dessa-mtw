@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ChevronRight, Play, Search, Bookmark, Flame, Target, GraduationCap } from 'lucide-react'
+import {
+  ChevronRight, Play, Search, Bookmark, Flame, Target, GraduationCap, HelpCircle,
+  ImagePlus, CheckCircle2, AlertCircle, Plus, Download, Share2, Video, FileText, Mic,
+} from 'lucide-react'
 
 const stagger = (i) => ({
   initial: { opacity: 0, y: 8 },
@@ -119,6 +122,55 @@ function PendingConceptDetail({ concept }) {
   )
 }
 
+// Moodboard placeholders — calm/clinical restraint (think Headspace or Calm)
+// with warm accents doing the work of "human." Drop matching images into
+// public/moodboard/ using these exact filenames and they render automatically
+// — until then each tile shows what to look for and exactly where it goes.
+const MOODBOARD_TILES = [
+  { file: 'calm-color-field.jpg', caption: 'Calm, muted color fields — teal & neutral tones', aspect: 'aspect-[4/3]' },
+  { file: 'warm-accent-detail.jpg', caption: 'Warm accent details — amber/coral in small doses', aspect: 'aspect-square' },
+  { file: 'minimal-typography.jpg', caption: 'Confident, minimal typography in editorial layouts', aspect: 'aspect-[3/4]' },
+  { file: 'soft-texture.jpg', caption: 'Soft natural textures — paper, linen, light grain', aspect: 'aspect-square' },
+  { file: 'clinical-precision.jpg', caption: 'Clean clinical precision — data, grids, structure', aspect: 'aspect-[4/3]' },
+  { file: 'human-warmth.jpg', caption: 'Human warmth — real classroom moments', aspect: 'aspect-[3/4]' },
+  { file: 'quiet-ui.jpg', caption: 'Quiet, restrained UI inspiration (Headspace/Calm-style)', aspect: 'aspect-square' },
+  { file: 'playful-detail.jpg', caption: 'One playful, energetic MTW-style moment', aspect: 'aspect-[4/3]' },
+]
+
+function MoodboardTile({ file, caption, aspect }) {
+  const [errored, setErrored] = useState(false)
+  return (
+    <div className={`relative ${aspect} rounded-xl overflow-hidden bg-brand-border/40`}>
+      {!errored && (
+        <img
+          src={`/moodboard/${file}`}
+          alt={caption}
+          onError={() => setErrored(true)}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      )}
+      {errored && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-3 text-center">
+          <ImagePlus size={18} className="text-brand-subtext" />
+          <p className="text-xs text-brand-subtext leading-snug">{caption}</p>
+          <code className="text-[10px] font-mono text-brand-subtext/70 bg-white/70 px-1.5 py-0.5 rounded">
+            /moodboard/{file}
+          </code>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Icon style sheet, grouped by use case rather than one flat row — makes the
+// "one icon language everywhere" claim easier to evaluate at a glance.
+const ICON_GROUPS = [
+  { label: 'Navigation', icons: [Search, GraduationCap, Bookmark, ChevronRight] },
+  { label: 'Status', icons: [Flame, Target, CheckCircle2, AlertCircle] },
+  { label: 'Actions', icons: [Plus, Download, Share2, Play] },
+  { label: 'Content types', icons: [Video, FileText, Mic] },
+]
+
 function ConceptFoundationDetail() {
   return (
     <div className="flex flex-col gap-10">
@@ -148,6 +200,25 @@ function ConceptFoundationDetail() {
               “Nice work, Tara — your class just finished Unit 4!”
             </p>
           </Card>
+        </div>
+      </div>
+
+      {/* Moodboard */}
+      <div>
+        <SectionHeading>Moodboard</SectionHeading>
+        <p className="text-sm text-brand-subtext mb-4 max-w-2xl">
+          Calm and clinical, with warm accents — closer to Headspace or Calm’s restraint than a
+          typical edtech product, with small human and energetic moments doing the work of
+          “warmth” rather than color everywhere. Drop reference images into{' '}
+          <code className="text-xs bg-brand-bg px-1.5 py-0.5 rounded">public/moodboard/</code>{' '}
+          using the filenames below and they’ll render here automatically.
+        </p>
+        <div className="columns-2 md:columns-4 gap-3">
+          {MOODBOARD_TILES.map((tile) => (
+            <div key={tile.file} className="mb-3 break-inside-avoid">
+              <MoodboardTile {...tile} />
+            </div>
+          ))}
         </div>
       </div>
 
@@ -203,18 +274,25 @@ function ConceptFoundationDetail() {
           One icon language everywhere — Lucide, 1.5–2px stroke, no fill. A shared icon set is one of the
           fastest ways to make two brands read as one product, even while color usage differs by context.
         </p>
-        <Card>
-          <div className="flex flex-wrap gap-4">
-            {[Search, Bookmark, Flame, Target, GraduationCap, Play, ChevronRight].map((Icon, i) => (
-              <div
-                key={i}
-                className="w-11 h-11 rounded-xl bg-brand-bg flex items-center justify-center text-brand-text"
-              >
-                <Icon size={18} strokeWidth={1.75} />
+        <div className="grid grid-cols-2 gap-4">
+          {ICON_GROUPS.map((group) => (
+            <Card key={group.label}>
+              <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-3">
+                {group.label}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {group.icons.map((Icon, i) => (
+                  <div
+                    key={i}
+                    className="w-11 h-11 rounded-xl bg-brand-bg flex items-center justify-center text-brand-text"
+                  >
+                    <Icon size={18} strokeWidth={1.75} />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </Card>
+            </Card>
+          ))}
+        </div>
       </div>
 
       {/* Look & Feel */}
@@ -226,13 +304,15 @@ function ConceptFoundationDetail() {
           primary actions, <code className="text-xs bg-brand-bg px-1.5 py-0.5 rounded">rounded-full</code> for
           MTW’s playful ones. DESSA screens keep motion subtle; MTW screens earn a little more bounce.
         </p>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 mb-4">
           <Card>
             <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#2A7F8F' }}>
               Assessment mode
             </p>
             <p className="text-sm font-semibold text-brand-text mb-1">My Student’s DESSA Ratings</p>
-            <p className="text-xs text-brand-subtext mb-4">25-26 Mid · 30 students</p>
+            <p className="flex items-center gap-1.5 text-xs text-brand-subtext mb-4">
+              <GraduationCap size={13} /> 25-26 Mid · 30 students
+            </p>
             <button className="px-4 py-2 rounded-md text-sm font-semibold text-white" style={{ background: '#2A7F8F' }}>
               View Details
             </button>
@@ -242,12 +322,40 @@ function ConceptFoundationDetail() {
               Curriculum mode
             </p>
             <p className="text-sm font-semibold text-brand-text mb-1">Unit 4 — Finding Your Calm</p>
-            <p className="text-xs text-brand-subtext mb-4">4 lessons · 2 complete</p>
+            <p className="flex items-center gap-1.5 text-xs text-brand-subtext mb-4">
+              <Bookmark size={13} /> 4 lessons · 2 complete
+            </p>
             <button className="px-4 py-2 rounded-full text-sm font-semibold text-white" style={{ background: '#F5A623' }}>
               Continue Lesson
             </button>
           </Card>
         </div>
+
+        <Card>
+          <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-3">
+            One nav, one icon language
+          </p>
+          <div className="flex items-center gap-4 bg-white border border-brand-border rounded-lg px-4 py-2.5">
+            <div
+              className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
+              style={{ background: '#1B2B4B' }}
+            >
+              D
+            </div>
+            <span className="text-sm font-medium text-brand-text">Dashboard</span>
+            <span className="text-sm font-medium text-brand-subtext">Curriculum</span>
+            <span className="text-sm font-medium text-brand-subtext">Ratings</span>
+            <div className="flex-1" />
+            <Search size={15} className="text-brand-subtext" />
+            <HelpCircle size={15} className="text-brand-subtext" />
+            <div
+              className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold flex-shrink-0"
+              style={{ background: '#2A7F8F' }}
+            >
+              TR
+            </div>
+          </div>
+        </Card>
       </div>
 
     </div>
