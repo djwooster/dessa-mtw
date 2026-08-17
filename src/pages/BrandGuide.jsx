@@ -295,6 +295,63 @@ function ConceptFoundationDetail() {
         </div>
       </div>
 
+      {/* Illustration & Character Style */}
+      <div>
+        <SectionHeading>Illustration &amp; Character Style</SectionHeading>
+        <p className="text-sm text-brand-subtext mb-4 max-w-2xl">
+          Reference material for how MTW’s character side could look — three distinct
+          directions gathered for comparison, not yet decided between.
+        </p>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <Card>
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-3">
+              Hand-scribble monster
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <img src="/concept-a/scribble-monster-friendly.png" alt="Friendly hand-scribble monster character" className="rounded-lg w-full aspect-square object-contain bg-brand-bg" />
+              <img src="/concept-a/scribble-monster-angry.png" alt="Angry hand-scribble monster character" className="rounded-lg w-full aspect-square object-contain bg-brand-bg" />
+              <img src="/concept-a/scribble-blob-content.png" alt="Content hand-scribble blob character" className="rounded-lg w-full aspect-square object-contain bg-brand-bg" />
+            </div>
+          </Card>
+          <Card>
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-3">
+              Flat bold monster
+            </p>
+            <img src="/concept-a/flat-monster-angry.png" alt="Flat bold illustrated monster character" className="rounded-lg w-full aspect-square object-contain bg-brand-bg" />
+          </Card>
+          <Card>
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-3">
+              Sticker / emoji shapes
+            </p>
+            <img src="/concept-a/sticker-shapes-grid.png" alt="Grid of colorful sticker-style smiley shapes" className="rounded-lg w-full aspect-square object-cover" />
+          </Card>
+        </div>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <Card>
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-3">
+              Abstract shape language
+            </p>
+            <img src="/concept-a/abstract-shape-language.png" alt="Grid of abstract decorative shapes" className="rounded-lg w-full object-contain" />
+          </Card>
+          <Card>
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-3">
+              Icon set reference
+            </p>
+            <img src="/concept-a/icon-set-reference.png" alt="Grid of generic line icons" className="rounded-lg w-full object-contain" />
+          </Card>
+        </div>
+        <Card>
+          <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-3">
+            Applied in a real UI — “Let’s check in”
+          </p>
+          <img
+            src="/concept-a/checkin-ui-mockup.png"
+            alt="Emotion check-in UI mockup using texture-based feeling descriptors"
+            className="rounded-lg mx-auto max-h-96 w-auto"
+          />
+        </Card>
+      </div>
+
       {/* Look & Feel */}
       <div>
         <SectionHeading>Look &amp; Feel</SectionHeading>
