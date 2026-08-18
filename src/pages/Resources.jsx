@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Search, X, Video, FileText, Mic, ChevronDown, ChevronRight, GraduationCap, Target,
-  Rocket, Monitor, Puzzle, Users, Heart, Mountain,
+  Rocket, Monitor, Heart, ClipboardList,
 } from 'lucide-react'
 import {
   resources, CATEGORIES, TYPES, ALL_GRADES, ALL_COMPETENCIES, courseFor,
@@ -16,6 +16,7 @@ import {
 const TYPE_META = {
   video: { icon: Video, label: 'Video', color: 'text-dessa-magenta', bg: 'bg-dessa-magenta' },
   pdf: { icon: FileText, label: 'PDF', color: 'text-mtw-purple', bg: 'bg-mtw-purple' },
+  worksheets: { icon: ClipboardList, label: 'Worksheet', color: 'text-mtw-coral', bg: 'bg-mtw-coral' },
   audio: { icon: Mic, label: 'Audio', color: 'text-mtw-blue', bg: 'bg-mtw-blue' },
 }
 
@@ -41,25 +42,29 @@ function FileTypeBadge({ type }) {
 const ELEMENTARY_GRADES = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Early Elementary', 'Late Elementary']
 const SECONDARY_GRADES = ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12', 'Middle School', 'High School']
 
-// Browse tiles matching the real product's current category names. Several
-// of those (Getting Started Tools, Webinars, MTW Common Language Resources,
-// Implementation & Engagement, Research) don't correspond to anything in our
-// mocked resource index, so they're rendered as decorative (no `filter`,
-// non-clickable) — same convention already used for the Ratings roster and
-// Reports sidebar. The rest apply a real filter combination on click.
-const CATEGORY_TILES = [
+// Quick links row, matching the real product's current category names
+// ("MTW" relabeled "Curriculum" per brand direction). Several of these
+// (Getting Started Tools, Webinars, Implementation & Engagement, Research)
+// don't correspond to anything in our mocked resource index, so they're
+// rendered as decorative (no `filter`, non-clickable) — same convention
+// already used for the Ratings roster and Reports sidebar. The rest apply a
+// real filter combination on click.
+const QUICK_LINKS = [
   { label: 'Getting Started Tools', icon: Rocket },
   { label: 'K-12 Worksheets', icon: GraduationCap, filter: { types: ['pdf'] } },
   { label: 'Elementary Worksheets', icon: GraduationCap, filter: { types: ['pdf'], grades: ELEMENTARY_GRADES } },
   { label: 'Secondary Worksheets', icon: GraduationCap, filter: { types: ['pdf'], grades: SECONDARY_GRADES } },
-  { label: 'MTW Videos', icon: Video, filter: { types: ['video'] } },
+  { label: 'Curriculum Videos', icon: Video, filter: { types: ['video'] } },
   { label: 'Webinars', icon: Monitor },
-  { label: 'MTW Common Language Resources', icon: Puzzle },
-  { label: 'Family Resources', icon: Users, filter: { categories: ['Family'] } },
   { label: 'Implementation & Engagement', icon: Heart },
   { label: 'Research', icon: Search },
-  { label: 'Tier 2', icon: Mountain, filter: { categories: ['Tier 2'] } },
 ]
+
+// One representative resource per type, shown as a "Suggested for you" row
+// on the landing (no search/filters yet) empty state — gives new users a
+// starting point instead of a blank illustration, and doubles as a quick
+// showcase of the mixed file types in the library.
+const SUGGESTED = TYPES.map((t) => resources.find((r) => r.type === t)).filter(Boolean)
 
 const PAGE_SIZE = 20
 
@@ -168,6 +173,7 @@ export default function Resources() {
   const [selectedTypes, setSelectedTypes] = useState([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
+  const [expandedGroups, setExpandedGroups] = useState(() => new Set())
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -189,8 +195,37 @@ export default function Resources() {
     setPage(1)
   }
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
+  // The same lesson (e.g. "Welcome Video!") exists once per grade the course
+  // is offered in — collapse those into a single expandable row instead of
+  // one row per grade, so the list reads as "resources" rather than
+  // "resources × grades". A group key of category+type+title is enough since
+  // titles repeat across grades but not across unrelated resources; grouping
+  // runs on the already-filtered set, so picking a single grade in the facet
+  // rail naturally collapses every group back down to one item.
+  const groupedResults = useMemo(() => {
+    const byKey = new Map()
+    for (const r of filtered) {
+      const key = `${r.category}::${r.type}::${r.title}`
+      if (!byKey.has(key)) byKey.set(key, [])
+      byKey.get(key).push(r)
+    }
+    return [...byKey.entries()].map(([key, items]) => ({
+      key,
+      items: [...items].sort((a, b) => ALL_GRADES.indexOf(a.grade) - ALL_GRADES.indexOf(b.grade)),
+    }))
+  }, [filtered])
+
+  const totalPages = Math.max(1, Math.ceil(groupedResults.length / pageSize))
+  const pagedGroups = groupedResults.slice((page - 1) * pageSize, page * pageSize)
+
+  function toggleGroup(key) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   function toggle(setFn, value) {
     setFn((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]))
@@ -232,10 +267,32 @@ export default function Resources() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-screen-xl mx-auto px-6 pt-8 pb-16"
     >
-      <h1 className="text-2xl font-semibold text-brand-text mb-1">Resources</h1>
-      <p className="text-sm text-brand-subtext mb-6">
-        Search and filter every video, guide, and printable across the curriculum library.
-      </p>
+      {/* Header — a single persistent bordered container so the <input> below
+          never unmounts between the landing/results states (swapping it for
+          a second input elsewhere would drop focus mid-keystroke). Heading
+          copy and search-bar styling shift based on hasFilters, but the
+          input itself stays in this one JSX slot throughout. */}
+      <div className="rounded-2xl border border-brand-border bg-white px-8 py-8 mb-6">
+        {hasFilters ? (
+          <h1 className="text-xl font-semibold text-brand-text mb-4">Resources</h1>
+        ) : (
+          <h1 className="text-2xl font-semibold text-brand-text text-center mb-6">
+            Hey, Tara. What are you looking for?
+          </h1>
+        )}
+        <div className={`relative ${hasFilters ? '' : 'max-w-xl mx-auto'}`}>
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search resources…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={`w-full pl-10 pr-4 h-11 text-sm border border-brand-border bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal transition-[border-radius] ${
+              hasFilters ? 'rounded-lg' : 'rounded-full'
+            }`}
+          />
+        </div>
+      </div>
 
       <div className="flex gap-6 items-start">
         {/* Facet rail — each section collapses so all four are always reachable
@@ -271,27 +328,18 @@ export default function Resources() {
           />
         </div>
 
-        {/* Search + results */}
+        {/* Results */}
         <div className="flex-1 min-w-0">
-          <div className="relative mb-3">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search resources…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 h-11 text-sm border border-brand-border rounded-lg bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-            />
-          </div>
-
+          {/* Quick links — commented out per review feedback (2026-08-18);
+              keeping the markup/data in place in case they come back.
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            {CATEGORY_TILES.map((tile) => {
+            {QUICK_LINKS.map((tile) => {
               const Tag = tile.filter ? 'button' : 'div'
               return (
                 <Tag
                   key={tile.label}
                   onClick={tile.filter ? () => selectTile(tile) : undefined}
-                  className={`flex items-center gap-1.5 rounded-xl border border-brand-border bg-brand-border/30 px-3 py-1.5 text-[12px] font-semibold text-brand-text transition-colors ${
+                  className={`flex items-center gap-1.5 rounded-xl border border-brand-border bg-brand-border/30 px-3 py-1.5 text-[12px] font-medium text-brand-text transition-colors ${
                     tile.filter ? 'hover:border-dessa-teal/50' : 'cursor-default'
                   }`}
                 >
@@ -301,6 +349,7 @@ export default function Resources() {
               )
             })}
           </div>
+          */}
 
           {hasFilters && (
             <div className="flex items-center gap-2 flex-wrap mb-4">
@@ -321,24 +370,50 @@ export default function Resources() {
           )}
 
           {!hasFilters ? (
-            <div className="px-6 py-16 text-center">
-              <img src="/Search/search-empty.svg" alt="" className="mx-auto h-56 w-auto mb-6" />
-              <p className="text-base font-semibold text-brand-text mb-1">
-                Search or pick a category to get started
-              </p>
-              <p className="text-sm text-brand-subtext max-w-sm mx-auto">
-                Browse thousands of videos, guides, and printables across the curriculum
-                library — use the categories above, the filters on the left, or search by title.
-              </p>
+            <div>
+              {/* Illustration + copy — commented out per review feedback (2026-08-18),
+                  leaving just the "Suggested for you" grid below.
+              <div className="px-6 py-16 text-center">
+                <img src="/Search/search-empty.svg" alt="" className="mx-auto h-56 w-auto mb-6" />
+                <p className="text-base font-semibold text-brand-text mb-1">
+                  Search or pick a category to get started
+                </p>
+                <p className="text-sm text-brand-subtext max-w-sm mx-auto mb-10">
+                  Browse thousands of videos, guides, and printables across the curriculum
+                  library — use the filters on the left or search by title.
+                </p>
+              </div>
+              */}
+
+              <p className="text-sm font-semibold text-brand-text mb-3">Suggested for you</p>
+              <div className="grid grid-cols-4 gap-4">
+                {SUGGESTED.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => openResource(r)}
+                    className="flex flex-col items-start gap-3 rounded-xl border border-brand-border bg-white p-4 text-left hover:border-dessa-teal/50 hover:bg-brand-bg transition-colors"
+                  >
+                    {TYPE_IMAGES[r.type] ? (
+                      <img src={TYPE_IMAGES[r.type]} alt={TYPE_META[r.type].label} className="h-10 w-10 object-contain" />
+                    ) : (
+                      <FileTypeBadge type={r.type} />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-brand-text leading-snug line-clamp-2 mb-0.5">{r.title}</p>
+                      <p className="text-xs text-brand-subtext">{TYPE_META[r.type].label}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
             <>
           <p className="text-sm text-brand-subtext mb-3">
-            {filtered.length.toLocaleString()} result{filtered.length === 1 ? '' : 's'}
+            {groupedResults.length.toLocaleString()} result{groupedResults.length === 1 ? '' : 's'}
           </p>
 
           <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
-            {paged.length === 0 ? (
+            {pagedGroups.length === 0 ? (
               <div className="px-6 py-16 text-center">
                 <img src="/Search/no-found.png" alt="" className="mx-auto h-64 w-auto mb-6" />
                 <p className="text-lg font-semibold text-brand-text mb-1.5">No resources found</p>
@@ -354,35 +429,88 @@ export default function Resources() {
                 </button>
               </div>
             ) : (
-              paged.map((r) => {
+              pagedGroups.map(({ key, items }) => {
+                const r = items[0]
+                const isGroup = items.length > 1
+                const isExpanded = expandedGroups.has(key)
+                const distinctCompetencies = [...new Set(items.map((i) => i.competency))]
+
                 return (
-                  <button
-                    key={r.id}
-                    onClick={() => openResource(r)}
-                    className="w-full flex items-center gap-6 px-5 py-4 border-b border-brand-border last:border-b-0 text-left hover:bg-brand-bg transition-colors"
-                  >
-                    {TYPE_IMAGES[r.type] ? (
-                      <img
-                        src={TYPE_IMAGES[r.type]}
-                        alt={TYPE_META[r.type].label}
-                        className="h-14 w-14 object-contain shrink-0"
-                      />
-                    ) : (
-                      <FileTypeBadge type={r.type} />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-lg font-semibold text-brand-text mb-0">{r.title}</p>
-                      <p className="text-sm text-brand-subtext mb-6 line-clamp-1 max-w-[580px]">{r.description}</p>
-                      <div className="flex items-center gap-4 flex-wrap">
-                        <IconTag icon={GraduationCap} label={r.grade} />
-                        <CompetencyTag primary={r.competency} extra={r.extraCompetencies} />
+                  <div key={key} className="border-b border-brand-border last:border-b-0">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => (isGroup ? toggleGroup(key) : openResource(r))}
+                      onKeyDown={(e) => {
+                        if (e.key !== 'Enter' && e.key !== ' ') return
+                        isGroup ? toggleGroup(key) : openResource(r)
+                      }}
+                      className="w-full flex items-center gap-6 px-5 py-4 text-left hover:bg-brand-bg transition-colors cursor-pointer"
+                    >
+                      {TYPE_IMAGES[r.type] ? (
+                        <img
+                          src={TYPE_IMAGES[r.type]}
+                          alt={TYPE_META[r.type].label}
+                          className="h-14 w-14 object-contain shrink-0"
+                        />
+                      ) : (
+                        <FileTypeBadge type={r.type} />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-lg font-semibold text-brand-text mb-0">{r.title}</p>
+                        <p className="text-sm text-brand-subtext mb-6 line-clamp-1 max-w-[580px]">
+                          {isGroup
+                            ? `Available across ${items.length} grades — expand to choose which one to open.`
+                            : r.description}
+                        </p>
+                        <div className="flex items-center gap-4 flex-wrap">
+                          {isGroup ? (
+                            <IconTag icon={GraduationCap} label={`${items.length} grades`} />
+                          ) : (
+                            <IconTag icon={GraduationCap} label={r.grade} />
+                          )}
+                          <CompetencyTag
+                            primary={distinctCompetencies[0]}
+                            extra={isGroup ? distinctCompetencies.slice(1) : r.extraCompetencies}
+                          />
+                        </div>
                       </div>
+                      {isGroup ? (
+                        <ChevronDown
+                          size={16}
+                          className={`text-brand-subtext shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        />
+                      ) : (
+                        <ChevronRight size={16} className="text-dessa-teal shrink-0" />
+                      )}
                     </div>
-                    <span className="flex items-center gap-1 text-sm font-semibold text-dessa-teal shrink-0">
-                      Go to content
-                      <ChevronRight size={15} />
-                    </span>
-                  </button>
+
+                    {isGroup && isExpanded && (
+                      <div className="pb-2">
+                        {items.map((item) => (
+                          <div
+                            key={item.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => openResource(item)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') openResource(item)
+                            }}
+                            className="w-full flex items-center gap-4 pl-[76px] pr-5 py-2.5 text-left hover:bg-brand-bg transition-colors cursor-pointer"
+                          >
+                            <div className="flex-1 min-w-0 flex items-center gap-4 flex-wrap">
+                              <IconTag icon={GraduationCap} label={item.grade} />
+                              <span className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext">
+                                <Target size={13} />
+                                {item.competency}
+                              </span>
+                            </div>
+                            <ChevronRight size={14} className="text-dessa-teal shrink-0" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )
               })
             )}

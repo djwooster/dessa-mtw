@@ -10,7 +10,7 @@ import { courses, tier2Courses, adultWellnessCourses, familyCourses } from './co
 import { tier2EarlyElementaryUnits, adultWellnessUnits, familyUnitsByGrade } from './lessonUnitsData'
 
 export const CATEGORIES = ['Tier 1', 'Tier 2', 'Adult Wellness', 'Family']
-export const TYPES = ['video', 'pdf', 'audio']
+export const TYPES = ['video', 'pdf', 'worksheets', 'audio']
 
 const GRADE_ORDER = [
   'Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5',
@@ -26,7 +26,10 @@ const PDF_TITLE_OVERRIDES = new Set(['Overview of MTW Competencies'])
 function inferType(title) {
   if (/podcast/i.test(title)) return 'audio'
   if (PDF_TITLE_OVERRIDES.has(title)) return 'pdf'
-  if (/guide|materials|printouts|poster|notes|worksheet/i.test(title)) return 'pdf'
+  // Student-facing practice materials get their own type, distinct from
+  // facilitator-facing guides/posters/notes (still 'pdf').
+  if (/materials|printouts|worksheet/i.test(title)) return 'worksheets'
+  if (/guide|poster|notes/i.test(title)) return 'pdf'
   return 'video'
 }
 
@@ -34,7 +37,7 @@ function inferType(title) {
 // (not yet authored per-lesson) — generated from each row's own category/
 // competency/grade so results read as distinct, sensible blurbs rather than
 // one repeated sentence.
-const TYPE_VERB = { video: 'walks through', pdf: 'outlines', audio: 'introduces' }
+const TYPE_VERB = { video: 'walks through', pdf: 'outlines', worksheets: 'provides', audio: 'introduces' }
 function placeholderDescription({ title, type, category, competency, grade }) {
   return `This ${category.toLowerCase()} resource ${TYPE_VERB[type]} "${title}", building ${competency} skills for ${grade}.`
 }

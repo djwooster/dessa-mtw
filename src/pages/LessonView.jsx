@@ -39,6 +39,7 @@ import {
   Info,
   X,
   PartyPopper,
+  Search,
 } from "lucide-react";
 
 const units = [
@@ -2942,6 +2943,7 @@ export default function LessonView({ onBookmark }) {
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [pendingNavigate, setPendingNavigate] = useState(null);
   const [showInactive, setShowInactive] = useState(true);
+  const [sidebarSearch, setSidebarSearch] = useState("");
   const [language, setLanguage] = useState("English");
   const [langOpen, setLangOpen] = useState(false);
   const [showNextLesson, setShowNextLesson] = useState(false);
@@ -3093,6 +3095,34 @@ export default function LessonView({ onBookmark }) {
     setTimeout(() => setShowToast(false), 3000);
   };
 
+  // Sidebar lesson search — filters the unit accordion to units whose title
+  // or lesson list matches, force-expanding matches so results are visible
+  // without also clicking through the tree.
+  const sidebarQuery = sidebarSearch.trim().toLowerCase();
+  const isSearchingSidebar = sidebarQuery.length > 0;
+  const searchableUnits = activeUnits.filter((unit) => showInactive || unit.active);
+  const visibleUnits = searchableUnits.filter(
+    (unit) =>
+      !isSearchingSidebar ||
+      unit.title.toLowerCase().includes(sidebarQuery) ||
+      unit.sub.some((s) => s.toLowerCase().includes(sidebarQuery)),
+  );
+
+  function highlightMatch(text) {
+    if (!isSearchingSidebar) return text;
+    const idx = text.toLowerCase().indexOf(sidebarQuery);
+    if (idx === -1) return text;
+    return (
+      <>
+        {text.slice(0, idx)}
+        <mark className="bg-dessa-tealLight text-brand-text rounded px-0.5">
+          {text.slice(idx, idx + sidebarQuery.length)}
+        </mark>
+        {text.slice(idx + sidebarQuery.length)}
+      </>
+    );
+  }
+
   return (
     <div className="flex h-[calc(100vh-56px)] overflow-hidden">
       {/* ── Bookmark toast — commented out ── */}
@@ -3119,11 +3149,41 @@ export default function LessonView({ onBookmark }) {
           </button>
         </div>
 
+        <div className="px-4 py-3 border-b border-brand-border">
+          <div className="relative">
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none"
+            />
+            <input
+              type="text"
+              value={sidebarSearch}
+              onChange={(e) => setSidebarSearch(e.target.value)}
+              placeholder="Search lessons…"
+              className="w-full pl-8 pr-8 h-9 text-sm border border-brand-border rounded-md bg-brand-bg text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal focus:bg-white transition-colors"
+            />
+            {sidebarSearch && (
+              <button
+                onClick={() => setSidebarSearch("")}
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text transition-colors"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="flex-1 overflow-y-auto py-1">
-          {activeUnits
-            .filter((unit) => showInactive || unit.active)
+          {isSearchingSidebar && visibleUnits.length === 0 ? (
+            <div className="px-4 py-10 text-center">
+              <p className="text-sm font-medium text-brand-text mb-1">No lessons found</p>
+              <p className="text-xs text-brand-subtext">Try a different search term.</p>
+            </div>
+          ) : (
+          visibleUnits
             .map((unit) => {
-              const isExpanded = expandedUnit === unit.id;
+              const isExpanded = isSearchingSidebar ? true : expandedUnit === unit.id;
               const toggle = () => setExpandedUnit(isExpanded ? null : unit.id);
               const isLeafUnit = unit.sub.length === 0;
               const isLeafSelected =
@@ -3169,7 +3229,7 @@ export default function LessonView({ onBookmark }) {
                           : { color: "#4b5465" }
                       }
                     >
-                      {unit.title}
+                      {highlightMatch(unit.title)}
                     </span>
                     {!isLeafUnit && (
                       <ChevronDown
@@ -3207,7 +3267,7 @@ export default function LessonView({ onBookmark }) {
                                     <span
                                       className={`text-sm ${isSelectedLesson ? "font-semibold text-brand-text" : "text-brand-text"}`}
                                     >
-                                      {item.replace(/^(Community|Independent):\s*/, "")}
+                                      {highlightMatch(item.replace(/^(Community|Independent):\s*/, ""))}
                                     </span>
                                     {unit.completed ? (
                                       <CheckCircle2
@@ -3233,7 +3293,8 @@ export default function LessonView({ onBookmark }) {
                   </AnimatePresence>
                 </div>
               );
-            })}
+            })
+          )}
         </div>
 
         {/* Audio Library entry — sticky, outside scroll area */}
