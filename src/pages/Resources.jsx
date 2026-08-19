@@ -639,6 +639,14 @@ export default function Resources() {
                         }}
                         className="w-full flex items-start gap-4 px-6 py-5 text-left hover:bg-brand-bg transition-colors cursor-pointer"
                       >
+                        {isGroup ? (
+                          <ChevronRight
+                            size={16}
+                            className={`text-brand-subtext shrink-0 mt-1.5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                          />
+                        ) : (
+                          <span className="w-4 shrink-0" />
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2.5">
                             <TypeIconBadge type={r.type} size={26} />
@@ -670,14 +678,7 @@ export default function Resources() {
                           >
                             <Star size={16} fill={isSaved ? 'currentColor' : 'none'} />
                           </button>
-                          {isGroup ? (
-                            <ChevronDown
-                              size={16}
-                              className={`text-brand-subtext transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                            />
-                          ) : (
-                            <ChevronRight size={16} className="text-dessa-teal" />
-                          )}
+                          {!isGroup && <ChevronRight size={16} className="text-dessa-teal" />}
                         </div>
                       </div>
 
