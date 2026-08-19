@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Search, X, Video, FileText, Mic, ChevronDown, ChevronRight, GraduationCap, Target,
-  Rocket, Monitor, Heart, ClipboardList,
+  Rocket, Monitor, Heart, ClipboardList, Star,
 } from 'lucide-react'
 import {
   resources, CATEGORIES, TYPES, ALL_GRADES, ALL_COMPETENCIES, courseFor,
@@ -20,20 +20,35 @@ const TYPE_META = {
   audio: { icon: Mic, label: 'Audio', color: 'text-mtw-blue', bg: 'bg-mtw-blue' },
 }
 
-// Real illustrated file-type icons, dropped in by design.
-const TYPE_IMAGES = {
-  video: '/file-types/video-newly.png',
-  pdf: '/file-types/PDF-newly.png',
-  audio: '/file-types/audio-newly.png',
-}
-
-function FileTypeBadge({ type }) {
+// Small round icon badge — stands in for the "author avatar" slot in the
+// card-list reference this row/card layout is based on, using our real
+// type data instead of an invented person.
+function TypeIconBadge({ type, size = 28 }) {
   const { icon: Icon, color, bg } = TYPE_META[type]
   return (
-    <div className={`w-14 h-16 rounded-lg ${bg} bg-opacity-15 flex items-center justify-center shrink-0`}>
-      <Icon size={22} strokeWidth={2} className={color} />
-    </div>
+    <span
+      className={`flex items-center justify-center rounded-full ${bg} bg-opacity-15 shrink-0`}
+      style={{ width: size, height: size }}
+    >
+      <Icon size={Math.round(size * 0.45)} className={color} />
+    </span>
   )
+}
+
+function TypePill({ type }) {
+  return (
+    <span className="text-[11px] font-semibold text-brand-subtext px-2 py-0.5 rounded-full bg-brand-bg shrink-0">
+      {TYPE_META[type].label}
+    </span>
+  )
+}
+
+// Shared identity for "the same lesson across grades" — used both to collapse
+// duplicate grade rows in search results and to key the saved/starred list,
+// so starring a resource from Popular picks and starring its counterpart in
+// search results (if it's the same lesson) reflect as the same saved item.
+function groupKey(r) {
+  return `${r.category}::${r.type}::${r.title}`
 }
 
 // Elementary vs. secondary grade bands, used by the worksheet tiles below —
@@ -60,11 +75,11 @@ const QUICK_LINKS = [
   { label: 'Research', icon: Search },
 ]
 
-// One representative resource per type, shown as a "Suggested for you" row
-// on the landing (no search/filters yet) empty state — gives new users a
+// One representative resource per type, shown as a "Popular picks" row on
+// the landing (no search/filters yet) empty state — gives new users a
 // starting point instead of a blank illustration, and doubles as a quick
 // showcase of the mixed file types in the library.
-const SUGGESTED = TYPES.map((t) => resources.find((r) => r.type === t)).filter(Boolean)
+const POPULAR_PICKS = TYPES.map((t) => resources.find((r) => r.type === t)).filter(Boolean)
 
 const PAGE_SIZE = 20
 
@@ -174,6 +189,50 @@ export default function Resources() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [expandedGroups, setExpandedGroups] = useState(() => new Set())
+  // Saved/starred resources — keyed by groupKey() so a resource stays "saved"
+  // regardless of which grade variant or view (card vs. result row) it was
+  // starred from. Map value is the representative resource, so the sidebar
+  // panel can render + navigate without re-deriving it from current filters.
+  const [savedKeys, setSavedKeys] = useState(() => new Map())
+
+  function toggleSaved(e, key, representative) {
+    e.stopPropagation()
+    setSavedKeys((prev) => {
+      const next = new Map(prev)
+      if (next.has(key)) next.delete(key)
+      else next.set(key, representative)
+      return next
+    })
+  }
+
+  // Predictive search dropdown — lightweight typeahead over the search box,
+  // not a full command bar: no global shortcut to open it, just live matches
+  // while the field is focused. Title-starts-with matches rank above
+  // title-contains matches; deduped by groupKey() so a lesson offered across
+  // many grades still only takes one dropdown slot.
+  const [searchFocused, setSearchFocused] = useState(false)
+  const [highlightIndex, setHighlightIndex] = useState(0)
+
+  const dropdownResults = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return []
+    const seen = new Set()
+    const startsWith = []
+    const contains = []
+    for (const r of resources) {
+      const t = r.title.toLowerCase()
+      if (!t.includes(q)) continue
+      const key = groupKey(r)
+      if (seen.has(key)) continue
+      seen.add(key)
+      ;(t.startsWith(q) ? startsWith : contains).push(r)
+    }
+    return [...startsWith, ...contains].slice(0, 5)
+  }, [search])
+
+  useEffect(() => {
+    setHighlightIndex(0)
+  }, [search])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -205,7 +264,7 @@ export default function Resources() {
   const groupedResults = useMemo(() => {
     const byKey = new Map()
     for (const r of filtered) {
-      const key = `${r.category}::${r.type}::${r.title}`
+      const key = groupKey(r)
       if (!byKey.has(key)) byKey.set(key, [])
       byKey.get(key).push(r)
     }
@@ -267,65 +326,167 @@ export default function Resources() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-screen-xl mx-auto px-6 pt-8 pb-16"
     >
-      {/* Header — a single persistent bordered container so the <input> below
-          never unmounts between the landing/results states (swapping it for
-          a second input elsewhere would drop focus mid-keystroke). Heading
-          copy and search-bar styling shift based on hasFilters, but the
-          input itself stays in this one JSX slot throughout. */}
+      {/* Header — a single persistent bordered container, identical in the
+          landing/results states (heading, shape, and alignment all stay
+          fixed) so the <input> below never unmounts or visibly resizes
+          between the two (swapping it for a second input elsewhere would
+          drop focus mid-keystroke). */}
       <div className="rounded-2xl border border-brand-border bg-white px-8 py-8 mb-6">
-        {hasFilters ? (
-          <h1 className="text-xl font-semibold text-brand-text mb-4">Resources</h1>
-        ) : (
-          <h1 className="text-2xl font-semibold text-brand-text text-center mb-6">
-            Hey, Tara. What are you looking for?
-          </h1>
-        )}
-        <div className={`relative ${hasFilters ? '' : 'max-w-xl mx-auto'}`}>
+        <h1 className="text-2xl font-semibold text-brand-text text-center mb-6">
+          Hey, Tara. What are you looking for?
+        </h1>
+        <div className="relative max-w-xl mx-auto">
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
           <input
             type="text"
             placeholder="Search resources…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className={`w-full pl-10 pr-4 h-11 text-sm border border-brand-border bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal transition-[border-radius] ${
-              hasFilters ? 'rounded-lg' : 'rounded-full'
-            }`}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+            onKeyDown={(e) => {
+              if (!searchFocused || dropdownResults.length === 0) return
+              if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                setHighlightIndex((i) => Math.min(i + 1, dropdownResults.length - 1))
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                setHighlightIndex((i) => Math.max(i - 1, 0))
+              } else if (e.key === 'Enter') {
+                e.preventDefault()
+                openResource(dropdownResults[highlightIndex])
+              } else if (e.key === 'Escape') {
+                setSearchFocused(false)
+                e.currentTarget.blur()
+              }
+            }}
+            className="w-full pl-10 pr-9 h-11 text-sm border border-brand-border rounded-full bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
           />
+          {search && (
+            <button
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setSearch('')}
+              aria-label="Clear search"
+              className="absolute top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text transition-colors"
+              style={{ right: 8 }}
+            >
+              <X size={15} />
+            </button>
+          )}
+
+          {/* Predictive dropdown — lightweight typeahead, not a full command
+              bar: live matches while focused, no global open shortcut. */}
+          {searchFocused && search.trim().length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 z-30 bg-white rounded-xl border border-brand-border shadow-lg overflow-hidden text-left">
+              {dropdownResults.length === 0 ? (
+                <p className="px-4 py-4 text-sm text-brand-subtext">No matches for &ldquo;{search}&rdquo;</p>
+              ) : (
+                <>
+                  <p className="px-4 pt-3 pb-2 text-xs font-medium text-brand-subtext">
+                    Search results ({dropdownResults.length})
+                  </p>
+                  <div className="border-t border-brand-border">
+                    {dropdownResults.map((r, i) => (
+                      <button
+                        key={groupKey(r)}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onMouseEnter={() => setHighlightIndex(i)}
+                        onClick={() => openResource(r)}
+                        className={`w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors ${
+                          i === highlightIndex ? 'bg-brand-bg' : 'hover:bg-brand-bg'
+                        }`}
+                      >
+                        <TypeIconBadge type={r.type} size={28} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-brand-text truncate">{r.title}</p>
+                          <p className="text-xs text-brand-subtext truncate">{r.grade} · {r.description}</p>
+                        </div>
+                        <TypePill type={r.type} />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 border-t border-brand-border text-[11px] text-brand-subtext">
+                    <span>↵ open</span>
+                    <span>·</span>
+                    <span>esc close</span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       <div className="flex gap-6 items-start">
-        {/* Facet rail — each section collapses so all four are always reachable
-            without scrolling the results; capped height + internal scroll is a
-            backstop in case everything is expanded at once. */}
-        <div className="w-64 flex-shrink-0 bg-white rounded-xl border border-brand-border overflow-y-auto sticky top-20 max-h-[calc(100vh-6rem)]">
-          <FacetGroup
-            title="Category"
-            options={CATEGORIES}
-            selected={selectedCategories}
-            onToggle={(v) => toggle(setSelectedCategories, v)}
-          />
-          <FacetGroup
-            title="Grade"
-            options={ALL_GRADES}
-            selected={selectedGrades}
-            onToggle={(v) => toggle(setSelectedGrades, v)}
-            scrollable
-            defaultOpen={false}
-          />
-          <FacetGroup
-            title="Competency"
-            options={ALL_COMPETENCIES}
-            selected={selectedCompetencies}
-            onToggle={(v) => toggle(setSelectedCompetencies, v)}
-            defaultOpen={false}
-          />
-          <FacetGroup
-            title="Type"
-            options={TYPES.map((t) => TYPE_META[t].label)}
-            selected={selectedTypes.map((t) => TYPE_META[t].label)}
-            onToggle={(label) => toggle(setSelectedTypes, TYPES.find((t) => TYPE_META[t].label === label))}
-          />
+        <div className="w-64 flex-shrink-0 flex flex-col gap-4 sticky top-20 max-h-[calc(100vh-6rem)]">
+          {/* Facet rail — each section collapses so all four are always
+              reachable without scrolling the results; capped height + internal
+              scroll is a backstop in case everything is expanded at once. */}
+          <div className="bg-white rounded-xl border border-brand-border overflow-y-auto">
+            <FacetGroup
+              title="Category"
+              options={CATEGORIES}
+              selected={selectedCategories}
+              onToggle={(v) => toggle(setSelectedCategories, v)}
+            />
+            <FacetGroup
+              title="Grade"
+              options={ALL_GRADES}
+              selected={selectedGrades}
+              onToggle={(v) => toggle(setSelectedGrades, v)}
+              scrollable
+              defaultOpen={false}
+            />
+            <FacetGroup
+              title="Competency"
+              options={ALL_COMPETENCIES}
+              selected={selectedCompetencies}
+              onToggle={(v) => toggle(setSelectedCompetencies, v)}
+              defaultOpen={false}
+            />
+            <FacetGroup
+              title="Type"
+              options={TYPES.map((t) => TYPE_META[t].label)}
+              selected={selectedTypes.map((t) => TYPE_META[t].label)}
+              onToggle={(label) => toggle(setSelectedTypes, TYPES.find((t) => TYPE_META[t].label === label))}
+            />
+          </div>
+
+          {/* Saved/starred resources — populated by the star button on
+              Popular picks cards and search result rows. */}
+          <div className="bg-white rounded-xl border border-brand-border p-4 overflow-y-auto">
+            <p className="text-sm font-semibold text-brand-text mb-3">Saved</p>
+            {savedKeys.size === 0 ? (
+              <p className="text-xs text-brand-subtext leading-relaxed">
+                Tap the star on any resource to save it here for quick access later.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-0.5">
+                {[...savedKeys.entries()].map(([key, r]) => (
+                  <div
+                    key={key}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openResource(r)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') openResource(r)
+                    }}
+                    className="group w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left cursor-pointer hover:bg-brand-bg transition-colors"
+                  >
+                    <TypeIconBadge type={r.type} size={22} />
+                    <span className="flex-1 min-w-0 text-xs font-medium text-brand-text truncate">{r.title}</span>
+                    <button
+                      onClick={(e) => toggleSaved(e, key, r)}
+                      aria-label="Remove from saved"
+                      className="shrink-0 text-dessa-teal opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Star size={13} fill="currentColor" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Results */}
@@ -385,34 +546,63 @@ export default function Resources() {
               </div>
               */}
 
-              <p className="text-sm font-semibold text-brand-text mb-3">Suggested for you</p>
+              <p className="text-sm font-semibold text-brand-text mb-3">Popular picks</p>
               <div className="grid grid-cols-4 gap-4">
-                {SUGGESTED.map((r) => (
-                  <button
-                    key={r.id}
-                    onClick={() => openResource(r)}
-                    className="flex flex-col items-start gap-3 rounded-xl border border-brand-border bg-white p-4 text-left hover:border-dessa-teal/50 hover:bg-brand-bg transition-colors"
-                  >
-                    {TYPE_IMAGES[r.type] ? (
-                      <img src={TYPE_IMAGES[r.type]} alt={TYPE_META[r.type].label} className="h-10 w-10 object-contain" />
-                    ) : (
-                      <FileTypeBadge type={r.type} />
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-brand-text leading-snug line-clamp-2 mb-0.5">{r.title}</p>
-                      <p className="text-xs text-brand-subtext">{TYPE_META[r.type].label}</p>
+                {POPULAR_PICKS.map((r) => {
+                  const key = groupKey(r)
+                  const isSaved = savedKeys.has(key)
+                  return (
+                    <div
+                      key={r.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openResource(r)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') openResource(r)
+                      }}
+                      className="relative flex flex-col items-start gap-3 rounded-2xl border border-brand-border bg-white p-4 text-left h-full cursor-pointer hover:border-dessa-teal/50 hover:shadow-sm transition-all"
+                    >
+                      <button
+                        onClick={(e) => toggleSaved(e, key, r)}
+                        aria-label={isSaved ? 'Remove from saved' : 'Save resource'}
+                        className={`absolute top-3 right-3 p-1 rounded-full transition-colors ${
+                          isSaved ? 'text-dessa-teal' : 'text-brand-subtext hover:text-dessa-teal'
+                        }`}
+                      >
+                        <Star size={16} fill={isSaved ? 'currentColor' : 'none'} />
+                      </button>
+                      <div className="flex items-center gap-2 pr-6">
+                        <TypeIconBadge type={r.type} size={28} />
+                        <span className="text-xs font-medium text-brand-subtext">{r.grade}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-brand-text leading-snug line-clamp-2 mb-1">{r.title}</p>
+                        <p className="text-xs text-brand-subtext leading-relaxed line-clamp-2">{r.description}</p>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 w-full pt-3 mt-auto border-t border-brand-border">
+                        <CompetencyTag primary={r.competency} extra={r.extraCompetencies} />
+                        <TypePill type={r.type} />
+                      </div>
                     </div>
-                  </button>
-                ))}
+                  )
+                })}
               </div>
             </div>
           ) : (
             <>
-          <p className="text-sm text-brand-subtext mb-3">
-            {groupedResults.length.toLocaleString()} result{groupedResults.length === 1 ? '' : 's'}
-          </p>
+          <div className="rounded-2xl border border-brand-border bg-white overflow-hidden">
+            <div className="px-6 pt-6 pb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-dessa-tealLight shrink-0">
+                  <Search size={14} className="text-dessa-teal" />
+                </span>
+                <h2 className="text-base font-semibold text-brand-text">Search results</h2>
+              </div>
+              <p className="text-sm text-brand-subtext">
+                {groupedResults.length.toLocaleString()} result{groupedResults.length === 1 ? '' : 's'}
+              </p>
+            </div>
 
-          <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
             {pagedGroups.length === 0 ? (
               <div className="px-6 py-16 text-center">
                 <img src="/Search/no-found.png" alt="" className="mx-auto h-64 w-auto mb-6" />
@@ -429,90 +619,97 @@ export default function Resources() {
                 </button>
               </div>
             ) : (
-              pagedGroups.map(({ key, items }) => {
-                const r = items[0]
-                const isGroup = items.length > 1
-                const isExpanded = expandedGroups.has(key)
-                const distinctCompetencies = [...new Set(items.map((i) => i.competency))]
+              <div className="border-t border-brand-border">
+                {pagedGroups.map(({ key, items }) => {
+                  const r = items[0]
+                  const isGroup = items.length > 1
+                  const isExpanded = expandedGroups.has(key)
+                  const isSaved = savedKeys.has(key)
+                  const distinctCompetencies = [...new Set(items.map((i) => i.competency))]
 
-                return (
-                  <div key={key} className="border-b border-brand-border last:border-b-0">
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => (isGroup ? toggleGroup(key) : openResource(r))}
-                      onKeyDown={(e) => {
-                        if (e.key !== 'Enter' && e.key !== ' ') return
-                        isGroup ? toggleGroup(key) : openResource(r)
-                      }}
-                      className="w-full flex items-center gap-6 px-5 py-4 text-left hover:bg-brand-bg transition-colors cursor-pointer"
-                    >
-                      {TYPE_IMAGES[r.type] ? (
-                        <img
-                          src={TYPE_IMAGES[r.type]}
-                          alt={TYPE_META[r.type].label}
-                          className="h-14 w-14 object-contain shrink-0"
-                        />
-                      ) : (
-                        <FileTypeBadge type={r.type} />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-lg font-semibold text-brand-text mb-0">{r.title}</p>
-                        <p className="text-sm text-brand-subtext mb-6 line-clamp-1 max-w-[580px]">
-                          {isGroup
-                            ? `Available across ${items.length} grades — expand to choose which one to open.`
-                            : r.description}
-                        </p>
-                        <div className="flex items-center gap-4 flex-wrap">
+                  return (
+                    <div key={key} className="border-b border-brand-border last:border-b-0">
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => (isGroup ? toggleGroup(key) : openResource(r))}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter' && e.key !== ' ') return
+                          isGroup ? toggleGroup(key) : openResource(r)
+                        }}
+                        className="w-full flex items-start gap-4 px-6 py-5 text-left hover:bg-brand-bg transition-colors cursor-pointer"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2.5">
+                            <TypeIconBadge type={r.type} size={26} />
+                            <span className="text-xs font-medium text-brand-subtext">
+                              {isGroup ? `${items.length} grades` : r.grade}
+                            </span>
+                          </div>
+                          <p className="text-base font-semibold text-brand-text leading-snug mb-1">{r.title}</p>
+                          <p className="text-sm text-brand-subtext leading-relaxed line-clamp-2 mb-3 max-w-[640px]">
+                            {isGroup
+                              ? `Available across ${items.length} grades — expand to choose which one to open.`
+                              : r.description}
+                          </p>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <CompetencyTag
+                              primary={distinctCompetencies[0]}
+                              extra={isGroup ? distinctCompetencies.slice(1) : r.extraCompetencies}
+                            />
+                            <TypePill type={r.type} />
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end justify-between self-stretch shrink-0">
+                          <button
+                            onClick={(e) => toggleSaved(e, key, r)}
+                            aria-label={isSaved ? 'Remove from saved' : 'Save resource'}
+                            className={`p-1 rounded-full transition-colors ${
+                              isSaved ? 'text-dessa-teal' : 'text-brand-subtext hover:text-dessa-teal'
+                            }`}
+                          >
+                            <Star size={16} fill={isSaved ? 'currentColor' : 'none'} />
+                          </button>
                           {isGroup ? (
-                            <IconTag icon={GraduationCap} label={`${items.length} grades`} />
+                            <ChevronDown
+                              size={16}
+                              className={`text-brand-subtext transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                            />
                           ) : (
-                            <IconTag icon={GraduationCap} label={r.grade} />
+                            <ChevronRight size={16} className="text-dessa-teal" />
                           )}
-                          <CompetencyTag
-                            primary={distinctCompetencies[0]}
-                            extra={isGroup ? distinctCompetencies.slice(1) : r.extraCompetencies}
-                          />
                         </div>
                       </div>
-                      {isGroup ? (
-                        <ChevronDown
-                          size={16}
-                          className={`text-brand-subtext shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                        />
-                      ) : (
-                        <ChevronRight size={16} className="text-dessa-teal shrink-0" />
+
+                      {isGroup && isExpanded && (
+                        <div className="pb-2">
+                          {items.map((item) => (
+                            <div
+                              key={item.id}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => openResource(item)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') openResource(item)
+                              }}
+                              className="w-full flex items-center gap-4 pl-[76px] pr-6 py-2.5 text-left hover:bg-brand-bg transition-colors cursor-pointer"
+                            >
+                              <div className="flex-1 min-w-0 flex items-center gap-4 flex-wrap">
+                                <IconTag icon={GraduationCap} label={item.grade} />
+                                <span className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext">
+                                  <Target size={13} />
+                                  {item.competency}
+                                </span>
+                              </div>
+                              <ChevronRight size={14} className="text-dessa-teal shrink-0" />
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
-
-                    {isGroup && isExpanded && (
-                      <div className="pb-2">
-                        {items.map((item) => (
-                          <div
-                            key={item.id}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => openResource(item)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') openResource(item)
-                            }}
-                            className="w-full flex items-center gap-4 pl-[76px] pr-5 py-2.5 text-left hover:bg-brand-bg transition-colors cursor-pointer"
-                          >
-                            <div className="flex-1 min-w-0 flex items-center gap-4 flex-wrap">
-                              <IconTag icon={GraduationCap} label={item.grade} />
-                              <span className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext">
-                                <Target size={13} />
-                                {item.competency}
-                              </span>
-                            </div>
-                            <ChevronRight size={14} className="text-dessa-teal shrink-0" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })
+                  )
+                })}
+              </div>
             )}
           </div>
 
