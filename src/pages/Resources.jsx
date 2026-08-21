@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  Search, X, Video, FileText, Mic, ChevronDown, ChevronRight, ChevronLeft, GraduationCap, Target,
+  Search, X, Video, FileText, Mic, ChevronDown, ChevronRight, ExternalLink,
   ClipboardList, Star,
 } from 'lucide-react'
 import {
@@ -51,11 +51,26 @@ function groupKey(r) {
   return `${r.category}::${r.type}::${r.title}`
 }
 
-// A handful of resources per type, shown as a horizontally-scrolling
-// "Popular picks" carousel in the hero — enough to overflow the visible
-// row (so the fade + cycle arrow have something to reveal), while still
-// giving a quick showcase of the mixed file types in the library.
-const POPULAR_PICKS = TYPES.flatMap((t) => resources.filter((r) => r.type === t).slice(0, 3))
+// Adult Wellness lesson titles are authored with an "Independent: " prefix
+// (they're self-guided, as opposed to facilitated) — useful in the source
+// data but redundant noise in a resource list, so strip it for display only.
+function displayTitle(title) {
+  return title.replace(/^Independent:\s*/, '')
+}
+
+// Quick-browse category tiles shown below the search bar — a curated set of
+// entry points into the library (not the same taxonomy as the sidebar's
+// Grade Band/Competency/Type facets), so clicking one runs a title search
+// for its label rather than toggling a facet that doesn't exist.
+const CATEGORY_TILES = [
+  'Getting Started Tools',
+  'Worksheets',
+  'Videos',
+  'Webinars',
+  'Common Language Resources',
+  'Family Resources',
+  'Implementation & Engagement',
+]
 
 const PAGE_SIZE = 20
 
@@ -124,47 +139,16 @@ function Chip({ label, onRemove }) {
   )
 }
 
-function IconTag({ icon, label }) {
-  const Icon = icon
-  return (
-    <span className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext">
-      <Icon size={13} />
-      {label}
-    </span>
-  )
-}
-
-function CompetencyTag({ primary, extra }) {
-  return (
-    <span className="relative flex items-center gap-1.5 text-xs font-medium text-brand-subtext group/comp">
-      <Target size={13} />
-      {primary}
-      {extra.length > 0 && (
-        <>
-          <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-brand-bg text-[11px] font-semibold text-brand-subtext">
-            +{extra.length} more
-          </span>
-          <div className="absolute left-0 top-full mt-1.5 hidden group-hover/comp:flex flex-col gap-1 bg-dessa-navy text-white text-xs rounded-lg px-3 py-2 shadow-lg z-20 whitespace-nowrap">
-            {extra.map((c) => (
-              <span key={c}>{c}</span>
-            ))}
-          </div>
-        </>
-      )}
-    </span>
-  )
-}
-
 export default function Resources() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
+  const [query, setQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState([])
   const [selectedGrades, setSelectedGrades] = useState([])
   const [selectedCompetencies, setSelectedCompetencies] = useState([])
   const [selectedTypes, setSelectedTypes] = useState([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
-  const [expandedGroups, setExpandedGroups] = useState(() => new Set())
   // Saved/starred resources — keyed by groupKey() so a resource stays "saved"
   // regardless of which grade variant or view (card vs. result row) it was
   // starred from. Map value is the representative resource, so the sidebar
@@ -179,29 +163,6 @@ export default function Resources() {
       else next.set(key, representative)
       return next
     })
-  }
-
-  // Popular picks carousel — paginated by CARDS_PER_PAGE, with dots tracking
-  // (and driving) the current page. Arrows/gradients on each edge only show
-  // when there's actually more to reveal in that direction.
-  const popularPicksRef = useRef(null)
-  const POPULAR_PICK_CARD_WIDTH = 288 + 16 // w-72 + gap-4
-  const POPULAR_PICKS_PER_PAGE = 4
-  const popularPicksPageCount = Math.ceil(POPULAR_PICKS.length / POPULAR_PICKS_PER_PAGE)
-  const [popularPicksPage, setPopularPicksPage] = useState(0)
-
-  function scrollToPopularPicksPage(page) {
-    const el = popularPicksRef.current
-    const clamped = Math.min(Math.max(page, 0), popularPicksPageCount - 1)
-    setPopularPicksPage(clamped)
-    el?.scrollTo({ left: clamped * POPULAR_PICKS_PER_PAGE * POPULAR_PICK_CARD_WIDTH, behavior: 'smooth' })
-  }
-
-  function handlePopularPicksScroll() {
-    const el = popularPicksRef.current
-    if (!el) return
-    const page = Math.round(el.scrollLeft / (POPULAR_PICKS_PER_PAGE * POPULAR_PICK_CARD_WIDTH))
-    setPopularPicksPage(Math.min(Math.max(page, 0), popularPicksPageCount - 1))
   }
 
   // Predictive search dropdown — lightweight typeahead over the search box,
@@ -234,7 +195,7 @@ export default function Resources() {
   }, [search])
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
+    const q = query.trim().toLowerCase()
     return resources.filter((r) =>
       (!q || r.title.toLowerCase().includes(q)) &&
       (selectedCategories.length === 0 || selectedCategories.includes(r.category)) &&
@@ -242,11 +203,11 @@ export default function Resources() {
       (selectedCompetencies.length === 0 || selectedCompetencies.includes(r.competency)) &&
       (selectedTypes.length === 0 || selectedTypes.includes(r.type))
     )
-  }, [search, selectedCategories, selectedGrades, selectedCompetencies, selectedTypes])
+  }, [query, selectedCategories, selectedGrades, selectedCompetencies, selectedTypes])
 
   // Reset to page 1 whenever the filter set or page size changes — adjusted
   // during render (not in an effect) so it takes effect in the same commit.
-  const filterKey = JSON.stringify([search, selectedCategories, selectedGrades, selectedCompetencies, selectedTypes, pageSize])
+  const filterKey = JSON.stringify([query, selectedCategories, selectedGrades, selectedCompetencies, selectedTypes, pageSize])
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
   if (filterKey !== prevFilterKey) {
     setPrevFilterKey(filterKey)
@@ -276,15 +237,6 @@ export default function Resources() {
   const totalPages = Math.max(1, Math.ceil(groupedResults.length / pageSize))
   const pagedGroups = groupedResults.slice((page - 1) * pageSize, page * pageSize)
 
-  function toggleGroup(key) {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
-
   function toggle(setFn, value) {
     setFn((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]))
   }
@@ -296,14 +248,20 @@ export default function Resources() {
     ...selectedTypes.map((v) => ({ group: 'type', value: v, setFn: setSelectedTypes })),
   ]
 
-  const hasFilters = chips.length > 0 || search.trim().length > 0
+  const hasFilters = chips.length > 0 || query.trim().length > 0
 
   function clearAll() {
     setSearch('')
+    setQuery('')
     setSelectedCategories([])
     setSelectedGrades([])
     setSelectedCompetencies([])
     setSelectedTypes([])
+  }
+
+  function submitSearch() {
+    setQuery(search)
+    setSearchFocused(false)
   }
 
   function openResource(r) {
@@ -317,18 +275,22 @@ export default function Resources() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-screen-xl mx-auto px-6 pb-16"
     >
-      {/* Hero — large colored banner surfacing Popular picks, inspired by a
-          reference dashboard's dark "welcome" hero. */}
-      <div className="w-screen mx-[calc(50%-50vw)] bg-dessa-navy mb-6">
-      <div className="max-w-screen-xl mx-auto px-6 py-14">
-        <h1 className="text-2xl font-semibold text-white text-center mb-6">
-          Hey, Tara. What are you looking for?
-        </h1>
+      {/* Top bar — eBay-style: a compact search container, a category row
+          directly beneath it, then the results content below that. Light
+          gray instead of a bold hero color so it reads as a utility bar,
+          not a banner. Search and categories are separate full-bleed bands
+          so each gets its own edge-to-edge divider rather than one border
+          shared (and visually mis-attributed) across both. */}
+      <div className="w-screen mx-[calc(50%-50vw)] bg-brand-bg border-b border-brand-border">
+      <div className="max-w-screen-xl mx-auto px-6 pt-[1.35rem] pb-4">
 
         {/* Search — kept in this one persistent JSX slot (never conditionally
             swapped elsewhere) so the <input> doesn't unmount and drop focus
-            mid-keystroke. */}
-        <div className="relative max-w-xl mx-auto mb-8">
+            mid-keystroke. Typing only drives the autocomplete dropdown below;
+            the results list only updates on submit (Enter or the search
+            button), Google-style. */}
+        <div className="flex items-stretch gap-2">
+        <div className="relative flex-1">
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
           <input
             type="text"
@@ -338,16 +300,9 @@ export default function Resources() {
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
             onKeyDown={(e) => {
-              if (!searchFocused || dropdownResults.length === 0) return
-              if (e.key === 'ArrowDown') {
+              if (e.key === 'Enter') {
                 e.preventDefault()
-                setHighlightIndex((i) => Math.min(i + 1, dropdownResults.length - 1))
-              } else if (e.key === 'ArrowUp') {
-                e.preventDefault()
-                setHighlightIndex((i) => Math.max(i - 1, 0))
-              } else if (e.key === 'Enter') {
-                e.preventDefault()
-                openResource(dropdownResults[highlightIndex])
+                submitSearch()
               } else if (e.key === 'Escape') {
                 setSearchFocused(false)
                 e.currentTarget.blur()
@@ -358,7 +313,10 @@ export default function Resources() {
           {search && (
             <button
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setSearch('')}
+              onClick={() => {
+                setSearch('')
+                setQuery('')
+              }}
               aria-label="Clear search"
               className="absolute top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text transition-colors"
               style={{ right: 8 }}
@@ -368,7 +326,9 @@ export default function Resources() {
           )}
 
           {/* Predictive dropdown — lightweight typeahead, not a full command
-              bar: live matches while focused, no global open shortcut. */}
+              bar: live suggestions while focused, but they don't filter the
+              results list themselves — click one to jump straight to it, or
+              hit Enter/the search button to search the typed text. */}
           {searchFocused && search.trim().length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-2 z-30 bg-white rounded-xl border border-brand-border shadow-lg overflow-hidden text-left">
               {dropdownResults.length === 0 ? (
@@ -376,7 +336,7 @@ export default function Resources() {
               ) : (
                 <>
                   <p className="px-4 pt-3 pb-2 text-xs font-medium text-brand-subtext">
-                    Search results ({dropdownResults.length})
+                    Suggestions ({dropdownResults.length})
                   </p>
                   <div className="border-t border-brand-border">
                     {dropdownResults.map((r, i) => (
@@ -391,7 +351,7 @@ export default function Resources() {
                       >
                         <TypeIconBadge type={r.type} size={28} />
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-brand-text truncate">{r.title}</p>
+                          <p className="text-sm font-semibold text-brand-text truncate">{displayTitle(r.title)}</p>
                           <p className="text-xs text-brand-subtext truncate">{r.grade} · {r.description}</p>
                         </div>
                         <TypePill type={r.type} />
@@ -399,7 +359,9 @@ export default function Resources() {
                     ))}
                   </div>
                   <div className="flex items-center gap-2 px-4 py-2 border-t border-brand-border text-[11px] text-brand-subtext">
-                    <span>↵ open</span>
+                    <span>click to open</span>
+                    <span>·</span>
+                    <span>↵ search</span>
                     <span>·</span>
                     <span>esc close</span>
                   </div>
@@ -408,104 +370,32 @@ export default function Resources() {
             </div>
           )}
         </div>
-
-        <p className="text-sm font-semibold text-white/70 mb-3">Popular picks</p>
-        <div className="relative">
-          <div
-            ref={popularPicksRef}
-            onScroll={handlePopularPicksScroll}
-            className="flex gap-4 overflow-x-auto scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {POPULAR_PICKS.map((r) => {
-              const key = groupKey(r)
-              const isSaved = savedKeys.has(key)
-              return (
-                <div
-                  key={r.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => openResource(r)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') openResource(r)
-                  }}
-                  className="relative flex flex-col items-start gap-3 rounded-2xl border border-white/15 bg-white/10 backdrop-blur-sm p-4 text-left h-full shrink-0 w-72 cursor-pointer hover:bg-white/15 transition-colors"
-                >
-                  <button
-                    onClick={(e) => toggleSaved(e, key, r)}
-                    aria-label={isSaved ? 'Remove from saved' : 'Save resource'}
-                    className={`absolute top-3 right-3 p-1 rounded-full transition-colors ${
-                      isSaved ? 'text-dessa-teal' : 'text-white/50 hover:text-white'
-                    }`}
-                  >
-                    <Star size={16} fill={isSaved ? 'currentColor' : 'none'} />
-                  </button>
-                  <div className="flex items-center gap-2 w-full min-w-0 pr-6">
-                    <TypeIconBadge type={r.type} size={28} />
-                    <p className="text-sm font-semibold text-white truncate min-w-0">{r.title}</p>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-white/60 leading-relaxed line-clamp-2">{r.description}</p>
-                  </div>
-                  <div className="flex items-center justify-between gap-2 w-full pt-3 mt-auto border-t border-white/15">
-                    <span className="flex items-center gap-1.5 text-xs font-medium text-white/70">
-                      <Target size={13} />
-                      {r.competency}
-                    </span>
-                    <span className="text-[11px] font-semibold text-white/70 px-2 py-0.5 rounded-full bg-white/10">
-                      {TYPE_META[r.type].label}
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Fade each edge into the hero's own background color, narrow
-              enough to still reveal a sliver of the next/previous card
-              rather than hiding it completely — only shown when there's
-              actually more to scroll in that direction. */}
-          {popularPicksPage > 0 && (
-            <div className="pointer-events-none absolute top-0 left-0 bottom-1 w-16 bg-gradient-to-r from-dessa-navy to-transparent" />
-          )}
-          {popularPicksPage < popularPicksPageCount - 1 && (
-            <div className="pointer-events-none absolute top-0 right-0 bottom-1 w-16 bg-gradient-to-l from-dessa-navy to-transparent" />
-          )}
-
-          {popularPicksPage > 0 && (
-            <button
-              onClick={() => scrollToPopularPicksPage(popularPicksPage - 1)}
-              aria-label="Show previous popular picks"
-              className="absolute top-1/2 left-2 -translate-y-1/2 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-white/15 text-white backdrop-blur-sm hover:bg-white/25 transition-colors"
-            >
-              <ChevronLeft size={18} />
-            </button>
-          )}
-          {popularPicksPage < popularPicksPageCount - 1 && (
-            <button
-              onClick={() => scrollToPopularPicksPage(popularPicksPage + 1)}
-              aria-label="Show more popular picks"
-              className="absolute top-1/2 right-2 -translate-y-1/2 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-white/15 text-white backdrop-blur-sm hover:bg-white/25 transition-colors"
-            >
-              <ChevronRight size={18} />
-            </button>
-          )}
+        <button
+          type="button"
+          onClick={submitSearch}
+          className="shrink-0 px-6 h-11 rounded-full text-sm font-semibold bg-dessa-teal text-white hover:bg-dessa-teal/90 transition-colors"
+        >
+          Search
+        </button>
         </div>
-
-        {popularPicksPageCount > 1 && (
-          <div className="flex items-center justify-center gap-1.5 mt-4">
-            {Array.from({ length: popularPicksPageCount }, (_, i) => (
-              <button
-                key={i}
-                onClick={() => scrollToPopularPicksPage(i)}
-                aria-label={`Go to popular picks page ${i + 1}`}
-                className={`rounded-full transition-all ${
-                  i === popularPicksPage ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30 hover:bg-white/50'
-                }`}
-              />
-            ))}
-          </div>
-        )}
       </div>
+      </div>
+
+      {/* Category row — curated browse shortcuts below the search bar;
+          clicking one runs a title search for its label. */}
+      <div className="flex items-center justify-center gap-10 flex-wrap pt-3 mb-6">
+        {CATEGORY_TILES.map((label) => (
+          <button
+            key={label}
+            onClick={() => {
+              setSearch(label)
+              setQuery(label)
+            }}
+            className="text-[13px] font-medium text-brand-text hover:text-dessa-teal transition-colors"
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <div className="flex gap-6 items-start">
@@ -515,7 +405,7 @@ export default function Resources() {
               scroll is a backstop in case everything is expanded at once. */}
           <div className="bg-white rounded-xl border border-brand-border overflow-y-auto">
             <FacetGroup
-              title="Category"
+              title="Grade Band"
               options={CATEGORIES}
               selected={selectedCategories}
               onToggle={(v) => toggle(setSelectedCategories, v)}
@@ -565,7 +455,7 @@ export default function Resources() {
                     className="group w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left cursor-pointer hover:bg-brand-bg transition-colors"
                   >
                     <TypeIconBadge type={r.type} size={22} />
-                    <span className="flex-1 min-w-0 text-xs font-medium text-brand-text truncate">{r.title}</span>
+                    <span className="flex-1 min-w-0 text-xs font-medium text-brand-text truncate">{displayTitle(r.title)}</span>
                     <button
                       onClick={(e) => toggleSaved(e, key, r)}
                       aria-label="Remove from saved"
@@ -602,12 +492,7 @@ export default function Resources() {
 
           <div className="rounded-2xl border border-brand-border bg-white overflow-hidden">
             <div className="px-6 pt-6 pb-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-dessa-tealLight shrink-0">
-                  <Search size={14} className="text-dessa-teal" />
-                </span>
-                <h2 className="text-base font-semibold text-brand-text">All resources</h2>
-              </div>
+              <h2 className="text-base font-semibold text-brand-text">All resources</h2>
               <p className="text-sm text-brand-subtext shrink-0">
                 {groupedResults.length.toLocaleString()} result{groupedResults.length === 1 ? '' : 's'}
               </p>
@@ -633,90 +518,80 @@ export default function Resources() {
                 {pagedGroups.map(({ key, items }) => {
                   const r = items[0]
                   const isGroup = items.length > 1
-                  const isExpanded = expandedGroups.has(key)
-                  const isSaved = savedKeys.has(key)
+                  // const isSaved = savedKeys.has(key) — star button disabled for now, see below
                   const distinctCompetencies = [...new Set(items.map((i) => i.competency))]
 
-                  return (
-                    <div key={key} className="border-b border-brand-border last:border-b-0">
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => (isGroup ? toggleGroup(key) : openResource(r))}
-                        onKeyDown={(e) => {
-                          if (e.key !== 'Enter' && e.key !== ' ') return
-                          isGroup ? toggleGroup(key) : openResource(r)
-                        }}
-                        className="w-full flex items-start gap-4 px-6 py-5 text-left hover:bg-brand-bg transition-colors cursor-pointer"
-                      >
-                        {isGroup ? (
-                          <ChevronRight
-                            size={16}
-                            className={`text-brand-subtext shrink-0 mt-1.5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                          />
-                        ) : (
-                          <span className="w-4 shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2.5">
-                            <TypeIconBadge type={r.type} size={26} />
-                            <span className="text-xs font-medium text-brand-subtext">
-                              {isGroup ? `${items.length} grades` : r.grade}
-                            </span>
-                          </div>
-                          <p className="text-base font-semibold text-brand-text leading-snug mb-1">{r.title}</p>
-                          <p className="text-sm text-brand-subtext leading-relaxed line-clamp-2 mb-3 max-w-[640px]">
-                            {isGroup
-                              ? `Available across ${items.length} grades — expand to choose which one to open.`
-                              : r.description}
-                          </p>
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <CompetencyTag
-                              primary={distinctCompetencies[0]}
-                              extra={isGroup ? distinctCompetencies.slice(1) : r.extraCompetencies}
-                            />
-                            <TypePill type={r.type} />
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end justify-between self-stretch shrink-0">
-                          <button
-                            onClick={(e) => toggleSaved(e, key, r)}
-                            aria-label={isSaved ? 'Remove from saved' : 'Save resource'}
-                            className={`p-1 rounded-full transition-colors ${
-                              isSaved ? 'text-dessa-teal' : 'text-brand-subtext hover:text-dessa-teal'
-                            }`}
-                          >
-                            <Star size={16} fill={isSaved ? 'currentColor' : 'none'} />
-                          </button>
-                          {!isGroup && <ChevronRight size={16} className="text-dessa-teal" />}
-                        </div>
-                      </div>
+                  const competencyPills = [distinctCompetencies[0], ...(isGroup ? distinctCompetencies.slice(1) : r.extraCompetencies)]
 
-                      {isGroup && isExpanded && (
-                        <div className="pb-2">
-                          {items.map((item) => (
-                            <div
-                              key={item.id}
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => openResource(item)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') openResource(item)
-                              }}
-                              className="w-full flex items-center gap-4 pl-[76px] pr-6 py-2.5 text-left hover:bg-brand-bg transition-colors cursor-pointer"
-                            >
-                              <div className="flex-1 min-w-0 flex items-center gap-4 flex-wrap">
-                                <IconTag icon={GraduationCap} label={item.grade} />
-                                <span className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext">
-                                  <Target size={13} />
-                                  {item.competency}
-                                </span>
+                  return (
+                    <div
+                      key={key}
+                      role={isGroup ? undefined : 'button'}
+                      tabIndex={isGroup ? undefined : 0}
+                      onClick={isGroup ? undefined : () => openResource(r)}
+                      onKeyDown={isGroup ? undefined : (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') openResource(r)
+                      }}
+                      className={`w-full flex items-start gap-4 px-6 py-4 text-left border-b border-brand-border last:border-b-0 transition-colors ${
+                        isGroup ? '' : 'hover:bg-brand-bg cursor-pointer'
+                      }`}
+                    >
+                      <span className="w-3.5 shrink-0" />
+                      <TypeIconBadge type={r.type} size={44} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[15px] font-semibold text-brand-text truncate">
+                          {displayTitle(r.title)}
+                        </p>
+                        <p className="text-sm text-brand-subtext leading-relaxed line-clamp-2 mt-1 max-w-[640px]">
+                          {isGroup
+                            ? `Available across ${items.length} grades — open the grade you're working with below.`
+                            : r.description}
+                        </p>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                          <span className="text-[11px] font-medium text-brand-subtext bg-brand-bg px-2 py-0.5 rounded-full">
+                            {competencyPills[0]}
+                          </span>
+                          {competencyPills.length > 1 && (
+                            <span className="relative group/comp text-[11px] font-semibold text-brand-subtext bg-brand-bg px-2 py-0.5 rounded-full">
+                              +{competencyPills.length - 1} more
+                              <div className="absolute left-0 top-full mt-1.5 hidden group-hover/comp:flex flex-col gap-1 bg-dessa-navy text-white text-xs rounded-lg px-3 py-2 shadow-lg z-20 whitespace-nowrap">
+                                {competencyPills.slice(1).map((c) => (
+                                  <span key={c}>{c}</span>
+                                ))}
                               </div>
-                              <ChevronRight size={14} className="text-dessa-teal shrink-0" />
-                            </div>
-                          ))}
+                            </span>
+                          )}
                         </div>
-                      )}
+
+                        {/* One button per grade variant — content is often reused
+                            across grades, so tracking needs to know exactly which
+                            grade's copy the educator opened, not just the group. */}
+                        {isGroup && (
+                          <div className="flex items-center gap-2 flex-wrap mt-6">
+                            {items.map((item) => (
+                              <button
+                                key={item.id}
+                                onClick={() => openResource(item)}
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors"
+                              >
+                                {item.grade}
+                                <ExternalLink size={12} className="text-brand-subtext" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {/* <button
+                          onClick={(e) => toggleSaved(e, key, r)}
+                          aria-label={isSaved ? 'Remove from saved' : 'Save resource'}
+                          className={`shrink-0 p-1 rounded-full transition-colors ${
+                            isSaved ? 'text-dessa-teal' : 'text-brand-subtext hover:text-dessa-teal'
+                          }`}
+                        >
+                          <Star size={16} fill={isSaved ? 'currentColor' : 'none'} />
+                        </button> */}
+                      {!isGroup && <ChevronRight size={16} className="self-center shrink-0 text-dessa-teal" />}
+                      {isGroup && <span className="w-4 shrink-0" />}
                     </div>
                   )
                 })}
