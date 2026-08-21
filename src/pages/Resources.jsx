@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  Search, X, Video, FileText, Mic, ChevronDown, ChevronRight, GraduationCap, Target,
-  Rocket, Monitor, Heart, ClipboardList, Star,
+  Search, X, Video, FileText, Mic, ChevronDown, ChevronRight, ChevronLeft, GraduationCap, Target,
+  ClipboardList, Star,
 } from 'lucide-react'
 import {
   resources, CATEGORIES, TYPES, ALL_GRADES, ALL_COMPETENCIES, courseFor,
@@ -51,35 +51,11 @@ function groupKey(r) {
   return `${r.category}::${r.type}::${r.title}`
 }
 
-// Elementary vs. secondary grade bands, used by the worksheet tiles below —
-// spans both the individual K-12 grades (Tier 1) and the band labels used by
-// Tier 2 / Family courses.
-const ELEMENTARY_GRADES = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Early Elementary', 'Late Elementary']
-const SECONDARY_GRADES = ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12', 'Middle School', 'High School']
-
-// Quick links row, matching the real product's current category names
-// ("MTW" relabeled "Curriculum" per brand direction). Several of these
-// (Getting Started Tools, Webinars, Implementation & Engagement, Research)
-// don't correspond to anything in our mocked resource index, so they're
-// rendered as decorative (no `filter`, non-clickable) — same convention
-// already used for the Ratings roster and Reports sidebar. The rest apply a
-// real filter combination on click.
-const QUICK_LINKS = [
-  { label: 'Getting Started Tools', icon: Rocket },
-  { label: 'K-12 Worksheets', icon: GraduationCap, filter: { types: ['pdf'] } },
-  { label: 'Elementary Worksheets', icon: GraduationCap, filter: { types: ['pdf'], grades: ELEMENTARY_GRADES } },
-  { label: 'Secondary Worksheets', icon: GraduationCap, filter: { types: ['pdf'], grades: SECONDARY_GRADES } },
-  { label: 'Curriculum Videos', icon: Video, filter: { types: ['video'] } },
-  { label: 'Webinars', icon: Monitor },
-  { label: 'Implementation & Engagement', icon: Heart },
-  { label: 'Research', icon: Search },
-]
-
-// One representative resource per type, shown as a "Popular picks" row on
-// the landing (no search/filters yet) empty state — gives new users a
-// starting point instead of a blank illustration, and doubles as a quick
-// showcase of the mixed file types in the library.
-const POPULAR_PICKS = TYPES.map((t) => resources.find((r) => r.type === t)).filter(Boolean)
+// A handful of resources per type, shown as a horizontally-scrolling
+// "Popular picks" carousel in the hero — enough to overflow the visible
+// row (so the fade + cycle arrow have something to reveal), while still
+// giving a quick showcase of the mixed file types in the library.
+const POPULAR_PICKS = TYPES.flatMap((t) => resources.filter((r) => r.type === t).slice(0, 3))
 
 const PAGE_SIZE = 20
 
@@ -205,6 +181,29 @@ export default function Resources() {
     })
   }
 
+  // Popular picks carousel — paginated by CARDS_PER_PAGE, with dots tracking
+  // (and driving) the current page. Arrows/gradients on each edge only show
+  // when there's actually more to reveal in that direction.
+  const popularPicksRef = useRef(null)
+  const POPULAR_PICK_CARD_WIDTH = 288 + 16 // w-72 + gap-4
+  const POPULAR_PICKS_PER_PAGE = 4
+  const popularPicksPageCount = Math.ceil(POPULAR_PICKS.length / POPULAR_PICKS_PER_PAGE)
+  const [popularPicksPage, setPopularPicksPage] = useState(0)
+
+  function scrollToPopularPicksPage(page) {
+    const el = popularPicksRef.current
+    const clamped = Math.min(Math.max(page, 0), popularPicksPageCount - 1)
+    setPopularPicksPage(clamped)
+    el?.scrollTo({ left: clamped * POPULAR_PICKS_PER_PAGE * POPULAR_PICK_CARD_WIDTH, behavior: 'smooth' })
+  }
+
+  function handlePopularPicksScroll() {
+    const el = popularPicksRef.current
+    if (!el) return
+    const page = Math.round(el.scrollLeft / (POPULAR_PICKS_PER_PAGE * POPULAR_PICK_CARD_WIDTH))
+    setPopularPicksPage(Math.min(Math.max(page, 0), popularPicksPageCount - 1))
+  }
+
   // Predictive search dropdown — lightweight typeahead over the search box,
   // not a full command bar: no global shortcut to open it, just live matches
   // while the field is focused. Title-starts-with matches rank above
@@ -307,14 +306,6 @@ export default function Resources() {
     setSelectedTypes([])
   }
 
-  function selectTile(tile) {
-    if (!tile.filter) return
-    setSelectedCategories(tile.filter.categories ?? [])
-    setSelectedGrades(tile.filter.grades ?? [])
-    setSelectedCompetencies(tile.filter.competencies ?? [])
-    setSelectedTypes(tile.filter.types ?? [])
-  }
-
   function openResource(r) {
     const course = courseFor(r)
     if (course) navigate('/mtw/lesson', { state: { course } })
@@ -324,22 +315,24 @@ export default function Resources() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-screen-xl mx-auto px-6 pt-8 pb-16"
+      className="max-w-screen-xl mx-auto px-6 pb-16"
     >
-      {/* Header — a single persistent bordered container, identical in the
-          landing/results states (heading, shape, and alignment all stay
-          fixed) so the <input> below never unmounts or visibly resizes
-          between the two (swapping it for a second input elsewhere would
-          drop focus mid-keystroke). */}
-      <div className="rounded-2xl border border-brand-border bg-white px-8 py-8 mb-6">
-        <h1 className="text-2xl font-semibold text-brand-text text-center mb-6">
+      {/* Hero — large colored banner surfacing Popular picks, inspired by a
+          reference dashboard's dark "welcome" hero. */}
+      <div className="w-screen mx-[calc(50%-50vw)] bg-dessa-navy mb-6">
+      <div className="max-w-screen-xl mx-auto px-6 py-14">
+        <h1 className="text-2xl font-semibold text-white text-center mb-6">
           Hey, Tara. What are you looking for?
         </h1>
-        <div className="relative max-w-xl mx-auto">
+
+        {/* Search — kept in this one persistent JSX slot (never conditionally
+            swapped elsewhere) so the <input> doesn't unmount and drop focus
+            mid-keystroke. */}
+        <div className="relative max-w-xl mx-auto mb-8">
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
           <input
             type="text"
-            placeholder="Search resources…"
+            placeholder="Search by competency, file type, grade level, or grade band"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onFocus={() => setSearchFocused(true)}
@@ -415,6 +408,104 @@ export default function Resources() {
             </div>
           )}
         </div>
+
+        <p className="text-sm font-semibold text-white/70 mb-3">Popular picks</p>
+        <div className="relative">
+          <div
+            ref={popularPicksRef}
+            onScroll={handlePopularPicksScroll}
+            className="flex gap-4 overflow-x-auto scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {POPULAR_PICKS.map((r) => {
+              const key = groupKey(r)
+              const isSaved = savedKeys.has(key)
+              return (
+                <div
+                  key={r.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openResource(r)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') openResource(r)
+                  }}
+                  className="relative flex flex-col items-start gap-3 rounded-2xl border border-white/15 bg-white/10 backdrop-blur-sm p-4 text-left h-full shrink-0 w-72 cursor-pointer hover:bg-white/15 transition-colors"
+                >
+                  <button
+                    onClick={(e) => toggleSaved(e, key, r)}
+                    aria-label={isSaved ? 'Remove from saved' : 'Save resource'}
+                    className={`absolute top-3 right-3 p-1 rounded-full transition-colors ${
+                      isSaved ? 'text-dessa-teal' : 'text-white/50 hover:text-white'
+                    }`}
+                  >
+                    <Star size={16} fill={isSaved ? 'currentColor' : 'none'} />
+                  </button>
+                  <div className="flex items-center gap-2 w-full min-w-0 pr-6">
+                    <TypeIconBadge type={r.type} size={28} />
+                    <p className="text-sm font-semibold text-white truncate min-w-0">{r.title}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-white/60 leading-relaxed line-clamp-2">{r.description}</p>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 w-full pt-3 mt-auto border-t border-white/15">
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-white/70">
+                      <Target size={13} />
+                      {r.competency}
+                    </span>
+                    <span className="text-[11px] font-semibold text-white/70 px-2 py-0.5 rounded-full bg-white/10">
+                      {TYPE_META[r.type].label}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Fade each edge into the hero's own background color, narrow
+              enough to still reveal a sliver of the next/previous card
+              rather than hiding it completely — only shown when there's
+              actually more to scroll in that direction. */}
+          {popularPicksPage > 0 && (
+            <div className="pointer-events-none absolute top-0 left-0 bottom-1 w-16 bg-gradient-to-r from-dessa-navy to-transparent" />
+          )}
+          {popularPicksPage < popularPicksPageCount - 1 && (
+            <div className="pointer-events-none absolute top-0 right-0 bottom-1 w-16 bg-gradient-to-l from-dessa-navy to-transparent" />
+          )}
+
+          {popularPicksPage > 0 && (
+            <button
+              onClick={() => scrollToPopularPicksPage(popularPicksPage - 1)}
+              aria-label="Show previous popular picks"
+              className="absolute top-1/2 left-2 -translate-y-1/2 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-white/15 text-white backdrop-blur-sm hover:bg-white/25 transition-colors"
+            >
+              <ChevronLeft size={18} />
+            </button>
+          )}
+          {popularPicksPage < popularPicksPageCount - 1 && (
+            <button
+              onClick={() => scrollToPopularPicksPage(popularPicksPage + 1)}
+              aria-label="Show more popular picks"
+              className="absolute top-1/2 right-2 -translate-y-1/2 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-white/15 text-white backdrop-blur-sm hover:bg-white/25 transition-colors"
+            >
+              <ChevronRight size={18} />
+            </button>
+          )}
+        </div>
+
+        {popularPicksPageCount > 1 && (
+          <div className="flex items-center justify-center gap-1.5 mt-4">
+            {Array.from({ length: popularPicksPageCount }, (_, i) => (
+              <button
+                key={i}
+                onClick={() => scrollToPopularPicksPage(i)}
+                aria-label={`Go to popular picks page ${i + 1}`}
+                className={`rounded-full transition-all ${
+                  i === popularPicksPage ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30 hover:bg-white/50'
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
       </div>
 
       <div className="flex gap-6 items-start">
@@ -491,27 +582,6 @@ export default function Resources() {
 
         {/* Results */}
         <div className="flex-1 min-w-0">
-          {/* Quick links — commented out per review feedback (2026-08-18);
-              keeping the markup/data in place in case they come back.
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            {QUICK_LINKS.map((tile) => {
-              const Tag = tile.filter ? 'button' : 'div'
-              return (
-                <Tag
-                  key={tile.label}
-                  onClick={tile.filter ? () => selectTile(tile) : undefined}
-                  className={`flex items-center gap-1.5 rounded-xl border border-brand-border bg-brand-border/30 px-3 py-1.5 text-[12px] font-medium text-brand-text transition-colors ${
-                    tile.filter ? 'hover:border-dessa-teal/50' : 'cursor-default'
-                  }`}
-                >
-                  <tile.icon size={14} className="text-brand-subtext" />
-                  {tile.label}
-                </Tag>
-              )
-            })}
-          </div>
-          */}
-
           {hasFilters && (
             <div className="flex items-center gap-2 flex-wrap mb-4">
               {chips.map((c) => (
@@ -530,75 +600,15 @@ export default function Resources() {
             </div>
           )}
 
-          {!hasFilters ? (
-            <div>
-              {/* Illustration + copy — commented out per review feedback (2026-08-18),
-                  leaving just the "Suggested for you" grid below.
-              <div className="px-6 py-16 text-center">
-                <img src="/Search/search-empty.svg" alt="" className="mx-auto h-56 w-auto mb-6" />
-                <p className="text-base font-semibold text-brand-text mb-1">
-                  Search or pick a category to get started
-                </p>
-                <p className="text-sm text-brand-subtext max-w-sm mx-auto mb-10">
-                  Browse thousands of videos, guides, and printables across the curriculum
-                  library — use the filters on the left or search by title.
-                </p>
-              </div>
-              */}
-
-              <p className="text-sm font-semibold text-brand-text mb-3">Popular picks</p>
-              <div className="grid grid-cols-4 gap-4">
-                {POPULAR_PICKS.map((r) => {
-                  const key = groupKey(r)
-                  const isSaved = savedKeys.has(key)
-                  return (
-                    <div
-                      key={r.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => openResource(r)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') openResource(r)
-                      }}
-                      className="relative flex flex-col items-start gap-3 rounded-2xl border border-brand-border bg-white p-4 text-left h-full cursor-pointer hover:border-dessa-teal/50 hover:shadow-sm transition-all"
-                    >
-                      <button
-                        onClick={(e) => toggleSaved(e, key, r)}
-                        aria-label={isSaved ? 'Remove from saved' : 'Save resource'}
-                        className={`absolute top-3 right-3 p-1 rounded-full transition-colors ${
-                          isSaved ? 'text-dessa-teal' : 'text-brand-subtext hover:text-dessa-teal'
-                        }`}
-                      >
-                        <Star size={16} fill={isSaved ? 'currentColor' : 'none'} />
-                      </button>
-                      <div className="flex items-center gap-2 pr-6">
-                        <TypeIconBadge type={r.type} size={28} />
-                        <span className="text-xs font-medium text-brand-subtext">{r.grade}</span>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-brand-text leading-snug line-clamp-2 mb-1">{r.title}</p>
-                        <p className="text-xs text-brand-subtext leading-relaxed line-clamp-2">{r.description}</p>
-                      </div>
-                      <div className="flex items-center justify-between gap-2 w-full pt-3 mt-auto border-t border-brand-border">
-                        <CompetencyTag primary={r.competency} extra={r.extraCompetencies} />
-                        <TypePill type={r.type} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          ) : (
-            <>
           <div className="rounded-2xl border border-brand-border bg-white overflow-hidden">
-            <div className="px-6 pt-6 pb-4">
-              <div className="flex items-center gap-2 mb-1">
+            <div className="px-6 pt-6 pb-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-dessa-tealLight shrink-0">
                   <Search size={14} className="text-dessa-teal" />
                 </span>
-                <h2 className="text-base font-semibold text-brand-text">Search results</h2>
+                <h2 className="text-base font-semibold text-brand-text">All resources</h2>
               </div>
-              <p className="text-sm text-brand-subtext">
+              <p className="text-sm text-brand-subtext shrink-0">
                 {groupedResults.length.toLocaleString()} result{groupedResults.length === 1 ? '' : 's'}
               </p>
             </div>
@@ -765,8 +775,6 @@ export default function Resources() {
                 <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
               </div>
             </div>
-          )}
-            </>
           )}
         </div>
       </div>

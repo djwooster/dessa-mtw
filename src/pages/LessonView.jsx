@@ -3095,18 +3095,21 @@ export default function LessonView({ onBookmark }) {
     setTimeout(() => setShowToast(false), 3000);
   };
 
-  // Sidebar lesson search — filters the unit accordion to units whose title
-  // or lesson list matches, force-expanding matches so results are visible
-  // without also clicking through the tree.
+  // Sidebar lesson search — highlights matches in place rather than hiding
+  // the rest of the tree, so users keep their bearings; units containing a
+  // match auto-expand so the highlighted lesson is visible without an extra
+  // click, but everything else stays exactly where it was.
   const sidebarQuery = sidebarSearch.trim().toLowerCase();
   const isSearchingSidebar = sidebarQuery.length > 0;
-  const searchableUnits = activeUnits.filter((unit) => showInactive || unit.active);
-  const visibleUnits = searchableUnits.filter(
-    (unit) =>
-      !isSearchingSidebar ||
-      unit.title.toLowerCase().includes(sidebarQuery) ||
-      unit.sub.some((s) => s.toLowerCase().includes(sidebarQuery)),
-  );
+  const visibleUnits = activeUnits.filter((unit) => showInactive || unit.active);
+
+  function unitMatchesSidebarQuery(unit) {
+    return (
+      isSearchingSidebar &&
+      (unit.title.toLowerCase().includes(sidebarQuery) ||
+        unit.sub.some((s) => s.toLowerCase().includes(sidebarQuery)))
+    );
+  }
 
   function highlightMatch(text) {
     if (!isSearchingSidebar) return text;
@@ -3175,15 +3178,9 @@ export default function LessonView({ onBookmark }) {
         </div>
 
         <div className="flex-1 overflow-y-auto py-1">
-          {isSearchingSidebar && visibleUnits.length === 0 ? (
-            <div className="px-4 py-10 text-center">
-              <p className="text-sm font-medium text-brand-text mb-1">No lessons found</p>
-              <p className="text-xs text-brand-subtext">Try a different search term.</p>
-            </div>
-          ) : (
-          visibleUnits
+          {visibleUnits
             .map((unit) => {
-              const isExpanded = isSearchingSidebar ? true : expandedUnit === unit.id;
+              const isExpanded = unitMatchesSidebarQuery(unit) ? true : expandedUnit === unit.id;
               const toggle = () => setExpandedUnit(isExpanded ? null : unit.id);
               const isLeafUnit = unit.sub.length === 0;
               const isLeafSelected =
@@ -3293,8 +3290,7 @@ export default function LessonView({ onBookmark }) {
                   </AnimatePresence>
                 </div>
               );
-            })
-          )}
+            })}
         </div>
 
         {/* Audio Library entry — sticky, outside scroll area */}
