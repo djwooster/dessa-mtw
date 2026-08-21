@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  Search, X, Video, FileText, Mic, ChevronDown, ChevronRight, ExternalLink,
+  Search, X, Video, FileText, Mic, ChevronDown, ChevronRight,
   ClipboardList, Star,
 } from 'lucide-react'
 import {
@@ -57,20 +57,6 @@ function groupKey(r) {
 function displayTitle(title) {
   return title.replace(/^Independent:\s*/, '')
 }
-
-// Quick-browse category tiles shown below the search bar — a curated set of
-// entry points into the library (not the same taxonomy as the sidebar's
-// Grade Band/Competency/Type facets), so clicking one runs a title search
-// for its label rather than toggling a facet that doesn't exist.
-const CATEGORY_TILES = [
-  'Getting Started Tools',
-  'Worksheets',
-  'Videos',
-  'Webinars',
-  'Common Language Resources',
-  'Family Resources',
-  'Implementation & Engagement',
-]
 
 const PAGE_SIZE = 20
 
@@ -144,7 +130,10 @@ export default function Resources() {
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState([])
-  const [selectedGrades, setSelectedGrades] = useState([])
+  // Single-select, not a facet array — stakeholders don't want educators to
+  // see that the same content also exists at other grade levels, so grade
+  // is a gate you pick before browsing, not a narrowing filter like the rest.
+  const [selectedGrade, setSelectedGrade] = useState(null)
   const [selectedCompetencies, setSelectedCompetencies] = useState([])
   const [selectedTypes, setSelectedTypes] = useState([])
   const [page, setPage] = useState(1)
@@ -194,48 +183,33 @@ export default function Resources() {
     setHighlightIndex(0)
   }, [search])
 
+  // Scoped to selectedGrade first — with no grade chosen there's nothing to
+  // show, by design, so a resource shared across grades never surfaces that
+  // fact. Once a grade is picked, at most one row per (category, type,
+  // title) exists within it, so no cross-grade grouping/dedup is needed.
   const filtered = useMemo(() => {
+    if (!selectedGrade) return []
     const q = query.trim().toLowerCase()
     return resources.filter((r) =>
+      r.grade === selectedGrade &&
       (!q || r.title.toLowerCase().includes(q)) &&
       (selectedCategories.length === 0 || selectedCategories.includes(r.category)) &&
-      (selectedGrades.length === 0 || selectedGrades.includes(r.grade)) &&
       (selectedCompetencies.length === 0 || selectedCompetencies.includes(r.competency)) &&
       (selectedTypes.length === 0 || selectedTypes.includes(r.type))
     )
-  }, [query, selectedCategories, selectedGrades, selectedCompetencies, selectedTypes])
+  }, [selectedGrade, query, selectedCategories, selectedCompetencies, selectedTypes])
 
   // Reset to page 1 whenever the filter set or page size changes — adjusted
   // during render (not in an effect) so it takes effect in the same commit.
-  const filterKey = JSON.stringify([query, selectedCategories, selectedGrades, selectedCompetencies, selectedTypes, pageSize])
+  const filterKey = JSON.stringify([selectedGrade, query, selectedCategories, selectedCompetencies, selectedTypes, pageSize])
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
   if (filterKey !== prevFilterKey) {
     setPrevFilterKey(filterKey)
     setPage(1)
   }
 
-  // The same lesson (e.g. "Welcome Video!") exists once per grade the course
-  // is offered in — collapse those into a single expandable row instead of
-  // one row per grade, so the list reads as "resources" rather than
-  // "resources × grades". A group key of category+type+title is enough since
-  // titles repeat across grades but not across unrelated resources; grouping
-  // runs on the already-filtered set, so picking a single grade in the facet
-  // rail naturally collapses every group back down to one item.
-  const groupedResults = useMemo(() => {
-    const byKey = new Map()
-    for (const r of filtered) {
-      const key = groupKey(r)
-      if (!byKey.has(key)) byKey.set(key, [])
-      byKey.get(key).push(r)
-    }
-    return [...byKey.entries()].map(([key, items]) => ({
-      key,
-      items: [...items].sort((a, b) => ALL_GRADES.indexOf(a.grade) - ALL_GRADES.indexOf(b.grade)),
-    }))
-  }, [filtered])
-
-  const totalPages = Math.max(1, Math.ceil(groupedResults.length / pageSize))
-  const pagedGroups = groupedResults.slice((page - 1) * pageSize, page * pageSize)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const pagedResults = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   function toggle(setFn, value) {
     setFn((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]))
@@ -243,7 +217,6 @@ export default function Resources() {
 
   const chips = [
     ...selectedCategories.map((v) => ({ group: 'category', value: v, setFn: setSelectedCategories })),
-    ...selectedGrades.map((v) => ({ group: 'grade', value: v, setFn: setSelectedGrades })),
     ...selectedCompetencies.map((v) => ({ group: 'competency', value: v, setFn: setSelectedCompetencies })),
     ...selectedTypes.map((v) => ({ group: 'type', value: v, setFn: setSelectedTypes })),
   ]
@@ -254,7 +227,6 @@ export default function Resources() {
     setSearch('')
     setQuery('')
     setSelectedCategories([])
-    setSelectedGrades([])
     setSelectedCompetencies([])
     setSelectedTypes([])
   }
@@ -381,19 +353,21 @@ export default function Resources() {
       </div>
       </div>
 
-      {/* Category row — curated browse shortcuts below the search bar;
-          clicking one runs a title search for its label. */}
-      <div className="flex items-center justify-center gap-10 flex-wrap pt-3 mb-6">
-        {CATEGORY_TILES.map((label) => (
+      {/* Grade-level picker — the primary gate into the library. Single-select:
+          picking a grade is what reveals results at all, so a resource shared
+          across grades never surfaces that fact side-by-side in one view. */}
+      <div className="flex items-center justify-center gap-2 flex-wrap pt-3 mb-6">
+        {ALL_GRADES.map((grade) => (
           <button
-            key={label}
-            onClick={() => {
-              setSearch(label)
-              setQuery(label)
-            }}
-            className="text-[13px] font-medium text-brand-text hover:text-dessa-teal transition-colors"
+            key={grade}
+            onClick={() => setSelectedGrade((prev) => (prev === grade ? null : grade))}
+            className={`px-3 py-1.5 rounded-full text-[13px] font-medium border transition-colors ${
+              selectedGrade === grade
+                ? 'bg-dessa-teal border-dessa-teal text-white'
+                : 'bg-white border-brand-border text-brand-text hover:border-dessa-teal hover:text-dessa-teal'
+            }`}
           >
-            {label}
+            {grade}
           </button>
         ))}
       </div>
@@ -409,14 +383,6 @@ export default function Resources() {
               options={CATEGORIES}
               selected={selectedCategories}
               onToggle={(v) => toggle(setSelectedCategories, v)}
-            />
-            <FacetGroup
-              title="Grade"
-              options={ALL_GRADES}
-              selected={selectedGrades}
-              onToggle={(v) => toggle(setSelectedGrades, v)}
-              scrollable
-              defaultOpen={false}
             />
             <FacetGroup
               title="Competency"
@@ -492,13 +458,24 @@ export default function Resources() {
 
           <div className="rounded-2xl border border-brand-border bg-white overflow-hidden">
             <div className="px-6 pt-6 pb-4 flex items-center justify-between gap-4">
-              <h2 className="text-base font-semibold text-brand-text">All resources</h2>
-              <p className="text-sm text-brand-subtext shrink-0">
-                {groupedResults.length.toLocaleString()} result{groupedResults.length === 1 ? '' : 's'}
-              </p>
+              <h2 className="text-base font-semibold text-brand-text">
+                {selectedGrade ? `${selectedGrade} resources` : 'All resources'}
+              </h2>
+              {selectedGrade && (
+                <p className="text-sm text-brand-subtext shrink-0">
+                  {filtered.length.toLocaleString()} result{filtered.length === 1 ? '' : 's'}
+                </p>
+              )}
             </div>
 
-            {pagedGroups.length === 0 ? (
+            {!selectedGrade ? (
+              <div className="px-6 py-16 text-center">
+                <p className="text-lg font-semibold text-brand-text mb-1.5">Pick a grade level to get started</p>
+                <p className="text-sm text-brand-subtext max-w-sm mx-auto">
+                  Choose a grade above to browse the resources available for it.
+                </p>
+              </div>
+            ) : pagedResults.length === 0 ? (
               <div className="px-6 py-16 text-center">
                 <img src="/Search/no-found.png" alt="" className="mx-auto h-64 w-auto mb-6" />
                 <p className="text-lg font-semibold text-brand-text mb-1.5">No resources found</p>
@@ -515,71 +492,35 @@ export default function Resources() {
               </div>
             ) : (
               <div className="border-t border-brand-border">
-                {pagedGroups.map(({ key, items }) => {
-                  const r = items[0]
-                  const isGroup = items.length > 1
+                {pagedResults.map((r) => {
+                  const key = groupKey(r)
                   // const isSaved = savedKeys.has(key) — star button disabled for now, see below
-                  const distinctCompetencies = [...new Set(items.map((i) => i.competency))]
-
-                  const competencyPills = [distinctCompetencies[0], ...(isGroup ? distinctCompetencies.slice(1) : r.extraCompetencies)]
 
                   return (
                     <div
                       key={key}
-                      role={isGroup ? undefined : 'button'}
-                      tabIndex={isGroup ? undefined : 0}
-                      onClick={isGroup ? undefined : () => openResource(r)}
-                      onKeyDown={isGroup ? undefined : (e) => {
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openResource(r)}
+                      onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') openResource(r)
                       }}
-                      className={`w-full flex items-start gap-4 px-6 py-4 text-left border-b border-brand-border last:border-b-0 transition-colors ${
-                        isGroup ? '' : 'hover:bg-brand-bg cursor-pointer'
-                      }`}
+                      className="w-full flex items-start gap-4 px-6 py-4 text-left border-b border-brand-border last:border-b-0 hover:bg-brand-bg transition-colors cursor-pointer"
                     >
                       <span className="w-3.5 shrink-0" />
                       <TypeIconBadge type={r.type} size={44} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[15px] font-semibold text-brand-text truncate">
-                          {displayTitle(r.title)}
-                        </p>
-                        <p className="text-sm text-brand-subtext leading-relaxed line-clamp-2 mt-1 max-w-[640px]">
-                          {isGroup
-                            ? `Available across ${items.length} grades — open the grade you're working with below.`
-                            : r.description}
-                        </p>
-                        <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                          <span className="text-[11px] font-medium text-brand-subtext bg-brand-bg px-2 py-0.5 rounded-full">
-                            {competencyPills[0]}
-                          </span>
-                          {competencyPills.length > 1 && (
-                            <span className="relative group/comp text-[11px] font-semibold text-brand-subtext bg-brand-bg px-2 py-0.5 rounded-full">
-                              +{competencyPills.length - 1} more
-                              <div className="absolute left-0 top-full mt-1.5 hidden group-hover/comp:flex flex-col gap-1 bg-dessa-navy text-white text-xs rounded-lg px-3 py-2 shadow-lg z-20 whitespace-nowrap">
-                                {competencyPills.slice(1).map((c) => (
-                                  <span key={c}>{c}</span>
-                                ))}
-                              </div>
-                            </span>
-                          )}
+                      <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[15px] font-semibold text-brand-text truncate">
+                            {displayTitle(r.title)}
+                          </p>
+                          <p className="text-sm text-brand-subtext leading-relaxed line-clamp-2 mt-1 max-w-[640px]">
+                            {r.description}
+                          </p>
                         </div>
-
-                        {/* One button per grade variant — content is often reused
-                            across grades, so tracking needs to know exactly which
-                            grade's copy the educator opened, not just the group. */}
-                        {isGroup && (
-                          <div className="flex items-center gap-2 flex-wrap mt-6">
-                            {items.map((item) => (
-                              <button
-                                key={item.id}
-                                onClick={() => openResource(item)}
-                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors"
-                              >
-                                {item.grade}
-                                <ExternalLink size={12} className="text-brand-subtext" />
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        <span className="shrink-0 text-[11px] font-medium text-brand-subtext bg-brand-bg px-2 py-0.5 rounded-full">
+                          {r.competency}
+                        </span>
                       </div>
                       {/* <button
                           onClick={(e) => toggleSaved(e, key, r)}
@@ -590,8 +531,7 @@ export default function Resources() {
                         >
                           <Star size={16} fill={isSaved ? 'currentColor' : 'none'} />
                         </button> */}
-                      {!isGroup && <ChevronRight size={16} className="self-center shrink-0 text-dessa-teal" />}
-                      {isGroup && <span className="w-4 shrink-0" />}
+                      <ChevronRight size={16} className="self-center shrink-0 text-dessa-teal" />
                     </div>
                   )
                 })}
