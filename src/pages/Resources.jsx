@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
 import {
   Search, X, Video, FileText, Mic, ChevronDown,
-  ClipboardList, Star,
+  ClipboardList, Star, Check,
 } from 'lucide-react'
 import {
   resources, CATEGORIES, TYPES, ALL_GRADES, ALL_COMPETENCIES, courseFor,
@@ -37,13 +37,13 @@ function TypeIconBadge({ type, size = 28 }) {
   )
 }
 
-// Tinted, outlined pill with a small icon + label — the file-type equivalent
+// Tinted, borderless pill with a small icon + label — the file-type equivalent
 // of the "status badge" pattern (e.g. a colored "Bookmarked" or "Flagged"
 // chip), so type reads as a labeled category rather than an abstract icon.
 function TypeBadge({ type }) {
   const { icon: Icon, color, bg, label } = TYPE_META[type]
   return (
-    <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full border border-current ${bg} bg-opacity-10 ${color} shrink-0`}>
+    <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] ${bg} bg-opacity-10 ${color} shrink-0`}>
       <Icon size={14} />
       <span className="text-xs font-medium">{label}</span>
     </span>
@@ -150,9 +150,12 @@ export default function Resources() {
   const [selectedTypes, setSelectedTypes] = useState([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
-  // Concept 3's sortable table columns.
+  // Sort — drives both the header "Sort" dropdown (concepts 1/2's list rows)
+  // and Concept 3's clickable table columns; same state either way, so the
+  // dropdown and column headers always agree on what's active.
   const [sortKey, setSortKey] = useState(null)
   const [sortDir, setSortDir] = useState('asc')
+  const [sortMenuOpen, setSortMenuOpen] = useState(false)
   // Saved/starred resources — Map value is the representative resource, so
   // the sidebar panel can render + navigate without re-deriving it from
   // current filters. (Currently unreachable: the star button that adds to
@@ -169,21 +172,36 @@ export default function Resources() {
     })
   }
 
-  // Scoped to selectedGrade first — with no grade chosen there's nothing to
-  // show, by design, so a resource shared across grades never surfaces that
-  // fact side by side in the same view. "ALL" is an explicit, deliberate
-  // choice (not the default) to see every grade's copy as its own row.
+  // Scoped to selectedGrade first — with no grade chosen AND no search
+  // submitted there's nothing to show, by design, so a resource shared
+  // across grades never surfaces that fact side by side in the same view.
+  // "ALL" is an explicit, deliberate choice (not the default) to see every
+  // grade's copy as its own row. A submitted search is the one exception:
+  // it bypasses the grade gate and searches every grade, same as "ALL"
+  // (see `showGradeColumn` below for how those rows disclose their grade).
+  const q = query.trim().toLowerCase()
   const filtered = useMemo(() => {
-    if (!selectedGrade) return []
-    const q = query.trim().toLowerCase()
+    if (!selectedGrade && !q) return []
     return resources.filter((r) =>
-      (selectedGrade === 'ALL' || r.grade === selectedGrade) &&
+      (!selectedGrade || selectedGrade === 'ALL' || r.grade === selectedGrade) &&
       (!q || r.title.toLowerCase().includes(q)) &&
       (selectedCategories.length === 0 || selectedCategories.includes(r.category)) &&
       (selectedCompetencies.length === 0 || selectedCompetencies.includes(r.competency)) &&
       (selectedTypes.length === 0 || selectedTypes.includes(r.type))
     )
-  }, [selectedGrade, query, selectedCategories, selectedCompetencies, selectedTypes])
+  }, [selectedGrade, q, selectedCategories, selectedCompetencies, selectedTypes])
+
+  // Rows disclose their own grade whenever the result set can legitimately
+  // span more than one grade: the explicit "All Grades" choice, or a search
+  // submitted before any grade was picked.
+  const showGradeColumn = selectedGrade === 'ALL' || (!selectedGrade && !!q)
+
+  // A grade-less search on the card-list layout clusters rows into a "Grade
+  // X" divider row per grade instead of a per-row grade tag (that per-row
+  // tag stays for the explicit "All Grades" pick — see showGradeColumn use
+  // in the row meta line below). Concept 3's table keeps its Grade column
+  // and is intentionally left out of this grouping.
+  const groupByGrade = concept !== '3' && !selectedGrade && !!q
 
   // Reset to page 1 whenever the filter set or page size changes — adjusted
   // during render (not in an effect) so it takes effect in the same commit.
@@ -194,19 +212,28 @@ export default function Resources() {
     setPage(1)
   }
 
-  // Concept 3 only — live column sorting for the table layout; other
-  // concepts just use filtered's natural (title-alphabetical) order.
+  // Shared across all three concepts — Concept 3's column headers and the
+  // header "Sort" dropdown (1/2/3) both read/write the same sortKey/sortDir.
   const sortedFiltered = useMemo(() => {
-    if (concept !== '3' || !sortKey) return filtered
-    return [...filtered].sort((a, b) => {
-      let result = 0
-      if (sortKey === 'title') result = displayTitle(a.title).localeCompare(displayTitle(b.title))
-      else if (sortKey === 'type') result = TYPE_META[a.type].label.localeCompare(TYPE_META[b.type].label)
-      else if (sortKey === 'competency') result = a.competency.localeCompare(b.competency)
-      else if (sortKey === 'grade') result = ALL_GRADES.indexOf(a.grade) - ALL_GRADES.indexOf(b.grade)
-      return sortDir === 'asc' ? result : -result
-    })
-  }, [filtered, concept, sortKey, sortDir])
+    let result = filtered
+    if (sortKey) {
+      result = [...result].sort((a, b) => {
+        let cmp = 0
+        if (sortKey === 'title') cmp = displayTitle(a.title).localeCompare(displayTitle(b.title))
+        else if (sortKey === 'type') cmp = TYPE_META[a.type].label.localeCompare(TYPE_META[b.type].label)
+        else if (sortKey === 'competency') cmp = a.competency.localeCompare(b.competency)
+        else if (sortKey === 'grade') cmp = ALL_GRADES.indexOf(a.grade) - ALL_GRADES.indexOf(b.grade)
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    }
+    // Grade always wins as the primary sort when grouping is active — a
+    // stable sort (guaranteed by spec) preserves whatever order the chosen
+    // sort above already produced within each grade.
+    if (groupByGrade) {
+      result = [...result].sort((a, b) => ALL_GRADES.indexOf(a.grade) - ALL_GRADES.indexOf(b.grade))
+    }
+    return result
+  }, [filtered, sortKey, sortDir, groupByGrade])
 
   function toggleSort(key) {
     if (sortKey === key) {
@@ -219,6 +246,62 @@ export default function Resources() {
 
   const totalPages = Math.max(1, Math.ceil(sortedFiltered.length / pageSize))
   const pagedResults = sortedFiltered.slice((page - 1) * pageSize, page * pageSize)
+
+  // Grade sort is only meaningful once rows can span more than one grade —
+  // with a single grade selected every row already shares it.
+  const sortOptions = [
+    { key: null, dir: 'asc', label: 'Relevance' },
+    { key: 'title', dir: 'asc', label: 'Title (A–Z)' },
+    { key: 'title', dir: 'desc', label: 'Title (Z–A)' },
+    { key: 'competency', dir: 'asc', label: 'Competency (A–Z)' },
+    { key: 'type', dir: 'asc', label: 'Type (A–Z)' },
+    ...(showGradeColumn ? [{ key: 'grade', dir: 'asc', label: 'Grade' }] : []),
+  ]
+  const activeSortLabel = sortOptions.find((o) => o.key === sortKey && (o.key === null || o.dir === sortDir))?.label
+    ?? 'Sort'
+
+  function renderSortMenu() {
+    return (
+      <Popover.Root open={sortMenuOpen} onOpenChange={setSortMenuOpen}>
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className="shrink-0 flex items-center gap-1.5 pl-2 pr-2 h-9 text-[13px] font-medium border border-brand-border rounded-md bg-white text-brand-text hover:bg-brand-bg transition-colors"
+          >
+            Sort: {activeSortLabel}
+            <ChevronDown size={13} className="text-brand-subtext" />
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            align="end"
+            sideOffset={8}
+            className="z-30 w-52 bg-white border border-brand-border rounded-xl shadow-lg outline-none overflow-hidden py-1"
+          >
+            {sortOptions.map((opt) => {
+              const active = opt.key === sortKey && (opt.key === null || opt.dir === sortDir)
+              return (
+                <button
+                  key={opt.label}
+                  onClick={() => {
+                    setSortKey(opt.key)
+                    setSortDir(opt.dir)
+                    setSortMenuOpen(false)
+                  }}
+                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-left transition-colors ${
+                    active ? 'text-dessa-teal font-semibold bg-dessa-tealLight' : 'text-brand-text hover:bg-brand-bg'
+                  }`}
+                >
+                  {opt.label}
+                  {active && <Check size={14} />}
+                </button>
+              )
+            })}
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    )
+  }
 
   const gradeChoices = [{ value: 'ALL', label: 'All Grades' }, ...ALL_GRADES.map((g) => ({ value: g, label: g }))]
   const filteredGradeChoices = gradeQuery.trim()
@@ -342,7 +425,9 @@ export default function Resources() {
           not a banner. Search and categories are separate full-bleed bands
           so each gets its own edge-to-edge divider rather than one border
           shared (and visually mis-attributed) across both. */}
-      <div className="w-screen mx-[calc(50%-50vw)] bg-brand-bg border-b border-brand-border">
+      {/* Sticky right under the nav (top-14 = nav's h-14) so the query stays
+          visible while scrolling through a long results list. */}
+      <div className="w-screen mx-[calc(50%-50vw)] bg-brand-bg border-b border-brand-border sticky top-14 z-40">
       <div className="max-w-screen-xl mx-auto px-6 pt-[1.35rem] pb-4">
 
         {/* Grade-level picker — the primary gate into the library, so it comes
@@ -402,7 +487,9 @@ export default function Resources() {
       </div>
 
       <div className="flex gap-6 items-start mt-6">
-        <div className="w-64 flex-shrink-0 flex flex-col gap-4 sticky top-20 max-h-[calc(100vh-6rem)]">
+        {/* top-[160px] clears the now-sticky search bar band above it
+            (56px nav + ~82px band) so the two don't overlap while scrolling. */}
+        <div className="w-64 flex-shrink-0 flex flex-col gap-4 sticky top-[160px] max-h-[calc(100vh-178px)]">
           {/* Facet rail — each section collapses so all four are always
               reachable without scrolling the results; capped height + internal
               scroll is a backstop in case everything is expanded at once. */}
@@ -469,42 +556,25 @@ export default function Resources() {
         <div className="flex-1 min-w-0">
           <div className="rounded-2xl border border-brand-border bg-white overflow-hidden">
             <div className="px-6 pt-6 pb-4 flex items-start justify-between gap-4">
+              {/* Nothing to label before a grade is picked — the empty state
+                  below already explains what to do, so this stays blank
+                  rather than showing a generic "All resources" heading. */}
+              {selectedGrade && (
               <div>
                 <h2 className="text-base font-semibold text-brand-text">
-                  {query.trim() ? (
-                    <span className="text-[14px] font-normal text-brand-subtext">
-                      Showing results for <span className="font-semibold text-dessa-teal">{query.trim()}</span>
-                      {' · '}
-                      <button onClick={clearAll} className="font-semibold text-brand-text hover:text-dessa-teal transition-colors">
-                        Clear all
-                      </button>
-                    </span>
-                  ) : selectedGrade === 'ALL' ? (
-                    'All grades'
-                  ) : selectedGrade ? (
-                    `${selectedGrade} resources`
-                  ) : (
-                    'All resources'
-                  )}
+                  {selectedGrade === 'ALL' ? 'All grades' : `${selectedGrade} resources`}
                 </h2>
-                {/* Concept 2 stacks the result count under the title instead
-                    of beside it, since the top-right slot now holds the
-                    grade combobox once a grade is picked. */}
-                {concept === '2' && selectedGrade && (
-                  <p className="text-sm text-brand-subtext mt-1">
-                    {filtered.length.toLocaleString()} result{filtered.length === 1 ? '' : 's'}
-                  </p>
-                )}
               </div>
-              {concept === '1' && selectedGrade && (
-                <p className="text-sm text-brand-subtext shrink-0">
-                  {filtered.length.toLocaleString()} result{filtered.length === 1 ? '' : 's'}
-                </p>
               )}
-              {concept === '2' && selectedGrade && renderGradeCombobox('relative shrink-0 w-40')}
+              {(selectedGrade || q) && (
+                <div className="flex items-center gap-2 shrink-0">
+                  {renderSortMenu()}
+                  {concept === '2' && renderGradeCombobox('relative w-40')}
+                </div>
+              )}
             </div>
 
-            {!selectedGrade ? (
+            {!selectedGrade && !q ? (
               <div className="px-6 py-16 text-center">
                 <img src="/Search/search-empty.svg" alt="" className="mx-auto h-56 w-auto mb-6" />
                 <p className="text-lg font-semibold text-brand-text mb-1.5">Pick a grade level to get started</p>
@@ -546,7 +616,7 @@ export default function Resources() {
                     <TableHead>
                       <SortButton label="Competency" field="competency" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                     </TableHead>
-                    {selectedGrade === 'ALL' && (
+                    {showGradeColumn && (
                       <TableHead>
                         <SortButton label="Grade" field="grade" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                       </TableHead>
@@ -578,63 +648,76 @@ export default function Resources() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap">{TYPE_META[r.type].label}</TableCell>
                       <TableCell className="whitespace-nowrap">{r.competency}</TableCell>
-                      {selectedGrade === 'ALL' && <TableCell className="whitespace-nowrap">{r.grade}</TableCell>}
+                      {showGradeColumn && <TableCell className="whitespace-nowrap">{r.grade}</TableCell>}
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             ) : (
               <div className="border-t border-brand-border">
-                {pagedResults.map((r) => {
+                {pagedResults.map((r, i) => {
+                  // Grade divider row — grade-less search clusters results by
+                  // grade (see groupByGrade), so it gets its own full-width
+                  // row marking the start of each grade's block instead of a
+                  // per-row grade tag. Re-shown on every page (not just once
+                  // per true group) so a page never opens mid-group with no
+                  // grade context above it.
+                  const showGradeDivider = groupByGrade && (i === 0 || pagedResults[i - 1].grade !== r.grade)
                   return (
-                    <div
-                      key={r.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => openResource(r)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') openResource(r)
-                      }}
-                      className="w-full flex flex-col gap-3 px-6 py-4 text-left border-b border-brand-border last:border-b-0 hover:bg-brand-bg transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-start gap-4">
-                        <span className="w-3.5 shrink-0" />
-                        <TypeBadge type={r.type} />
-                        <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
-                          <div className="min-w-0">
+                    <div key={r.id}>
+                      {showGradeDivider && (
+                        <div className="px-6 py-2 bg-brand-bg border-b border-brand-border text-xs font-semibold text-brand-text uppercase tracking-wide">
+                          {r.grade}
+                        </div>
+                      )}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => openResource(r)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') openResource(r)
+                        }}
+                        className={`w-full flex flex-col gap-2 px-6 py-4 text-left hover:bg-brand-bg transition-colors cursor-pointer ${
+                          i === pagedResults.length - 1 ? '' : 'border-b border-brand-border'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
                             <p className="text-[15px] font-semibold text-brand-text truncate">
                               {displayTitle(r.title)}
                             </p>
-                            <p className="text-xs text-brand-subtext truncate mt-0.5">{r.unitTitle}</p>
+                            {/* Single meta line — unit and competency read
+                                left-to-right in one scan instead of splitting
+                                attention between a left-aligned title block
+                                and a right-floating badge cluster. Grade is
+                                shown here only for the explicit "All Grades"
+                                pick — the grade-less-search case gets its own
+                                divider row instead (see showGradeDivider). */}
+                            <p className="text-xs text-brand-subtext truncate mt-0.5">
+                              {r.unitTitle}
+                              {r.competency && <> · {r.competency}</>}
+                              {selectedGrade === 'ALL' && <> · {r.grade}</>}
+                            </p>
                           </div>
-                          <div className="shrink-0 flex items-center gap-1.5">
-                            {selectedGrade === 'ALL' && (
-                              <span className="text-[11px] font-medium text-brand-subtext bg-brand-bg px-2 py-0.5 rounded-full">
-                                {r.grade}
-                              </span>
-                            )}
-                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full">
-                              {r.competency}
-                            </span>
-                          </div>
+                          <TypeBadge type={r.type} />
+                          {/* <button
+                            onClick={(e) => toggleSaved(e, key, r)}
+                            aria-label={isSaved ? 'Remove from saved' : 'Save resource'}
+                            className={`shrink-0 p-1 rounded-full transition-colors ${
+                              isSaved ? 'text-dessa-teal' : 'text-brand-subtext hover:text-dessa-teal'
+                            }`}
+                          >
+                            <Star size={16} fill={isSaved ? 'currentColor' : 'none'} />
+                          </button> */}
                         </div>
-                        {/* <button
-                          onClick={(e) => toggleSaved(e, key, r)}
-                          aria-label={isSaved ? 'Remove from saved' : 'Save resource'}
-                          className={`shrink-0 p-1 rounded-full transition-colors ${
-                            isSaved ? 'text-dessa-teal' : 'text-brand-subtext hover:text-dessa-teal'
-                          }`}
-                        >
-                          <Star size={16} fill={isSaved ? 'currentColor' : 'none'} />
-                        </button> */}
+                        {/* Flush left, spanning the icon's column too — not
+                            indented to align under the title — so the row reads
+                            as a compact header cluster with a full-width body
+                            beneath it, rather than one uniformly dense block. */}
+                        <p className="text-sm text-brand-subtext leading-relaxed line-clamp-2 max-w-[640px]">
+                          {r.description}
+                        </p>
                       </div>
-                      {/* Flush left, spanning the icon's column too — not
-                          indented to align under the title — so the row reads
-                          as a compact header cluster with a full-width body
-                          beneath it, rather than one uniformly dense block. */}
-                      <p className="text-sm text-brand-subtext leading-relaxed line-clamp-2 max-w-[640px]">
-                        {r.description}
-                      </p>
                     </div>
                   )
                 })}
