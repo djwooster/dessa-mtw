@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation, useSearchParams } from 'react-router-dom'
 import { Search, HelpCircle, Settings, Palette } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 
@@ -20,6 +20,9 @@ const userMenuItems = [
 ]
 
 export default function Nav() {
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+
   return (
     <nav className="bg-white border-b border-brand-border shadow-sm sticky top-0 z-50">
       <div className="max-w-screen-xl mx-auto px-6 h-14 flex items-center gap-6">
@@ -47,6 +50,26 @@ export default function Nav() {
               {item.label}
             </NavLink>
           ))}
+
+          {/* Resources-only design-review toggle — lets reviewers flip between
+              the two grade-picker layout concepts on that page without a
+              separate route; lives here (not on the page) since it's about
+              comparing designs, not a feature of the page itself. */}
+          {location.pathname === '/resources' && (
+            <select
+              value={searchParams.get('concept') || '1'}
+              onChange={(e) => {
+                const next = new URLSearchParams(searchParams)
+                next.set('concept', e.target.value)
+                setSearchParams(next)
+              }}
+              className="ml-2 h-7 pl-2 pr-6 text-xs font-medium border border-brand-border rounded-md bg-white text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+            >
+              <option value="1">Concept 1</option>
+              <option value="2">Concept 2</option>
+              <option value="3">Concept 3</option>
+            </select>
+          )}
         </div>
 
         {/* Right actions */}
