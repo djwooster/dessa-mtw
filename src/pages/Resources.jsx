@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
 import {
   Search, X, Video, FileText, Mic, ChevronDown,
-  ClipboardList, Star, Check, ImagePlus,
+  ClipboardList, Star, Check, ImagePlus, Filter,
 } from 'lucide-react'
 import {
   resources, CATEGORIES, TYPES, ALL_GRADES, ALL_COMPETENCIES, courseFor,
@@ -12,7 +12,37 @@ import {
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis,
 } from '../components/ui/pagination'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
+
+// "Adult Wellness" is excluded from every picker on this page now, per
+// explicit request — both the grade pickers (sidebar Grade facet, all three
+// gate concepts' pill grids) and the Course Type facet below. Adult
+// Wellness resources still exist in the data (r.grade/r.category ===
+// 'Adult Wellness'), they're just entirely unreachable through this page's
+// browse flow now.
+// "Not Grade-Specific" is a synthetic pseudo-grade, not a real value in the
+// resource data (unlike the actual grades ALL_GRADES is derived from) — it
+// represents content like an Anti-bullying resource that applies to any
+// grade. Appended last so it reads as a catch-all rather than sitting
+// alongside the real grade order. Appears everywhere SELECTABLE_GRADES is
+// used: the starting gate's pill grid, the sidebar Grade facet, and 3B's
+// Filter panel. No resource is tagged with it yet, so selecting only this
+// pill currently shows "No resources found" — ask if a demo resource (e.g.
+// the Anti-bullying example) should be added to make it demonstrable.
+const SELECTABLE_GRADES = ALL_GRADES.filter((g) => g !== 'Adult Wellness').concat(['Not Grade-Specific'])
+const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c !== 'Adult Wellness')
+
+// 3A/3B only ("remember my choice") — a plain localStorage read/write, not
+// wired through any backend/session concept, since this prototype has none.
+const REMEMBERED_GRADES_KEY = 'resources.rememberedGrades'
+
+function loadRememberedGrades() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(REMEMBERED_GRADES_KEY))
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : null
+  } catch {
+    return null
+  }
+}
 
 // Simple placeholder: lucide icon over a low-opacity colored rectangle.
 const TYPE_META = {
@@ -47,23 +77,6 @@ function TypeBadge({ type }) {
       <Icon size={14} />
       <span className="text-xs font-medium">{label}</span>
     </span>
-  )
-}
-
-// Concept 3's sortable table column header — click toggles asc/desc on that
-// field, chevron only turns teal/flips when it's the active sort column.
-function SortButton({ label, field, sortKey, sortDir, onSort }) {
-  const active = sortKey === field
-  return (
-    <button onClick={() => onSort(field)} className="flex items-center gap-1 hover:text-brand-text transition-colors">
-      {label}
-      <ChevronDown
-        size={12}
-        className={`transition-transform ${active ? 'text-dessa-teal' : 'text-brand-subtext/50'} ${
-          active && sortDir === 'desc' ? 'rotate-180' : ''
-        }`}
-      />
-    </button>
   )
 }
 
@@ -130,74 +143,288 @@ function pageWindow(current, total) {
   return withGaps
 }
 
-// Concept 3's blocking grade gate — replaces the search-bar combobox
-// entirely for this concept. Selection is staged in local `pending` state
-// (not written to selectedGrades until "View Resources" is pressed) so
-// picking several pills doesn't close the modal after the first tap; the
-// component unmounts on confirm and remounts fresh if grades are later
-// cleared back to zero (e.g. via the sidebar facet), which is what resets
-// `pending` — no extra effect/sync needed.
-function GradeGateModal({ onConfirm }) {
+// Concept 3's grade gate, in three presentations (3A/3B/3C — see Nav's
+// switcher). All three share the same staged-selection pattern: picks are
+// held in local `pending` state (not written to selectedGrades until the
+// confirm button is pressed), and each gate component unmounts on confirm
+// and remounts fresh if grades are later cleared back to zero (e.g. via the
+// sidebar facet), which is what resets `pending` — no extra effect needed.
+// An earlier pass (now retired) put this behind a fixed-position, dark-
+// backdrop modal — manager feedback was that it "slammed down" too abruptly,
+// so none of these three use a full-screen overlay.
+function usePendingGrades() {
   const [pending, setPending] = useState([])
-  const [imgErrored, setImgErrored] = useState(false)
-
-  function togglePending(grade) {
+  function toggle(grade) {
     setPending((prev) => (prev.includes(grade) ? prev.filter((g) => g !== grade) : [...prev, grade]))
+  }
+  return [pending, toggle]
+}
+
+function GradePillGrid({ pending, onToggle, wrapClassName }) {
+  return (
+    <div className={wrapClassName}>
+      {SELECTABLE_GRADES.map((grade) => {
+        const active = pending.includes(grade)
+        return (
+          <button
+            key={grade}
+            type="button"
+            onClick={() => onToggle(grade)}
+            className={`px-3 py-1 rounded-md text-[13px] font-medium transition-colors ${
+              active
+                ? 'border-2 border-dessa-teal bg-dessa-tealLight text-dessa-teal'
+                : 'border-2 border-dashed border-brand-border text-brand-subtext hover:border-dessa-teal/50 hover:text-brand-text'
+            }`}
+          >
+            {grade}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// 3A — full-page takeover: nothing else (search bar, sidebar, results card)
+// mounts until a grade is confirmed, so there's no background page for an
+// overlay to interrupt — this state simply *is* the page.
+function GateFullPage({ onConfirm, defaultRemember }) {
+  const [pending, togglePending] = usePendingGrades()
+  const [imgErrored, setImgErrored] = useState(false)
+  const [remember, setRemember] = useState(defaultRemember)
+  return (
+    <div className="flex justify-center py-16 px-6">
+      <div className="w-full max-w-3xl rounded-2xl border border-brand-border bg-white p-10 flex flex-col items-center text-center">
+        {!imgErrored ? (
+          <img
+            src="/Yearly%20Setup/search-modal.svg"
+            alt=""
+            onError={() => setImgErrored(true)}
+            className="h-24 w-auto max-w-[180px] object-contain mb-6"
+          />
+        ) : (
+          <div className="h-24 w-24 mb-6 rounded-2xl bg-brand-bg border border-brand-border flex flex-col items-center justify-center gap-1 shrink-0">
+            <ImagePlus size={20} className="text-brand-subtext" />
+          </div>
+        )}
+        <h1 className="text-2xl font-semibold text-brand-text mb-1.5">Select a grade level</h1>
+        <p className="text-sm text-brand-subtext max-w-sm mb-8">
+          To make sure you're seeing content relevant to your grade level, choose it below.
+        </p>
+        <GradePillGrid pending={pending} onToggle={togglePending} wrapClassName="flex flex-wrap justify-center gap-2 max-w-lg mb-6" />
+        <label className="flex items-center gap-2 text-sm text-brand-subtext mb-6 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+            className="accent-dessa-teal w-3.5 h-3.5"
+          />
+          Remember my choice
+        </label>
+        <button
+          type="button"
+          disabled={pending.length === 0}
+          onClick={() => onConfirm(pending, remember)}
+          className="h-12 px-10 rounded-full text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors disabled:bg-brand-border disabled:text-brand-subtext"
+        >
+          View Resources
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// 3B — one filter section within FilterPanel below, styled after the
+// reference screenshot's "Date range / Activity type / Status" fields: a
+// title + "Reset" link, then its own control.
+// optionsClassName defaults to a single column; Grade passes a 2-column
+// grid instead (see FilterPanel) since it has far more options than the
+// other sections — splitting it avoids a scrollbar without making that
+// cell wildly taller than its Course Type neighbor in the same grid row.
+function FilterSection({ title, options, selected, onToggle, onReset, optionsClassName = 'flex flex-col gap-1.5' }) {
+  return (
+    <div className="px-4 py-3 h-full">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm font-semibold text-brand-text">{title}</p>
+        <button type="button" onClick={onReset} className="text-xs font-medium text-dessa-teal hover:underline">
+          Reset
+        </button>
+      </div>
+      <div className={optionsClassName}>
+        {options.map((opt) => (
+          <label key={opt} className="flex items-center gap-2 text-sm text-brand-text cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selected.includes(opt)}
+              onChange={() => onToggle(opt)}
+              className="accent-dessa-teal w-3.5 h-3.5 shrink-0"
+            />
+            <span className="truncate">{opt}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// 3B — replaces the always-visible sidebar facets with a "Filter" button +
+// popover, staged like the reference screenshot: picks are held in local
+// pending state and only committed to the real selectedX state (and thus
+// to the results) when "Apply now" is pressed — unlike the sidebar facets
+// elsewhere, which filter live. Grade is included here (not just Course
+// Type/Competency/Type) since 3B has no sidebar at all to house it
+// otherwise; clearing it to zero and applying reopens the full-page gate,
+// same as clearing the sidebar facet does for 3A.
+function FilterPanel({
+  selectedGrades, setSelectedGrades,
+  selectedCategories, setSelectedCategories,
+  selectedCompetencies, setSelectedCompetencies,
+  selectedTypes, setSelectedTypes,
+}) {
+  const [open, setOpen] = useState(false)
+  const [pendingGrades, setPendingGrades] = useState(selectedGrades)
+  const [pendingCategories, setPendingCategories] = useState(selectedCategories)
+  const [pendingCompetencies, setPendingCompetencies] = useState(selectedCompetencies)
+  const [pendingTypes, setPendingTypes] = useState(selectedTypes)
+
+  function handleOpenChange(next) {
+    if (next) {
+      // Re-stage from the committed values every time the panel opens, so a
+      // prior "Reset all" that was never applied doesn't leak into the next
+      // time it's opened.
+      setPendingGrades(selectedGrades)
+      setPendingCategories(selectedCategories)
+      setPendingCompetencies(selectedCompetencies)
+      setPendingTypes(selectedTypes)
+    }
+    setOpen(next)
+  }
+
+  function togglePending(setFn, value) {
+    setFn((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]))
+  }
+
+  function applyNow() {
+    setSelectedGrades(pendingGrades)
+    setSelectedCategories(pendingCategories)
+    setSelectedCompetencies(pendingCompetencies)
+    setSelectedTypes(pendingTypes)
+    setOpen(false)
+  }
+
+  function resetAll() {
+    setPendingGrades([])
+    setPendingCategories([])
+    setPendingCompetencies([])
+    setPendingTypes([])
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-dessa-navy/50 backdrop-blur-sm p-6">
-      <div className="w-full max-w-xl max-h-[85vh] overflow-y-auto bg-white rounded-3xl shadow-2xl p-8 sm:p-10">
-        <div className="flex flex-col items-center text-center mb-7">
-          {/* Lives at public/Yearly Setup/search-modal.svg. Sized small and
-              capped so a wide or tall illustration still sits proportionally
-              in the modal rather than dominating it. */}
-          {!imgErrored ? (
-            <img
-              src="/Yearly%20Setup/search-modal.svg"
-              alt=""
-              onError={() => setImgErrored(true)}
-              className="h-20 w-auto max-w-[160px] object-contain mb-5"
-            />
-          ) : (
-            <div className="h-20 w-20 mb-5 rounded-2xl bg-brand-bg flex flex-col items-center justify-center gap-1 shrink-0">
-              <ImagePlus size={18} className="text-brand-subtext" />
-              <code className="text-[8px] font-mono text-brand-subtext/70 text-center leading-tight">
-                search-modal.svg
-              </code>
-            </div>
+    <Popover.Root open={open} onOpenChange={handleOpenChange}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className="relative shrink-0 flex items-center gap-1.5 pl-3 pr-3 h-9 text-[13px] font-medium border border-brand-border rounded-md bg-white text-brand-text hover:bg-brand-bg transition-colors"
+        >
+          <Filter size={13} className="text-brand-subtext" />
+          Filter
+          {/* Grade counts too, per explicit request — this button only ever
+              renders once the mandatory gate is passed, so selectedGrades
+              is never empty here, and the dot is effectively always on. */}
+          {(selectedGrades.length > 0 || selectedCategories.length > 0 || selectedCompetencies.length > 0 || selectedTypes.length > 0) && (
+            <span className="absolute top-[0.4rem] right-[0.1rem] w-2.5 h-2.5 rounded-full bg-dessa-teal border-2 border-white" />
           )}
-          <h2 className="text-xl font-semibold text-brand-text mb-1.5">Select a grade level</h2>
-          <p className="text-sm text-brand-subtext max-w-sm">
-            Choose one or more grades to see the resources built for them.
-          </p>
-        </div>
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="end"
+          sideOffset={8}
+          className="z-30 w-[720px] max-h-[80vh] overflow-y-auto bg-white border border-brand-border rounded-xl shadow-lg outline-none"
+        >
+          <div className="px-4 py-3 border-b border-brand-border bg-brand-bg rounded-t-xl">
+            <p className="text-sm font-semibold text-brand-text">Filter</p>
+          </div>
+          {/* 2x2 grid instead of one long vertical stack — wider and
+              shorter, and groups scan as two clear rows rather than one
+              undifferentiated list. Borders applied on these wrapper divs
+              (not FilterSection itself) so the grid lines land between
+              cells rather than under every section regardless of column. */}
+          <div className="grid grid-cols-2">
+            <div className="border-r border-b border-brand-border">
+              <FilterSection
+                title="Grade"
+                options={SELECTABLE_GRADES}
+                selected={pendingGrades}
+                onToggle={(v) => togglePending(setPendingGrades, v)}
+                onReset={() => setPendingGrades([])}
+                optionsClassName="grid grid-cols-2 gap-x-3 gap-y-1.5"
+              />
+            </div>
+            <div className="border-b border-brand-border">
+              <FilterSection
+                title="Course Type"
+                options={SELECTABLE_CATEGORIES}
+                selected={pendingCategories}
+                onToggle={(v) => togglePending(setPendingCategories, v)}
+                onReset={() => setPendingCategories([])}
+              />
+            </div>
+            <div className="border-r border-brand-border">
+              <FilterSection
+                title="Competency"
+                options={ALL_COMPETENCIES}
+                selected={pendingCompetencies}
+                onToggle={(v) => togglePending(setPendingCompetencies, v)}
+                onReset={() => setPendingCompetencies([])}
+              />
+            </div>
+            <div>
+              <FilterSection
+                title="Type"
+                options={TYPES.map((t) => TYPE_META[t].label)}
+                selected={pendingTypes.map((t) => TYPE_META[t].label)}
+                onToggle={(label) => togglePending(setPendingTypes, TYPES.find((t) => TYPE_META[t].label === label))}
+                onReset={() => setPendingTypes([])}
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-brand-border">
+            <button
+              type="button"
+              onClick={resetAll}
+              className="px-3 py-2 rounded-md text-sm font-semibold border border-brand-border text-brand-text hover:bg-brand-bg transition-colors"
+            >
+              Reset all
+            </button>
+            <button
+              type="button"
+              onClick={applyNow}
+              className="px-4 py-2 rounded-md text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors"
+            >
+              Apply now
+            </button>
+          </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}
 
-        <div className="flex flex-wrap justify-start gap-2 mb-8">
-          {ALL_GRADES.map((grade) => {
-            const active = pending.includes(grade)
-            return (
-              <button
-                key={grade}
-                type="button"
-                onClick={() => togglePending(grade)}
-                className={`px-3 py-1 rounded-md text-[13px] font-medium transition-colors ${
-                  active
-                    ? 'border-2 border-dessa-teal bg-dessa-tealLight text-dessa-teal'
-                    : 'border-2 border-dashed border-brand-border text-brand-subtext hover:border-dessa-teal/50 hover:text-brand-text'
-                }`}
-              >
-                {grade}
-              </button>
-            )
-          })}
-        </div>
-
+// 3C — banner preview: a light, non-blocking banner sits above the (dimmed,
+// inert) page so the user can see the interface waiting for them, instead of
+// a dark backdrop hiding it entirely.
+function GateBanner({ onConfirm }) {
+  const [pending, togglePending] = usePendingGrades()
+  return (
+    <div className="w-screen mx-[calc(50%-50vw)] bg-dessa-tealLight border-b border-dessa-teal/20">
+      <div className="max-w-screen-xl mx-auto px-6 py-4 flex items-center gap-4 flex-wrap">
+        <p className="text-sm font-semibold text-brand-text shrink-0">Select a grade level to view resources</p>
+        <GradePillGrid pending={pending} onToggle={togglePending} wrapClassName="flex flex-wrap gap-2 flex-1" />
         <button
           type="button"
           disabled={pending.length === 0}
           onClick={() => onConfirm(pending)}
-          className="w-full h-12 rounded-full text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors disabled:bg-brand-border disabled:text-brand-subtext disabled:hover:bg-brand-border"
+          className="shrink-0 h-9 px-5 rounded-full text-xs font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors disabled:bg-brand-border disabled:text-brand-subtext"
         >
           View Resources
         </button>
@@ -209,29 +436,40 @@ function GradeGateModal({ onConfirm }) {
 export default function Resources() {
   const navigate = useNavigate()
   // Design-review toggle set via the select in Nav (Resources-only) — lets a
-  // reviewer flip between two grade-picker layout concepts on the same data.
+  // reviewer flip between three ways of presenting the mandatory grade gate
+  // (3A/3B/3C) on the same underlying data.
   const [searchParams] = useSearchParams()
-  const concept = searchParams.get('concept') || '1'
+  const concept = searchParams.get('concept') || 'a'
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState([])
-  // A set of grades, driven by two controls that both read/write it: the
-  // top combobox (a quick-pick — choosing one grade replaces the whole set
-  // with just that grade; "All Grades" checks every box) and the sidebar's
-  // Grade facet (ordinary multi-select, like the other facets, so any
-  // combination — e.g. just Grade 2 + Grade 4 — is possible). Empty =
-  // nothing picked yet (empty state, unless a search is submitted — see
-  // `q` below, which bypasses the gate and searches every grade).
-  const [selectedGrades, setSelectedGrades] = useState([])
-  const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
-  const [gradeQuery, setGradeQuery] = useState('')
+  // A set of grades, driven by multiple controls that all read/write it: the
+  // active gate concept's picker (GateFullPage/GateBanner — all confirm
+  // straight into this), the sidebar's Grade facet for 3A/3C (ordinary
+  // multi-select), and 3B's Filter panel (staged — see FilterPanel). Any
+  // combination — e.g. just Grade 2 + Grade 4 — stays reachable after the
+  // initial gate. Empty = nothing picked yet, which blocks all results
+  // regardless of search (see `filtered` below).
+  // 3A/3B only: if "Remember my choice" was checked on a previous visit,
+  // skip the gate entirely and start already on the remembered grade(s) —
+  // 3C keeps requiring the banner every time, since it wasn't in scope for
+  // this feature.
+  const [selectedGrades, setSelectedGrades] = useState(() => {
+    const remembered = loadRememberedGrades()
+    return remembered && (concept === 'a' || concept === 'b') ? remembered : []
+  })
+  // Tracks whether the current selectedGrades should be persisted — set from
+  // the gate's "Remember my choice" checkbox on confirm, or true at mount if
+  // a remembered value was just loaded above. Kept in sync with
+  // selectedGrades by the effect below, so changing grades via the sidebar
+  // (or clearing them via "Change grade") updates/clears storage too, not
+  // just the gate's own confirm action.
+  const [rememberGrades, setRememberGrades] = useState(() => loadRememberedGrades() !== null)
   const [selectedCompetencies, setSelectedCompetencies] = useState([])
   const [selectedTypes, setSelectedTypes] = useState([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
-  // Sort — drives both the header "Sort" dropdown (concepts 1/2's list rows)
-  // and Concept 3's clickable table columns; same state either way, so the
-  // dropdown and column headers always agree on what's active.
+  // Sort — drives the header "Sort" dropdown that sorts the card-list results.
   const [sortKey, setSortKey] = useState(null)
   const [sortDir, setSortDir] = useState('asc')
   const [sortMenuOpen, setSortMenuOpen] = useState(false)
@@ -251,18 +489,33 @@ export default function Resources() {
     })
   }
 
-  // Scoped to selectedGrades first — with no grades chosen AND no search
-  // submitted there's nothing to show, by design, so a resource shared
-  // across grades never surfaces that fact side by side in the same view.
-  // An empty set otherwise means "no grade constraint" — covers both the
-  // explicit "All Grades" pick (every box checked) and a submitted search
-  // before any grade was picked (bypasses the gate and searches every
-  // grade — see `showGradeColumn` below for how those rows disclose grade).
+  // Keeps localStorage in sync with the current grades whenever
+  // rememberGrades is on — not just at the moment the gate is confirmed —
+  // so a later change via the sidebar facet updates what's remembered, and
+  // clearing back to zero (e.g. via "Change grade") forgets it.
+  useEffect(() => {
+    if (!rememberGrades) return
+    if (selectedGrades.length === 0) localStorage.removeItem(REMEMBERED_GRADES_KEY)
+    else localStorage.setItem(REMEMBERED_GRADES_KEY, JSON.stringify(selectedGrades))
+  }, [selectedGrades, rememberGrades])
+
+  function confirmGrades(grades, remember) {
+    setRememberGrades(remember)
+    setSelectedGrades(grades)
+  }
+
+  // Scoped to selectedGrades first — with no grade picked yet there's
+  // nothing to show, by design (a resource shared across grades never
+  // surfaces that fact side by side in the same view), and search can't
+  // bypass this: the manager's specific praise for Concept 3 was that grade
+  // selection is mandatory *before* search, so an unpicked grade blocks
+  // results regardless of query. An empty set otherwise means "no grade
+  // constraint" — i.e. the explicit "All Grades" pick (every box checked).
   const q = query.trim().toLowerCase()
   const filtered = useMemo(() => {
-    if (selectedGrades.length === 0 && !q) return []
+    if (selectedGrades.length === 0) return []
     return resources.filter((r) =>
-      (selectedGrades.length === 0 || selectedGrades.includes(r.grade)) &&
+      selectedGrades.includes(r.grade) &&
       (!q || r.title.toLowerCase().includes(q)) &&
       (selectedCategories.length === 0 || selectedCategories.includes(r.category)) &&
       (selectedCompetencies.length === 0 || selectedCompetencies.includes(r.competency)) &&
@@ -270,16 +523,11 @@ export default function Resources() {
     )
   }, [selectedGrades, q, selectedCategories, selectedCompetencies, selectedTypes])
 
-  // Rows disclose their own grade whenever the result set can legitimately
-  // span more than one grade: exactly one grade selected is the only case
-  // that doesn't need it (0 selected, or 2+ selected via either control).
+  // The result set discloses grade (via divider rows, see showGradeDivider
+  // below) whenever it can legitimately span more than one grade: exactly
+  // one grade selected is the only case that doesn't need it (0 selected,
+  // or 2+ selected via either control).
   const showGradeColumn = selectedGrades.length !== 1
-
-  // Concept 1/2's card-list clusters multi-grade result sets into "Grade X"
-  // divider rows per grade instead of a per-row grade tag — whether that's
-  // an explicit multi-select, "All Grades", or a grade-less search. Concept
-  // 3's table keeps its Grade column and is intentionally left out of this.
-  const groupByGrade = concept !== '3' && showGradeColumn
 
   // Reset to page 1 whenever the filter set or page size changes — adjusted
   // during render (not in an effect) so it takes effect in the same commit.
@@ -290,8 +538,6 @@ export default function Resources() {
     setPage(1)
   }
 
-  // Shared across all three concepts — Concept 3's column headers and the
-  // header "Sort" dropdown (1/2/3) both read/write the same sortKey/sortDir.
   const sortedFiltered = useMemo(() => {
     let result = filtered
     if (sortKey) {
@@ -304,23 +550,16 @@ export default function Resources() {
         return sortDir === 'asc' ? cmp : -cmp
       })
     }
-    // Grade always wins as the primary sort when grouping is active — a
-    // stable sort (guaranteed by spec) preserves whatever order the chosen
-    // sort above already produced within each grade.
-    if (groupByGrade) {
+    // Multi-grade result sets cluster into "Grade X" divider rows (see
+    // showGradeDivider below), which relies on same-grade rows being
+    // contiguous — so grade always wins as the primary sort here. A stable
+    // sort (guaranteed by spec) preserves whatever order the chosen sort
+    // above already produced within each grade.
+    if (showGradeColumn) {
       result = [...result].sort((a, b) => ALL_GRADES.indexOf(a.grade) - ALL_GRADES.indexOf(b.grade))
     }
     return result
-  }, [filtered, sortKey, sortDir, groupByGrade])
-
-  function toggleSort(key) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(key)
-      setSortDir('asc')
-    }
-  }
+  }, [filtered, sortKey, sortDir, showGradeColumn])
 
   const totalPages = Math.max(1, Math.ceil(sortedFiltered.length / pageSize))
   const pagedResults = sortedFiltered.slice((page - 1) * pageSize, page * pageSize)
@@ -381,112 +620,6 @@ export default function Resources() {
     )
   }
 
-  const gradeChoices = [{ value: 'ALL', label: 'All Grades' }, ...ALL_GRADES.map((g) => ({ value: g, label: g }))]
-  const filteredGradeChoices = gradeQuery.trim()
-    ? gradeChoices.filter((o) => o.label.toLowerCase().includes(gradeQuery.trim().toLowerCase()))
-    : gradeChoices
-  // The combobox is a quick-pick, not the sole source of truth — it can only
-  // ever land the set in one of two states (a single grade, or every grade),
-  // so its label falls back to a generic count once the sidebar's Grade
-  // facet has put the set into some other combination (e.g. 2 of 6 checked).
-  const selectedGradeLabel =
-    selectedGrades.length === 0
-      ? 'Select grade'
-      : selectedGrades.length === ALL_GRADES.length
-      ? 'All Grades'
-      : selectedGrades.length === 1
-      ? selectedGrades[0]
-      : `${selectedGrades.length} grades selected`
-
-  function pickGrade(value) {
-    setSelectedGrades(value === 'ALL' ? [...ALL_GRADES] : [value])
-    setGradeMenuOpen(false)
-    setGradeQuery('')
-  }
-
-  function clearGrade(e) {
-    e.stopPropagation()
-    setSelectedGrades([])
-    setGradeMenuOpen(false)
-    setGradeQuery('')
-  }
-
-  // Shared between Concept 1 (lives in the search bar) and Concept 2 (lives
-  // centered in the empty state, then relocates to the card's top-right once
-  // a grade is picked) so both concepts drive the exact same picker state.
-  function renderGradeCombobox(wrapperClassName) {
-    return (
-      <div className={wrapperClassName}>
-        <Popover.Root open={gradeMenuOpen} onOpenChange={setGradeMenuOpen}>
-          <Popover.Trigger asChild>
-            <button
-              type="button"
-              className="w-full flex items-center gap-1 pl-4 pr-7 h-11 text-sm border border-brand-border rounded-full bg-white text-brand-text focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal transition-colors"
-            >
-              <span className={`flex-1 truncate text-left ${selectedGrades.length > 0 ? 'text-brand-text' : 'text-brand-subtext'}`}>
-                {selectedGradeLabel}
-              </span>
-              {selectedGrades.length === 0 && <ChevronDown size={14} className="shrink-0 text-brand-subtext" />}
-            </button>
-          </Popover.Trigger>
-          <Popover.Portal>
-            <Popover.Content
-              align="start"
-              sideOffset={8}
-              className="z-30 w-64 bg-white border border-brand-border rounded-xl shadow-lg outline-none overflow-hidden"
-            >
-              <div className="p-2 border-b border-brand-border">
-                <div className="relative">
-                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-                  <input
-                    autoFocus
-                    type="text"
-                    value={gradeQuery}
-                    onChange={(e) => setGradeQuery(e.target.value)}
-                    placeholder="Search grades"
-                    className="w-full pl-7 pr-2 h-8 text-sm rounded-md border border-brand-border focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-                  />
-                </div>
-              </div>
-              <div className="max-h-64 overflow-y-auto py-1">
-                {filteredGradeChoices.length === 0 ? (
-                  <p className="px-3 py-3 text-xs text-brand-subtext text-center">No matches</p>
-                ) : (
-                  filteredGradeChoices.map((opt) => {
-                    const active =
-                      opt.value === 'ALL'
-                        ? selectedGrades.length === ALL_GRADES.length
-                        : selectedGrades.length === 1 && selectedGrades[0] === opt.value
-                    return (
-                      <button
-                        key={opt.value}
-                        onClick={() => pickGrade(opt.value)}
-                        className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                          active ? 'bg-dessa-tealLight text-dessa-teal font-semibold' : 'text-brand-text hover:bg-brand-bg'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    )
-                  })
-                )}
-              </div>
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
-        {selectedGrades.length > 0 && (
-          <button
-            onClick={clearGrade}
-            aria-label="Clear grade selection"
-            className="absolute top-1/2 -translate-y-1/2 right-3.5 text-brand-subtext hover:text-brand-text transition-colors"
-          >
-            <X size={15} />
-          </button>
-        )}
-      </div>
-    )
-  }
-
   function toggle(setFn, value) {
     setFn((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]))
   }
@@ -508,19 +641,28 @@ export default function Resources() {
     if (course) navigate('/mtw/lesson', { state: { course } })
   }
 
+  const gateOpen = selectedGrades.length === 0
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className="max-w-screen-xl mx-auto px-6 pb-16"
     >
-      {/* Concept 3 only — a hard gate, not just an empty state: the modal's
-          backdrop (z-[100], above the sticky search bar and nav) blocks
-          interaction with the whole page, including a submitted search,
-          until at least one grade is confirmed. Reappears automatically if
-          the sidebar's Grade facet is later cleared back to zero. */}
-      {concept === '3' && selectedGrades.length === 0 && (
-        <GradeGateModal onConfirm={(grades) => setSelectedGrades(grades)} />
+      {/* 3A/3B — both use the same full-page gate; nothing else on the page
+          mounts until a grade is confirmed, so there's no backdrop needed
+          and no background content for one to interrupt. They diverge only
+          in what renders after: 3A keeps the sidebar facets, 3B moves
+          filtering into the top-right Filter panel with full-width results
+          (see below). */}
+      {(concept === 'a' || concept === 'b') && gateOpen ? (
+        <GateFullPage onConfirm={confirmGrades} defaultRemember={rememberGrades} />
+      ) : (
+      <>
+
+      {/* 3C — light, non-blocking banner above the (dimmed, inert) page. */}
+      {concept === 'c' && gateOpen && (
+        <GateBanner onConfirm={(grades) => setSelectedGrades(grades)} />
       )}
 
       {/* Top bar — eBay-style: a compact search container, a category row
@@ -530,24 +672,19 @@ export default function Resources() {
           so each gets its own edge-to-edge divider rather than one border
           shared (and visually mis-attributed) across both. */}
       {/* Sticky right under the nav (top-14 = nav's h-14) so the query stays
-          visible while scrolling through a long results list. */}
-      <div className="w-screen mx-[calc(50%-50vw)] bg-brand-bg border-b border-brand-border sticky top-14 z-40">
+          visible while scrolling through a long results list. 3C dims this
+          along with the rest of the page below the banner. */}
+      <div
+        className={`w-screen mx-[calc(50%-50vw)] bg-brand-bg border-b border-brand-border sticky top-14 z-40 ${
+          concept === 'c' && gateOpen ? 'opacity-40 pointer-events-none' : ''
+        }`}
+      >
       <div className="max-w-screen-xl mx-auto px-6 pt-[1.35rem] pb-4">
-
-        {/* Grade-level picker — the primary gate into the library, so it comes
-            before search in both reading order and tab order. A quick-pick:
-            choosing one grade here reveals just that grade's results; the
-            sidebar's Grade facet is the one that supports arbitrary
-            combinations. Concept 2 moves this into the results card instead
-            — see below. Concept 3 has no combobox here at all: it gates
-            entry with GradeGateModal instead (rendered further down), and
-            the sidebar facet is the only way to change grades afterward. */}
-        <div className="flex items-stretch gap-2">
-        {concept === '1' && renderGradeCombobox('relative shrink-0 w-40')}
 
         {/* Search — results list only updates on submit (Enter or the
             search button), not while typing. */}
-        <div className="relative flex-1">
+        <div className="flex items-stretch gap-4">
+        <div className="relative w-[500px] shrink-0">
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
           <input
             type="text"
@@ -591,28 +728,32 @@ export default function Resources() {
       </div>
       </div>
 
-      <div className="flex gap-6 items-start mt-6">
-        {/* top-[160px] clears the now-sticky search bar band above it
-            (56px nav + ~82px band) so the two don't overlap while scrolling. */}
+      <div className={`flex gap-6 items-start mt-6 ${concept === 'c' && gateOpen ? 'opacity-40 pointer-events-none' : ''}`}>
+        {/* 3B has no sidebar at all — filtering moved into the top-right
+            Filter panel (see FilterPanel below) so results can go full
+            width instead. */}
+        {concept !== 'b' && (
         <div className="w-64 flex-shrink-0 flex flex-col gap-4 sticky top-[160px] max-h-[calc(100vh-178px)]">
+          {/* top-[160px] clears the now-sticky search bar band above it
+              (56px nav + ~82px band) so the two don't overlap while scrolling. */}
           {/* Facet rail — each section collapses so all four are always
               reachable without scrolling the results; capped height + internal
               scroll is a backstop in case everything is expanded at once. */}
           <div className="bg-white rounded-xl border border-brand-border overflow-y-auto">
-            {/* Ordinary multi-select facet — the top combobox is still the
-                quick way to gate into a single grade or "All Grades," but
-                this lets any combination (e.g. just Grade 2 + Grade 4) get
-                checked directly. Both controls read/write selectedGrades. */}
+            {/* Ordinary multi-select facet — the active gate concept's picker
+                is the entry point, but this lets any combination (e.g. just
+                Grade 2 + Grade 4) get checked directly afterward. Both
+                controls read/write selectedGrades. */}
             <FacetGroup
               title="Grade"
-              options={ALL_GRADES}
+              options={SELECTABLE_GRADES}
               selected={selectedGrades}
               onToggle={(v) => toggle(setSelectedGrades, v)}
               scrollable
             />
             <FacetGroup
               title="Course Type"
-              options={CATEGORIES}
+              options={SELECTABLE_CATEGORIES}
               selected={selectedCategories}
               onToggle={(v) => toggle(setSelectedCategories, v)}
             />
@@ -669,6 +810,7 @@ export default function Resources() {
           </div>
           */}
         </div>
+        )}
 
         {/* Results */}
         <div className="flex-1 min-w-0">
@@ -680,7 +822,7 @@ export default function Resources() {
               {selectedGrades.length > 0 && (
               <div>
                 <h2 className="text-base font-semibold text-brand-text">
-                  {selectedGrades.length === ALL_GRADES.length
+                  {selectedGrades.length === SELECTABLE_GRADES.length
                     ? 'All grades'
                     : selectedGrades.length === 1
                     ? `${selectedGrades[0]} resources`
@@ -688,27 +830,34 @@ export default function Resources() {
                 </h2>
               </div>
               )}
-              {(selectedGrades.length > 0 || q) && (
+              {selectedGrades.length > 0 && (
                 <div className="flex items-center gap-2 shrink-0">
                   {renderSortMenu()}
-                  {concept === '2' && renderGradeCombobox('relative w-40')}
+                  {concept === 'b' && (
+                    <FilterPanel
+                      selectedGrades={selectedGrades}
+                      setSelectedGrades={setSelectedGrades}
+                      selectedCategories={selectedCategories}
+                      setSelectedCategories={setSelectedCategories}
+                      selectedCompetencies={selectedCompetencies}
+                      setSelectedCompetencies={setSelectedCompetencies}
+                      selectedTypes={selectedTypes}
+                      setSelectedTypes={setSelectedTypes}
+                    />
+                  )}
                 </div>
               )}
             </div>
 
-            {selectedGrades.length === 0 && !q ? (
+            {gateOpen ? (
               <div className="px-6 py-16 text-center">
                 <img src="/Search/search-empty.svg" alt="" className="mx-auto h-56 w-auto mb-6" />
                 <p className="text-lg font-semibold text-brand-text mb-1.5">Pick a grade level to get started</p>
-                {concept === '2' ? (
-                  <div className="flex justify-center">
-                    {renderGradeCombobox('relative w-56')}
-                  </div>
-                ) : (
-                  <p className="text-sm text-brand-subtext max-w-sm mx-auto">
-                    Choose a grade from the dropdown above to browse the resources available for it.
-                  </p>
-                )}
+                <p className="text-sm text-brand-subtext max-w-sm mx-auto">
+                  {concept === 'b'
+                    ? 'Choose a grade above to start searching.'
+                    : 'Choose a grade from the sidebar to browse the resources available for it.'}
+                </p>
               </div>
             ) : pagedResults.length === 0 ? (
               <div className="px-6 py-8 text-center">
@@ -725,66 +874,16 @@ export default function Resources() {
                   Clear filters
                 </button>
               </div>
-            ) : concept === '3' ? (
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead>
-                      <SortButton label="Resource" field="title" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                    </TableHead>
-                    <TableHead>
-                      <SortButton label="Type" field="type" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                    </TableHead>
-                    <TableHead>
-                      <SortButton label="Competency" field="competency" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                    </TableHead>
-                    {showGradeColumn && (
-                      <TableHead>
-                        <SortButton label="Grade" field="grade" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                      </TableHead>
-                    )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pagedResults.map((r) => (
-                    <TableRow
-                      key={r.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => openResource(r)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') openResource(r)
-                      }}
-                      className="cursor-pointer"
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <TypeIconBadge type={r.type} size={32} />
-                          <div className="min-w-0">
-                            <p className="text-[15px] font-semibold text-brand-text truncate">
-                              {displayTitle(r.title)}
-                            </p>
-                            <p className="text-xs text-brand-subtext truncate">{r.unitTitle}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">{TYPE_META[r.type].label}</TableCell>
-                      <TableCell className="whitespace-nowrap">{r.competency}</TableCell>
-                      {showGradeColumn && <TableCell className="whitespace-nowrap">{r.grade}</TableCell>}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
             ) : (
               <div className="border-t border-brand-border">
                 {pagedResults.map((r, i) => {
-                  // Grade divider row — grade-less search clusters results by
-                  // grade (see groupByGrade), so it gets its own full-width
-                  // row marking the start of each grade's block instead of a
-                  // per-row grade tag. Re-shown on every page (not just once
-                  // per true group) so a page never opens mid-group with no
-                  // grade context above it.
-                  const showGradeDivider = groupByGrade && (i === 0 || pagedResults[i - 1].grade !== r.grade)
+                  // Grade divider row — a multi-grade result set clusters into
+                  // "Grade X" divider rows instead of a per-row grade tag.
+                  // Re-shown on every page (not just once per true group) so
+                  // a page never opens mid-group with no grade context above
+                  // it. Relies on sortedFiltered keeping same-grade rows
+                  // contiguous (see showGradeColumn above).
+                  const showGradeDivider = showGradeColumn && (i === 0 || pagedResults[i - 1].grade !== r.grade)
                   return (
                     <div key={r.id}>
                       {showGradeDivider && (
@@ -813,22 +912,13 @@ export default function Resources() {
                                 attention between a left-aligned title block
                                 and a right-floating badge cluster. Grade never
                                 appears inline here — any multi-grade result
-                                set gets a divider row instead (groupByGrade). */}
+                                set gets a divider row instead. */}
                             <p className="text-xs text-brand-subtext truncate mt-0.5">
                               {r.unitTitle}
                               {r.competency && <> · {r.competency}</>}
                             </p>
                           </div>
                           <TypeBadge type={r.type} />
-                          {/* <button
-                            onClick={(e) => toggleSaved(e, key, r)}
-                            aria-label={isSaved ? 'Remove from saved' : 'Save resource'}
-                            className={`shrink-0 p-1 rounded-full transition-colors ${
-                              isSaved ? 'text-dessa-teal' : 'text-brand-subtext hover:text-dessa-teal'
-                            }`}
-                          >
-                            <Star size={16} fill={isSaved ? 'currentColor' : 'none'} />
-                          </button> */}
                         </div>
                         {/* Flush left, spanning the icon's column too — not
                             indented to align under the title — so the row reads
@@ -899,6 +989,8 @@ export default function Resources() {
           )}
         </div>
       </div>
+      </>
+      )}
     </motion.div>
   )
 }

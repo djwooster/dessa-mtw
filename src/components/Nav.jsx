@@ -51,13 +51,15 @@ export default function Nav() {
             </NavLink>
           ))}
 
-          {/* Resources-only design-review toggle — lets reviewers flip between
-              the two grade-picker layout concepts on that page without a
-              separate route; lives here (not on the page) since it's about
-              comparing designs, not a feature of the page itself. */}
+          {/* Resources-only design-review toggle. Concepts 1/2 (search-bar
+              combobox + card-list results) lost the review to Concept 3's
+              mandatory-grade-gate + table — that direction is now the only
+              one left, so this switcher compares ways of *presenting* the
+              gate instead of a blocking modal (which read as jarring), and
+              (for 3B) how filtering is laid out after it. */}
           {location.pathname === '/resources' && (
             <select
-              value={searchParams.get('concept') || '1'}
+              value={searchParams.get('concept') || 'a'}
               onChange={(e) => {
                 const next = new URLSearchParams(searchParams)
                 next.set('concept', e.target.value)
@@ -65,9 +67,9 @@ export default function Nav() {
               }}
               className="ml-2 h-7 pl-2 pr-6 text-xs font-medium border border-brand-border rounded-md bg-white text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
             >
-              <option value="1">Concept 1</option>
-              <option value="2">Concept 2</option>
-              <option value="3">Concept 3</option>
+              <option value="a">3A — Full-page gate</option>
+              <option value="b">3B — Filter panel</option>
+              <option value="c">3C — Banner preview</option>
             </select>
           )}
         </div>
