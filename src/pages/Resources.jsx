@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
 import {
   Search, X, Video, FileText, Mic, ChevronDown,
-  ClipboardList, Star, Check,
+  ClipboardList, Star, Check, ImagePlus,
 } from 'lucide-react'
 import {
   resources, CATEGORIES, TYPES, ALL_GRADES, ALL_COMPETENCIES, courseFor,
@@ -130,6 +130,82 @@ function pageWindow(current, total) {
   return withGaps
 }
 
+// Concept 3's blocking grade gate — replaces the search-bar combobox
+// entirely for this concept. Selection is staged in local `pending` state
+// (not written to selectedGrades until "View Resources" is pressed) so
+// picking several pills doesn't close the modal after the first tap; the
+// component unmounts on confirm and remounts fresh if grades are later
+// cleared back to zero (e.g. via the sidebar facet), which is what resets
+// `pending` — no extra effect/sync needed.
+function GradeGateModal({ onConfirm }) {
+  const [pending, setPending] = useState([])
+  const [imgErrored, setImgErrored] = useState(false)
+
+  function togglePending(grade) {
+    setPending((prev) => (prev.includes(grade) ? prev.filter((g) => g !== grade) : [...prev, grade]))
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-dessa-navy/50 backdrop-blur-sm p-6">
+      <div className="w-full max-w-xl max-h-[85vh] overflow-y-auto bg-white rounded-3xl shadow-2xl p-8 sm:p-10">
+        <div className="flex flex-col items-center text-center mb-7">
+          {/* Lives at public/Yearly Setup/search-modal.svg. Sized small and
+              capped so a wide or tall illustration still sits proportionally
+              in the modal rather than dominating it. */}
+          {!imgErrored ? (
+            <img
+              src="/Yearly%20Setup/search-modal.svg"
+              alt=""
+              onError={() => setImgErrored(true)}
+              className="h-20 w-auto max-w-[160px] object-contain mb-5"
+            />
+          ) : (
+            <div className="h-20 w-20 mb-5 rounded-2xl bg-brand-bg flex flex-col items-center justify-center gap-1 shrink-0">
+              <ImagePlus size={18} className="text-brand-subtext" />
+              <code className="text-[8px] font-mono text-brand-subtext/70 text-center leading-tight">
+                search-modal.svg
+              </code>
+            </div>
+          )}
+          <h2 className="text-xl font-semibold text-brand-text mb-1.5">Select a grade level</h2>
+          <p className="text-sm text-brand-subtext max-w-sm">
+            Choose one or more grades to see the resources built for them.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap justify-start gap-2 mb-8">
+          {ALL_GRADES.map((grade) => {
+            const active = pending.includes(grade)
+            return (
+              <button
+                key={grade}
+                type="button"
+                onClick={() => togglePending(grade)}
+                className={`px-3 py-1 rounded-md text-[13px] font-medium transition-colors ${
+                  active
+                    ? 'border-2 border-dessa-teal bg-dessa-tealLight text-dessa-teal'
+                    : 'border-2 border-dashed border-brand-border text-brand-subtext hover:border-dessa-teal/50 hover:text-brand-text'
+                }`}
+              >
+                {grade}
+              </button>
+            )
+          })}
+        </div>
+
+        <button
+          type="button"
+          disabled={pending.length === 0}
+          onClick={() => onConfirm(pending)}
+          className="w-full h-12 rounded-full text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors disabled:bg-brand-border disabled:text-brand-subtext disabled:hover:bg-brand-border"
+        >
+          View Resources
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Resources() {
   const navigate = useNavigate()
   // Design-review toggle set via the select in Nav (Resources-only) — lets a
@@ -139,11 +215,14 @@ export default function Resources() {
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState([])
-  // Single-select, not a facet array — stakeholders don't want educators to
-  // see that the same content also exists at other grade levels, so grade
-  // is a gate you pick before browsing, not a narrowing filter like the rest.
-  // null = nothing picked yet (empty state); 'ALL' = explicit "every grade".
-  const [selectedGrade, setSelectedGrade] = useState(null)
+  // A set of grades, driven by two controls that both read/write it: the
+  // top combobox (a quick-pick — choosing one grade replaces the whole set
+  // with just that grade; "All Grades" checks every box) and the sidebar's
+  // Grade facet (ordinary multi-select, like the other facets, so any
+  // combination — e.g. just Grade 2 + Grade 4 — is possible). Empty =
+  // nothing picked yet (empty state, unless a search is submitted — see
+  // `q` below, which bypasses the gate and searches every grade).
+  const [selectedGrades, setSelectedGrades] = useState([])
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
   const [gradeQuery, setGradeQuery] = useState('')
   const [selectedCompetencies, setSelectedCompetencies] = useState([])
@@ -172,40 +251,39 @@ export default function Resources() {
     })
   }
 
-  // Scoped to selectedGrade first — with no grade chosen AND no search
+  // Scoped to selectedGrades first — with no grades chosen AND no search
   // submitted there's nothing to show, by design, so a resource shared
   // across grades never surfaces that fact side by side in the same view.
-  // "ALL" is an explicit, deliberate choice (not the default) to see every
-  // grade's copy as its own row. A submitted search is the one exception:
-  // it bypasses the grade gate and searches every grade, same as "ALL"
-  // (see `showGradeColumn` below for how those rows disclose their grade).
+  // An empty set otherwise means "no grade constraint" — covers both the
+  // explicit "All Grades" pick (every box checked) and a submitted search
+  // before any grade was picked (bypasses the gate and searches every
+  // grade — see `showGradeColumn` below for how those rows disclose grade).
   const q = query.trim().toLowerCase()
   const filtered = useMemo(() => {
-    if (!selectedGrade && !q) return []
+    if (selectedGrades.length === 0 && !q) return []
     return resources.filter((r) =>
-      (!selectedGrade || selectedGrade === 'ALL' || r.grade === selectedGrade) &&
+      (selectedGrades.length === 0 || selectedGrades.includes(r.grade)) &&
       (!q || r.title.toLowerCase().includes(q)) &&
       (selectedCategories.length === 0 || selectedCategories.includes(r.category)) &&
       (selectedCompetencies.length === 0 || selectedCompetencies.includes(r.competency)) &&
       (selectedTypes.length === 0 || selectedTypes.includes(r.type))
     )
-  }, [selectedGrade, q, selectedCategories, selectedCompetencies, selectedTypes])
+  }, [selectedGrades, q, selectedCategories, selectedCompetencies, selectedTypes])
 
   // Rows disclose their own grade whenever the result set can legitimately
-  // span more than one grade: the explicit "All Grades" choice, or a search
-  // submitted before any grade was picked.
-  const showGradeColumn = selectedGrade === 'ALL' || (!selectedGrade && !!q)
+  // span more than one grade: exactly one grade selected is the only case
+  // that doesn't need it (0 selected, or 2+ selected via either control).
+  const showGradeColumn = selectedGrades.length !== 1
 
-  // A grade-less search on the card-list layout clusters rows into a "Grade
-  // X" divider row per grade instead of a per-row grade tag (that per-row
-  // tag stays for the explicit "All Grades" pick — see showGradeColumn use
-  // in the row meta line below). Concept 3's table keeps its Grade column
-  // and is intentionally left out of this grouping.
-  const groupByGrade = concept !== '3' && !selectedGrade && !!q
+  // Concept 1/2's card-list clusters multi-grade result sets into "Grade X"
+  // divider rows per grade instead of a per-row grade tag — whether that's
+  // an explicit multi-select, "All Grades", or a grade-less search. Concept
+  // 3's table keeps its Grade column and is intentionally left out of this.
+  const groupByGrade = concept !== '3' && showGradeColumn
 
   // Reset to page 1 whenever the filter set or page size changes — adjusted
   // during render (not in an effect) so it takes effect in the same commit.
-  const filterKey = JSON.stringify([selectedGrade, query, selectedCategories, selectedCompetencies, selectedTypes, pageSize])
+  const filterKey = JSON.stringify([selectedGrades, query, selectedCategories, selectedCompetencies, selectedTypes, pageSize])
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
   if (filterKey !== prevFilterKey) {
     setPrevFilterKey(filterKey)
@@ -307,17 +385,28 @@ export default function Resources() {
   const filteredGradeChoices = gradeQuery.trim()
     ? gradeChoices.filter((o) => o.label.toLowerCase().includes(gradeQuery.trim().toLowerCase()))
     : gradeChoices
-  const selectedGradeLabel = gradeChoices.find((o) => o.value === selectedGrade)?.label ?? 'Select grade'
+  // The combobox is a quick-pick, not the sole source of truth — it can only
+  // ever land the set in one of two states (a single grade, or every grade),
+  // so its label falls back to a generic count once the sidebar's Grade
+  // facet has put the set into some other combination (e.g. 2 of 6 checked).
+  const selectedGradeLabel =
+    selectedGrades.length === 0
+      ? 'Select grade'
+      : selectedGrades.length === ALL_GRADES.length
+      ? 'All Grades'
+      : selectedGrades.length === 1
+      ? selectedGrades[0]
+      : `${selectedGrades.length} grades selected`
 
   function pickGrade(value) {
-    setSelectedGrade(value)
+    setSelectedGrades(value === 'ALL' ? [...ALL_GRADES] : [value])
     setGradeMenuOpen(false)
     setGradeQuery('')
   }
 
   function clearGrade(e) {
     e.stopPropagation()
-    setSelectedGrade(null)
+    setSelectedGrades([])
     setGradeMenuOpen(false)
     setGradeQuery('')
   }
@@ -334,10 +423,10 @@ export default function Resources() {
               type="button"
               className="w-full flex items-center gap-1 pl-4 pr-7 h-11 text-sm border border-brand-border rounded-full bg-white text-brand-text focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal transition-colors"
             >
-              <span className={`flex-1 truncate text-left ${selectedGrade ? 'text-brand-text' : 'text-brand-subtext'}`}>
+              <span className={`flex-1 truncate text-left ${selectedGrades.length > 0 ? 'text-brand-text' : 'text-brand-subtext'}`}>
                 {selectedGradeLabel}
               </span>
-              {!selectedGrade && <ChevronDown size={14} className="shrink-0 text-brand-subtext" />}
+              {selectedGrades.length === 0 && <ChevronDown size={14} className="shrink-0 text-brand-subtext" />}
             </button>
           </Popover.Trigger>
           <Popover.Portal>
@@ -363,23 +452,29 @@ export default function Resources() {
                 {filteredGradeChoices.length === 0 ? (
                   <p className="px-3 py-3 text-xs text-brand-subtext text-center">No matches</p>
                 ) : (
-                  filteredGradeChoices.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => pickGrade(opt.value)}
-                      className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                        selectedGrade === opt.value ? 'bg-dessa-tealLight text-dessa-teal font-semibold' : 'text-brand-text hover:bg-brand-bg'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))
+                  filteredGradeChoices.map((opt) => {
+                    const active =
+                      opt.value === 'ALL'
+                        ? selectedGrades.length === ALL_GRADES.length
+                        : selectedGrades.length === 1 && selectedGrades[0] === opt.value
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => pickGrade(opt.value)}
+                        className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                          active ? 'bg-dessa-tealLight text-dessa-teal font-semibold' : 'text-brand-text hover:bg-brand-bg'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    )
+                  })
                 )}
               </div>
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>
-        {selectedGrade && (
+        {selectedGrades.length > 0 && (
           <button
             onClick={clearGrade}
             aria-label="Clear grade selection"
@@ -419,6 +514,15 @@ export default function Resources() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-screen-xl mx-auto px-6 pb-16"
     >
+      {/* Concept 3 only — a hard gate, not just an empty state: the modal's
+          backdrop (z-[100], above the sticky search bar and nav) blocks
+          interaction with the whole page, including a submitted search,
+          until at least one grade is confirmed. Reappears automatically if
+          the sidebar's Grade facet is later cleared back to zero. */}
+      {concept === '3' && selectedGrades.length === 0 && (
+        <GradeGateModal onConfirm={(grades) => setSelectedGrades(grades)} />
+      )}
+
       {/* Top bar — eBay-style: a compact search container, a category row
           directly beneath it, then the results content below that. Light
           gray instead of a bold hero color so it reads as a utility bar,
@@ -431,14 +535,15 @@ export default function Resources() {
       <div className="max-w-screen-xl mx-auto px-6 pt-[1.35rem] pb-4">
 
         {/* Grade-level picker — the primary gate into the library, so it comes
-            before search in both reading order and tab order. Single-select:
-            picking a grade is what reveals results at all, so a resource shared
-            across grades never surfaces that fact side by side in one view.
-            Concept 2 moves this into the results card instead — see below.
-            Concept 3 (table layout) reuses this same search-bar placement,
-            since that concept is only about the results table, not this. */}
+            before search in both reading order and tab order. A quick-pick:
+            choosing one grade here reveals just that grade's results; the
+            sidebar's Grade facet is the one that supports arbitrary
+            combinations. Concept 2 moves this into the results card instead
+            — see below. Concept 3 has no combobox here at all: it gates
+            entry with GradeGateModal instead (rendered further down), and
+            the sidebar facet is the only way to change grades afterward. */}
         <div className="flex items-stretch gap-2">
-        {(concept === '1' || concept === '3') && renderGradeCombobox('relative shrink-0 w-40')}
+        {concept === '1' && renderGradeCombobox('relative shrink-0 w-40')}
 
         {/* Search — results list only updates on submit (Enter or the
             search button), not while typing. */}
@@ -494,6 +599,17 @@ export default function Resources() {
               reachable without scrolling the results; capped height + internal
               scroll is a backstop in case everything is expanded at once. */}
           <div className="bg-white rounded-xl border border-brand-border overflow-y-auto">
+            {/* Ordinary multi-select facet — the top combobox is still the
+                quick way to gate into a single grade or "All Grades," but
+                this lets any combination (e.g. just Grade 2 + Grade 4) get
+                checked directly. Both controls read/write selectedGrades. */}
+            <FacetGroup
+              title="Grade"
+              options={ALL_GRADES}
+              selected={selectedGrades}
+              onToggle={(v) => toggle(setSelectedGrades, v)}
+              scrollable
+            />
             <FacetGroup
               title="Course Type"
               options={CATEGORIES}
@@ -515,8 +631,9 @@ export default function Resources() {
             />
           </div>
 
-          {/* Saved/starred resources — populated by the star button on
-              Popular picks cards and search result rows. */}
+          {/* Saved/starred resources — commented out for now (disabled along
+              with the star buttons that populate it; see "star button
+              disabled for now" below).
           <div className="bg-white rounded-xl border border-brand-border p-4 overflow-y-auto">
             <p className="text-sm font-semibold text-brand-text mb-3">Saved</p>
             {savedKeys.size === 0 ? (
@@ -550,6 +667,7 @@ export default function Resources() {
               </div>
             )}
           </div>
+          */}
         </div>
 
         {/* Results */}
@@ -559,14 +677,18 @@ export default function Resources() {
               {/* Nothing to label before a grade is picked — the empty state
                   below already explains what to do, so this stays blank
                   rather than showing a generic "All resources" heading. */}
-              {selectedGrade && (
+              {selectedGrades.length > 0 && (
               <div>
                 <h2 className="text-base font-semibold text-brand-text">
-                  {selectedGrade === 'ALL' ? 'All grades' : `${selectedGrade} resources`}
+                  {selectedGrades.length === ALL_GRADES.length
+                    ? 'All grades'
+                    : selectedGrades.length === 1
+                    ? `${selectedGrades[0]} resources`
+                    : `${selectedGrades.length} grades selected`}
                 </h2>
               </div>
               )}
-              {(selectedGrade || q) && (
+              {(selectedGrades.length > 0 || q) && (
                 <div className="flex items-center gap-2 shrink-0">
                   {renderSortMenu()}
                   {concept === '2' && renderGradeCombobox('relative w-40')}
@@ -574,7 +696,7 @@ export default function Resources() {
               )}
             </div>
 
-            {!selectedGrade && !q ? (
+            {selectedGrades.length === 0 && !q ? (
               <div className="px-6 py-16 text-center">
                 <img src="/Search/search-empty.svg" alt="" className="mx-auto h-56 w-auto mb-6" />
                 <p className="text-lg font-semibold text-brand-text mb-1.5">Pick a grade level to get started</p>
@@ -689,14 +811,12 @@ export default function Resources() {
                             {/* Single meta line — unit and competency read
                                 left-to-right in one scan instead of splitting
                                 attention between a left-aligned title block
-                                and a right-floating badge cluster. Grade is
-                                shown here only for the explicit "All Grades"
-                                pick — the grade-less-search case gets its own
-                                divider row instead (see showGradeDivider). */}
+                                and a right-floating badge cluster. Grade never
+                                appears inline here — any multi-grade result
+                                set gets a divider row instead (groupByGrade). */}
                             <p className="text-xs text-brand-subtext truncate mt-0.5">
                               {r.unitTitle}
                               {r.competency && <> · {r.competency}</>}
-                              {selectedGrade === 'ALL' && <> · {r.grade}</>}
                             </p>
                           </div>
                           <TypeBadge type={r.type} />
