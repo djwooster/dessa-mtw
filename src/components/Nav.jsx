@@ -56,7 +56,9 @@ export default function Nav() {
               mandatory-grade-gate + table — that direction is now the only
               one left, so this switcher compares ways of *presenting* the
               gate instead of a blocking modal (which read as jarring), and
-              (for 3B) how filtering is laid out after it. */}
+              (for 3B/3C) how filtering is laid out after it — both share
+              3B's gate + no-sidebar layout and only differ in how the
+              Filter panel itself presents its sections. */}
           {location.pathname === '/resources' && (
             <select
               value={searchParams.get('concept') || 'a'}
@@ -69,7 +71,7 @@ export default function Nav() {
             >
               <option value="a">3A — Full-page gate</option>
               <option value="b">3B — Filter panel</option>
-              <option value="c">3C — Banner preview</option>
+              <option value="c">3C — Filter panel (alt)</option>
             </select>
           )}
         </div>
