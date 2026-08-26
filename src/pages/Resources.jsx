@@ -759,45 +759,54 @@ function FilterFieldDropdown({ label, options, selected, onToggle, onReset, opti
       <p className="text-sm font-semibold text-brand-text">{label}</p>
       <Popover.Root open={open} onOpenChange={handleOpenChange}>
         {/* Chip-field trigger (matches the "Site" field in the reference
-            report screenshot): the field itself shows the first selected
-            value as a removable chip plus a "+N" badge for the rest, rather
-            than a "N selected" summary — only the teal "+" button opens the
-            popover to add more; the chip's own × removes just that value
-            without opening anything. */}
-        <div className="w-full flex items-center gap-2 h-10 pl-1 pr-1 border border-brand-border rounded-md bg-white">
-          {selected.length === 0 ? (
-            <span className="flex-1 pl-2 text-sm text-brand-subtext truncate">All</span>
-          ) : (
-            <>
-              <span className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-md bg-dessa-tealLight text-dessa-teal text-sm font-medium max-w-[60%]">
-                <span className="truncate">{selected[0]}</span>
-                <button
-                  type="button"
-                  onClick={() => onToggle(selected[0])}
-                  aria-label={`Remove ${selected[0]}`}
-                  className="shrink-0 hover:opacity-70 transition-opacity"
-                >
-                  <X size={12} />
-                </button>
-              </span>
-              {selected.length > 1 && (
-                <span className="shrink-0 px-2 py-1 rounded-md bg-brand-bg text-brand-text text-xs font-semibold">
-                  +{selected.length - 1}
-                </span>
-              )}
-              <span className="flex-1" />
-            </>
-          )}
+            report screenshot) once something's selected: the field shows
+            the first selected value as a removable chip plus a "+N" badge
+            for the rest, and only the teal "+" button opens the popover to
+            add more — the chip's own × removes just that value without
+            opening anything. At rest (nothing selected yet), the field is a
+            plain "All" dropdown — the whole field is the trigger, with a
+            chevron instead of the "+", matching the original facet-field
+            affordance before anything's been picked. */}
+        {selected.length === 0 ? (
           <Popover.Trigger asChild>
             <button
               type="button"
-              aria-label={`Add ${label} filter`}
-              className="shrink-0 w-7 h-7 rounded-md bg-dessa-teal text-white flex items-center justify-center hover:bg-dessa-teal/90 transition-colors"
+              className="w-full flex items-center justify-between gap-2 h-10 px-3 text-sm border border-brand-border rounded-md bg-white text-brand-subtext hover:border-dessa-teal/50 transition-colors"
             >
-              <Plus size={14} />
+              <span className="truncate text-left">All</span>
+              <ChevronDown size={14} className={`text-brand-subtext shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>
           </Popover.Trigger>
-        </div>
+        ) : (
+          <div className="w-full flex items-center gap-2 h-10 pl-1 pr-1 border border-brand-border rounded-md bg-white">
+            <span className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-md bg-dessa-tealLight text-dessa-teal text-sm font-medium max-w-[60%]">
+              <span className="truncate">{selected[0]}</span>
+              <button
+                type="button"
+                onClick={() => onToggle(selected[0])}
+                aria-label={`Remove ${selected[0]}`}
+                className="shrink-0 hover:opacity-70 transition-opacity"
+              >
+                <X size={12} />
+              </button>
+            </span>
+            {selected.length > 1 && (
+              <span className="shrink-0 px-2 py-1 rounded-md bg-brand-bg text-brand-text text-xs font-semibold">
+                +{selected.length - 1}
+              </span>
+            )}
+            <span className="flex-1" />
+            <Popover.Trigger asChild>
+              <button
+                type="button"
+                aria-label={`Add ${label} filter`}
+                className="shrink-0 w-7 h-7 rounded-md bg-dessa-teal text-white flex items-center justify-center hover:bg-dessa-teal/90 transition-colors"
+              >
+                <Plus size={14} />
+              </button>
+            </Popover.Trigger>
+          </div>
+        )}
         <Popover.Portal>
           <Popover.Content
             align="start"
@@ -1241,7 +1250,7 @@ export default function Resources() {
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
           <input
             type="text"
-            placeholder="Search by competency, file type, grade level, or grade band"
+            placeholder="Search by competency, file type, or grade level"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => {
