@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
 import {
   Search, X, Video, FileText, Mic, ChevronDown,
-  ClipboardList, Star, Check, ImagePlus, Filter,
+  ClipboardList, Star, Check, ImagePlus, Filter, ExternalLink,
 } from 'lucide-react'
 import {
   resources, CATEGORIES, TYPES, ALL_GRADES, ALL_COMPETENCIES, courseFor,
@@ -308,7 +308,7 @@ function GateFields({ pending, togglePending, remember, setRemember, onConfirm, 
       <h1 className={`text-4xl font-semibold text-brand-text mb-3 ${isLeft ? '' : 'text-center'}`}>
         MTW Resource Library
       </h1>
-      <p className={`text-base text-brand-subtext max-w-sm mb-8 ${isLeft ? '' : 'text-center'}`}>
+      <p className={`text-base text-brand-subtext max-w-md mb-8 ${isLeft ? '' : 'text-center'}`}>
         Browse lesson videos, activity guides, and printable worksheets organized by grade and SEL competency.
       </p>
       <h6 className="text-xs font-semibold text-[#5B6878] uppercase tracking-wide mb-4">
@@ -350,20 +350,32 @@ function GateFields({ pending, togglePending, remember, setRemember, onConfirm, 
 // bottom edges via a linear mask (same masked-edge technique as
 // GateBackdrop, just linear instead of radial) — purely a vignette now,
 // unrelated to any motion.
+// Ordered so the first GATE_SCROLL_VISIBLE_COUNT (8, the only ones actually
+// rendered) mix all 5 icon types below rather than skewing pdf/worksheets
+// — per explicit feedback, the visible set previously had zero video/audio
+// rows at all.
 const GATE_SCROLL_ROWS = [
   { label: 'Anti-Bullying Poster', type: 'pdf', tag: 'Social Awareness' },
-  { label: 'High-Five Poster', type: 'pdf', tag: 'Relationship Skills' },
+  { label: 'Bounce-Back Stories Guide', type: 'video', tag: 'Social Awareness' },
   { label: 'Calm-Down Toolkit', type: 'worksheets', tag: 'Self-Management' },
+  { label: 'Mindful Moments Podcast', type: 'audio', tag: 'Self-Management' },
   { label: 'Growth Mindset Worksheet', type: 'worksheets', tag: 'Self-Awareness' },
+  { label: 'MTW Parent Newsletter', type: 'external', tag: 'Relationship Skills' },
   { label: 'Active Listening Guide', type: 'pdf', tag: 'Relationship Skills' },
   { label: 'Feelings Check-In Cards', type: 'worksheets', tag: 'Self-Awareness' },
+  { label: 'High-Five Poster', type: 'pdf', tag: 'Relationship Skills' },
   { label: 'Breathing Buddies Guide', type: 'pdf', tag: 'Self-Management' },
   { label: 'The Pause Button Worksheet', type: 'worksheets', tag: 'Self-Management' },
   { label: 'Gratitude Practice Journal', type: 'worksheets', tag: 'Self-Awareness' },
-  { label: 'Self-Talk Strategies Cards', type: 'worksheets', tag: 'Self-Management' },
-  { label: 'Bounce-Back Stories Guide', type: 'video', tag: 'Social Awareness' },
-  { label: 'Emotional Vocabulary Poster', type: 'pdf', tag: 'Self-Awareness' },
 ]
+// 'external' isn't a real resourcesData.js/TYPE_META type (TYPES is just
+// video/pdf/worksheets/audio) — added locally, only for this purely
+// decorative row list, to cover a "links out" example (e.g. a newsletter)
+// without inventing a new type in the real data model.
+const GATE_SCROLL_TYPE_META = {
+  ...TYPE_META,
+  external: { icon: ExternalLink, color: 'text-mtw-blue' },
+}
 // Sized down ~10% from the original 56/12/520 — done by shrinking the real
 // dimensions rather than a CSS `transform: scale()` on the stack, since a
 // post-layout transform (esp. with a top-anchored origin) shrinks the
@@ -392,7 +404,7 @@ const GATE_GLOW_PEAK = '0 0 0 2px rgba(42, 127, 143, 0.9), 0 0 20px 4px rgba(42,
 const GATE_SCROLL_SCALES = [0.91, 0.93, 0.95, 0.97, 1.05, 0.97, 0.95, 0.93]
 
 function GateScrollRow({ row, selected, scale }) {
-  const { icon: Icon, color } = TYPE_META[row.type]
+  const { icon: Icon, color } = GATE_SCROLL_TYPE_META[row.type]
   return (
     <div
       className={`rounded-xl bg-white border border-brand-border flex items-center gap-3 px-4 shrink-0 transition-transform ${
@@ -471,7 +483,15 @@ function GateFullPage({ onConfirm, defaultRemember, decorConcept }) {
             align="left"
           />
         </div>
-        <div className="relative hidden md:block min-w-0" style={{ height: GATE_SCROLL_CONTAINER_HEIGHT }}>
+        {/* transform: scale here (on the whole already-masked block), not
+            on GateScrollRows' internal content — scaling the mask+rows
+            together as one composited unit avoids the earlier bug where
+            scaling just the content caused it to stop filling the mask's
+            coordinate space and broke the bottom fade. */}
+        <div
+          className="relative hidden md:block min-w-0"
+          style={{ height: GATE_SCROLL_CONTAINER_HEIGHT, transform: 'scale(0.9)' }}
+        >
           <GateScrollRows />
         </div>
       </div>
