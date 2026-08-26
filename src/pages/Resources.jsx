@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
 import {
   Search, X, Video, FileText, Mic, ChevronDown,
-  ClipboardList, Star, Check, ImagePlus, Filter, ExternalLink,
+  ClipboardList, Star, Check, ImagePlus, Filter, ExternalLink, Plus,
 } from 'lucide-react'
 import {
   resources, CATEGORIES, TYPES, ALL_GRADES, ALL_COMPETENCIES, courseFor,
@@ -103,6 +103,27 @@ function TypeBadge({ type }) {
 // data but redundant noise in a resource list, so strip it for display only.
 function displayTitle(title) {
   return title.replace(/^Independent:\s*/, '')
+}
+
+// 3C — one removable chip per applied filter value, replacing the old
+// "N grades selected" summary text in the results card header. Spans every
+// facet (grade, course type, competency, type), not just grade, so any
+// filter picked via the Filters card above is visible and removable inline
+// without reopening that card.
+function FilterChip({ label, onRemove }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-full bg-dessa-tealLight text-dessa-teal text-sm font-medium">
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${label} filter`}
+        className="rounded-full p-0.5 hover:bg-dessa-teal/15 transition-colors"
+      >
+        <X size={13} />
+      </button>
+    </span>
+  )
 }
 
 const PAGE_SIZE = 20
@@ -306,13 +327,13 @@ function GateFields({ pending, togglePending, remember, setRemember, onConfirm, 
           "choose it below" told the user what to do with the gate
           instead of what they'd find once through it. */}
       <h1 className={`text-4xl font-semibold text-brand-text mb-3 ${isLeft ? '' : 'text-center'}`}>
-        MTW Resource Library
+        Curriculum Resource Library
       </h1>
       <p className={`text-base text-brand-subtext max-w-md mb-8 ${isLeft ? '' : 'text-center'}`}>
         Browse lesson videos, activity guides, and printable worksheets organized by grade and SEL competency.
       </p>
       <h6 className="text-xs font-semibold text-[#5B6878] uppercase tracking-wide mb-4">
-        Select one or more grades
+        Select one or more grade levels
       </h6>
       <GradePillGrid
         pending={pending}
@@ -704,11 +725,12 @@ function FilterPanel({
   )
 }
 
-// 3C — full-width expandable "Filters" bar, modeled on a real-app reference
+// 3C — full-width expandable "Filters" card, modeled on a real-app reference
 // screenshot (a report page's "Filters ⌄" row that pushes the page down
 // when expanded, rather than a popover). Sits above the grade heading/
-// results entirely — see the "Filters" render block below the sticky
-// search bar. Replaces the earlier popover-triggered FilterPanelC; unlike
+// results entirely, in its own card — see the "Filters" render block below
+// the sticky search bar. Replaces the earlier popover-triggered
+// FilterPanelC; unlike
 // that version, each facet is its own labeled dropdown-style field
 // (FilterFieldDropdown) instead of a static checklist column, closer to the
 // reference's "Site"/"User Role" fields — the selection underneath is still
@@ -719,12 +741,6 @@ function FilterPanel({
 // Each dropdown's popover is itself a search box over its own option list
 // (own local `search` state, cleared on close) — useful once a facet like
 // Grade has more options than fit without scrolling/hunting.
-function summarizeSelection(selected) {
-  if (selected.length === 0) return 'All'
-  if (selected.length === 1) return selected[0]
-  return `${selected.length} selected`
-}
-
 function FilterFieldDropdown({ label, options, selected, onToggle, onReset, optionsClassName = 'flex flex-col gap-1.5' }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -742,15 +758,46 @@ function FilterFieldDropdown({ label, options, selected, onToggle, onReset, opti
     <div className="flex flex-col gap-1.5">
       <p className="text-sm font-semibold text-brand-text">{label}</p>
       <Popover.Root open={open} onOpenChange={handleOpenChange}>
-        <Popover.Trigger asChild>
-          <button
-            type="button"
-            className="w-full flex items-center justify-between gap-2 h-10 px-3 text-sm border border-brand-border rounded-md bg-white text-brand-text hover:border-dessa-teal/50 transition-colors"
-          >
-            <span className="truncate text-left">{summarizeSelection(selected)}</span>
-            <ChevronDown size={14} className={`text-brand-subtext shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-          </button>
-        </Popover.Trigger>
+        {/* Chip-field trigger (matches the "Site" field in the reference
+            report screenshot): the field itself shows the first selected
+            value as a removable chip plus a "+N" badge for the rest, rather
+            than a "N selected" summary — only the teal "+" button opens the
+            popover to add more; the chip's own × removes just that value
+            without opening anything. */}
+        <div className="w-full flex items-center gap-2 h-10 pl-1 pr-1 border border-brand-border rounded-md bg-white">
+          {selected.length === 0 ? (
+            <span className="flex-1 pl-2 text-sm text-brand-subtext truncate">All</span>
+          ) : (
+            <>
+              <span className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-md bg-dessa-tealLight text-dessa-teal text-sm font-medium max-w-[60%]">
+                <span className="truncate">{selected[0]}</span>
+                <button
+                  type="button"
+                  onClick={() => onToggle(selected[0])}
+                  aria-label={`Remove ${selected[0]}`}
+                  className="shrink-0 hover:opacity-70 transition-opacity"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+              {selected.length > 1 && (
+                <span className="shrink-0 px-2 py-1 rounded-md bg-brand-bg text-brand-text text-xs font-semibold">
+                  +{selected.length - 1}
+                </span>
+              )}
+              <span className="flex-1" />
+            </>
+          )}
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              aria-label={`Add ${label} filter`}
+              className="shrink-0 w-7 h-7 rounded-md bg-dessa-teal text-white flex items-center justify-center hover:bg-dessa-teal/90 transition-colors"
+            >
+              <Plus size={14} />
+            </button>
+          </Popover.Trigger>
+        </div>
         <Popover.Portal>
           <Popover.Content
             align="start"
@@ -844,18 +891,18 @@ function FilterBarC({
   }
 
   return (
-    <div className="mb-6">
+    <div className="mb-6 rounded-2xl border border-brand-border bg-white">
       <button
         type="button"
         onClick={toggleExpanded}
         aria-expanded={expanded}
-        className="flex items-center gap-1.5 text-base font-semibold text-brand-text"
+        className="w-full flex items-center gap-1.5 px-5 py-4 text-base font-semibold text-brand-text"
       >
         Filters
         <ChevronDown size={16} className={`text-brand-text transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
       {expanded && (
-        <div className="mt-3 rounded-2xl border border-brand-border bg-white p-5">
+        <div className="px-5 pt-5 pb-5 border-t border-brand-border">
           <div className="grid grid-cols-4 gap-4">
             <FilterFieldDropdown
               label="Grade"
@@ -965,6 +1012,20 @@ export default function Resources() {
   // current filters. (Currently unreachable: the star button that adds to
   // this is commented out below, see "star button disabled for now".)
   const [savedKeys, setSavedKeys] = useState(() => new Map())
+  // Per-grade collapse for the results list's "Grade X" divider rows — a
+  // collapsed grade's resource rows are skipped entirely in the render below
+  // (still counted for pagination, just not shown), jumping straight from
+  // that grade's header to the next one.
+  const [collapsedGrades, setCollapsedGrades] = useState(() => new Set())
+
+  function toggleGradeCollapsed(grade) {
+    setCollapsedGrades((prev) => {
+      const next = new Set(prev)
+      if (next.has(grade)) next.delete(grade)
+      else next.add(grade)
+      return next
+    })
+  }
 
   function toggleSaved(e, key, representative) {
     e.stopPropagation()
@@ -1112,6 +1173,17 @@ export default function Resources() {
   function toggle(setFn, value) {
     setFn((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]))
   }
+
+  // Drives the results card header's chip row — one chip per applied value
+  // across every facet (grade, course type, competency, type), each
+  // removable on its own via the chip's ×. Order mirrors the Filters card's
+  // field order above.
+  const filterChips = [
+    ...selectedGrades.map((g) => ({ key: `grade:${g}`, label: g, onRemove: () => toggle(setSelectedGrades, g) })),
+    ...selectedCategories.map((c) => ({ key: `cat:${c}`, label: c, onRemove: () => toggle(setSelectedCategories, c) })),
+    ...selectedCompetencies.map((c) => ({ key: `comp:${c}`, label: c, onRemove: () => toggle(setSelectedCompetencies, c) })),
+    ...selectedTypes.map((t) => ({ key: `type:${t}`, label: TYPE_META[t].label, onRemove: () => toggle(setSelectedTypes, t) })),
+  ]
 
   function clearAll() {
     setSearch('')
@@ -1319,20 +1391,26 @@ export default function Resources() {
 
         {/* Results */}
         <div className="flex-1 min-w-0">
-          <div className="rounded-2xl border border-brand-border bg-white overflow-hidden">
+          {/* No overflow-hidden here — an ancestor with overflow other than
+              visible (even "hidden") constrains where a position:sticky
+              descendant sticks, which is exactly what broke the grade
+              divider's sticky-under-search behavior. The couple of spots
+              that used to rely on this clipping (hover fill squaring off
+              the card's rounded bottom corners) are rounded individually
+              instead — see the last-row/last-header `isLastRow` handling
+              below. */}
+          <div className="rounded-2xl border border-brand-border bg-white">
             <div className="px-6 pt-6 pb-4 flex items-start justify-between gap-4">
               {/* Nothing to label before a grade is picked — the empty state
                   below already explains what to do, so this stays blank
-                  rather than showing a generic "All resources" heading. */}
+                  rather than showing a generic "All resources" heading.
+                  Replaces the old "N grades selected" summary text with one
+                  removable chip per applied filter (see filterChips above). */}
               {selectedGrades.length > 0 && (
-              <div>
-                <h2 className="text-base font-semibold text-brand-text">
-                  {selectedGrades.length === SELECTABLE_GRADES.length
-                    ? 'All grades'
-                    : selectedGrades.length === 1
-                    ? `${selectedGrades[0]} resources`
-                    : `${selectedGrades.length} grades selected`}
-                </h2>
+              <div className="flex flex-wrap gap-2 flex-1">
+                {filterChips.map((chip) => (
+                  <FilterChip key={chip.key} label={chip.label} onRemove={chip.onRemove} />
+                ))}
               </div>
               )}
               {selectedGrades.length > 0 && (
@@ -1383,13 +1461,40 @@ export default function Resources() {
                   // it. Relies on sortedFiltered keeping same-grade rows
                   // contiguous (see showGradeColumn above).
                   const showGradeDivider = showGradeColumn && (i === 0 || pagedResults[i - 1].grade !== r.grade)
+                  const gradeCollapsed = collapsedGrades.has(r.grade)
+                  // Whichever element actually paints last needs the card's
+                  // own bottom radius (rounded-b-2xl) now that the card no
+                  // longer clips via overflow-hidden — the header when its
+                  // group is the last one and collapsed, otherwise the
+                  // content row.
+                  const isLastRow = i === pagedResults.length - 1
                   return (
                     <div key={r.id}>
                       {showGradeDivider && (
-                        <div className="px-6 py-2 bg-brand-bg border-b border-brand-border text-xs font-semibold text-brand-text uppercase tracking-wide">
+                        // Sticky at the same offset the sidebar facet rail
+                        // uses elsewhere on this page (top-[160px]) to clear
+                        // the sticky search band above — so as the list
+                        // scrolls, the active grade's header stays pinned
+                        // just below it until the next grade's header
+                        // reaches that same offset and displaces it. The
+                        // chevron collapses this grade's rows without
+                        // affecting pagination/counts — see gradeCollapsed.
+                        <button
+                          type="button"
+                          onClick={() => toggleGradeCollapsed(r.grade)}
+                          aria-expanded={!gradeCollapsed}
+                          className={`sticky top-[160px] z-10 w-full flex items-center justify-between gap-2 px-6 py-2 bg-brand-bg border-b border-brand-border text-xs font-semibold text-brand-text uppercase tracking-wide hover:bg-brand-border/40 transition-colors ${
+                            isLastRow && gradeCollapsed ? 'rounded-b-2xl' : ''
+                          }`}
+                        >
                           {r.grade}
-                        </div>
+                          <ChevronDown
+                            size={14}
+                            className={`text-brand-subtext shrink-0 transition-transform ${gradeCollapsed ? '-rotate-90' : ''}`}
+                          />
+                        </button>
                       )}
+                      {!gradeCollapsed && (
                       <div
                         role="button"
                         tabIndex={0}
@@ -1398,7 +1503,7 @@ export default function Resources() {
                           if (e.key === 'Enter' || e.key === ' ') openResource(r)
                         }}
                         className={`w-full flex flex-col gap-2 px-6 py-4 text-left hover:bg-brand-bg transition-colors cursor-pointer ${
-                          i === pagedResults.length - 1 ? '' : 'border-b border-brand-border'
+                          isLastRow ? 'rounded-b-2xl' : 'border-b border-brand-border'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -1427,6 +1532,7 @@ export default function Resources() {
                           {r.description}
                         </p>
                       </div>
+                      )}
                     </div>
                   )
                 })}
