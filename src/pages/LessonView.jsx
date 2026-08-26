@@ -2901,6 +2901,24 @@ function AudioLibraryView({ grade }) {
   );
 }
 
+// Shared by the sidebar's Concept A search (highlightMatch below, closes
+// over sidebarQuery) and Concept B's command palette (closes over its own
+// paletteQuery) — a pure text->JSX helper doesn't need component state.
+function highlightMatchText(text, query) {
+  if (!query) return text;
+  const idx = text.toLowerCase().indexOf(query);
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-dessa-tealLight text-brand-text rounded px-0.5">
+        {text.slice(idx, idx + query.length)}
+      </mark>
+      {text.slice(idx + query.length)}
+    </>
+  );
+}
+
 export default function LessonView({ onBookmark }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -2944,6 +2962,17 @@ export default function LessonView({ onBookmark }) {
   const [pendingNavigate, setPendingNavigate] = useState(null);
   const [showInactive, setShowInactive] = useState(true);
   const [sidebarSearch, setSidebarSearch] = useState("");
+  // Design-review toggle comparing two lesson-search mechanisms: A is the
+  // existing always-visible sidebar box (highlights matches in place,
+  // auto-expands the containing unit); B swaps that box for a trigger
+  // button that opens a full command-palette-style overlay searching every
+  // unit/lesson at once, independent of the sidebar's expand/collapse
+  // state. Kept as a simple local toggle (not a URL param, unlike the
+  // Resources page's `?concept=` switcher) since this is a quick two-way
+  // comparison, not something that needs to be shareable via link.
+  const [searchConcept, setSearchConcept] = useState("a");
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState("");
   const [language, setLanguage] = useState("English");
   const [langOpen, setLangOpen] = useState(false);
   const [showNextLesson, setShowNextLesson] = useState(false);
@@ -2968,6 +2997,15 @@ export default function LessonView({ onBookmark }) {
   useEffect(() => {
     setStornawayWatched(false);
   }, [selectedLesson]);
+
+  useEffect(() => {
+    if (!commandPaletteOpen) return;
+    function onKeyDown(e) {
+      if (e.key === "Escape") setCommandPaletteOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [commandPaletteOpen]);
 
   useEffect(() => {
     const el = mainRef.current;
@@ -3112,18 +3150,37 @@ export default function LessonView({ onBookmark }) {
   }
 
   function highlightMatch(text) {
-    if (!isSearchingSidebar) return text;
-    const idx = text.toLowerCase().indexOf(sidebarQuery);
-    if (idx === -1) return text;
-    return (
-      <>
-        {text.slice(0, idx)}
-        <mark className="bg-dessa-tealLight text-brand-text rounded px-0.5">
-          {text.slice(idx, idx + sidebarQuery.length)}
-        </mark>
-        {text.slice(idx + sidebarQuery.length)}
-      </>
-    );
+    return highlightMatchText(text, sidebarQuery);
+  }
+
+  // Concept B — command palette results: flattens every visible unit's
+  // lessons (leaf units count as their own single "lesson") into one list
+  // and matches against unit title OR lesson title, same match rule as
+  // Concept A's sidebar search. Only computed once there's a query, since
+  // showing the full ~140-lesson list unfiltered isn't useful.
+  const normalizedPaletteQuery = paletteQuery.trim().toLowerCase();
+  const paletteResults = normalizedPaletteQuery
+    ? visibleUnits.flatMap((unit) => {
+        if (unit.sub.length === 0) {
+          return unit.title.toLowerCase().includes(normalizedPaletteQuery)
+            ? [{ unitId: unit.id, lessonIndex: 0, unitTitle: unit.title, lessonTitle: unit.title }]
+            : [];
+        }
+        return unit.sub
+          .map((item, i) => ({ i, cleanItem: item.replace(/^(Community|Independent):\s*/, "") }))
+          .filter(
+            ({ cleanItem }) =>
+              unit.title.toLowerCase().includes(normalizedPaletteQuery) ||
+              cleanItem.toLowerCase().includes(normalizedPaletteQuery),
+          )
+          .map(({ i, cleanItem }) => ({ unitId: unit.id, lessonIndex: i, unitTitle: unit.title, lessonTitle: cleanItem }));
+      })
+    : [];
+
+  function selectFromPalette(unitId, lessonIndex) {
+    setCommandPaletteOpen(false);
+    setPaletteQuery("");
+    handleSelectLesson(unitId, lessonIndex);
   }
 
   return (
@@ -3143,38 +3200,77 @@ export default function LessonView({ onBookmark }) {
             <ChevronLeft size={14} />
             Back
           </button>
-          <button
-            onClick={() => setShowInactive((v) => !v)}
-            className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors"
-          >
-            {showInactive ? <Eye size={13} /> : <EyeOff size={13} />}
-            {showInactive ? "Hide inactive units" : "Show inactive units"}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Design-review toggle — A: sidebar box below (highlight-in-
+                place). B: swaps that box for a trigger that opens the
+                command-palette overlay (see below). */}
+            <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0">
+              <button
+                onClick={() => setSearchConcept("a")}
+                aria-label="Search concept A"
+                className={`px-2 py-1 transition-colors ${
+                  searchConcept === "a" ? "bg-dessa-teal text-white" : "text-brand-subtext hover:bg-brand-bg"
+                }`}
+              >
+                A
+              </button>
+              <button
+                onClick={() => setSearchConcept("b")}
+                aria-label="Search concept B"
+                className={`px-2 py-1 border-l border-brand-border transition-colors ${
+                  searchConcept === "b" ? "bg-dessa-teal text-white" : "text-brand-subtext hover:bg-brand-bg"
+                }`}
+              >
+                B
+              </button>
+            </div>
+            <button
+              onClick={() => setShowInactive((v) => !v)}
+              className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors"
+            >
+              {showInactive ? <Eye size={13} /> : <EyeOff size={13} />}
+              {showInactive ? "Hide inactive units" : "Show inactive units"}
+            </button>
+          </div>
         </div>
 
         <div className="px-4 py-3 border-b border-brand-border">
-          <div className="relative">
-            <Search
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none"
-            />
-            <input
-              type="text"
-              value={sidebarSearch}
-              onChange={(e) => setSidebarSearch(e.target.value)}
-              placeholder="Search lessons…"
-              className="w-full pl-8 pr-8 h-9 text-sm border border-brand-border rounded-md bg-brand-bg text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal focus:bg-white transition-colors"
-            />
-            {sidebarSearch && (
-              <button
-                onClick={() => setSidebarSearch("")}
-                aria-label="Clear search"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text transition-colors"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
+          {searchConcept === "a" ? (
+            <div className="relative">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none"
+              />
+              <input
+                type="text"
+                value={sidebarSearch}
+                onChange={(e) => setSidebarSearch(e.target.value)}
+                placeholder="Search lessons…"
+                className="w-full pl-8 pr-8 h-9 text-sm border border-brand-border rounded-md bg-brand-bg text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal focus:bg-white transition-colors"
+              />
+              {sidebarSearch && (
+                <button
+                  onClick={() => setSidebarSearch("")}
+                  aria-label="Clear search"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text transition-colors"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          ) : (
+            // Concept B — not a text box: a plain trigger that opens the
+            // full-screen command palette, so typing/results live in one
+            // dedicated overlay instead of the sidebar itself.
+            <button
+              type="button"
+              onClick={() => setCommandPaletteOpen(true)}
+              className="w-full flex items-center gap-2 pl-3 pr-3 h-9 text-sm border border-brand-border rounded-md bg-brand-bg text-brand-subtext hover:bg-white hover:border-dessa-teal/50 transition-colors"
+            >
+              <Search size={14} className="shrink-0" />
+              Search lessons…
+            </button>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto py-1">
@@ -3321,6 +3417,68 @@ export default function LessonView({ onBookmark }) {
         </div>
         )}
       </aside>
+
+      {/* Concept B — command palette overlay. Fixed positioning so it sits
+          above the whole page, not just the sidebar; clicking the backdrop
+          or pressing Escape (see effect above) closes it without selecting
+          a lesson. */}
+      {commandPaletteOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center pt-32 bg-black/40"
+          onClick={() => setCommandPaletteOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg bg-white rounded-2xl border border-brand-border shadow-2xl overflow-hidden flex flex-col max-h-[60vh]"
+          >
+            <div className="relative border-b border-brand-border shrink-0">
+              <Search
+                size={16}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none"
+              />
+              <input
+                type="text"
+                autoFocus
+                value={paletteQuery}
+                onChange={(e) => setPaletteQuery(e.target.value)}
+                placeholder="Search lessons across all units…"
+                className="w-full pl-11 pr-11 h-14 text-sm text-brand-text placeholder:text-brand-subtext focus:outline-none"
+              />
+              <button
+                onClick={() => setCommandPaletteOpen(false)}
+                aria-label="Close search"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto py-2">
+              {!normalizedPaletteQuery ? (
+                <p className="text-sm text-brand-subtext text-center py-8">
+                  Start typing to search lessons across all units.
+                </p>
+              ) : paletteResults.length === 0 ? (
+                <p className="text-sm text-brand-subtext text-center py-8">No lessons found.</p>
+              ) : (
+                paletteResults.map((r) => (
+                  <button
+                    key={`${r.unitId}-${r.lessonIndex}`}
+                    onClick={() => selectFromPalette(r.unitId, r.lessonIndex)}
+                    className="w-full flex flex-col items-start gap-0.5 px-4 py-2.5 text-left hover:bg-brand-bg transition-colors"
+                  >
+                    <span className="text-sm font-medium text-brand-text">
+                      {highlightMatchText(r.lessonTitle, normalizedPaletteQuery)}
+                    </span>
+                    <span className="text-xs text-brand-subtext">
+                      {highlightMatchText(r.unitTitle, normalizedPaletteQuery)}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Main content ── */}
       <main ref={mainRef} className="flex-1 overflow-y-auto bg-brand-bg">

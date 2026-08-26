@@ -21,29 +21,32 @@ import {
 // browse flow now.
 // "All Grades" is a synthetic pseudo-grade, not a real value in the resource
 // data (unlike the actual grades ALL_GRADES is derived from) — it represents
-// content like an Anti-bullying resource that applies to any grade. Inserted
-// right after 'Grade 12' rather than appended last, since GRADE_ORDER (see
-// resourcesData.js) sorts the grade-band values ('Early Elementary', 'Late
-// Elementary', 'Middle School', 'High School') after the numbered grades —
-// appending would've landed it after those bands instead. Appears everywhere
-// SELECTABLE_GRADES is used: the starting gate's pill grid, the sidebar
-// Grade facet, and 3B/3C's Filter panels. No resource is tagged with it yet,
-// so selecting only this pill currently shows "No resources found" — ask if
-// a demo resource (e.g. the Anti-bullying example) should be added to make
-// it demonstrable.
-const gradesWithoutAdultWellness = ALL_GRADES.filter((g) => g !== 'Adult Wellness')
-const grade12Index = gradesWithoutAdultWellness.indexOf('Grade 12')
-// The grade-band values themselves (not a numbered grade) plus the "All
-// Grades" pseudo-grade — used below to force the results list's grade
-// divider rows on even when only one of these is selected, since (unlike
+// content like an Anti-bullying resource that applies to any grade. Appears
+// everywhere SELECTABLE_GRADES is used: the starting gate's pill grid, the
+// sidebar Grade facet, and 3B/3C's Filter panels. No resource is tagged with
+// it yet, so selecting only this pill currently shows "No resources found"
+// — ask if a demo resource (e.g. the Anti-bullying example) should be added
+// to make it demonstrable.
+// "Pre-K" is prepended ahead of 'Kindergarten' — like "All Grades" above,
+// it isn't a real value in the resource data (no course/resource is tagged
+// with it), so selecting only this pill currently shows "No resources
+// found." Unlike "All Grades" it's a real, specific grade rather than a
+// pseudo-grade, so it's excluded from PSEUDO_GRADES and behaves like any
+// other single numbered grade (no forced divider row when picked alone).
+// The grade-band values ('Early Elementary', 'Late Elementary', 'Middle
+// School', 'High School') are excluded from the grade gate/picker entirely
+// per manager feedback (2026-08-26) — same treatment as 'Adult Wellness'
+// above: resources tagged with these grades (Tier 2 / Family courses) still
+// exist in the data, they're just unreachable through this page's grade-
+// based browse flow now.
+const GRADE_BANDS = ['Early Elementary', 'Late Elementary', 'Middle School', 'High School']
+const gradesWithoutAdultWellness = ALL_GRADES.filter((g) => g !== 'Adult Wellness' && !GRADE_BANDS.includes(g))
+// The "All Grades" pseudo-grade — used below to force the results list's
+// grade divider rows on even when it's selected alone, since (unlike
 // picking a single numbered grade) it isn't obvious to the user that
 // everything in the list shares one grade tag. See showGradeColumn.
-const BAND_GRADES = [...gradesWithoutAdultWellness.slice(grade12Index + 1), 'All Grades']
-const SELECTABLE_GRADES = [
-  ...gradesWithoutAdultWellness.slice(0, grade12Index + 1),
-  'All Grades',
-  ...gradesWithoutAdultWellness.slice(grade12Index + 1),
-]
+const PSEUDO_GRADES = ['All Grades']
+const SELECTABLE_GRADES = ['Pre-K', ...gradesWithoutAdultWellness, ...PSEUDO_GRADES]
 const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c !== 'Adult Wellness')
 
 // 3A/3B only ("remember my choice") — a plain localStorage read/write, not
@@ -188,7 +191,7 @@ function GradePillGrid({ pending, onToggle, wrapClassName }) {
             className={`px-3 py-1 rounded-md text-[13px] font-medium transition-colors ${
               active
                 ? 'border-2 border-dessa-teal bg-dessa-tealLight text-dessa-teal'
-                : 'border-2 border-dashed border-brand-border text-brand-subtext hover:border-dessa-teal/50 hover:text-brand-text'
+                : 'border-2 border-dashed border-[#C9CDD3] text-brand-subtext hover:border-dessa-teal/50 hover:text-brand-text'
             }`}
           >
             {grade}
@@ -199,16 +202,286 @@ function GradePillGrid({ pending, onToggle, wrapClassName }) {
   )
 }
 
+// Decorative grid + floating type-icon tiles behind the gate card — a
+// delight-add per explicit feedback (2026-08-26), meant to read as
+// background texture rather than competing content: a faint dessa-teal
+// grid, masked so it's invisible right behind the card and gradually
+// reveals itself toward the edges. This is the inverse of a typical
+// "vignette" radial gradient (which fades OUT toward the edges) — here the
+// center is what's hidden. The floating tiles reuse this page's real
+// TYPE_META icons (video/pdf/worksheets/audio) rather than generic file-
+// type art, and live inside the same masked layer so they fade in with the
+// grid instead of being hard-placed with a visible cutoff.
+const GATE_DECOR_MASK = 'radial-gradient(ellipse 60% 55% at center, transparent 0%, transparent 45%, black 85%)'
+const GATE_DECOR_TILES = [
+  { type: 'video', top: '10%', left: '8%', rotate: -8 },
+  { type: 'pdf', top: '14%', left: '88%', rotate: 7 },
+  { type: 'worksheets', top: '84%', left: '10%', rotate: 6 },
+  { type: 'audio', top: '80%', left: '86%', rotate: -6 },
+]
+// Browsing-term pills (2026-08-26 follow-up) — not real catalog entries
+// (no lookup/click-through, just illustrative of the kind of content that
+// exists), styled and thematically grounded to match this app's actual
+// content (posters/toolkits/worksheets/guides, echoing real unit titles
+// like "Calm Toolkit" and "Active Listening") so they read as authentic
+// hints rather than generic placeholder text.
+const GATE_DECOR_PILLS = [
+  { label: 'Anti-Bullying Poster', top: '5%', left: '38%', rotate: -4 },
+  { label: 'High-Five Poster', top: '38%', left: '3%', rotate: 5 },
+  { label: 'Calm-Down Toolkit', top: '40%', left: '95%', rotate: -6 },
+  { label: 'Growth Mindset Worksheet', top: '92%', left: '60%', rotate: 4 },
+  { label: 'Active Listening Guide', top: '66%', left: '22%', rotate: -3 },
+]
+
+// Shared floating behavior for both tiles and pills — a slow, subtle
+// vertical bob (not a spin/scale, which would read as busier than
+// intended for background texture). Duration/delay vary by index so the
+// items drift out of sync with each other rather than bobbing in unison.
+function floatTransition(i) {
+  return { duration: 3.6 + (i % 3) * 0.7, repeat: Infinity, ease: 'easeInOut', delay: i * 0.35 }
+}
+
+function GateBackdrop() {
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute inset-0 pointer-events-none overflow-hidden"
+      style={{ WebkitMaskImage: GATE_DECOR_MASK, maskImage: GATE_DECOR_MASK }}
+    >
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(0deg, rgba(42,127,143,0.14) 0px, rgba(42,127,143,0.14) 1px, transparent 1px, transparent 48px), ' +
+            'repeating-linear-gradient(90deg, rgba(42,127,143,0.14) 0px, rgba(42,127,143,0.14) 1px, transparent 1px, transparent 48px)',
+        }}
+      />
+      {GATE_DECOR_TILES.map(({ type, top, left, rotate }, i) => {
+        const { icon: Icon, color } = TYPE_META[type]
+        return (
+          // Outer div handles absolute placement + centering (translate
+          // -50%/-50%) as a static transform; the inner motion.div owns
+          // rotate + the animated float so the two transforms don't fight
+          // (framer-motion overwrites the whole `transform` property based
+          // on its own x/y/rotate values each frame).
+          <div key={type} className="absolute" style={{ top, left, transform: 'translate(-50%, -50%)' }}>
+            <motion.div
+              className="w-14 h-14 rounded-2xl bg-white border border-brand-border shadow-md flex items-center justify-center"
+              style={{ rotate }}
+              animate={{ y: [0, -6, 0] }}
+              transition={floatTransition(i)}
+            >
+              <Icon size={22} className={color} />
+            </motion.div>
+          </div>
+        )
+      })}
+      {GATE_DECOR_PILLS.map(({ label, top, left, rotate }, i) => (
+        <div key={label} className="absolute" style={{ top, left, transform: 'translate(-50%, -50%)' }}>
+          <motion.div
+            className="whitespace-nowrap px-3 py-1.5 rounded-full bg-white border border-brand-border shadow-sm text-xs font-medium text-brand-text"
+            style={{ rotate }}
+            animate={{ y: [0, -6, 0] }}
+            transition={floatTransition(i + GATE_DECOR_TILES.length)}
+          >
+            {label}
+          </motion.div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Shared gate copy/controls — factored out so Concept C's left-aligned,
+// card-less layout can reuse the exact same heading/subcopy/pill grid/
+// checkbox/button as A/B's centered card instead of forking the text
+// (per explicit instruction: "same content, just left-aligned & bg
+// removed"). `align` only toggles text/pill alignment, nothing else.
+function GateFields({ pending, togglePending, remember, setRemember, onConfirm, align = 'center' }) {
+  const isLeft = align === 'left'
+  return (
+    <>
+      {/* Describes the library's content, not the selection mechanic —
+          per explicit feedback (2026-08-26), "Select a grade level" /
+          "choose it below" told the user what to do with the gate
+          instead of what they'd find once through it. */}
+      <h1 className={`text-4xl font-semibold text-brand-text mb-3 ${isLeft ? '' : 'text-center'}`}>
+        MTW Resource Library
+      </h1>
+      <p className={`text-base text-brand-subtext max-w-sm mb-8 ${isLeft ? '' : 'text-center'}`}>
+        Browse lesson videos, activity guides, and printable worksheets organized by grade and SEL competency.
+      </p>
+      <h6 className="text-xs font-semibold text-[#5B6878] uppercase tracking-wide mb-4">
+        Select one or more grades
+      </h6>
+      <GradePillGrid
+        pending={pending}
+        onToggle={togglePending}
+        wrapClassName={`flex flex-wrap gap-2 max-w-lg mb-6 ${isLeft ? '' : 'justify-center'}`}
+      />
+      <label className="flex items-center gap-2 text-sm text-brand-subtext mb-6 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={remember}
+          onChange={(e) => setRemember(e.target.checked)}
+          className="accent-dessa-teal w-3.5 h-3.5"
+        />
+        Remember my choice
+      </label>
+      <button
+        type="button"
+        disabled={pending.length === 0}
+        onClick={() => onConfirm(pending, remember)}
+        className="h-12 px-10 rounded-full text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors disabled:bg-brand-border disabled:text-brand-subtext"
+      >
+        View Resources
+      </button>
+    </>
+  )
+}
+
+// Concept C's right-side row stack (2026-08-26) — originally an endlessly
+// scrolling marquee with a glow that traveled row-to-row; per explicit
+// feedback it's now static ("just looks like an image"), showing only as
+// many rows as fit the container, with one fixed row treated as the
+// "selected" one: a permanent dessa-teal glow plus a slightly larger
+// scale, instead of a glow that used to travel and fade as rows scrolled
+// past center. The container still fades content out at the very top/
+// bottom edges via a linear mask (same masked-edge technique as
+// GateBackdrop, just linear instead of radial) — purely a vignette now,
+// unrelated to any motion.
+const GATE_SCROLL_ROWS = [
+  { label: 'Anti-Bullying Poster', type: 'pdf', tag: 'Social Awareness' },
+  { label: 'High-Five Poster', type: 'pdf', tag: 'Relationship Skills' },
+  { label: 'Calm-Down Toolkit', type: 'worksheets', tag: 'Self-Management' },
+  { label: 'Growth Mindset Worksheet', type: 'worksheets', tag: 'Self-Awareness' },
+  { label: 'Active Listening Guide', type: 'pdf', tag: 'Relationship Skills' },
+  { label: 'Feelings Check-In Cards', type: 'worksheets', tag: 'Self-Awareness' },
+  { label: 'Breathing Buddies Guide', type: 'pdf', tag: 'Self-Management' },
+  { label: 'The Pause Button Worksheet', type: 'worksheets', tag: 'Self-Management' },
+  { label: 'Gratitude Practice Journal', type: 'worksheets', tag: 'Self-Awareness' },
+  { label: 'Self-Talk Strategies Cards', type: 'worksheets', tag: 'Self-Management' },
+  { label: 'Bounce-Back Stories Guide', type: 'video', tag: 'Social Awareness' },
+  { label: 'Emotional Vocabulary Poster', type: 'pdf', tag: 'Self-Awareness' },
+]
+// Sized down ~10% from the original 56/12/520 — done by shrinking the real
+// dimensions rather than a CSS `transform: scale()` on the stack, since a
+// post-layout transform (esp. with a top-anchored origin) shrinks the
+// rendered content away from the container's edges, breaking the top/bottom
+// mask fade (the last row no longer reaches the bottom fade zone at all).
+const GATE_SCROLL_ITEM_HEIGHT = 50
+const GATE_SCROLL_GAP = 11
+const GATE_SCROLL_ROW_WIDTH = 468
+const GATE_SCROLL_SLOT = GATE_SCROLL_ITEM_HEIGHT + GATE_SCROLL_GAP
+// Must match the height applied to GateScrollRows' wrapping div in
+// GateFullPage below.
+const GATE_SCROLL_CONTAINER_HEIGHT = 480
+// 8 rows fit the container (see the math this used to be derived from,
+// now just hardcoded to keep this simple): N*ITEM_HEIGHT + (N-1)*GAP <=
+// CONTAINER_HEIGHT, i.e. 8*50 + 7*11 = 477 <= 480.
+const GATE_SCROLL_VISIBLE_COUNT = 8
+// The one row treated as "selected" — the 5th of 8, roughly the middle.
+const GATE_SCROLL_SELECTED_INDEX = 4
+const GATE_SCROLL_MASK = 'linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)'
+const GATE_GLOW_PEAK = '0 0 0 2px rgba(42, 127, 143, 0.9), 0 0 20px 4px rgba(42, 127, 143, 0.45)'
+// Hardcoded per-row scale (2026-08-26, replacing a distance-formula
+// version that left the last row unscaled) — one literal value per row,
+// index-matched 1:1 to GATE_SCROLL_VISIBLE_COUNT. Falls away from the
+// selected row (index 4 → 1.05 + glow) in 0.02 steps per row of distance,
+// symmetric in both directions: .97/.95/.93 one/two/three rows away.
+const GATE_SCROLL_SCALES = [0.91, 0.93, 0.95, 0.97, 1.05, 0.97, 0.95, 0.93]
+
+function GateScrollRow({ row, selected, scale }) {
+  const { icon: Icon, color } = TYPE_META[row.type]
+  return (
+    <div
+      className={`rounded-xl bg-white border border-brand-border flex items-center gap-3 px-4 shrink-0 transition-transform ${
+        selected ? 'z-10' : ''
+      }`}
+      style={{
+        height: GATE_SCROLL_ITEM_HEIGHT,
+        width: GATE_SCROLL_ROW_WIDTH,
+        boxShadow: selected ? GATE_GLOW_PEAK : 'none',
+        transform: `scale(${scale})`,
+      }}
+    >
+      <Icon size={16} className={`${color} shrink-0`} />
+      <span className="flex-1 text-sm font-medium text-brand-text truncate">{row.label}</span>
+      <span className="shrink-0 text-[11px] font-medium px-2 py-1 rounded-full bg-dessa-tealLight text-dessa-teal">
+        {row.tag}
+      </span>
+    </div>
+  )
+}
+
+function GateScrollRows() {
+  const rows = GATE_SCROLL_ROWS.slice(0, GATE_SCROLL_VISIBLE_COUNT)
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute inset-0 overflow-hidden pointer-events-none"
+      style={{ WebkitMaskImage: GATE_SCROLL_MASK, maskImage: GATE_SCROLL_MASK }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 flex flex-col items-center"
+        style={{ gap: GATE_SCROLL_GAP }}
+      >
+        {rows.map((row, i) => (
+          <GateScrollRow
+            key={row.label}
+            row={row}
+            selected={i === GATE_SCROLL_SELECTED_INDEX}
+            scale={GATE_SCROLL_SCALES[i]}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // 3A — full-page takeover: nothing else (search bar, sidebar, results card)
 // mounts until a grade is confirmed, so there's no background page for an
 // overlay to interrupt — this state simply *is* the page.
-function GateFullPage({ onConfirm, defaultRemember }) {
+function GateFullPage({ onConfirm, defaultRemember, decorConcept }) {
   const [pending, togglePending] = usePendingGrades()
   const [imgErrored, setImgErrored] = useState(false)
   const [remember, setRemember] = useState(defaultRemember)
+
+  // Concept C — left-aligned content with no card/background, a right-
+  // side scrolling animation (GateScrollRows) filling the space the
+  // centered card used to occupy. Confirmed explicitly (2026-08-26): same
+  // gate content as A/B, just left-aligned; icon graphic dropped since
+  // the reference this was modeled on doesn't have one; the two columns
+  // are otherwise unrelated to Concept B's grid/tiles backdrop.
+  if (decorConcept === 'c') {
+    return (
+      <div className="relative w-screen mx-[calc(50%-50vw)] grid grid-cols-1 md:grid-cols-2 gap-16 items-center pt-28 pb-16 px-6 md:px-[172px] overflow-hidden">
+        {/* Grid, not flex — grid-cols-2 forces a true 50/50 split
+            regardless of content width. flex-1 alone doesn't guarantee
+            that: flex items default to a content-based min-width, so the
+            scrolling rows' unwrapped text could still push that column
+            wider than its sibling even with flex-1 on both. */}
+        <div className="flex flex-col items-start text-left">
+          <GateFields
+            pending={pending}
+            togglePending={togglePending}
+            remember={remember}
+            setRemember={setRemember}
+            onConfirm={onConfirm}
+            align="left"
+          />
+        </div>
+        <div className="relative hidden md:block min-w-0" style={{ height: GATE_SCROLL_CONTAINER_HEIGHT }}>
+          <GateScrollRows />
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex justify-center py-16 px-6">
-      <div className="w-full max-w-3xl rounded-2xl border border-brand-border bg-white p-10 flex flex-col items-center text-center">
+    <div className="relative w-screen mx-[calc(50%-50vw)] flex justify-center py-16 px-6 overflow-hidden">
+      {decorConcept === 'b' && <GateBackdrop />}
+      <div className="relative z-10 w-full max-w-3xl rounded-2xl border border-brand-border bg-white p-10 flex flex-col items-center text-center">
         {!imgErrored ? (
           <img
             src="/Yearly%20Setup/search-modal.svg"
@@ -221,28 +494,14 @@ function GateFullPage({ onConfirm, defaultRemember }) {
             <ImagePlus size={20} className="text-brand-subtext" />
           </div>
         )}
-        <h1 className="text-2xl font-semibold text-brand-text mb-1.5">Select a grade level</h1>
-        <p className="text-sm text-brand-subtext max-w-sm mb-8">
-          To make sure you're seeing content relevant to your grade level, choose it below.
-        </p>
-        <GradePillGrid pending={pending} onToggle={togglePending} wrapClassName="flex flex-wrap justify-center gap-2 max-w-lg mb-6" />
-        <label className="flex items-center gap-2 text-sm text-brand-subtext mb-6 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={remember}
-            onChange={(e) => setRemember(e.target.checked)}
-            className="accent-dessa-teal w-3.5 h-3.5"
-          />
-          Remember my choice
-        </label>
-        <button
-          type="button"
-          disabled={pending.length === 0}
-          onClick={() => onConfirm(pending, remember)}
-          className="h-12 px-10 rounded-full text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors disabled:bg-brand-border disabled:text-brand-subtext"
-        >
-          View Resources
-        </button>
+        <GateFields
+          pending={pending}
+          togglePending={togglePending}
+          remember={remember}
+          setRemember={setRemember}
+          onConfirm={onConfirm}
+          align="center"
+        />
       </div>
     </div>
   )
@@ -632,11 +891,22 @@ function FilterBarC({
 
 export default function Resources() {
   const navigate = useNavigate()
-  // Design-review toggle set via the select in Nav (Resources-only) — lets a
-  // reviewer flip between three ways of presenting the mandatory grade gate
-  // (3A/3B/3C) on the same underlying data.
+  // 2026-08-26: manager picked 3C as the final direction for the mandatory
+  // grade gate. The Nav switcher that let reviewers flip between 3A/3B/3C
+  // via a `?concept=` param has been removed (see Nav.jsx), so `concept`
+  // is now a hardcoded constant rather than read from the URL. 3A's and
+  // 3B's JSX (below) are commented out rather than deleted — kept for our
+  // own records in case either direction needs to be revisited — so this
+  // stays 'c' rather than being removed outright.
+  const concept = 'c'
+  // New, separate design-review toggle (2026-08-26) — compares gate-screen
+  // *background decoration* concepts via the Nav switcher's `?decor=`
+  // param: A is the plain status quo (no visual assets), B is the masked
+  // grid + floating type-icon tiles (GateBackdrop). C and D are reserved
+  // for concepts not designed yet, so anything other than 'b' renders like
+  // 'a' for now — see the `decorConcept === 'b'` check in GateFullPage.
   const [searchParams] = useSearchParams()
-  const concept = searchParams.get('concept') || 'a'
+  const decorConcept = searchParams.get('decor') || 'a'
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState([])
@@ -723,10 +993,10 @@ export default function Resources() {
   // The result set discloses grade (via divider rows, see showGradeDivider
   // below) whenever it can legitimately span more than one grade (0
   // selected, or 2+ selected via either control), OR whenever the selection
-  // includes any band/pseudo value (BAND_GRADES) even alone — those read
-  // as a segment rather than an obviously-homogeneous single grade, so the
+  // includes any pseudo value (PSEUDO_GRADES) even alone — those read as a
+  // segment rather than an obviously-homogeneous single grade, so the
   // header row stays on to label them explicitly.
-  const showGradeColumn = selectedGrades.length !== 1 || selectedGrades.some((g) => BAND_GRADES.includes(g))
+  const showGradeColumn = selectedGrades.length !== 1 || selectedGrades.some((g) => PSEUDO_GRADES.includes(g))
 
   // Reset to page 1 whenever the filter set or page size changes — adjusted
   // during render (not in an effect) so it takes effect in the same commit.
@@ -857,7 +1127,7 @@ export default function Resources() {
           bar above the results entirely (see FilterPanel vs FilterBarC
           below). */}
       {gateOpen ? (
-        <GateFullPage onConfirm={confirmGrades} defaultRemember={rememberGrades} />
+        <GateFullPage onConfirm={confirmGrades} defaultRemember={rememberGrades} decorConcept={decorConcept} />
       ) : (
       <>
 
@@ -942,18 +1212,23 @@ export default function Resources() {
         {/* 3B/3C have no sidebar at all — filtering moved into the top-right
             Filter panel (3B) or the full-width Filters bar above (3C) so
             results can go full width instead. */}
+        {/* 3A — retired 2026-08-26 (manager chose 3C); kept for reference,
+            not rendered now that `concept` is hardcoded to 'c'. The nested
+            "Saved" comment this block already had is flattened to plain
+            text below (its comment delimiters removed) so it doesn't
+            prematurely close this outer comment.
         {concept === 'a' && (
         <div className="w-64 flex-shrink-0 flex flex-col gap-4 sticky top-[160px] max-h-[calc(100vh-178px)]">
-          {/* top-[160px] clears the now-sticky search bar band above it
-              (56px nav + ~82px band) so the two don't overlap while scrolling. */}
-          {/* Facet rail — each section collapses so all four are always
-              reachable without scrolling the results; capped height + internal
-              scroll is a backstop in case everything is expanded at once. */}
+          top-[160px] clears the now-sticky search bar band above it
+          (56px nav + ~82px band) so the two don't overlap while scrolling.
+          Facet rail — each section collapses so all four are always
+          reachable without scrolling the results; capped height + internal
+          scroll is a backstop in case everything is expanded at once.
           <div className="bg-white rounded-xl border border-brand-border overflow-y-auto">
-            {/* Ordinary multi-select facet — the active gate concept's picker
-                is the entry point, but this lets any combination (e.g. just
-                Grade 2 + Grade 4) get checked directly afterward. Both
-                controls read/write selectedGrades. */}
+            Ordinary multi-select facet — the active gate concept's picker
+            is the entry point, but this lets any combination (e.g. just
+            Grade 2 + Grade 4) get checked directly afterward. Both
+            controls read/write selectedGrades.
             <FacetGroup
               title="Grade"
               options={SELECTABLE_GRADES}
@@ -982,9 +1257,9 @@ export default function Resources() {
             />
           </div>
 
-          {/* Saved/starred resources — commented out for now (disabled along
-              with the star buttons that populate it; see "star button
-              disabled for now" below).
+          Saved/starred resources — commented out for now (disabled along
+          with the star buttons that populate it; see "star button
+          disabled for now" below).
           <div className="bg-white rounded-xl border border-brand-border p-4 overflow-y-auto">
             <p className="text-sm font-semibold text-brand-text mb-3">Saved</p>
             {savedKeys.size === 0 ? (
@@ -1018,9 +1293,9 @@ export default function Resources() {
               </div>
             )}
           </div>
-          */}
         </div>
         )}
+        */}
 
         {/* Results */}
         <div className="flex-1 min-w-0">
@@ -1043,6 +1318,9 @@ export default function Resources() {
               {selectedGrades.length > 0 && (
                 <div className="flex items-center gap-2 shrink-0">
                   {renderSortMenu()}
+                  {/* 3B — retired 2026-08-26 (manager chose 3C); kept for
+                      reference, not rendered now that `concept` is
+                      hardcoded to 'c'.
                   {concept === 'b' && (
                     <FilterPanel
                       selectedGrades={selectedGrades}
@@ -1055,6 +1333,7 @@ export default function Resources() {
                       setSelectedTypes={setSelectedTypes}
                     />
                   )}
+                  */}
                 </div>
               )}
             </div>

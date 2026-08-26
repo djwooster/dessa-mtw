@@ -51,27 +51,29 @@ export default function Nav() {
             </NavLink>
           ))}
 
-          {/* Resources-only design-review toggle. Concepts 1/2 (search-bar
-              combobox + card-list results) lost the review to Concept 3's
-              mandatory-grade-gate + table — that direction is now the only
-              one left, so this switcher compares ways of *presenting* the
-              gate instead of a blocking modal (which read as jarring), and
-              (for 3B/3C) how filtering is laid out after it — both share
-              3B's gate + no-sidebar layout and only differ in how the
-              Filter panel itself presents its sections. */}
+          {/* Resources-only design-review toggle (2026-08-26) — separate
+              from the retired 3A/3B/3C gate-presentation switcher (that
+              question is settled; 3C won). This one compares gate-screen
+              *background decoration* concepts: A is the plain status quo
+              (no visual assets), B is the masked grid + floating type-icon
+              tiles, C is a left-aligned/no-card layout with a right-side
+              scrolling row animation. D is reserved for a concept not
+              designed yet — until then it renders identically to A (see
+              Resources.jsx). */}
           {location.pathname === '/resources' && (
             <select
-              value={searchParams.get('concept') || 'a'}
+              value={searchParams.get('decor') || 'a'}
               onChange={(e) => {
                 const next = new URLSearchParams(searchParams)
-                next.set('concept', e.target.value)
+                next.set('decor', e.target.value)
                 setSearchParams(next)
               }}
               className="ml-2 h-7 pl-2 pr-6 text-xs font-medium border border-brand-border rounded-md bg-white text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
             >
-              <option value="a">3A — Full-page gate</option>
-              <option value="b">3B — Filter panel</option>
-              <option value="c">3C — Filter panel (alt)</option>
+              <option value="a">A — No decoration</option>
+              <option value="b">B — Grid + tiles</option>
+              <option value="c">C — Left-aligned + scrolling rows</option>
+              <option value="d">D — Not yet designed</option>
             </select>
           )}
         </div>
