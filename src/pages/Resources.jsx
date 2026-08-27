@@ -105,23 +105,15 @@ function displayTitle(title) {
   return title.replace(/^Independent:\s*/, '')
 }
 
-// 3C — one removable chip per applied filter value, replacing the old
+// 3C — one read-only chip per applied filter value, replacing the old
 // "N grades selected" summary text in the results card header. Spans every
 // facet (grade, course type, competency, type), not just grade, so any
-// filter picked via the Filters card above is visible and removable inline
-// without reopening that card.
-function FilterChip({ label, onRemove }) {
+// filter picked via the Filters card above is visible at a glance here;
+// removing one is done via that card, not from these chips.
+function FilterChip({ label }) {
   return (
-    <span className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-full bg-dessa-tealLight text-dessa-teal text-sm font-medium">
+    <span className="inline-flex items-center pl-3 pr-3 py-1.5 rounded-full bg-dessa-tealLight text-dessa-teal text-sm font-medium">
       {label}
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={`Remove ${label} filter`}
-        className="rounded-full p-0.5 hover:bg-dessa-teal/15 transition-colors"
-      >
-        <X size={13} />
-      </button>
     </span>
   )
 }
@@ -1021,20 +1013,6 @@ export default function Resources() {
   // current filters. (Currently unreachable: the star button that adds to
   // this is commented out below, see "star button disabled for now".)
   const [savedKeys, setSavedKeys] = useState(() => new Map())
-  // Per-grade collapse for the results list's "Grade X" divider rows — a
-  // collapsed grade's resource rows are skipped entirely in the render below
-  // (still counted for pagination, just not shown), jumping straight from
-  // that grade's header to the next one.
-  const [collapsedGrades, setCollapsedGrades] = useState(() => new Set())
-
-  function toggleGradeCollapsed(grade) {
-    setCollapsedGrades((prev) => {
-      const next = new Set(prev)
-      if (next.has(grade)) next.delete(grade)
-      else next.add(grade)
-      return next
-    })
-  }
 
   function toggleSaved(e, key, representative) {
     e.stopPropagation()
@@ -1179,19 +1157,15 @@ export default function Resources() {
     )
   }
 
-  function toggle(setFn, value) {
-    setFn((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]))
-  }
-
-  // Drives the results card header's chip row — one chip per applied value
-  // across every facet (grade, course type, competency, type), each
-  // removable on its own via the chip's ×. Order mirrors the Filters card's
-  // field order above.
+  // Drives the results card header's chip row — one read-only chip per
+  // applied value across every facet (grade, course type, competency,
+  // type). Removing a filter is done via the Filters card dropdowns above,
+  // not from these chips. Order mirrors the Filters card's field order.
   const filterChips = [
-    ...selectedGrades.map((g) => ({ key: `grade:${g}`, label: g, onRemove: () => toggle(setSelectedGrades, g) })),
-    ...selectedCategories.map((c) => ({ key: `cat:${c}`, label: c, onRemove: () => toggle(setSelectedCategories, c) })),
-    ...selectedCompetencies.map((c) => ({ key: `comp:${c}`, label: c, onRemove: () => toggle(setSelectedCompetencies, c) })),
-    ...selectedTypes.map((t) => ({ key: `type:${t}`, label: TYPE_META[t].label, onRemove: () => toggle(setSelectedTypes, t) })),
+    ...selectedGrades.map((g) => ({ key: `grade:${g}`, label: g })),
+    ...selectedCategories.map((c) => ({ key: `cat:${c}`, label: c })),
+    ...selectedCompetencies.map((c) => ({ key: `comp:${c}`, label: c })),
+    ...selectedTypes.map((t) => ({ key: `type:${t}`, label: TYPE_META[t].label })),
   ]
 
   function clearAll() {
@@ -1414,11 +1388,11 @@ export default function Resources() {
                   below already explains what to do, so this stays blank
                   rather than showing a generic "All resources" heading.
                   Replaces the old "N grades selected" summary text with one
-                  removable chip per applied filter (see filterChips above). */}
+                  read-only chip per applied filter (see filterChips above). */}
               {selectedGrades.length > 0 && (
               <div className="flex flex-wrap gap-2 flex-1">
                 {filterChips.map((chip) => (
-                  <FilterChip key={chip.key} label={chip.label} onRemove={chip.onRemove} />
+                  <FilterChip key={chip.key} label={chip.label} />
                 ))}
               </div>
               )}
@@ -1470,40 +1444,18 @@ export default function Resources() {
                   // it. Relies on sortedFiltered keeping same-grade rows
                   // contiguous (see showGradeColumn above).
                   const showGradeDivider = showGradeColumn && (i === 0 || pagedResults[i - 1].grade !== r.grade)
-                  const gradeCollapsed = collapsedGrades.has(r.grade)
-                  // Whichever element actually paints last needs the card's
-                  // own bottom radius (rounded-b-2xl) now that the card no
-                  // longer clips via overflow-hidden — the header when its
-                  // group is the last one and collapsed, otherwise the
-                  // content row.
+                  // Static, not sticky — an earlier sticky-under-search
+                  // treatment (top-[160px]) kept overlapping content
+                  // incorrectly, so this row just sits in normal flow like
+                  // any other divider. Plain label, no collapse/chevron.
                   const isLastRow = i === pagedResults.length - 1
                   return (
                     <div key={r.id}>
                       {showGradeDivider && (
-                        // Sticky at the same offset the sidebar facet rail
-                        // uses elsewhere on this page (top-[160px]) to clear
-                        // the sticky search band above — so as the list
-                        // scrolls, the active grade's header stays pinned
-                        // just below it until the next grade's header
-                        // reaches that same offset and displaces it. The
-                        // chevron collapses this grade's rows without
-                        // affecting pagination/counts — see gradeCollapsed.
-                        <button
-                          type="button"
-                          onClick={() => toggleGradeCollapsed(r.grade)}
-                          aria-expanded={!gradeCollapsed}
-                          className={`sticky top-[160px] z-10 w-full flex items-center justify-between gap-2 px-6 py-2 bg-brand-bg border-b border-brand-border text-xs font-semibold text-brand-text uppercase tracking-wide hover:bg-brand-border/40 transition-colors ${
-                            isLastRow && gradeCollapsed ? 'rounded-b-2xl' : ''
-                          }`}
-                        >
+                        <div className="px-6 py-2 bg-brand-bg border-b border-brand-border text-xs font-semibold text-brand-text uppercase tracking-wide">
                           {r.grade}
-                          <ChevronDown
-                            size={14}
-                            className={`text-brand-subtext shrink-0 transition-transform ${gradeCollapsed ? '-rotate-90' : ''}`}
-                          />
-                        </button>
+                        </div>
                       )}
-                      {!gradeCollapsed && (
                       <div
                         role="button"
                         tabIndex={0}
@@ -1541,7 +1493,6 @@ export default function Resources() {
                           {r.description}
                         </p>
                       </div>
-                      )}
                     </div>
                   )
                 })}
