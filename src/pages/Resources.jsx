@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
 import {
   Search, X, Video, FileText, Mic, ChevronDown,
-  ClipboardList, Star, Check, ImagePlus, Filter, ExternalLink, Plus,
+  ClipboardList, Star, Check, ImagePlus, Filter, ExternalLink, Plus, MoreHorizontal,
 } from 'lucide-react'
 import {
   resources, CATEGORIES, TYPES, ALL_GRADES, ALL_COMPETENCIES, courseFor,
@@ -85,15 +85,13 @@ function TypeIconBadge({ type, size = 28 }) {
   )
 }
 
-// Tinted, borderless pill with a small icon + label — the file-type equivalent
-// of the "status badge" pattern (e.g. a colored "Bookmarked" or "Flagged"
-// chip), so type reads as a labeled category rather than an abstract icon.
-function TypeBadge({ type }) {
-  const { icon: Icon, color, bg, label } = TYPE_META[type]
+// One consistent style regardless of competency — plain light gray, no
+// icon — same rounded-rectangle shape the file-type badge used to have in
+// this slot before competency was promoted here to read as more prominent.
+function CompetencyBadge({ label }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] ${bg} bg-opacity-10 ${color} shrink-0`}>
-      <Icon size={14} />
-      <span className="text-xs font-medium">{label}</span>
+    <span className="inline-flex items-center px-2.5 py-1 rounded-[5px] bg-brand-bg text-brand-text text-xs font-medium shrink-0">
+      {label}
     </span>
   )
 }
@@ -306,10 +304,12 @@ function GateBackdrop() {
 }
 
 // Shared gate copy/controls — factored out so Concept C's left-aligned,
-// card-less layout can reuse the exact same heading/subcopy/pill grid/
-// checkbox/button as A/B's centered card instead of forking the text
-// (per explicit instruction: "same content, just left-aligned & bg
-// removed"). `align` only toggles text/pill alignment, nothing else.
+// card-less layout can reuse the same heading/pill grid/checkbox/button as
+// A/B's centered card instead of forking all of it. `align` only toggles
+// text/pill alignment, nothing else — EXCEPT the supporting paragraph
+// below, which now diverges per explicit request (2026-08-27): Concept C
+// (align="left") gets its own longer copy describing the full breadth of
+// the library, while A/B/D keep the original shorter line.
 function GateFields({ pending, togglePending, remember, setRemember, onConfirm, align = 'center' }) {
   const isLeft = align === 'left'
   return (
@@ -321,8 +321,10 @@ function GateFields({ pending, togglePending, remember, setRemember, onConfirm, 
       <h1 className={`text-4xl font-semibold text-brand-text mb-3 ${isLeft ? '' : 'text-center'}`}>
         Curriculum Resource Library
       </h1>
-      <p className={`text-base text-brand-subtext max-w-md mb-8 ${isLeft ? '' : 'text-center'}`}>
-        Browse lesson videos, activity guides, and printable worksheets organized by grade and SEL competency.
+      <p className={`text-base text-brand-subtext mb-8 ${isLeft ? 'max-w-lg' : 'max-w-md text-center'}`}>
+        {isLeft
+          ? 'Explore a full range of resources organized by topic and skill area, from student-facing lesson videos and worksheets to tools for school engagement and implementation, built for every grade level.'
+          : 'Browse lesson videos, activity guides, and printable worksheets organized by grade and SEL competency.'}
       </p>
       <h6 className="text-xs font-semibold text-[#5B6878] uppercase tracking-wide mb-4">
         Select one or more grade levels
@@ -496,14 +498,14 @@ function GateFullPage({ onConfirm, defaultRemember, decorConcept }) {
             align="left"
           />
         </div>
-        {/* transform: scale here (on the whole already-masked block), not
-            on GateScrollRows' internal content — scaling the mask+rows
+        {/* scale here (on the whole already-masked block), not on
+            GateScrollRows' internal content — scaling the mask+rows
             together as one composited unit avoids the earlier bug where
             scaling just the content caused it to stop filling the mask's
             coordinate space and broke the bottom fade. */}
         <div
           className="relative hidden md:block min-w-0"
-          style={{ height: GATE_SCROLL_CONTAINER_HEIGHT, transform: 'scale(0.9)' }}
+          style={{ height: GATE_SCROLL_CONTAINER_HEIGHT, scale: '0.9' }}
         >
           <GateScrollRows />
         </div>
@@ -733,7 +735,7 @@ function FilterPanel({
 // Each dropdown's popover is itself a search box over its own option list
 // (own local `search` state, cleared on close) — useful once a facet like
 // Grade has more options than fit without scrolling/hunting.
-function FilterFieldDropdown({ label, options, selected, onToggle, onReset, optionsClassName = 'flex flex-col gap-1.5' }) {
+function FilterFieldDropdown({ label, options, selected, onToggle, onReset, optionsClassName = 'flex flex-col' }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const q = search.trim().toLowerCase()
@@ -770,40 +772,58 @@ function FilterFieldDropdown({ label, options, selected, onToggle, onReset, opti
             </button>
           </Popover.Trigger>
         ) : (
-          <div className="w-full flex items-center gap-2 h-10 pl-1 pr-1 border border-brand-border rounded-md bg-white">
-            <span className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-md bg-dessa-tealLight text-dessa-teal text-sm font-medium max-w-[60%]">
-              <span className="truncate">{selected[0]}</span>
-              <button
-                type="button"
-                onClick={() => onToggle(selected[0])}
-                aria-label={`Remove ${selected[0]}`}
-                className="shrink-0 hover:opacity-70 transition-opacity"
-              >
-                <X size={12} />
-              </button>
-            </span>
-            {selected.length > 1 && (
-              <span className="shrink-0 px-2 py-1 rounded-md bg-brand-bg text-brand-text text-xs font-semibold">
-                +{selected.length - 1}
+          // The whole field is the trigger (not just the "+" button) so the
+          // popover's anchor width — and therefore its position/width below
+          // — matches the full field, not just that small button. The
+          // chip's own × stops propagation so removing a value doesn't also
+          // pop the dropdown open via the bubbled click.
+          <Popover.Trigger asChild>
+            <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setOpen(true)
+                }
+              }}
+              className="w-full flex items-center gap-2 h-10 pl-1 pr-1 border border-brand-border rounded-md bg-white cursor-pointer"
+            >
+              <span className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-md bg-dessa-tealLight text-dessa-teal text-sm font-medium max-w-[60%]">
+                <span className="truncate">{selected[0]}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggle(selected[0])
+                  }}
+                  aria-label={`Remove ${selected[0]}`}
+                  className="shrink-0 hover:opacity-70 transition-opacity"
+                >
+                  <X size={12} />
+                </button>
               </span>
-            )}
-            <span className="flex-1" />
-            <Popover.Trigger asChild>
-              <button
-                type="button"
+              {selected.length > 1 && (
+                <span className="shrink-0 px-2 py-1 rounded-md bg-brand-bg text-brand-text text-xs font-semibold">
+                  +{selected.length - 1}
+                </span>
+              )}
+              <span className="flex-1" />
+              <span
                 aria-label={`Add ${label} filter`}
                 className="shrink-0 w-7 h-7 rounded-md bg-dessa-teal text-white flex items-center justify-center hover:bg-dessa-teal/90 transition-colors"
               >
                 <Plus size={14} />
-              </button>
-            </Popover.Trigger>
-          </div>
+              </span>
+            </div>
+          </Popover.Trigger>
         )}
         <Popover.Portal>
           <Popover.Content
             align="start"
             sideOffset={6}
-            className="z-30 w-64 bg-white border border-brand-border rounded-xl shadow-lg outline-none p-3 flex flex-col"
+            style={{ width: 'var(--radix-popover-trigger-width)' }}
+            className="z-30 bg-white border border-brand-border rounded-xl shadow-lg outline-none p-3 flex flex-col"
           >
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold text-brand-subtext uppercase tracking-wide">{label}</p>
@@ -812,32 +832,43 @@ function FilterFieldDropdown({ label, options, selected, onToggle, onReset, opti
               </button>
             </div>
             <div className="relative mb-2 shrink-0">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
               <input
                 type="text"
                 autoFocus
                 placeholder={`Search ${label.toLowerCase()}`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-8 pr-2 h-8 text-sm border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                className="w-full pl-10 pr-2 h-11 text-sm border-2 border-brand-border rounded-lg bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
               />
             </div>
-            <div className="max-h-56 overflow-y-auto">
+            <div className="max-h-56 overflow-y-auto -mx-3">
               {filteredOptions.length === 0 ? (
-                <p className="text-sm text-brand-subtext px-1 py-2">No matches</p>
+                <p className="text-sm text-brand-subtext px-4 py-2">No matches</p>
               ) : (
                 <div className={optionsClassName}>
-                  {filteredOptions.map((opt) => (
-                    <label key={opt} className="flex items-center gap-2 text-sm text-brand-text cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selected.includes(opt)}
-                        onChange={() => onToggle(opt)}
-                        className="accent-dessa-teal w-3.5 h-3.5 shrink-0"
-                      />
-                      <span className="truncate">{opt}</span>
-                    </label>
-                  ))}
+                  {filteredOptions.map((opt) => {
+                    const isSelected = selected.includes(opt)
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => onToggle(opt)}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-brand-text transition-colors ${
+                          isSelected ? 'bg-[rgba(15,148,172,0.1)]' : 'hover:bg-brand-bg'
+                        }`}
+                      >
+                        <span
+                          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            isSelected ? 'bg-dessa-teal border-dessa-teal' : 'border-brand-border'
+                          }`}
+                        >
+                          {isSelected && <Check size={13} strokeWidth={3} className="text-white" />}
+                        </span>
+                        <span className="truncate">{opt}</span>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -911,7 +942,6 @@ function FilterBarC({
               selected={pendingGrades}
               onToggle={(v) => togglePending(setPendingGrades, v)}
               onReset={() => setPendingGrades([])}
-              optionsClassName="grid grid-cols-2 gap-x-3 gap-y-1.5"
             />
             <FilterFieldDropdown
               label="Course Type"
@@ -1008,6 +1038,12 @@ export default function Resources() {
   const [sortKey, setSortKey] = useState(null)
   const [sortDir, setSortDir] = useState('asc')
   const [sortMenuOpen, setSortMenuOpen] = useState(false)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  // Staged like the Filters card's Apply/Reset pattern — the checkbox
+  // toggles this local pending value, not rememberGrades itself, so
+  // "Close" can discard it. Re-staged from the committed value every time
+  // the menu opens, same reason as FilterPanel/FilterBarC re-staging.
+  const [pendingRemember, setPendingRemember] = useState(rememberGrades)
   // Saved/starred resources — Map value is the representative resource, so
   // the sidebar panel can render + navigate without re-deriving it from
   // current filters. (Currently unreachable: the star button that adds to
@@ -1151,6 +1187,81 @@ export default function Resources() {
                 </button>
               )
             })}
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    )
+  }
+
+  // Stays open after toggling — this is a Popover (like Sort/the Filters
+  // dropdowns above), not an auto-dismissing menu, so ticking the checkbox
+  // just flips the staged pendingRemember value in place; dismissing is
+  // either an outside click/Escape (Popover's default, which — like
+  // "Close" — discards the pending toggle) or explicitly via Close/Save.
+  function handleMoreMenuOpenChange(next) {
+    if (next) setPendingRemember(rememberGrades)
+    setMoreMenuOpen(next)
+  }
+
+  // Turning the setting off also clears any already-remembered grades
+  // immediately (the gate's own confirm-time effect only writes/clears in
+  // response to selectedGrades changing, not to rememberGrades flipping on
+  // its own — this menu needs its own explicit clear so "off" reliably
+  // means "nothing remembered next visit").
+  function saveMoreMenu() {
+    setRememberGrades(pendingRemember)
+    if (!pendingRemember) localStorage.removeItem(REMEMBERED_GRADES_KEY)
+    setMoreMenuOpen(false)
+  }
+
+  function renderMoreMenu() {
+    return (
+      <Popover.Root open={moreMenuOpen} onOpenChange={handleMoreMenuOpenChange}>
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            aria-label="More options"
+            className="shrink-0 flex items-center justify-center w-9 h-9 border border-brand-border rounded-md bg-white text-brand-subtext hover:bg-brand-bg hover:text-brand-text transition-colors"
+          >
+            <MoreHorizontal size={16} />
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            align="end"
+            sideOffset={8}
+            className="z-30 w-max bg-white border border-brand-border rounded-xl shadow-lg outline-none p-1"
+          >
+            <button
+              type="button"
+              onClick={() => setPendingRemember((prev) => !prev)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left text-brand-text hover:bg-brand-bg rounded-lg transition-colors whitespace-nowrap"
+            >
+              <span
+                className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                  pendingRemember ? 'bg-dessa-teal border-dessa-teal' : 'border-brand-border'
+                }`}
+              >
+                {pendingRemember && <Check size={13} strokeWidth={3} className="text-white" />}
+              </span>
+              Remember my grade selection
+            </button>
+            <div className="flex items-center justify-between gap-2 border-t border-brand-border mt-1 pt-2 px-2 pb-1">
+              <button
+                type="button"
+                onClick={() => setMoreMenuOpen(false)}
+                className="px-3 py-1.5 text-sm font-medium text-brand-subtext hover:text-brand-text rounded-md hover:bg-brand-bg transition-colors"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={saveMoreMenu}
+                className="px-4 py-1.5 rounded-md text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors"
+              >
+                Save
+              </button>
+            </div>
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
@@ -1399,6 +1510,7 @@ export default function Resources() {
               {selectedGrades.length > 0 && (
                 <div className="flex items-center gap-2 shrink-0">
                   {renderSortMenu()}
+                  {renderMoreMenu()}
                   {/* 3B — retired 2026-08-26 (manager chose 3C); kept for
                       reference, not rendered now that `concept` is
                       hardcoded to 'c'.
@@ -1449,10 +1561,14 @@ export default function Resources() {
                   // incorrectly, so this row just sits in normal flow like
                   // any other divider. Plain label, no collapse/chevron.
                   const isLastRow = i === pagedResults.length - 1
+                  const typeMeta = TYPE_META[r.type]
                   return (
                     <div key={r.id}>
                       {showGradeDivider && (
-                        <div className="px-6 py-2 bg-brand-bg border-b border-brand-border text-xs font-semibold text-brand-text uppercase tracking-wide">
+                        <div
+                          className="px-6 py-2 border-b border-brand-border text-xs font-semibold text-brand-text uppercase tracking-wide"
+                          style={{ backgroundColor: 'rgba(241,242,245,0.29)' }}
+                        >
                           {r.grade}
                         </div>
                       )}
@@ -1463,35 +1579,65 @@ export default function Resources() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') openResource(r)
                         }}
-                        className={`w-full flex flex-col gap-2 px-6 py-4 text-left hover:bg-brand-bg transition-colors cursor-pointer ${
+                        className={`w-full flex items-center justify-between gap-3 px-6 py-4 text-left hover:bg-brand-bg transition-colors cursor-pointer ${
                           isLastRow ? 'rounded-b-2xl' : 'border-b border-brand-border'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[15px] font-semibold text-brand-text truncate">
+                        {/* Left column: icon pill, title, unit, and the
+                            description all stacked together, so the
+                            competency column (a sibling of this whole div,
+                            not nested inside it) centers against its FULL
+                            height — title block + description — rather than
+                            just the title block on its own. */}
+                        <div className="flex-1 min-w-0 flex flex-col gap-4">
+                          <div>
+                            {/* Tinted icon + label pill as a small eyebrow
+                                above the title — the same shape/style the
+                                file-type badge always had, just relocated
+                                here now that competency occupies its old
+                                spot on the right. */}
+                            <span
+                              className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] mb-1 ${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`}
+                            >
+                              <typeMeta.icon size={14} />
+                              <span className="text-xs font-medium">{typeMeta.label}</span>
+                            </span>
+                            <p className="text-[16px] font-semibold text-brand-text truncate">
                               {displayTitle(r.title)}
                             </p>
-                            {/* Single meta line — unit and competency read
-                                left-to-right in one scan instead of splitting
-                                attention between a left-aligned title block
-                                and a right-floating badge cluster. Grade never
-                                appears inline here — any multi-grade result
-                                set gets a divider row instead. */}
+                            {/* Unit only now — competency moved to the badge
+                                on the right, so it's dropped here to avoid
+                                showing it twice. Grade never appears inline
+                                here either — any multi-grade result set gets
+                                a divider row instead. */}
                             <p className="text-xs text-brand-subtext truncate mt-0.5">
                               {r.unitTitle}
-                              {r.competency && <> · {r.competency}</>}
                             </p>
                           </div>
-                          <TypeBadge type={r.type} />
+                          {/* Flush left, spanning the icon's column too — not
+                              indented to align under the title — so the row reads
+                              as a compact header cluster with a full-width body
+                              beneath it, rather than one uniformly dense block. */}
+                          <p className="text-sm text-brand-subtext leading-relaxed line-clamp-2 max-w-[640px]">
+                            {r.description}
+                          </p>
                         </div>
-                        {/* Flush left, spanning the icon's column too — not
-                            indented to align under the title — so the row reads
-                            as a compact header cluster with a full-width body
-                            beneath it, rather than one uniformly dense block. */}
-                        <p className="text-sm text-brand-subtext leading-relaxed line-clamp-2 max-w-[640px]">
-                          {r.description}
-                        </p>
+                        {/* Competency, promoted to this slot (previously
+                            the file-type badge's spot) to read as slightly
+                            more prominent — one consistent style regardless
+                            of competency (light gray, no icon), with a
+                            "+N" tag for any secondary competencies. A sibling
+                            of the whole left column above (not nested inside
+                            its title block), so the outer row's items-center
+                            centers it against the full row height. */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <CompetencyBadge label={r.competency} />
+                          {r.extraCompetencies?.length > 0 && (
+                            <span className="shrink-0 px-2 py-1 rounded-md bg-brand-bg text-brand-text text-xs font-semibold">
+                              +{r.extraCompetencies.length}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )
