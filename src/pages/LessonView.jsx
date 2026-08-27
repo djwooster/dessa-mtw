@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { familyUnitsByGrade, adultWellnessUnits, tier2EarlyElementaryUnits } from "../lib/lessonUnitsData";
 import {
   CheckCircle2,
@@ -2922,6 +2922,7 @@ function highlightMatchText(text, query) {
 export default function LessonView({ onBookmark }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const course = location.state?.course;
   const isGrade2 = course?.grade === "Grade 2";
   const isTier2EE = course?.level === 'Tier 2';
@@ -2967,10 +2968,11 @@ export default function LessonView({ onBookmark }) {
   // auto-expands the containing unit); B swaps that box for a trigger
   // button that opens a full command-palette-style overlay searching every
   // unit/lesson at once, independent of the sidebar's expand/collapse
-  // state. Kept as a simple local toggle (not a URL param, unlike the
-  // Resources page's `?concept=` switcher) since this is a quick two-way
-  // comparison, not something that needs to be shareable via link.
-  const [searchConcept, setSearchConcept] = useState("a");
+  // state. Driven by a `?searchConcept=` URL param (like the Resources
+  // page's `?decor=` switcher) rather than local state, since the control
+  // itself now lives in Nav's top-right actions cluster (see Nav.jsx)
+  // instead of this page's sidebar — a param is how the two stay in sync.
+  const searchConcept = searchParams.get("searchConcept") || "a";
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState("");
   const [language, setLanguage] = useState("English");
@@ -3201,29 +3203,9 @@ export default function LessonView({ onBookmark }) {
             Back
           </button>
           <div className="flex items-center gap-2">
-            {/* Design-review toggle — A: sidebar box below (highlight-in-
-                place). B: swaps that box for a trigger that opens the
-                command-palette overlay (see below). */}
-            <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0">
-              <button
-                onClick={() => setSearchConcept("a")}
-                aria-label="Search concept A"
-                className={`px-2 py-1 transition-colors ${
-                  searchConcept === "a" ? "bg-dessa-teal text-white" : "text-brand-subtext hover:bg-brand-bg"
-                }`}
-              >
-                A
-              </button>
-              <button
-                onClick={() => setSearchConcept("b")}
-                aria-label="Search concept B"
-                className={`px-2 py-1 border-l border-brand-border transition-colors ${
-                  searchConcept === "b" ? "bg-dessa-teal text-white" : "text-brand-subtext hover:bg-brand-bg"
-                }`}
-              >
-                B
-              </button>
-            </div>
+            {/* Design-review toggle relocated to Nav's top-right actions
+                cluster (see Nav.jsx) — this page just reads the resulting
+                `?searchConcept=` param above. */}
             <button
               onClick={() => setShowInactive((v) => !v)}
               className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors"
@@ -3234,6 +3216,10 @@ export default function LessonView({ onBookmark }) {
           </div>
         </div>
 
+        {/* Concept C has no sidebar search slot at all — its search lives
+            in the fixed bottom-right pill button instead (see below), so
+            this row is skipped outright rather than left empty. */}
+        {searchConcept !== "c" && (
         <div className="px-4 py-3 border-b border-brand-border">
           {searchConcept === "a" ? (
             <div className="relative">
@@ -3268,10 +3254,11 @@ export default function LessonView({ onBookmark }) {
               className="w-full flex items-center gap-2 pl-3 pr-3 h-9 text-sm border border-brand-border rounded-md bg-brand-bg text-brand-subtext hover:bg-white hover:border-dessa-teal/50 transition-colors"
             >
               <Search size={14} className="shrink-0" />
-              Search lessons…
+              Search inside this course
             </button>
           )}
         </div>
+        )}
 
         <div className="flex-1 overflow-y-auto py-1">
           {visibleUnits
@@ -3417,6 +3404,20 @@ export default function LessonView({ onBookmark }) {
         </div>
         )}
       </aside>
+
+      {/* Concept C — no sidebar search element at all; a fixed pill button
+          in the bottom-right corner of the viewport opens the same command
+          palette overlay Concept B uses. */}
+      {searchConcept === "c" && (
+        <button
+          type="button"
+          onClick={() => setCommandPaletteOpen(true)}
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 pl-4 pr-5 h-11 rounded-full bg-dessa-teal text-white text-sm font-semibold shadow-lg hover:bg-dessa-teal/90 transition-colors"
+        >
+          <Search size={16} />
+          Search
+        </button>
+      )}
 
       {/* Concept B — command palette overlay. Fixed positioning so it sits
           above the whole page, not just the sidebar; clicking the backdrop
