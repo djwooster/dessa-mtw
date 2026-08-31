@@ -51,15 +51,12 @@ export default function Nav() {
             </NavLink>
           ))}
 
-          {/* Resources-only design-review toggle (2026-08-26) — separate
-              from the retired 3A/3B/3C gate-presentation switcher (that
-              question is settled; 3C won). This one compares gate-screen
-              *background decoration* concepts: A is the plain status quo
-              (no visual assets), B is the masked grid + floating type-icon
-              tiles, C is a left-aligned/no-card layout with a right-side
-              scrolling row animation. D is reserved for a concept not
-              designed yet — until then it renders identically to A (see
-              Resources.jsx). */}
+          {/* Resources-only design-review toggle — retired 2026-08-28
+              (manager picked Concept C, left-aligned + scrolling rows, as
+              final; Resources.jsx now hardcodes decorConcept = 'c'). Kept
+              commented rather than deleted so the A/B/C/D comparison story
+              can be shown later if needed — same treatment as the retired
+              3A/3B/3C gate-presentation switcher before it.
           {location.pathname === '/resources' && (
             <select
               value={searchParams.get('decor') || 'a'}
@@ -74,6 +71,32 @@ export default function Nav() {
               <option value="b">B — Grid + tiles</option>
               <option value="c">C — Left-aligned + scrolling rows</option>
               <option value="d">D — Not yet designed</option>
+            </select>
+          )}
+          */}
+
+          {/* Curriculum Setup-only design-review toggle (2026-08-28) —
+              compares four ways to show Program Admins which sites have
+              customized their weekly goal (AP-4933): A embeds a lightweight
+              table right in the page; B keeps a trigger pill that opens a
+              right-side drawer; C is a full report-style table over every
+              site (search/filter/pagination); D is the same content as B in
+              a centered modal + overlay instead of a drawer. See the block
+              comment above GoalPicker in CurriculumSetup.jsx. */}
+          {location.pathname === '/settings/curriculum-setup' && (
+            <select
+              value={searchParams.get('adminConcept') || 'a'}
+              onChange={(e) => {
+                const next = new URLSearchParams(searchParams)
+                next.set('adminConcept', e.target.value)
+                setSearchParams(next)
+              }}
+              className="ml-2 h-7 pl-2 pr-6 text-xs font-medium border border-brand-border rounded-md bg-white text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+            >
+              <option value="a">A — Inline table</option>
+              <option value="b">B — Side drawer</option>
+              <option value="c">C — Report table</option>
+              <option value="d">D — Modal</option>
             </select>
           )}
         </div>
