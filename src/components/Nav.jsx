@@ -103,17 +103,18 @@ export default function Nav() {
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
-          {/* Lesson View (proposal A)-only design-review toggle (relocated
-              here 2026-08-27, was previously in that page's own sidebar
-              header) comparing three lesson-search mechanisms: A is the
-              always-visible sidebar box (highlights matches in place); B
-              swaps that box for a sidebar trigger ("Search inside this
-              course") that opens a full command-palette-style overlay; C
-              drops the sidebar element entirely in favor of a fixed
-              bottom-right pill button that opens that same overlay. Driven
-              by the same `?param=` pattern as the Resources decor switcher
-              above, so LessonView.jsx just reads `?searchConcept=` instead
-              of holding local state. */}
+          {/* Lesson View (proposal A)-only design-review toggle — retired
+              2026-08-31 (Concept A confirmed as the kept lesson-search
+              direction; LessonView.jsx now hardcodes its Concept A box
+              unconditionally rather than reading `?searchConcept=`). Kept
+              commented rather than deleted, same treatment as the retired
+              Resources decor switcher above.
+          Comparing three lesson-search mechanisms: A is the always-visible
+          sidebar box (highlights matches in place); B swaps that box for a
+          sidebar trigger ("Search inside this course") that opens a full
+          command-palette-style overlay; C drops the sidebar element
+          entirely in favor of a fixed bottom-right pill button that opens
+          that same overlay.
           {location.pathname === '/mtw/lesson' && (
             <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0 mr-1">
               {['a', 'b', 'c'].map((value, i) => (
@@ -136,6 +137,7 @@ export default function Nav() {
               ))}
             </div>
           )}
+          */}
           <button className="text-brand-subtext hover:text-brand-text transition-colors p-1.5 rounded hover:bg-brand-bg">
             <Search size={16} />
           </button>

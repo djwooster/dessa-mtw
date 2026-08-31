@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { familyUnitsByGrade, adultWellnessUnits, tier2EarlyElementaryUnits } from "../lib/lessonUnitsData";
 import {
   CheckCircle2,
@@ -2922,7 +2922,6 @@ function highlightMatchText(text, query) {
 export default function LessonView({ onBookmark }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
   const course = location.state?.course;
   const isGrade2 = course?.grade === "Grade 2";
   const isTier2EE = course?.level === 'Tier 2';
@@ -2963,18 +2962,22 @@ export default function LessonView({ onBookmark }) {
   const [pendingNavigate, setPendingNavigate] = useState(null);
   const [showInactive, setShowInactive] = useState(true);
   const [sidebarSearch, setSidebarSearch] = useState("");
-  // Design-review toggle comparing two lesson-search mechanisms: A is the
-  // existing always-visible sidebar box (highlights matches in place,
-  // auto-expands the containing unit); B swaps that box for a trigger
-  // button that opens a full command-palette-style overlay searching every
-  // unit/lesson at once, independent of the sidebar's expand/collapse
-  // state. Driven by a `?searchConcept=` URL param (like the Resources
-  // page's `?decor=` switcher) rather than local state, since the control
-  // itself now lives in Nav's top-right actions cluster (see Nav.jsx)
-  // instead of this page's sidebar — a param is how the two stay in sync.
-  const searchConcept = searchParams.get("searchConcept") || "a";
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [paletteQuery, setPaletteQuery] = useState("");
+  // 2026-08-31: Concept A (the always-visible sidebar search box, filtering
+  // the unit tree down to matches) is the kept lesson-search direction —
+  // confirmed to match `main`'s original hide-non-matches + "No lessons
+  // found" behavior (see visibleUnits below), unlike B/C's command-palette
+  // overlay approach. The Nav.jsx A/B/C toggle and B/C's own JSX (the
+  // trigger-button branch below, Concept C's floating pill, and the
+  // command-palette overlay itself) are commented out rather than deleted
+  // — kept for the record, same treatment as Resources.jsx's retired
+  // concepts. Concept A's box now always renders unconditionally rather
+  // than being gated on a `searchConcept` check, so that variable itself
+  // is dead too — commented out along with everything that used to read it.
+  // const searchConcept = "a";
+  // Concepts B/C's command-palette state — retired alongside their JSX
+  // below (search this file for "Concepts B/C" to find the rest).
+  // const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  // const [paletteQuery, setPaletteQuery] = useState("");
   const [language, setLanguage] = useState("English");
   const [langOpen, setLangOpen] = useState(false);
   const [showNextLesson, setShowNextLesson] = useState(false);
@@ -3000,14 +3003,15 @@ export default function LessonView({ onBookmark }) {
     setStornawayWatched(false);
   }, [selectedLesson]);
 
-  useEffect(() => {
-    if (!commandPaletteOpen) return;
-    function onKeyDown(e) {
-      if (e.key === "Escape") setCommandPaletteOpen(false);
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [commandPaletteOpen]);
+  // Concepts B/C — Escape closed the command palette; retired with it.
+  // useEffect(() => {
+  //   if (!commandPaletteOpen) return;
+  //   function onKeyDown(e) {
+  //     if (e.key === "Escape") setCommandPaletteOpen(false);
+  //   }
+  //   window.addEventListener("keydown", onKeyDown);
+  //   return () => window.removeEventListener("keydown", onKeyDown);
+  // }, [commandPaletteOpen]);
 
   useEffect(() => {
     const el = mainRef.current;
@@ -3135,55 +3139,57 @@ export default function LessonView({ onBookmark }) {
     setTimeout(() => setShowToast(false), 3000);
   };
 
-  // Sidebar lesson search — highlights matches in place rather than hiding
-  // the rest of the tree, so users keep their bearings; units containing a
-  // match auto-expand so the highlighted lesson is visible without an extra
-  // click, but everything else stays exactly where it was.
+  // Sidebar lesson search (Concept A, the kept implementation — see the
+  // Nav.jsx toggle) — filters the unit tree down to units whose title or
+  // lesson list matches, same as main, so this restores that behavior
+  // rather than the highlight-in-place-without-hiding approach an
+  // in-progress version of this branch had. Force-expanding while
+  // searching still applies here: since every unit that survives the
+  // filter below is, by construction, a match, there's no need for a
+  // separate per-unit "does this match" check the way an earlier version
+  // of this code had — isSearchingSidebar alone is enough (see isExpanded
+  // below), same as main.
   const sidebarQuery = sidebarSearch.trim().toLowerCase();
   const isSearchingSidebar = sidebarQuery.length > 0;
-  const visibleUnits = activeUnits.filter((unit) => showInactive || unit.active);
-
-  function unitMatchesSidebarQuery(unit) {
-    return (
-      isSearchingSidebar &&
-      (unit.title.toLowerCase().includes(sidebarQuery) ||
-        unit.sub.some((s) => s.toLowerCase().includes(sidebarQuery)))
+  const visibleUnits = activeUnits
+    .filter((unit) => showInactive || unit.active)
+    .filter(
+      (unit) =>
+        !isSearchingSidebar ||
+        unit.title.toLowerCase().includes(sidebarQuery) ||
+        unit.sub.some((s) => s.toLowerCase().includes(sidebarQuery)),
     );
-  }
 
   function highlightMatch(text) {
     return highlightMatchText(text, sidebarQuery);
   }
 
-  // Concept B — command palette results: flattens every visible unit's
-  // lessons (leaf units count as their own single "lesson") into one list
-  // and matches against unit title OR lesson title, same match rule as
-  // Concept A's sidebar search. Only computed once there's a query, since
-  // showing the full ~140-lesson list unfiltered isn't useful.
-  const normalizedPaletteQuery = paletteQuery.trim().toLowerCase();
-  const paletteResults = normalizedPaletteQuery
-    ? visibleUnits.flatMap((unit) => {
-        if (unit.sub.length === 0) {
-          return unit.title.toLowerCase().includes(normalizedPaletteQuery)
-            ? [{ unitId: unit.id, lessonIndex: 0, unitTitle: unit.title, lessonTitle: unit.title }]
-            : [];
-        }
-        return unit.sub
-          .map((item, i) => ({ i, cleanItem: item.replace(/^(Community|Independent):\s*/, "") }))
-          .filter(
-            ({ cleanItem }) =>
-              unit.title.toLowerCase().includes(normalizedPaletteQuery) ||
-              cleanItem.toLowerCase().includes(normalizedPaletteQuery),
-          )
-          .map(({ i, cleanItem }) => ({ unitId: unit.id, lessonIndex: i, unitTitle: unit.title, lessonTitle: cleanItem }));
-      })
-    : [];
-
-  function selectFromPalette(unitId, lessonIndex) {
-    setCommandPaletteOpen(false);
-    setPaletteQuery("");
-    handleSelectLesson(unitId, lessonIndex);
-  }
+  // Concepts B/C — command palette results, retired along with their JSX
+  // and state (search this file for "Concepts B/C" for the rest).
+  // const normalizedPaletteQuery = paletteQuery.trim().toLowerCase();
+  // const paletteResults = normalizedPaletteQuery
+  //   ? visibleUnits.flatMap((unit) => {
+  //       if (unit.sub.length === 0) {
+  //         return unit.title.toLowerCase().includes(normalizedPaletteQuery)
+  //           ? [{ unitId: unit.id, lessonIndex: 0, unitTitle: unit.title, lessonTitle: unit.title }]
+  //           : [];
+  //       }
+  //       return unit.sub
+  //         .map((item, i) => ({ i, cleanItem: item.replace(/^(Community|Independent):\s*/, "") }))
+  //         .filter(
+  //           ({ cleanItem }) =>
+  //             unit.title.toLowerCase().includes(normalizedPaletteQuery) ||
+  //             cleanItem.toLowerCase().includes(normalizedPaletteQuery),
+  //         )
+  //         .map(({ i, cleanItem }) => ({ unitId: unit.id, lessonIndex: i, unitTitle: unit.title, lessonTitle: cleanItem }));
+  //     })
+  //   : [];
+  //
+  // function selectFromPalette(unitId, lessonIndex) {
+  //   setCommandPaletteOpen(false);
+  //   setPaletteQuery("");
+  //   handleSelectLesson(unitId, lessonIndex);
+  // }
 
   return (
     <div className="flex h-[calc(100vh-56px)] overflow-hidden">
@@ -3216,9 +3222,38 @@ export default function LessonView({ onBookmark }) {
           </div>
         </div>
 
-        {/* Concept C has no sidebar search slot at all — its search lives
-            in the fixed bottom-right pill button instead (see below), so
-            this row is skipped outright rather than left empty. */}
+        {/* Concept A — the kept lesson-search UI (see the block comment
+            above `searchConcept`). B's trigger-button branch and C's
+            "no search slot here at all" treatment are preserved below in
+            a comment for the record, not deleted. */}
+        <div className="px-4 py-3 border-b border-brand-border">
+          <div className="relative">
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none"
+            />
+            <input
+              type="text"
+              value={sidebarSearch}
+              onChange={(e) => setSidebarSearch(e.target.value)}
+              placeholder="Search lessons…"
+              className="w-full pl-8 pr-8 h-9 text-sm border border-brand-border rounded-md bg-brand-bg text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal focus:bg-white transition-colors"
+            />
+            {sidebarSearch && (
+              <button
+                onClick={() => setSidebarSearch("")}
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text transition-colors"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Concepts B/C — retired 2026-08-31 (Concept A confirmed as the
+            kept direction); kept for reference, not rendered now that
+            `searchConcept` is hardcoded to "a".
         {searchConcept !== "c" && (
         <div className="px-4 py-3 border-b border-brand-border">
           {searchConcept === "a" ? (
@@ -3259,11 +3294,18 @@ export default function LessonView({ onBookmark }) {
           )}
         </div>
         )}
+        */}
 
         <div className="flex-1 overflow-y-auto py-1">
-          {visibleUnits
+          {isSearchingSidebar && visibleUnits.length === 0 ? (
+            <div className="px-4 py-10 text-center">
+              <p className="text-sm font-medium text-brand-text mb-1">No lessons found</p>
+              <p className="text-xs text-brand-subtext">Try a different search term.</p>
+            </div>
+          ) : (
+          visibleUnits
             .map((unit) => {
-              const isExpanded = unitMatchesSidebarQuery(unit) ? true : expandedUnit === unit.id;
+              const isExpanded = isSearchingSidebar ? true : expandedUnit === unit.id;
               const toggle = () => setExpandedUnit(isExpanded ? null : unit.id);
               const isLeafUnit = unit.sub.length === 0;
               const isLeafSelected =
@@ -3373,7 +3415,8 @@ export default function LessonView({ onBookmark }) {
                   </AnimatePresence>
                 </div>
               );
-            })}
+            })
+          )}
         </div>
 
         {/* Audio Library entry — sticky, outside scroll area */}
@@ -3405,9 +3448,17 @@ export default function LessonView({ onBookmark }) {
         )}
       </aside>
 
-      {/* Concept C — no sidebar search element at all; a fixed pill button
+      {/* Concepts B/C — retired 2026-08-31 (Concept A confirmed as the kept
+          lesson-search direction); kept for reference, not rendered now
+          that `searchConcept` is hardcoded to "a" and commandPaletteOpen
+          can never become true (no trigger left to set it). The two nested
+          comments this block already had are flattened (their comment
+          delimiters removed) so they don't prematurely close this outer
+          comment.
+
+          Concept C — no sidebar search element at all; a fixed pill button
           in the bottom-right corner of the viewport opens the same command
-          palette overlay Concept B uses. */}
+          palette overlay Concept B uses.
       {searchConcept === "c" && (
         <button
           type="button"
@@ -3419,10 +3470,10 @@ export default function LessonView({ onBookmark }) {
         </button>
       )}
 
-      {/* Concept B — command palette overlay. Fixed positioning so it sits
+          Concept B — command palette overlay. Fixed positioning so it sits
           above the whole page, not just the sidebar; clicking the backdrop
           or pressing Escape (see effect above) closes it without selecting
-          a lesson. */}
+          a lesson.
       {commandPaletteOpen && (
         <div
           className="fixed inset-0 z-50 flex items-start justify-center pt-32 bg-black/40"
@@ -3480,6 +3531,7 @@ export default function LessonView({ onBookmark }) {
           </div>
         </div>
       )}
+      */}
 
       {/* ── Main content ── */}
       <main ref={mainRef} className="flex-1 overflow-y-auto bg-brand-bg">
