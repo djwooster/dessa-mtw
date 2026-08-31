@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
 import {
@@ -997,14 +997,14 @@ export default function Resources() {
   // own records in case either direction needs to be revisited — so this
   // stays 'c' rather than being removed outright.
   const concept = 'c'
-  // New, separate design-review toggle (2026-08-26) — compares gate-screen
-  // *background decoration* concepts via the Nav switcher's `?decor=`
-  // param: A is the plain status quo (no visual assets), B is the masked
-  // grid + floating type-icon tiles (GateBackdrop). C and D are reserved
-  // for concepts not designed yet, so anything other than 'b' renders like
-  // 'a' for now — see the `decorConcept === 'b'` check in GateFullPage.
-  const [searchParams] = useSearchParams()
-  const decorConcept = searchParams.get('decor') || 'a'
+  // 2026-08-28: manager picked Concept C (left-aligned + scrolling rows) as
+  // the final gate-screen background decoration, out of the A/B/C/D
+  // comparison that used to be reachable via the Nav switcher's `?decor=`
+  // param. That switcher is now commented out (see Nav.jsx) rather than
+  // deleted — kept for the record in case the story behind how we landed
+  // here needs to be revisited — so this stays a hardcoded constant rather
+  // than being removed outright, same treatment as `concept` above.
+  const decorConcept = 'c'
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState([])
@@ -1579,64 +1579,87 @@ export default function Resources() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') openResource(r)
                         }}
-                        className={`w-full flex items-center justify-between gap-3 px-6 py-4 text-left hover:bg-brand-bg transition-colors cursor-pointer ${
+                        className={`w-full flex items-center gap-3 px-6 py-4 text-left hover:bg-[rgba(15,148,172,0.1)] transition-colors cursor-pointer ${
                           isLastRow ? 'rounded-b-2xl' : 'border-b border-brand-border'
                         }`}
                       >
-                        {/* Left column: icon pill, title, unit, and the
-                            description all stacked together, so the
-                            competency column (a sibling of this whole div,
-                            not nested inside it) centers against its FULL
-                            height — title block + description — rather than
-                            just the title block on its own. */}
-                        <div className="flex-1 min-w-0 flex flex-col gap-4">
-                          <div>
-                            {/* Tinted icon + label pill as a small eyebrow
-                                above the title — the same shape/style the
-                                file-type badge always had, just relocated
-                                here now that competency occupies its old
-                                spot on the right. */}
+                        {/* Single-line row (2026-08-28 redesign): title/unit,
+                            description, and badges sit as three side-by-side
+                            columns instead of a title block stacked over a
+                            wrapping description, so every row reads at a
+                            fixed height regardless of description length. */}
+                        <div className="w-72 shrink-0">
+                          <p className="text-[16px] font-semibold text-brand-text truncate">
+                            {displayTitle(r.title)}
+                          </p>
+                          {/* Unit only — competency lives in the badge
+                              column. Grade never appears inline here either;
+                              any multi-grade result set gets a divider row
+                              instead. */}
+                          <p className="text-xs text-brand-subtext truncate mt-0.5">
+                            {r.unitTitle}
+                          </p>
+                        </div>
+                        {/* Fixed width, not flex-grow — everything before
+                            the type column (title, then this) needs to be a
+                            deterministic width so the type pill always lands
+                            at the same x. A flex-grow'd width, even capped
+                            with max-w, still varies with how much space the
+                            competency column to the right happens to take up
+                            (e.g. whether its "+N" chip is present). */}
+                        <p className="w-[550px] shrink-0 truncate text-left text-sm text-brand-subtext">
+                          {r.description}
+                        </p>
+                        {/* Badges: type pill (moved here from its old spot
+                            above the title) followed by the competency
+                            badge(s), the whole cluster pinned to the row's
+                            right edge via ml-auto. Safe to right-pin now
+                            that the "+N" slot below always reserves the same
+                            width whether or not it's shown — otherwise a row
+                            with a "+N" chip would render as measurably wider
+                            than one without, and ml-auto would shift the
+                            type pill's x along with it. */}
+                        <div className="flex items-center gap-3 shrink-0 ml-auto">
+                          {/* Type column — fixed width so every pill (Video/
+                              PDF/Worksheet/Audio) starts at the same x,
+                              regardless of label length, keeping the
+                              competency column that follows scannable. */}
+                          <div className="w-20 shrink-0">
                             <span
-                              className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] mb-1 ${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`}
+                              className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] ${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`}
                             >
                               <typeMeta.icon size={14} />
                               <span className="text-xs font-medium">{typeMeta.label}</span>
                             </span>
-                            <p className="text-[16px] font-semibold text-brand-text truncate">
-                              {displayTitle(r.title)}
-                            </p>
-                            {/* Unit only now — competency moved to the badge
-                                on the right, so it's dropped here to avoid
-                                showing it twice. Grade never appears inline
-                                here either — any multi-grade result set gets
-                                a divider row instead. */}
-                            <p className="text-xs text-brand-subtext truncate mt-0.5">
-                              {r.unitTitle}
-                            </p>
                           </div>
-                          {/* Flush left, spanning the icon's column too — not
-                              indented to align under the title — so the row reads
-                              as a compact header cluster with a full-width body
-                              beneath it, rather than one uniformly dense block. */}
-                          <p className="text-sm text-brand-subtext leading-relaxed line-clamp-2 max-w-[640px]">
-                            {r.description}
-                          </p>
-                        </div>
-                        {/* Competency, promoted to this slot (previously
-                            the file-type badge's spot) to read as slightly
-                            more prominent — one consistent style regardless
-                            of competency (light gray, no icon), with a
-                            "+N" tag for any secondary competencies. A sibling
-                            of the whole left column above (not nested inside
-                            its title block), so the outer row's items-center
-                            centers it against the full row height. */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <CompetencyBadge label={r.competency} />
-                          {r.extraCompetencies?.length > 0 && (
-                            <span className="shrink-0 px-2 py-1 rounded-md bg-brand-bg text-brand-text text-xs font-semibold">
-                              +{r.extraCompetencies.length}
-                            </span>
-                          )}
+                          {/* Competency column — same idea, min-width (not
+                              fixed) so a longer competency name never clips;
+                              the "+N" overflow chip stays glued to the
+                              badge's right edge rather than getting its own
+                              column, so it can shift slightly row to row. */}
+                          <div className="flex items-center gap-1.5 min-w-[130px] shrink-0">
+                            <CompetencyBadge label={r.competency} />
+                            {/* Always rendered (invisible when there's
+                                nothing to show) so this slot's width is
+                                constant across rows — see the ml-auto note
+                                above. */}
+                            <div
+                              className={`relative group/extra shrink-0 w-9 ${
+                                r.extraCompetencies?.length > 0 ? '' : 'opacity-0 pointer-events-none'
+                              }`}
+                            >
+                              <span className="block px-2 py-1 rounded-md bg-brand-bg text-brand-text text-xs font-semibold cursor-default">
+                                +{r.extraCompetencies?.length || 0}
+                              </span>
+                              {r.extraCompetencies?.length > 0 && (
+                                <div className="absolute hidden group-hover/extra:flex flex-col gap-1 z-20 right-0 top-full mt-1.5 p-2 rounded-lg border border-brand-border bg-white shadow-lg whitespace-nowrap">
+                                  {r.extraCompetencies.map((c) => (
+                                    <span key={c} className="text-xs font-medium text-brand-text">{c}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
