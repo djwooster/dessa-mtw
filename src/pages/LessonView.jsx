@@ -2911,7 +2911,7 @@ function highlightMatchText(text, query) {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="bg-dessa-tealLight text-brand-text rounded px-0.5">
+      <mark className="bg-mtw-amberLight text-brand-text rounded px-0.5 border border-mtw-amber/30">
         {text.slice(idx, idx + query.length)}
       </mark>
       {text.slice(idx + query.length)}
