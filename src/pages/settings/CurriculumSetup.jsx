@@ -182,6 +182,66 @@ function GoalColorDropdown({ value, onChange, muted = false }) {
   )
 }
 
+// Concept D's toolbar action (2026-09-01, replacing the "N selected" bar
+// that used to appear beneath the toolbar once a checkbox was checked — the
+// bar's own layout-shifting presence was the thing that didn't read well,
+// not the underlying bulk actions themselves). Now an always-present
+// button next to search: muted/inert with nothing selected, opens a small
+// dropdown of the same two actions (bulkSetGoal / bulkStageReset) once at
+// least one row is checked.
+function BulkActionsButton({ count, onSetGoal, onReset }) {
+  const [open, setOpen] = useState(false)
+  const disabled = count === 0
+  return (
+    <Popover.Root open={open} onOpenChange={(o) => setOpen(disabled ? false : o)}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className={`flex items-center gap-1.5 h-9 px-3 rounded-md text-sm font-medium border border-brand-border transition-colors shrink-0 ${
+            disabled ? 'text-brand-subtext/50 cursor-not-allowed' : 'text-brand-text hover:bg-brand-bg'
+          }`}
+        >
+          Actions{count > 0 ? ` (${count})` : ''}
+          <ChevronDown size={14} />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="start"
+          sideOffset={6}
+          className="z-[60] w-52 bg-white border border-brand-border rounded-lg shadow-lg outline-none overflow-hidden py-2"
+        >
+          <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand-subtext">
+            Set weekly goal to
+          </p>
+          <div className="flex flex-wrap gap-1.5 px-3 pb-2.5">
+            {GOAL_OPTIONS.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => { onSetGoal(n); setOpen(false) }}
+                className="rounded-md hover:opacity-70 transition-opacity"
+                aria-label={`Set selected sites to ${n} days`}
+              >
+                <GoalPill n={n} size="sm" />
+              </button>
+            ))}
+          </div>
+          <div className="border-t border-brand-border" />
+          <button
+            type="button"
+            onClick={() => { onReset(); setOpen(false) }}
+            className="w-full text-left px-3 pt-2.5 text-sm font-medium text-[#3662da] hover:opacity-80 transition-opacity"
+          >
+            Reset to default
+          </button>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}
+
 // Admin-summary concept switcher (2026-08-28) — four different ways to show
 // Program Admins which sites have customized their weekly goal, driven by
 // the Nav dropdown's `?adminConcept=` param (same pattern as the retired
@@ -1198,7 +1258,7 @@ export default function CurriculumSetup() {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border shrink-0">
-            <p className="text-base font-semibold text-brand-text">Site overrides</p>
+            <p className="text-base font-semibold text-brand-text">Weekly Goal by Site</p>
             <div className="flex items-center gap-4">
               <p className="text-xs text-brand-subtext">
                 Weekly goal by site — program default is {goal} day{goal === 1 ? '' : 's'}/week.
@@ -1215,6 +1275,11 @@ export default function CurriculumSetup() {
           </div>
 
           <div className="flex items-center justify-end gap-3 px-6 py-3 border-b border-brand-border shrink-0">
+            <BulkActionsButton
+              count={selectedSchoolIds.size}
+              onSetGoal={bulkSetGoal}
+              onReset={bulkStageReset}
+            />
             <div className="relative w-64 shrink-0">
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
               <input
@@ -1227,63 +1292,23 @@ export default function CurriculumSetup() {
             </div>
           </div>
 
-          {/* Bulk action bar — appears above the table once a row is
-              checked. Setting a goal directly is instant (nothing
-              disappears from view); resetting still stages via
-              pendingResets so a checked-then-reset row stays visible
-              (dimmed, "Reverting…") until the modal closes, same reasoning
-              as Concept B's per-row Reset. */}
-          {selectedSchoolIds.size > 0 && (
-            <div className="flex items-center gap-3 px-6 py-2.5 bg-dessa-tealLight border-b border-brand-border shrink-0">
-              <p className="text-sm font-semibold text-dessa-teal shrink-0">
-                {selectedSchoolIds.size} selected
-              </p>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-xs text-brand-subtext mr-0.5">Set to:</span>
-                {GOAL_OPTIONS.map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => bulkSetGoal(n)}
-                    className="rounded-md hover:opacity-70 transition-opacity"
-                    aria-label={`Set selected sites to ${n} days`}
-                  >
-                    <GoalPill n={n} size="sm" />
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={bulkStageReset}
-                className="text-xs font-medium text-[#3662da] hover:opacity-80 transition-opacity shrink-0"
-              >
-                Reset to default
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedSchoolIds(new Set())}
-                className="ml-auto text-xs font-medium text-brand-subtext hover:text-brand-text transition-colors shrink-0"
-              >
-                Clear selection
-              </button>
-            </div>
-          )}
-
           <div className="flex-1 overflow-y-auto">
             <Table>
-              <TableHeader className="sticky top-0 bg-white z-10">
+              <TableHeader className="sticky top-0 bg-brand-bg/80 z-10">
                 <TableRow>
                   <TableHead className="w-10">
-                    <input
-                      type="checkbox"
-                      checked={pagedModalSchools.length > 0 && pagedModalSchools.every((s) => selectedSchoolIds.has(s.id))}
-                      onChange={toggleSelectAllPaged}
-                      aria-label="Select all sites on this page"
-                      className="accent-dessa-teal w-3.5 h-3.5"
-                    />
+                    <div className="flex items-center justify-center h-full">
+                      <input
+                        type="checkbox"
+                        checked={pagedModalSchools.length > 0 && pagedModalSchools.every((s) => selectedSchoolIds.has(s.id))}
+                        onChange={toggleSelectAllPaged}
+                        aria-label="Select all sites on this page"
+                        className="accent-dessa-teal w-3.5 h-3.5 opacity-80"
+                      />
+                    </div>
                   </TableHead>
-                  <TableHead>Site</TableHead>
-                  <TableHead className="text-right">Weekly goal</TableHead>
+                  <TableHead className="normal-case pl-0">Site</TableHead>
+                  <TableHead className="normal-case text-right">Weekly goal</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1304,16 +1329,18 @@ export default function CurriculumSetup() {
                         onClick={() => toggleSchoolSelected(school.id)}
                         className="cursor-pointer"
                       >
-                        <TableCell className="py-2 pr-0" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selectedSchoolIds.has(school.id)}
-                            onChange={() => toggleSchoolSelected(school.id)}
-                            aria-label={`Select ${school.name}`}
-                            className="accent-dessa-teal w-3.5 h-3.5"
-                          />
+                        <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center h-full">
+                            <input
+                              type="checkbox"
+                              checked={selectedSchoolIds.has(school.id)}
+                              onChange={() => toggleSchoolSelected(school.id)}
+                              aria-label={`Select ${school.name}`}
+                              className="accent-dessa-teal w-3.5 h-3.5 opacity-80"
+                            />
+                          </div>
                         </TableCell>
-                        <TableCell className={`py-2 pl-3 text-[13px] font-medium ${isPendingReset ? 'text-brand-subtext' : ''}`}>
+                        <TableCell className={`py-2 pl-0 text-[13px] font-medium ${isPendingReset ? 'text-brand-subtext' : ''}`}>
                           <span className="inline-flex items-center gap-2">
                             {school.name}
                             {/* Status lives here instead of its own column
