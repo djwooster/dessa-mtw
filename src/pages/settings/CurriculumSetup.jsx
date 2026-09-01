@@ -1352,7 +1352,21 @@ export default function CurriculumSetup() {
                         </TableCell>
                         <TableCell className="py-2 text-right" onClick={(e) => e.stopPropagation()}>
                           {isPendingReset ? (
-                            <GoalPill n={goal} muted size="sm" />
+                            // Previewing the reverted (default) value, but
+                            // still a live dropdown, not a frozen tag —
+                            // picking a value here cancels the pending
+                            // reset and customizes the site to that value
+                            // instead, same as picking one on a Default row.
+                            <GoalColorDropdown
+                              value={goal}
+                              muted
+                              onChange={(n) => {
+                                togglePendingReset(school.id)
+                                setOverrides((os) =>
+                                  os.map((o) => (o.school.id === school.id ? { ...o, weeklyGoal: n } : o))
+                                )
+                              }}
+                            />
                           ) : isCustom ? (
                             <GoalColorDropdown
                               value={override.weeklyGoal}
