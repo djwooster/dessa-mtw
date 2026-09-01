@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import * as Popover from '@radix-ui/react-popover'
-import { Info, Plus, Pencil, Trash2, Check, X, ChevronDown, Search } from 'lucide-react'
+import { Info, Plus, Pencil, Trash2, Check, X, ChevronDown, Search, RotateCcw } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { toast } from 'sonner'
 // import FamilyAccessUrl from './FamilyAccessUrl'
@@ -182,63 +182,48 @@ function GoalColorDropdown({ value, onChange, muted = false }) {
   )
 }
 
-// Concept D's toolbar action (2026-09-01, replacing the "N selected" bar
-// that used to appear beneath the toolbar once a checkbox was checked — the
-// bar's own layout-shifting presence was the thing that didn't read well,
-// not the underlying bulk actions themselves). Now an always-present
-// button next to search: muted/inert with nothing selected, opens a small
-// dropdown of the same two actions (bulkSetGoal / bulkStageReset) once at
-// least one row is checked.
-function BulkActionsButton({ count, onSetGoal, onReset }) {
-  const [open, setOpen] = useState(false)
-  const disabled = count === 0
+// Selection command bar (2026-09-01, replacing the dropdown-based Actions
+// button and, before that, the layout-shifting "N selected" bar) — modeled
+// directly on Notion's own bulk-edit toolbar: renders nothing at all with
+// zero rows selected (no persistent "Actions" affordance to keep around),
+// and appears in that same slot, left of search, the moment ≥1 row is
+// checked. Thin `bg-dessa-teal/20` hairlines between segments mirror
+// Notion's own subtle dividers rather than visible borders per segment.
+// Actions are intentionally just the two we actually have — set weekly
+// goal (inline pills, not hidden behind a dropdown like the button
+// version) and reset — no "..." overflow, since hiding one of two actions
+// behind a menu only adds a click.
+function SelectionCommandBar({ count, onSetGoal, onReset }) {
   return (
-    <Popover.Root open={open} onOpenChange={(o) => setOpen(disabled ? false : o)}>
-      <Popover.Trigger asChild>
-        <button
-          type="button"
-          disabled={disabled}
-          className={`flex items-center gap-1.5 h-9 px-3 rounded-md text-sm font-medium border border-brand-border transition-colors shrink-0 ${
-            disabled ? 'text-brand-subtext/50 cursor-not-allowed' : 'text-brand-text hover:bg-brand-bg'
-          }`}
-        >
-          Actions{count > 0 ? ` (${count})` : ''}
-          <ChevronDown size={14} />
-        </button>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          align="start"
-          sideOffset={6}
-          className="z-[60] w-52 bg-white border border-brand-border rounded-lg shadow-lg outline-none overflow-hidden py-2"
-        >
-          <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand-subtext">
-            Set weekly goal to
-          </p>
-          <div className="flex flex-wrap gap-1.5 px-3 pb-2.5">
-            {GOAL_OPTIONS.map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => { onSetGoal(n); setOpen(false) }}
-                className="rounded-md hover:opacity-70 transition-opacity"
-                aria-label={`Set selected sites to ${n} days`}
-              >
-                <GoalPill n={n} size="sm" />
-              </button>
-            ))}
-          </div>
-          <div className="border-t border-brand-border" />
+    <div className="flex items-center gap-2.5 h-9 px-3 rounded-md bg-dessa-tealLight shrink-0">
+      <span className="text-sm font-semibold text-dessa-teal whitespace-nowrap">
+        {count} selected
+      </span>
+      <span className="w-px h-5 bg-dessa-teal/20 shrink-0" />
+      <div className="flex items-center gap-1.5 shrink-0">
+        {GOAL_OPTIONS.map((n) => (
           <button
+            key={n}
             type="button"
-            onClick={() => { onReset(); setOpen(false) }}
-            className="w-full text-left px-3 pt-2.5 text-sm font-medium text-[#3662da] hover:opacity-80 transition-opacity"
+            onClick={() => onSetGoal(n)}
+            className="rounded-md hover:opacity-70 transition-opacity"
+            aria-label={`Set selected sites to ${n} days`}
           >
-            Reset to default
+            <GoalPill n={n} size="sm" />
           </button>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+        ))}
+      </div>
+      <span className="w-px h-5 bg-dessa-teal/20 shrink-0" />
+      <button
+        type="button"
+        onClick={onReset}
+        title="Reset to default"
+        aria-label="Reset selected sites to program default"
+        className="p-1.5 rounded-md text-dessa-teal hover:bg-white/50 transition-colors shrink-0"
+      >
+        <RotateCcw size={15} />
+      </button>
+    </div>
   )
 }
 
@@ -1275,11 +1260,13 @@ export default function CurriculumSetup() {
           </div>
 
           <div className="flex items-center justify-end gap-3 px-6 py-3 border-b border-brand-border shrink-0">
-            <BulkActionsButton
-              count={selectedSchoolIds.size}
-              onSetGoal={bulkSetGoal}
-              onReset={bulkStageReset}
-            />
+            {selectedSchoolIds.size > 0 && (
+              <SelectionCommandBar
+                count={selectedSchoolIds.size}
+                onSetGoal={bulkSetGoal}
+                onReset={bulkStageReset}
+              />
+            )}
             <div className="relative w-64 shrink-0">
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
               <input
@@ -1323,32 +1310,39 @@ export default function CurriculumSetup() {
                     const override = overrides.find((o) => o.school.id === school.id)
                     const isCustom = !!override
                     const isPendingReset = pendingResets.has(school.id)
+                    const isSelected = selectedSchoolIds.has(school.id)
                     return (
                       <TableRow
                         key={school.id}
                         onClick={() => toggleSchoolSelected(school.id)}
-                        className="cursor-pointer"
+                        // A selected row needs its own hover:bg here — the
+                        // shared TableRow's default hover:bg-brand-bg/60 has
+                        // higher specificity (class + :hover beats a plain
+                        // class), so without this override it visually masks
+                        // the selected tint entirely while the mouse still
+                        // sits on the row you just clicked.
+                        className={`cursor-pointer ${isSelected ? 'bg-dessa-teal/[10%] hover:bg-dessa-teal/[16%]' : ''}`}
                       >
                         <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center h-full">
                             <input
                               type="checkbox"
-                              checked={selectedSchoolIds.has(school.id)}
+                              checked={isSelected}
                               onChange={() => toggleSchoolSelected(school.id)}
                               aria-label={`Select ${school.name}`}
                               className="accent-dessa-teal w-3.5 h-3.5 opacity-80"
                             />
                           </div>
                         </TableCell>
-                        <TableCell className={`py-2 pl-0 text-[13px] font-medium ${isPendingReset ? 'text-brand-subtext' : ''}`}>
+                        <TableCell className="py-2 pl-0 text-[13px] font-medium">
                           <span className="inline-flex items-center gap-2">
                             {school.name}
                             {/* Status lives here instead of its own column
                                 (see the block comment above) — only rendered
                                 for Custom rows so the common Default case
                                 stays quiet, and suppressed during a pending
-                                reset since the dimmed name + muted goal pill
-                                already communicate "reverting." */}
+                                reset since the muted goal pill already
+                                communicates "reverting." */}
                             {isCustom && !isPendingReset && (
                               <span className="text-xs font-medium text-dessa-teal bg-dessa-tealLight border border-dessa-teal/[7%] rounded px-1 py-0.5 shrink-0">
                                 Custom
@@ -1358,7 +1352,7 @@ export default function CurriculumSetup() {
                         </TableCell>
                         <TableCell className="py-2 text-right" onClick={(e) => e.stopPropagation()}>
                           {isPendingReset ? (
-                            <GoalPill n={goal} muted />
+                            <GoalPill n={goal} muted size="sm" />
                           ) : isCustom ? (
                             <GoalColorDropdown
                               value={override.weeklyGoal}
