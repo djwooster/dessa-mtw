@@ -860,29 +860,32 @@ export default function CurriculumSetup() {
           {adminConcept === 'c' && (
             <div className="px-6 pb-6">
               <div className="border-t border-brand-border pt-5">
-                <p className="text-sm font-semibold text-brand-text mb-1">Site overrides</p>
-                <p className="text-sm text-brand-subtext mb-3">
-                  Every site's weekly goal setting — default or customized.
-                </p>
-
-                <div className="flex items-center justify-end flex-wrap gap-3 mb-3">
-                  {selectedSchoolIds.size > 0 && (
-                    <SelectionCommandBar
-                      count={selectedSchoolIds.size}
-                      onSetGoal={bulkSetGoal}
-                      onReset={bulkStageReset}
-                      onClear={() => setSelectedSchoolIds(new Set())}
-                    />
-                  )}
-                  <div className="relative flex-1 min-w-[140px] max-w-xs">
-                    <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-                    <input
-                      type="text"
-                      value={overridesSearch}
-                      onChange={(e) => setOverridesSearch(e.target.value)}
-                      placeholder={`Search ${schools.length} sites`}
-                      className="w-full pl-8 pr-2 h-9 text-sm border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-                    />
+                <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+                  <div>
+                    <p className="text-sm font-semibold text-brand-text mb-1">Site overrides</p>
+                    <p className="text-sm text-brand-subtext">
+                      Customize the weekly goal for individual sites, or leave them on the program default.
+                    </p>
+                  </div>
+                  <div className="flex items-center flex-wrap gap-3">
+                    {selectedSchoolIds.size > 0 && (
+                      <SelectionCommandBar
+                        count={selectedSchoolIds.size}
+                        onSetGoal={bulkSetGoal}
+                        onReset={bulkStageReset}
+                        onClear={() => setSelectedSchoolIds(new Set())}
+                      />
+                    )}
+                    <div className="relative flex-1 min-w-[140px] max-w-xs">
+                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+                      <input
+                        type="text"
+                        value={overridesSearch}
+                        onChange={(e) => setOverridesSearch(e.target.value)}
+                        placeholder={`Search ${schools.length} sites`}
+                        className="w-full pl-8 pr-2 h-9 text-sm border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                      />
+                    </div>
                   </div>
                 </div>
 
