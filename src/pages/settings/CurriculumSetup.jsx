@@ -373,6 +373,11 @@ export default function CurriculumSetup() {
   // page state rather than reusing A/B's plain overrides list.
   const [overridesSearch, setOverridesSearch] = useState('')
   const [overridesPage, setOverridesPage] = useState(1)
+  // Shared by Concepts C and D as of 2026-09-02 — "All Sites"/"Custom"
+  // segmented Tabs filter (reusing the same TabsList/TabsTrigger pill style
+  // already used above for the Program Admin/Site Leader switcher), the
+  // replacement for the old status <select> retired earlier this session.
+  const [overridesView, setOverridesView] = useState('all')
   // Shared by Concepts C and D as of 2026-09-02 — adjustable page size
   // (matching the Resources page's own results-list pagination), unlike
   // C's old fixed OVERRIDES_PAGE_SIZE. Defaults to 10 per the design-system
@@ -623,12 +628,15 @@ export default function CurriculumSetup() {
   //   })
   //   .sort((a, b) => a.name.localeCompare(b.name))
 
-  // Shared by Concepts C and D as of 2026-09-02 — always every site (no
-  // status filter), search-only, click-to-sort on Site or Weekly goal (see
-  // overridesSortKey/toggleOverridesSort). A site with no override sorts by
-  // the program default goal, same value the row itself displays.
+  // Shared by Concepts C and D as of 2026-09-02 — every site by default, or
+  // just the customized ones when overridesView is 'custom' (see the Tabs
+  // filter above the table), search-only otherwise, click-to-sort on Site
+  // or Weekly goal (see overridesSortKey/toggleOverridesSort). A site with
+  // no override sorts by the program default goal, same value the row
+  // itself displays.
   const modalSchools = schools
     .filter((s) => !overridesSearchQuery || s.name.toLowerCase().includes(overridesSearchQuery))
+    .filter((s) => overridesView !== 'custom' || overrides.some((o) => o.school.id === s.id))
     .sort((a, b) => {
       if (overridesSortKey === 'goal') {
         const aGoal = overrides.find((o) => o.school.id === a.id)?.weeklyGoal ?? goal
@@ -642,7 +650,7 @@ export default function CurriculumSetup() {
   // render (same pattern as the Resources page's results list) rather than
   // in an effect, so it takes effect in the same commit as the paged lists
   // below.
-  const overridesFilterKey = JSON.stringify([overridesSearch, modalPageSize, overridesSortKey, overridesSortDir])
+  const overridesFilterKey = JSON.stringify([overridesSearch, overridesView, modalPageSize, overridesSortKey, overridesSortDir])
   const [prevOverridesFilterKey, setPrevOverridesFilterKey] = useState(overridesFilterKey)
   if (overridesFilterKey !== prevOverridesFilterKey) {
     setPrevOverridesFilterKey(overridesFilterKey)
@@ -876,6 +884,12 @@ export default function CurriculumSetup() {
                         onClear={() => setSelectedSchoolIds(new Set())}
                       />
                     )}
+                    <Tabs value={overridesView} onValueChange={setOverridesView}>
+                      <TabsList>
+                        <TabsTrigger value="all">All Sites</TabsTrigger>
+                        <TabsTrigger value="custom">Custom</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
                     <div className="relative flex-1 min-w-[140px] max-w-xs">
                       <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
                       <input
@@ -927,7 +941,9 @@ export default function CurriculumSetup() {
                       {pagedModalSchools.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={3} className="text-center text-brand-subtext py-6">
-                            No sites match your search.
+                            {overridesView === 'custom'
+                              ? 'No sites have customized their goal yet.'
+                              : 'No sites match your search.'}
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -1414,6 +1430,12 @@ export default function CurriculumSetup() {
                 onClear={() => setSelectedSchoolIds(new Set())}
               />
             )}
+            <Tabs value={overridesView} onValueChange={setOverridesView}>
+              <TabsList>
+                <TabsTrigger value="all">All Sites</TabsTrigger>
+                <TabsTrigger value="custom">Custom</TabsTrigger>
+              </TabsList>
+            </Tabs>
             {/* flex-1 + a lower min-width (was a fixed w-64 shrink-0) so
                 this can compress once the selection command bar's own
                 fixed-width segments are also competing for space — without
@@ -1456,7 +1478,9 @@ export default function CurriculumSetup() {
                 {pagedModalSchools.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center text-brand-subtext py-6">
-                      No sites match your search.
+                      {overridesView === 'custom'
+                        ? 'No sites have customized their goal yet.'
+                        : 'No sites match your search.'}
                     </TableCell>
                   </TableRow>
                 ) : (
