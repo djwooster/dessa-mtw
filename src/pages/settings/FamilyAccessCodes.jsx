@@ -3,10 +3,26 @@ import { motion } from 'framer-motion'
 import { ArrowUp, ArrowDown, ArrowUpDown, Search, X, MoreHorizontal, Download, ChevronDown } from 'lucide-react'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table'
 import {
-  Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext,
+  Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis,
 } from '../../components/ui/pagination'
 import { CopyField } from '../../components/ui/copy-field'
 import { schools, SITE_LEADER_SCHOOL, getSiteJoinUrl } from '../../lib/familyAccessData'
+
+// Windowed page list (first, last, current ±1) with gaps marked by 'ellipsis'
+// — same helper as Resources.jsx's/CurriculumSetup.jsx's pageWindow,
+// duplicated here rather than extracted to a shared util. Needed once this
+// list can span double-digit page counts (150 sites) — listing every page
+// number isn't viable at that point.
+function pageWindow(current, total) {
+  const shown = new Set([1, total, current - 1, current, current + 1])
+  const pages = [...shown].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b)
+  const withGaps = []
+  pages.forEach((p, i) => {
+    if (i > 0 && p - pages[i - 1] > 1) withGaps.push('ellipsis')
+    withGaps.push(p)
+  })
+  return withGaps
+}
 
 function SiteSortHeader({ sortDir, onSort }) {
   return (
@@ -191,26 +207,26 @@ export default function FamilyAccessCodes({ role }) {
                     <PaginationPrevious
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
-                      className="w-8 h-8 p-0 justify-center rounded-lg"
-                    >
-                      {''}
-                    </PaginationPrevious>
+                    />
                   </PaginationItem>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                    <PaginationItem key={p}>
-                      <PaginationLink isActive={p === page} onClick={() => setPage(p)} className="w-9 h-9 rounded-lg">
-                        {p}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
+                  {pageWindow(page, totalPages).map((p, i) =>
+                    p === 'ellipsis' ? (
+                      <PaginationItem key={`ellipsis-${i}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={p}>
+                        <PaginationLink isActive={p === page} onClick={() => setPage(p)}>
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
                   <PaginationItem>
                     <PaginationNext
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={page === totalPages}
-                      className="w-8 h-8 p-0 justify-center rounded-lg"
-                    >
-                      {''}
-                    </PaginationNext>
+                    />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>

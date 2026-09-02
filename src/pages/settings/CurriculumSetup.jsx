@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import * as Popover from '@radix-ui/react-popover'
-import { Info, Plus, Pencil, Trash2, Check, X, ChevronDown, Search, RotateCcw } from 'lucide-react'
+import { Info, Plus, Pencil, Trash2, Check, X, ChevronDown, Search, RotateCcw, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { toast } from 'sonner'
 // import FamilyAccessUrl from './FamilyAccessUrl'
@@ -22,8 +22,14 @@ const TABS = [
 ]
 
 const GOAL_OPTIONS = [1, 2, 3, 4, 5]
-const OVERRIDES_PAGE_SIZE = 8
-const MODAL_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 'all']
+// Concept C's old fixed page size, back when it had its own status-filtered
+// table separate from Concept D's. Retired 2026-09-02 when C switched to
+// D's table (see the block comment above GoalPicker) and started sharing
+// MODAL_PAGE_SIZE_OPTIONS/modalPageSize below instead. Kept commented
+// rather than deleted, same treatment as the rest of this file's retired
+// concept code.
+// const OVERRIDES_PAGE_SIZE = 8
+const MODAL_PAGE_SIZE_OPTIONS = [5, 10, 25, 50]
 
 // Windowed page list (first, last, current ±1) with gaps marked by '…' —
 // same helper as Resources.jsx's pageWindow, duplicated here rather than
@@ -115,6 +121,33 @@ function GoalRadioGroup({ value, onChange, name }) {
   )
 }
 
+// Click-to-sort column header for Concepts C/D's shared table (2026-09-02)
+// — same ArrowUp/ArrowDown/ArrowUpDown convention as Family Access Codes'
+// SiteSortHeader, generalized to take a label since this table has two
+// sortable columns (Site, Weekly goal) instead of just one.
+function SortableHeader({ label, active, dir, onClick, align = 'left' }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1 text-sm font-semibold transition-colors group ${
+        align === 'right' ? 'flex-row-reverse' : ''
+      } ${active ? 'text-brand-text' : 'text-brand-subtext hover:text-brand-text'}`}
+    >
+      {label}
+      {active ? (
+        dir === 'asc' ? (
+          <ArrowUp size={13} className="text-dessa-teal" />
+        ) : (
+          <ArrowDown size={13} className="text-dessa-teal" />
+        )
+      ) : (
+        <ArrowUpDown size={13} className="opacity-40 group-hover:opacity-70" />
+      )}
+    </button>
+  )
+}
+
 // Value pill for Concept D's dense table (2026-08-31, simplified same day —
 // the per-value Notion-style colors read as "off" rather than helpful, so
 // every pill is plain light-gray with a subtle border for now regardless of
@@ -139,15 +172,19 @@ function GoalPill({ n, size = 'md', interactive = false }) {
   )
 }
 
-// Click-to-edit cell for Concept D's table — closed state is just the
-// colored pill (Notion's reference showed a removable chip + "create one"
-// search, but our range is a fixed, always-populated 1-5, so that's
-// simplified to a plain list of the other 4 values, with no way to clear
-// it entirely — clearing an override back to the program default is a
-// bulk-only action, see bulkStageReset). z-[60] on the content since it
-// needs to render above the modal's own z-50 overlay. `muted` just passes
-// through to the trigger pill — a Default row opening this still lists the
-// normal colored options, since picking one is what customizes it.
+// Click-to-edit cell shared by Concepts C and D's tables — closed state is
+// the GoalPill trigger (Notion's reference showed a removable chip +
+// "create one" search, but our range is a fixed, always-populated 1-5, so
+// that's simplified to a plain list of the other 4 values, with no way to
+// clear it entirely — clearing an override back to the program default is a
+// bulk-only action, see bulkStageReset). The open list itself is plain text
+// rows (2026-09-02 — GoalPill read as odd floating chips once stacked in a
+// menu; a standard select-style list reads more familiar), not pills. z-[60]
+// on the content since it needs to render above the modal's own z-50
+// overlay (Concept D only — harmless no-op for Concept C, which has no
+// overlay to sit above). `muted` just passes through to the trigger pill —
+// a Default row opening this still lists the normal options, since picking
+// one is what customizes it.
 function GoalColorDropdown({ value, onChange, muted = false }) {
   const [open, setOpen] = useState(false)
   return (
@@ -168,11 +205,11 @@ function GoalColorDropdown({ value, onChange, muted = false }) {
               key={n}
               type="button"
               onClick={() => { onChange(n); setOpen(false) }}
-              className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 text-sm text-left transition-colors ${
+              className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 text-sm text-left font-medium text-brand-text transition-colors ${
                 value === n && !muted ? 'bg-brand-bg' : 'hover:bg-brand-bg'
               }`}
             >
-              <GoalPill n={n} size="sm" />
+              {n} {n === 1 ? 'Day' : 'Days'}
               {value === n && !muted && <Check size={13} className="text-dessa-teal shrink-0" />}
             </button>
           ))}
@@ -183,43 +220,50 @@ function GoalColorDropdown({ value, onChange, muted = false }) {
 }
 
 // Selection command bar (2026-09-01, replacing the dropdown-based Actions
-// button and, before that, the layout-shifting "N selected" bar) — modeled
-// directly on Notion's own bulk-edit toolbar: renders nothing at all with
-// zero rows selected (no persistent "Actions" affordance to keep around),
-// and appears in that same slot, left of search, the moment ≥1 row is
-// checked. Thin `bg-dessa-teal/20` hairlines between segments mirror
-// Notion's own subtle dividers rather than visible borders per segment.
-// Actions are intentionally just the two we actually have — set weekly
-// goal (inline pills, not hidden behind a dropdown like the button
-// version) and reset — no "..." overflow, since hiding one of two actions
-// behind a menu only adds a click.
-function SelectionCommandBar({ count, onSetGoal, onReset }) {
+// button and, before that, the layout-shifting "N selected" bar) — rebuilt
+// this same day to actually match Notion's structure (see reference
+// screenshot) rather than just borrow its color: Notion's segments are
+// flush full-height buttons stacked edge-to-edge with hairline dividers
+// between every one of them, not chips floating inside a padded box. So
+// here the outer container carries zero padding — each segment (including
+// "N selected" itself, now a real clickable clear-selection button) owns
+// its own h-full + px-3 and hover state. Dividers are a `border-r` on every
+// segment but the last, not a separate element — that's automatically
+// full-height (it's part of the button's own box) and is how a segmented
+// toolbar like this is normally built, rather than interleaving standalone
+// divider spans between children. `overflow-hidden` on the container clips
+// the first/last segment's corners to the shared rounded-md shape. Renders
+// nothing at all with zero rows selected (no persistent "Actions"
+// affordance to keep around) and appears in that slot, left of search,
+// once ≥1 row is checked. Reset gets no unique treatment — same button
+// styling as the day options, per explicit request.
+function SelectionCommandBar({ count, onSetGoal, onReset, onClear }) {
   return (
-    <div className="flex items-center gap-2.5 h-9 px-3 rounded-md bg-dessa-tealLight shrink-0">
-      <span className="text-sm font-semibold text-dessa-teal whitespace-nowrap">
+    <div className="flex items-center h-9 rounded-md bg-brand-bg/80 overflow-hidden shrink-0">
+      <button
+        type="button"
+        onClick={onClear}
+        className="h-full px-3 flex items-center border-r border-brand-border text-xs font-semibold text-dessa-teal hover:bg-dessa-teal/10 transition-colors whitespace-nowrap"
+      >
         {count} selected
-      </span>
-      <span className="w-px h-5 bg-dessa-teal/20 shrink-0" />
-      <div className="flex items-center gap-1.5 shrink-0">
-        {GOAL_OPTIONS.map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onSetGoal(n)}
-            className="rounded-md hover:opacity-70 transition-opacity"
-            aria-label={`Set selected sites to ${n} days`}
-          >
-            <GoalPill n={n} size="sm" />
-          </button>
-        ))}
-      </div>
-      <span className="w-px h-5 bg-dessa-teal/20 shrink-0" />
+      </button>
+      {GOAL_OPTIONS.map((n) => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => onSetGoal(n)}
+          className="h-full px-3 flex items-center border-r border-brand-border text-xs font-medium text-brand-text hover:bg-dessa-teal/10 transition-colors whitespace-nowrap"
+          aria-label={`Set selected sites to ${n} days`}
+        >
+          {n} {n === 1 ? 'Day' : 'Days'}
+        </button>
+      ))}
       <button
         type="button"
         onClick={onReset}
         title="Reset to default"
         aria-label="Reset selected sites to program default"
-        className="p-1.5 rounded-md text-dessa-teal hover:bg-white/50 transition-colors shrink-0"
+        className="h-full px-3 flex items-center text-xs font-medium text-brand-text hover:bg-dessa-teal/10 transition-colors"
       >
         <RotateCcw size={15} />
       </button>
@@ -230,14 +274,16 @@ function SelectionCommandBar({ count, onSetGoal, onReset }) {
 // Admin-summary concept switcher (2026-08-28) — four different ways to show
 // Program Admins which sites have customized their weekly goal, driven by
 // the Nav dropdown's `?adminConcept=` param (same pattern as the retired
-// Resources decor switcher): A embeds a lightweight table directly in the
-// page (accordion-expand to edit, like the ticket's original build); B
-// keeps a trigger pill that opens a right-side drawer with compact inline
-// controls per row; C is a full report-style table over every site
-// (search + status filter + pagination, reusing this app's Table/
-// Pagination primitives) so the "summary" scales to browsing the whole
-// roster, not just the exceptions; D is the same compact content as B but
-// in a centered modal + overlay instead of a side drawer.
+// Resources decor switcher). A (lightweight accordion table) and B (side
+// drawer with compact inline controls) were frozen 2026-09-02 — their
+// render blocks are commented out below, kept only as evidence of process.
+// The live comparison is now just C vs. D: C is a full report-style table
+// over every site, always inline in the page; D is the same table in a
+// centered modal + overlay instead. As of 2026-09-02 they share the exact
+// same table (checkbox multi-select + bulk command bar, inline "Custom"
+// badge instead of a Status column, click-to-edit GoalColorDropdown cell,
+// numbered Pagination + page-size select) — the only remaining difference
+// is presentation (inline vs. modal), not the table itself.
 
 // Deterministic pseudo-random fraction in [0, 1) from an integer seed —
 // used below so which ~25% of the mock roster starts customized (and at
@@ -290,7 +336,7 @@ export default function CurriculumSetup() {
   // state, same reasoning as the retired Resources decor switcher: a
   // reviewer flips it from the nav without this page needing its own
   // control for something that's purely a design-comparison toggle.
-  const adminConcept = searchParams.get('adminConcept') || 'a'
+  const adminConcept = searchParams.get('adminConcept') || 'c'
 
   const [tab, setTab] = useState('engagement')
   const [goal, setGoal] = useState(3)
@@ -327,14 +373,26 @@ export default function CurriculumSetup() {
   // page state rather than reusing A/B's plain overrides list.
   const [overridesSearch, setOverridesSearch] = useState('')
   const [overridesPage, setOverridesPage] = useState(1)
-  // Concept D only — adjustable page size (matching the Resources page's
-  // own results-list pagination), unlike C's fixed OVERRIDES_PAGE_SIZE.
-  const [modalPageSize, setModalPageSize] = useState('all')
-  // Concept C only — its status filter is a <select> (all/custom/default),
-  // narrowing which rows show at all. Concept D dropped this in favor of
-  // always showing every site (2026-08-31 simplification) plus the
-  // sortable Status column below, so D never reads or writes this.
-  const [overridesStatusFilter, setOverridesStatusFilter] = useState('all')
+  // Shared by Concepts C and D as of 2026-09-02 — adjustable page size
+  // (matching the Resources page's own results-list pagination), unlike
+  // C's old fixed OVERRIDES_PAGE_SIZE. Defaults to 10 per the design-system
+  // reference (2026-09-02).
+  const [modalPageSize, setModalPageSize] = useState(10)
+  // Shared by Concepts C and D as of 2026-09-02 — click-to-sort on the Site
+  // and Weekly goal column headers (see SortableHeader/toggleOverridesSort).
+  // Two-state per column (asc/desc), not three — picking a new column
+  // always starts it at asc, same as Family Access Codes' single-column
+  // SiteSortHeader, just generalized to track which column is active.
+  const [overridesSortKey, setOverridesSortKey] = useState('name')
+  const [overridesSortDir, setOverridesSortDir] = useState('asc')
+  // Concept C's status filter was a <select> (all/custom/default),
+  // narrowing which rows show at all. Retired 2026-09-02 when C switched to
+  // Concept D's table — D always shows every site with an inline "Custom"
+  // badge instead of a Status column/filter, and C now matches it (see the
+  // block comment above GoalPicker). Commented out, along with
+  // filteredSchools/pagedSchools/overridesTotalPages further down, since
+  // nothing reads it anymore.
+  // const [overridesStatusFilter, setOverridesStatusFilter] = useState('all')
   // Concept D — click-to-sort on the Status column header; retired
   // 2026-08-31 along with that column (see the block comment above
   // GoalPill). Commented out rather than left as dead-but-declared state,
@@ -458,6 +516,17 @@ export default function CurriculumSetup() {
     })
   }
 
+  // Clicking the active column's header flips its direction; clicking the
+  // other column switches to it starting at asc.
+  function toggleOverridesSort(key) {
+    if (overridesSortKey === key) {
+      setOverridesSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setOverridesSortKey(key)
+      setOverridesSortDir('asc')
+    }
+  }
+
   // Concept D bulk actions — apply to every currently-selected school
   // (looked up from the full roster, not just `overrides`, since a
   // selected "Default" row has no existing override entry yet). Setting a
@@ -536,53 +605,64 @@ export default function CurriculumSetup() {
     setOverrides((os) => os.map((o) => (o.school.id === SITE_LEADER_SCHOOL.id ? { ...o, weeklyGoal: day } : o)))
   }
 
-  // Concept C only — full-roster report, filtered by its own status
-  // <select> and paged. `schools` (familyAccessData.js) is generated in
-  // place/suffix/type cycling order, not alphabetically, so this sorts
+  // `schools` (familyAccessData.js) is generated in place/suffix/type
+  // cycling order, not alphabetically, so both concepts' lists below sort
   // explicitly.
   const overridesSearchQuery = overridesSearch.trim().toLowerCase()
-  const filteredSchools = schools
-    .filter((s) => {
-      const isCustom = overrides.some((o) => o.school.id === s.id)
-      const matchesSearch = !overridesSearchQuery || s.name.toLowerCase().includes(overridesSearchQuery)
-      const matchesStatus =
-        overridesStatusFilter === 'all' || (overridesStatusFilter === 'custom' ? isCustom : !isCustom)
-      return matchesSearch && matchesStatus
-    })
-    .sort((a, b) => a.name.localeCompare(b.name))
+  // Concept C's own status-filtered roster — retired 2026-09-02 alongside
+  // overridesStatusFilter above; C now reuses modalSchools/pagedModalSchools
+  // below (Concept D's derived lists) instead, since both concepts show the
+  // same search-only, no-status-filter roster now.
+  // const filteredSchools = schools
+  //   .filter((s) => {
+  //     const isCustom = overrides.some((o) => o.school.id === s.id)
+  //     const matchesSearch = !overridesSearchQuery || s.name.toLowerCase().includes(overridesSearchQuery)
+  //     const matchesStatus =
+  //       overridesStatusFilter === 'all' || (overridesStatusFilter === 'custom' ? isCustom : !isCustom)
+  //     return matchesSearch && matchesStatus
+  //   })
+  //   .sort((a, b) => a.name.localeCompare(b.name))
 
-  // Concept D only — always every site (no status filter, per the
-  // 2026-08-31 simplification), same search, sorted alphabetically. Used to
-  // also sort by Status when overridesStatusSort was set via that column's
-  // header; that state and this branch are retired along with the column
-  // (see the block comment above GoalPill).
+  // Shared by Concepts C and D as of 2026-09-02 — always every site (no
+  // status filter), search-only, click-to-sort on Site or Weekly goal (see
+  // overridesSortKey/toggleOverridesSort). A site with no override sorts by
+  // the program default goal, same value the row itself displays.
   const modalSchools = schools
     .filter((s) => !overridesSearchQuery || s.name.toLowerCase().includes(overridesSearchQuery))
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => {
+      if (overridesSortKey === 'goal') {
+        const aGoal = overrides.find((o) => o.school.id === a.id)?.weeklyGoal ?? goal
+        const bGoal = overrides.find((o) => o.school.id === b.id)?.weeklyGoal ?? goal
+        return overridesSortDir === 'asc' ? aGoal - bGoal : bGoal - aGoal
+      }
+      return overridesSortDir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+    })
 
-  // Reset to page 1 when the search/filter changes — adjusted during
+  // Reset to page 1 when the search/filter/sort changes — adjusted during
   // render (same pattern as the Resources page's results list) rather than
   // in an effect, so it takes effect in the same commit as the paged lists
   // below.
-  const overridesFilterKey = JSON.stringify([overridesSearch, overridesStatusFilter, modalPageSize])
+  const overridesFilterKey = JSON.stringify([overridesSearch, modalPageSize, overridesSortKey, overridesSortDir])
   const [prevOverridesFilterKey, setPrevOverridesFilterKey] = useState(overridesFilterKey)
   if (overridesFilterKey !== prevOverridesFilterKey) {
     setPrevOverridesFilterKey(overridesFilterKey)
     setOverridesPage(1)
   }
 
-  const overridesTotalPages = Math.max(1, Math.ceil(filteredSchools.length / OVERRIDES_PAGE_SIZE))
-  const pagedSchools = filteredSchools.slice(
-    (overridesPage - 1) * OVERRIDES_PAGE_SIZE,
-    overridesPage * OVERRIDES_PAGE_SIZE
-  )
+  // Concept C's own pagination over filteredSchools — retired 2026-09-02
+  // alongside filteredSchools/OVERRIDES_PAGE_SIZE above; C now uses
+  // modalTotalPages/pagedModalSchools below instead.
+  // const overridesTotalPages = Math.max(1, Math.ceil(filteredSchools.length / OVERRIDES_PAGE_SIZE))
+  // const pagedSchools = filteredSchools.slice(
+  //   (overridesPage - 1) * OVERRIDES_PAGE_SIZE,
+  //   overridesPage * OVERRIDES_PAGE_SIZE
+  // )
 
-  // 'all' page size means "no pagination" — one page holding every filtered
-  // school, rather than treating it as a numeric size to slice by.
-  const modalTotalPages = modalPageSize === 'all' ? 1 : Math.max(1, Math.ceil(modalSchools.length / modalPageSize))
-  const pagedModalSchools = modalPageSize === 'all'
-    ? modalSchools
-    : modalSchools.slice((overridesPage - 1) * modalPageSize, overridesPage * modalPageSize)
+  const modalTotalPages = Math.max(1, Math.ceil(modalSchools.length / modalPageSize))
+  const pagedModalSchools = modalSchools.slice(
+    (overridesPage - 1) * modalPageSize,
+    overridesPage * modalPageSize
+  )
 
   // Shared by Concepts B and D — same compact, no-expand-step content
   // (a value control + reset right on each row), just presented in a
@@ -699,9 +779,10 @@ export default function CurriculumSetup() {
           </div>
 
           {/* Concept A — lightweight table embedded directly in the page,
-              always visible (no trigger/overlay needed). Same accordion-
-              expand-to-edit interaction as the original build, just no
-              longer hidden behind a pill + side panel. */}
+              always visible (no trigger/overlay needed), with an accordion-
+              expand-to-edit interaction. Frozen 2026-09-02 (see the block
+              comment above GoalPicker) — commented out rather than deleted,
+              kept only as evidence of process.
           {adminConcept === 'a' && (
             <div className="px-6 pb-6">
               <div className="border-t border-brand-border pt-5">
@@ -763,13 +844,19 @@ export default function CurriculumSetup() {
               </div>
             </div>
           )}
+          */}
 
           {/* Concept C — full-roster report: every site, not just the
-              overridden ones, with search + status filter + pagination
-              (mirrors the Report1 admin-table pattern elsewhere in this
-              app) so it scales to browsing/auditing the whole district,
-              not just spotting exceptions. Editing is inline in the table
-              itself — no drawer/modal. */}
+              overridden ones, so it scales to browsing/auditing the whole
+              district, not just spotting exceptions. As of 2026-09-02 this
+              is Concept D's table (see the block comment above GoalPicker)
+              rendered inline in the page instead of inside a modal — same
+              checkbox multi-select + bulk command bar, inline "Custom"
+              badge, click-to-edit GoalColorDropdown cell, and numbered
+              Pagination + page-size select. The status-filter dropdown,
+              GoalPicker cell, and Previous/Next pagination this replaced
+              are commented out above/below (search this file for
+              "retired 2026-09-02") rather than deleted. */}
           {adminConcept === 'c' && (
             <div className="px-6 pb-6">
               <div className="border-t border-brand-border pt-5">
@@ -777,94 +864,129 @@ export default function CurriculumSetup() {
                 <p className="text-sm text-brand-subtext mb-3">
                   Every site's weekly goal setting — default or customized.
                 </p>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="relative flex-1 max-w-xs">
+
+                <div className="flex items-center justify-end flex-wrap gap-3 mb-3">
+                  {selectedSchoolIds.size > 0 && (
+                    <SelectionCommandBar
+                      count={selectedSchoolIds.size}
+                      onSetGoal={bulkSetGoal}
+                      onReset={bulkStageReset}
+                      onClear={() => setSelectedSchoolIds(new Set())}
+                    />
+                  )}
+                  <div className="relative flex-1 min-w-[140px] max-w-xs">
                     <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
                     <input
                       type="text"
                       value={overridesSearch}
                       onChange={(e) => setOverridesSearch(e.target.value)}
-                      placeholder="Search sites"
+                      placeholder={`Search ${schools.length} sites`}
                       className="w-full pl-8 pr-2 h-9 text-sm border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
                     />
                   </div>
-                  <select
-                    value={overridesStatusFilter}
-                    onChange={(e) => setOverridesStatusFilter(e.target.value)}
-                    className="h-9 px-2.5 text-sm border border-brand-border rounded-md bg-white text-brand-text focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-                  >
-                    <option value="all">All sites</option>
-                    <option value="custom">Customized</option>
-                    <option value="default">Program default</option>
-                  </select>
                 </div>
+
                 <div className="rounded-lg border border-brand-border overflow-hidden">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-brand-bg/60">
                       <TableRow>
-                        <TableHead>Site</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Weekly goal</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
+                        <TableHead className="w-10">
+                          <div className="flex items-center justify-center h-full">
+                            <input
+                              type="checkbox"
+                              checked={pagedModalSchools.length > 0 && pagedModalSchools.every((s) => selectedSchoolIds.has(s.id))}
+                              onChange={toggleSelectAllPaged}
+                              aria-label="Select all sites on this page"
+                              className="accent-dessa-teal w-3.5 h-3.5 opacity-80"
+                            />
+                          </div>
+                        </TableHead>
+                        <TableHead className="normal-case pl-0">
+                          <SortableHeader
+                            label="Site"
+                            active={overridesSortKey === 'name'}
+                            dir={overridesSortDir}
+                            onClick={() => toggleOverridesSort('name')}
+                          />
+                        </TableHead>
+                        <TableHead className="normal-case text-right">
+                          <SortableHeader
+                            label="Weekly goal"
+                            align="right"
+                            active={overridesSortKey === 'goal'}
+                            dir={overridesSortDir}
+                            onClick={() => toggleOverridesSort('goal')}
+                          />
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pagedSchools.length === 0 ? (
+                      {pagedModalSchools.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-brand-subtext py-6">
+                          <TableCell colSpan={3} className="text-center text-brand-subtext py-6">
                             No sites match your search.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        pagedSchools.map((school) => {
+                        pagedModalSchools.map((school) => {
                           const override = overrides.find((o) => o.school.id === school.id)
                           const isCustom = !!override
+                          const isPendingReset = pendingResets.has(school.id)
+                          const isSelected = selectedSchoolIds.has(school.id)
                           return (
-                            <TableRow key={school.id}>
-                              <TableCell className="font-medium">{school.name}</TableCell>
-                              <TableCell>
-                                <span
-                                  className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                    isCustom ? 'text-dessa-teal bg-dessa-tealLight' : 'text-brand-subtext bg-brand-bg'
-                                  }`}
-                                >
-                                  {isCustom ? 'Custom' : 'Default'}
+                            <TableRow
+                              key={school.id}
+                              onClick={() => toggleSchoolSelected(school.id)}
+                              className={`cursor-pointer ${isSelected ? 'bg-dessa-teal/[8%] hover:bg-dessa-teal/[16%]' : ''}`}
+                            >
+                              <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-center h-full">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => toggleSchoolSelected(school.id)}
+                                    aria-label={`Select ${school.name}`}
+                                    className="accent-dessa-teal w-3.5 h-3.5 opacity-80"
+                                  />
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-2 pl-0 text-[13px] font-medium">
+                                <span className="inline-flex items-center gap-2">
+                                  {school.name}
+                                  {isCustom && !isPendingReset && (
+                                    <span className="text-xs font-medium text-dessa-teal bg-dessa-tealLight border border-dessa-teal/[7%] rounded px-1 py-0.5 shrink-0">
+                                      Custom
+                                    </span>
+                                  )}
                                 </span>
                               </TableCell>
-                              <TableCell>
-                                {isCustom ? (
-                                  <GoalPicker
+                              <TableCell className="py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                                {isPendingReset ? (
+                                  <GoalColorDropdown
+                                    value={goal}
+                                    muted
+                                    onChange={(n) => {
+                                      togglePendingReset(school.id)
+                                      setOverrides((os) =>
+                                        os.map((o) => (o.school.id === school.id ? { ...o, weeklyGoal: n } : o))
+                                      )
+                                    }}
+                                  />
+                                ) : isCustom ? (
+                                  <GoalColorDropdown
                                     value={override.weeklyGoal}
                                     onChange={(n) =>
                                       setOverrides((os) =>
                                         os.map((o) => (o.school.id === school.id ? { ...o, weeklyGoal: n } : o))
                                       )
                                     }
-                                    size="sm"
                                   />
                                 ) : (
-                                  <span className="text-brand-subtext">
-                                    {goal} day{goal === 1 ? '' : 's'} (default)
-                                  </span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {isCustom ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setOverrides((os) => os.filter((o) => o.school.id !== school.id))}
-                                    className="text-xs font-medium text-brand-subtext hover:text-brand-text transition-colors"
-                                  >
-                                    Reset
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => setOverrides((os) => [...os, { school, weeklyGoal: goal }])}
-                                    className="text-xs font-medium text-dessa-teal hover:underline"
-                                  >
-                                    Customize
-                                  </button>
+                                  <GoalColorDropdown
+                                    value={goal}
+                                    muted
+                                    onChange={(n) => setOverrides((os) => [...os, { school, weeklyGoal: n }])}
+                                  />
                                 )}
                               </TableCell>
                             </TableRow>
@@ -874,34 +996,54 @@ export default function CurriculumSetup() {
                     </TableBody>
                   </Table>
                 </div>
-                {filteredSchools.length > 0 && (
-                  <div className="flex items-center justify-between mt-3">
-                    <p className="text-xs text-brand-subtext">
-                      {filteredSchools.length} site{filteredSchools.length === 1 ? '' : 's'}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setOverridesPage((p) => Math.max(1, p - 1))}
-                        disabled={overridesPage === 1}
-                        className="h-8 px-3 rounded-md text-xs font-medium border border-brand-border text-brand-text hover:bg-brand-bg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Previous
-                      </button>
-                      <p className="text-xs text-brand-subtext">
-                        Page {overridesPage} of {overridesTotalPages}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setOverridesPage((p) => Math.min(overridesTotalPages, p + 1))}
-                        disabled={overridesPage === overridesTotalPages}
-                        className="h-8 px-3 rounded-md text-xs font-medium border border-brand-border text-brand-text hover:bg-brand-bg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Next
-                      </button>
-                    </div>
+
+                <div className="flex items-center justify-between gap-4 mt-3">
+                  <div className="flex items-center gap-4">
+                    {modalTotalPages > 1 && (
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => setOverridesPage((p) => Math.max(1, p - 1))}
+                              disabled={overridesPage === 1}
+                            />
+                          </PaginationItem>
+                          {pageWindow(overridesPage, modalTotalPages).map((p, i) =>
+                            p === 'ellipsis' ? (
+                              <PaginationItem key={`ellipsis-${i}`}>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            ) : (
+                              <PaginationItem key={p}>
+                                <PaginationLink isActive={p === overridesPage} onClick={() => setOverridesPage(p)}>
+                                  {p}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )
+                          )}
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() => setOverridesPage((p) => Math.min(modalTotalPages, p + 1))}
+                              disabled={overridesPage === modalTotalPages}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    )}
                   </div>
-                )}
+                  <div className="relative shrink-0">
+                    <select
+                      value={modalPageSize}
+                      onChange={(e) => setModalPageSize(Number(e.target.value))}
+                      className="appearance-none pl-3 pr-8 h-9 text-sm border border-brand-border rounded-md bg-white text-brand-text focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                    >
+                      {MODAL_PAGE_SIZE_OPTIONS.map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1208,8 +1350,8 @@ export default function CurriculumSetup() {
     </SidePanel>
 
     {/* Concept B — right-side drawer, compact inline controls (no expand
-        step). Concept D reuses the exact same content in a centered modal
-        instead — see below. */}
+        step). Frozen 2026-09-02 (see the block comment above GoalPicker) —
+        commented out rather than deleted, kept only as evidence of process.
     <SidePanel
       open={overridesOpen && adminConcept === 'b'}
       onClose={closeOverridesPanel}
@@ -1217,6 +1359,7 @@ export default function CurriculumSetup() {
     >
       {renderOverridesCompactList()}
     </SidePanel>
+    */}
 
     {/* Concept D (2026-08-31 redesign, refined again same day; status badge
         added 2026-09-01) — dense, Notion/Linear-inspired table. Always
@@ -1227,12 +1370,12 @@ export default function CurriculumSetup() {
         Weekly Goal pill and picking a value, and reverting a Custom row
         back to the default is bulk-only now (select its checkbox, use
         "Reset to default" in the bulk bar below), even for a single site.
-        Uses modalSchools/pagedModalSchools/modalTotalPages (this concept's
-        own derived list) rather than Concept C's filteredSchools/
-        pagedSchools, though both still share the same overridesSearch/
-        overridesPage state. Sized to 50vw/80vh (fixed, not max-*) per
-        explicit request, rather than shrinking to fit its content like the
-        old compact modal did. */}
+        Uses modalSchools/pagedModalSchools/modalTotalPages — shared with
+        Concept C as of 2026-09-02, since C now renders this same table
+        inline instead of in a modal (see the block comment above
+        GoalPicker). Sized to 50vw/80vh (fixed, not max-*) per explicit
+        request, rather than shrinking to fit its content like the old
+        compact modal did. */}
     {adminConcept === 'd' && overridesOpen && (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6"
@@ -1259,15 +1402,23 @@ export default function CurriculumSetup() {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 px-6 py-3 border-b border-brand-border shrink-0">
+          <div className="flex items-center justify-end flex-wrap gap-3 px-4 py-3 border-b border-brand-border shrink-0">
             {selectedSchoolIds.size > 0 && (
               <SelectionCommandBar
                 count={selectedSchoolIds.size}
                 onSetGoal={bulkSetGoal}
                 onReset={bulkStageReset}
+                onClear={() => setSelectedSchoolIds(new Set())}
               />
             )}
-            <div className="relative w-64 shrink-0">
+            {/* flex-1 + a lower min-width (was a fixed w-64 shrink-0) so
+                this can compress once the selection command bar's own
+                fixed-width segments are also competing for space — without
+                it, nothing in this row could shrink and the bar would
+                overflow past the modal's edge instead of the two sharing
+                the available width. flex-wrap above is the fallback for
+                widths too narrow even for that. */}
+            <div className="relative flex-1 min-w-[140px] max-w-64">
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
               <input
                 type="text"
@@ -1281,7 +1432,7 @@ export default function CurriculumSetup() {
 
           <div className="flex-1 overflow-y-auto">
             <Table>
-              <TableHeader className="sticky top-0 bg-brand-bg/80 z-10">
+              <TableHeader className="sticky top-0 bg-brand-bg/60 z-10">
                 <TableRow>
                   <TableHead className="w-10">
                     <div className="flex items-center justify-center h-full">
@@ -1321,7 +1472,7 @@ export default function CurriculumSetup() {
                         // class), so without this override it visually masks
                         // the selected tint entirely while the mouse still
                         // sits on the row you just clicked.
-                        className={`cursor-pointer ${isSelected ? 'bg-dessa-teal/[10%] hover:bg-dessa-teal/[16%]' : ''}`}
+                        className={`cursor-pointer ${isSelected ? 'bg-dessa-teal/[8%] hover:bg-dessa-teal/[16%]' : ''}`}
                       >
                         <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center h-full">
@@ -1408,10 +1559,7 @@ export default function CurriculumSetup() {
                       <PaginationPrevious
                         onClick={() => setOverridesPage((p) => Math.max(1, p - 1))}
                         disabled={overridesPage === 1}
-                        className="w-8 h-8 p-0 justify-center rounded-lg text-dessa-teal"
-                      >
-                        {''}
-                      </PaginationPrevious>
+                      />
                     </PaginationItem>
                     {pageWindow(overridesPage, modalTotalPages).map((p, i) =>
                       p === 'ellipsis' ? (
@@ -1420,7 +1568,7 @@ export default function CurriculumSetup() {
                         </PaginationItem>
                       ) : (
                         <PaginationItem key={p}>
-                          <PaginationLink isActive={p === overridesPage} onClick={() => setOverridesPage(p)} className="w-8 h-8 rounded-lg">
+                          <PaginationLink isActive={p === overridesPage} onClick={() => setOverridesPage(p)}>
                             {p}
                           </PaginationLink>
                         </PaginationItem>
@@ -1430,10 +1578,7 @@ export default function CurriculumSetup() {
                       <PaginationNext
                         onClick={() => setOverridesPage((p) => Math.min(modalTotalPages, p + 1))}
                         disabled={overridesPage === modalTotalPages}
-                        className="w-8 h-8 p-0 justify-center rounded-lg text-dessa-teal"
-                      >
-                        {''}
-                      </PaginationNext>
+                      />
                     </PaginationItem>
                   </PaginationContent>
                 </Pagination>

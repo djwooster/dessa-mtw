@@ -76,16 +76,17 @@ export default function Nav() {
           */}
 
           {/* Curriculum Setup-only design-review toggle (2026-08-28) —
-              compares four ways to show Program Admins which sites have
-              customized their weekly goal (AP-4933): A embeds a lightweight
-              table right in the page; B keeps a trigger pill that opens a
-              right-side drawer; C is a full report-style table over every
-              site (search/filter/pagination); D is the same content as B in
-              a centered modal + overlay instead of a drawer. See the block
-              comment above GoalPicker in CurriculumSetup.jsx. */}
+              originally compared four ways to show Program Admins which
+              sites have customized their weekly goal (AP-4933). A (inline
+              table) and B (side drawer) were frozen 2026-09-02 — kept below,
+              commented out, only as evidence of process. The live
+              comparison is now C vs. D: both render the same full-roster
+              table (search + bulk-select + pagination), C inline in the
+              page and D in a centered modal. See the block comment above
+              GoalPicker in CurriculumSetup.jsx. */}
           {location.pathname === '/settings/curriculum-setup' && (
             <select
-              value={searchParams.get('adminConcept') || 'a'}
+              value={searchParams.get('adminConcept') || 'c'}
               onChange={(e) => {
                 const next = new URLSearchParams(searchParams)
                 next.set('adminConcept', e.target.value)
@@ -93,8 +94,8 @@ export default function Nav() {
               }}
               className="ml-2 h-7 pl-2 pr-6 text-xs font-medium border border-brand-border rounded-md bg-white text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
             >
-              <option value="a">A — Inline table</option>
-              <option value="b">B — Side drawer</option>
+              {/* <option value="a">A — Inline table</option> */}
+              {/* <option value="b">B — Side drawer</option> */}
               <option value="c">C — Report table</option>
               <option value="d">D — Modal</option>
             </select>

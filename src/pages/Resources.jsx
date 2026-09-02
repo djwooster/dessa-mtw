@@ -1677,10 +1677,7 @@ export default function Resources() {
                     <PaginationPrevious
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
-                      className="w-8 h-8 p-0 justify-center rounded-lg text-dessa-teal"
-                    >
-                      {''}
-                    </PaginationPrevious>
+                    />
                   </PaginationItem>
                   {pageWindow(page, totalPages).map((p, i) =>
                     p === 'ellipsis' ? (
@@ -1689,7 +1686,7 @@ export default function Resources() {
                       </PaginationItem>
                     ) : (
                       <PaginationItem key={p}>
-                        <PaginationLink isActive={p === page} onClick={() => setPage(p)} className="w-9 h-9 rounded-lg">
+                        <PaginationLink isActive={p === page} onClick={() => setPage(p)}>
                           {p}
                         </PaginationLink>
                       </PaginationItem>
@@ -1699,10 +1696,7 @@ export default function Resources() {
                     <PaginationNext
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={page === totalPages}
-                      className="w-8 h-8 p-0 justify-center rounded-lg text-dessa-teal"
-                    >
-                      {''}
-                    </PaginationNext>
+                    />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
