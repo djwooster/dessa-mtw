@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import * as Popover from '@radix-ui/react-popover'
-import { Info, Plus, Pencil, Trash2, Check, X, ChevronDown, Search, RotateCcw, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { Info, Plus, Pencil, Trash2, Check, X, ChevronDown, Search, RotateCcw, ArrowUp, ArrowDown, ArrowUpDown, MoreHorizontal } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { toast } from 'sonner'
 // import FamilyAccessUrl from './FamilyAccessUrl'
@@ -226,28 +226,30 @@ function GoalColorDropdown({ value, onChange, muted = false }) {
 // flush full-height buttons stacked edge-to-edge with hairline dividers
 // between every one of them, not chips floating inside a padded box. So
 // here the outer container carries zero padding — each segment (including
-// "N selected" itself, now a real clickable clear-selection button) owns
-// its own h-full + px-3 and hover state. Dividers are a `border-r` on every
-// segment but the last, not a separate element — that's automatically
-// full-height (it's part of the button's own box) and is how a segmented
-// toolbar like this is normally built, rather than interleaving standalone
-// divider spans between children. `overflow-hidden` on the container clips
-// the first/last segment's corners to the shared rounded-md shape. Renders
-// nothing at all with zero rows selected (no persistent "Actions"
-// affordance to keep around) and appears in that slot, left of search,
-// once ≥1 row is checked. Reset gets no unique treatment — same button
-// styling as the day options, per explicit request.
+// the clear-selection button) owns its own h-full + px-3 and hover state.
+// Dividers are a `border-r` on every segment but the last, not a separate
+// element — that's automatically full-height (it's part of the button's
+// own box) and is how a segmented toolbar like this is normally built,
+// rather than interleaving standalone divider spans between children.
+// `overflow-hidden` on the container clips the first/last segment's
+// corners to the shared rounded-md shape. Renders nothing at all with zero
+// rows selected (no persistent "Actions" affordance to keep around) and
+// appears in that slot, left of search, once ≥1 row is checked.
+// 2026-09-02 — per-value quick-set buttons (1 Day...5 Days) commented out;
+// Reset to default is now the only bulk action, so it gets an icon + label
+// instead of icon-only. onSetGoal is kept as a prop (unused internally for
+// now) so the day buttons can come back without re-wiring callers.
 function SelectionCommandBar({ count, onSetGoal, onReset, onClear }) {
   return (
-    <div className="flex items-center h-9 rounded-md bg-brand-bg/80 overflow-hidden shrink-0">
+    <div className="flex items-center h-8 rounded-md bg-brand-bg/80 overflow-hidden shrink-0">
       <button
         type="button"
         onClick={onClear}
         className="h-full px-3 flex items-center border-r border-brand-border text-xs font-semibold text-dessa-teal hover:bg-dessa-teal/10 transition-colors whitespace-nowrap"
       >
-        {count} selected
+        Deselect all
       </button>
-      {GOAL_OPTIONS.map((n) => (
+      {/* {GOAL_OPTIONS.map((n) => (
         <button
           key={n}
           type="button"
@@ -257,17 +259,108 @@ function SelectionCommandBar({ count, onSetGoal, onReset, onClear }) {
         >
           {n} {n === 1 ? 'Day' : 'Days'}
         </button>
-      ))}
+      ))} */}
       <button
         type="button"
         onClick={onReset}
-        title="Reset to default"
-        aria-label="Reset selected sites to program default"
-        className="h-full px-3 flex items-center text-xs font-medium text-brand-text hover:bg-dessa-teal/10 transition-colors"
+        className="h-full px-3 flex items-center gap-1.5 text-xs font-medium text-brand-text hover:bg-dessa-teal/10 transition-colors whitespace-nowrap"
       >
         <RotateCcw size={15} />
+        Reset to default
       </button>
     </div>
+  )
+}
+
+const STATUS_FILTER_OPTIONS = [
+  { value: 'all', label: 'All Sites' },
+  { value: 'custom', label: 'Custom' },
+  { value: 'default', label: 'Default' },
+]
+
+// Status filter chip (2026-09-02, replacing the All Sites/Custom Tabs) —
+// modeled after the "Role ▾"/"Country ▾" filter chips in the reference
+// screenshot rather than a segmented pill control: this is a single-select
+// *filter* on the table, not a view switcher, so a bordered dropdown chip
+// (same trigger/list treatment as GoalColorDropdown — plain text rows,
+// checkmark on the active one) reads more appropriately than Tabs did.
+// Re-adds the "Default only" option dropped when the old status <select>
+// was retired, since a 3-item dropdown doesn't need a submenu the way a
+// kebab-menu drilldown would have.
+function StatusFilterDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const activeLabel = STATUS_FILTER_OPTIONS.find((o) => o.value === value)?.label ?? 'All Sites'
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className="h-8 px-2.5 inline-flex items-center gap-1.5 rounded-md border border-brand-border bg-white text-xs font-medium text-brand-text hover:bg-brand-bg transition-colors"
+        >
+          {activeLabel}
+          <ChevronDown size={13} className="text-brand-subtext" />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="start"
+          sideOffset={6}
+          className="z-[60] w-40 bg-white border border-brand-border rounded-lg shadow-lg outline-none overflow-hidden py-1"
+        >
+          {STATUS_FILTER_OPTIONS.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => { onChange(o.value); setOpen(false) }}
+              className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 text-sm text-left font-medium text-brand-text transition-colors ${
+                value === o.value ? 'bg-brand-bg' : 'hover:bg-brand-bg'
+              }`}
+            >
+              {o.label}
+              {value === o.value && <Check size={13} className="text-dessa-teal shrink-0" />}
+            </button>
+          ))}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}
+
+// "•••" overflow menu (2026-09-02) — houses the one bulk action that isn't
+// tied to a row selection (Reset all to default), keeping it out of the
+// primary toolbar row entirely rather than pairing it with the status
+// filter, since a district-wide reset is a much higher blast-radius action
+// than a view filter and shouldn't sit at the same visual weight.
+function OverridesMoreMenu({ onResetAll }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          aria-label="More actions"
+          className="h-8 w-8 flex items-center justify-center rounded-md border border-brand-border bg-white text-brand-subtext hover:bg-brand-bg hover:text-brand-text transition-colors shrink-0"
+        >
+          <MoreHorizontal size={16} />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="end"
+          sideOffset={6}
+          className="z-[60] w-52 bg-white border border-brand-border rounded-lg shadow-lg outline-none overflow-hidden py-1"
+        >
+          <button
+            type="button"
+            onClick={() => { onResetAll(); setOpen(false) }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left font-medium text-brand-text hover:bg-brand-bg transition-colors"
+          >
+            <RotateCcw size={14} className="text-brand-subtext" />
+            Reset all to default
+          </button>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }
 
@@ -373,10 +466,12 @@ export default function CurriculumSetup() {
   // page state rather than reusing A/B's plain overrides list.
   const [overridesSearch, setOverridesSearch] = useState('')
   const [overridesPage, setOverridesPage] = useState(1)
-  // Shared by Concepts C and D as of 2026-09-02 — "All Sites"/"Custom"
-  // segmented Tabs filter (reusing the same TabsList/TabsTrigger pill style
-  // already used above for the Program Admin/Site Leader switcher), the
-  // replacement for the old status <select> retired earlier this session.
+  // Shared by Concepts C and D as of 2026-09-02 — all/custom/default value
+  // driving StatusFilterDropdown, a second attempt at replacing the old
+  // status <select> retired earlier this session. The first attempt (a
+  // segmented Tabs control, all/custom only) is retired in turn — a
+  // single-select filter chip reads more appropriately than a view-switcher
+  // style control, and this version restores the "Default only" option.
   const [overridesView, setOverridesView] = useState('all')
   // Shared by Concepts C and D as of 2026-09-02 — adjustable page size
   // (matching the Resources page's own results-list pagination), unlike
@@ -590,6 +685,16 @@ export default function CurriculumSetup() {
     setExpandedSchoolId(null)
   }
 
+  // Concepts C/D's "•••" menu — clears every customization district-wide,
+  // not just the selected rows (see OverridesMoreMenu). Immediate, not
+  // staged like the per-row/bulk-selection resets, since it isn't scoped to
+  // a modal's close-to-commit flow.
+  function resetAllOverrides() {
+    setOverrides([])
+    setSelectedSchoolIds(new Set())
+    toast.success('All sites reset to the program default')
+  }
+
   // Site Leader side — single-site for now (multi-site switching is still
   // an open question per the ticket). "Customized" is derived, not tracked
   // separately: this site is custom exactly when it's present in the same
@@ -628,15 +733,18 @@ export default function CurriculumSetup() {
   //   })
   //   .sort((a, b) => a.name.localeCompare(b.name))
 
-  // Shared by Concepts C and D as of 2026-09-02 — every site by default, or
-  // just the customized ones when overridesView is 'custom' (see the Tabs
-  // filter above the table), search-only otherwise, click-to-sort on Site
-  // or Weekly goal (see overridesSortKey/toggleOverridesSort). A site with
-  // no override sorts by the program default goal, same value the row
-  // itself displays.
+  // Shared by Concepts C and D as of 2026-09-02 — filtered by the
+  // StatusFilterDropdown's all/custom/default value, search-only otherwise,
+  // click-to-sort on Site or Weekly goal (see overridesSortKey/
+  // toggleOverridesSort). A site with no override sorts by the program
+  // default goal, same value the row itself displays.
   const modalSchools = schools
     .filter((s) => !overridesSearchQuery || s.name.toLowerCase().includes(overridesSearchQuery))
-    .filter((s) => overridesView !== 'custom' || overrides.some((o) => o.school.id === s.id))
+    .filter((s) => {
+      if (overridesView === 'all') return true
+      const isCustom = overrides.some((o) => o.school.id === s.id)
+      return overridesView === 'custom' ? isCustom : !isCustom
+    })
     .sort((a, b) => {
       if (overridesSortKey === 'goal') {
         const aGoal = overrides.find((o) => o.school.id === a.id)?.weeklyGoal ?? goal
@@ -868,14 +976,17 @@ export default function CurriculumSetup() {
           {adminConcept === 'c' && (
             <div className="px-6 pb-6">
               <div className="border-t border-brand-border pt-5">
+                {/* Heading/description commented out for the moment while the
+                    copy/placement is reconsidered — the toolbar below now
+                    sits left-aligned where that text used to be, instead of
+                    being pinned right against an empty counterpart div.
+                <p className="text-sm font-semibold text-brand-text mb-1">Site overrides</p>
+                <p className="text-sm text-brand-subtext">
+                  Customize the weekly goal for individual sites, or leave them on the program default.
+                </p>
+                */}
                 <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
                   <div>
-                    <p className="text-sm font-semibold text-brand-text mb-1">Site overrides</p>
-                    <p className="text-sm text-brand-subtext">
-                      Customize the weekly goal for individual sites, or leave them on the program default.
-                    </p>
-                  </div>
-                  <div className="flex items-center flex-wrap gap-3">
                     {selectedSchoolIds.size > 0 && (
                       <SelectionCommandBar
                         count={selectedSchoolIds.size}
@@ -884,12 +995,9 @@ export default function CurriculumSetup() {
                         onClear={() => setSelectedSchoolIds(new Set())}
                       />
                     )}
-                    <Tabs value={overridesView} onValueChange={setOverridesView}>
-                      <TabsList>
-                        <TabsTrigger value="all">All Sites</TabsTrigger>
-                        <TabsTrigger value="custom">Custom</TabsTrigger>
-                      </TabsList>
-                    </Tabs>
+                  </div>
+                  <div className="flex items-center flex-wrap gap-3">
+                    <StatusFilterDropdown value={overridesView} onChange={setOverridesView} />
                     <div className="relative flex-1 min-w-[140px] max-w-xs">
                       <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
                       <input
@@ -897,9 +1005,10 @@ export default function CurriculumSetup() {
                         value={overridesSearch}
                         onChange={(e) => setOverridesSearch(e.target.value)}
                         placeholder={`Search ${schools.length} sites`}
-                        className="w-full pl-8 pr-2 h-9 text-sm border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                        className="w-full pl-8 pr-2 h-8 text-sm border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
                       />
                     </div>
+                    <OverridesMoreMenu onResetAll={resetAllOverrides} />
                   </div>
                 </div>
 
@@ -1421,37 +1530,37 @@ export default function CurriculumSetup() {
             </div>
           </div>
 
-          <div className="flex items-center justify-end flex-wrap gap-3 px-4 py-3 border-b border-brand-border shrink-0">
-            {selectedSchoolIds.size > 0 && (
-              <SelectionCommandBar
-                count={selectedSchoolIds.size}
-                onSetGoal={bulkSetGoal}
-                onReset={bulkStageReset}
-                onClear={() => setSelectedSchoolIds(new Set())}
-              />
-            )}
-            <Tabs value={overridesView} onValueChange={setOverridesView}>
-              <TabsList>
-                <TabsTrigger value="all">All Sites</TabsTrigger>
-                <TabsTrigger value="custom">Custom</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            {/* flex-1 + a lower min-width (was a fixed w-64 shrink-0) so
-                this can compress once the selection command bar's own
-                fixed-width segments are also competing for space — without
-                it, nothing in this row could shrink and the bar would
-                overflow past the modal's edge instead of the two sharing
-                the available width. flex-wrap above is the fallback for
-                widths too narrow even for that. */}
-            <div className="relative flex-1 min-w-[140px] max-w-64">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-              <input
-                type="text"
-                value={overridesSearch}
-                onChange={(e) => setOverridesSearch(e.target.value)}
-                placeholder={`Search ${schools.length} sites`}
-                className="w-full pl-8 pr-2 h-9 text-sm border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-              />
+          <div className="flex items-center justify-between flex-wrap gap-3 px-4 py-3 border-b border-brand-border shrink-0">
+            <div>
+              {selectedSchoolIds.size > 0 && (
+                <SelectionCommandBar
+                  count={selectedSchoolIds.size}
+                  onSetGoal={bulkSetGoal}
+                  onReset={bulkStageReset}
+                  onClear={() => setSelectedSchoolIds(new Set())}
+                />
+              )}
+            </div>
+            <div className="flex items-center flex-wrap gap-3">
+              <StatusFilterDropdown value={overridesView} onChange={setOverridesView} />
+              {/* flex-1 + a lower min-width (was a fixed w-64 shrink-0) so
+                  this can compress once the selection command bar's own
+                  fixed-width segments are also competing for space — without
+                  it, nothing in this row could shrink and the bar would
+                  overflow past the modal's edge instead of the two sharing
+                  the available width. flex-wrap above is the fallback for
+                  widths too narrow even for that. */}
+              <div className="relative flex-1 min-w-[140px] max-w-64">
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+                <input
+                  type="text"
+                  value={overridesSearch}
+                  onChange={(e) => setOverridesSearch(e.target.value)}
+                  placeholder={`Search ${schools.length} sites`}
+                  className="w-full pl-8 pr-2 h-8 text-sm border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                />
+              </div>
+              <OverridesMoreMenu onResetAll={resetAllOverrides} />
             </div>
           </div>
 
