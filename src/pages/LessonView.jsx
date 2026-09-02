@@ -2901,6 +2901,24 @@ function AudioLibraryView({ grade }) {
   );
 }
 
+// Mock keyword tags for the "search in lesson" concept — curriculum staff
+// can tag a lesson with a keyword (e.g. "Brain Break") that never appears in
+// its title or on-page copy, so a query can match a lesson conceptually with
+// nothing on the row for highlightMatchText to highlight. Keyed by
+// `${unitId}-${lessonIndex}`. Demo data only, not wired to any real schema.
+const lessonTags = {
+  "5-2": ["Brain Break"],
+  "5-3": ["Brain Break"],
+  "12-3": ["Self-Regulation Strategy"],
+};
+
+function getTagMatch(unitId, lessonIndex, query) {
+  if (!query) return null;
+  const tags = lessonTags[`${unitId}-${lessonIndex}`];
+  if (!tags) return null;
+  return tags.find((t) => t.toLowerCase().includes(query)) ?? null;
+}
+
 // Shared by the sidebar's Concept A search (highlightMatch below, closes
 // over sidebarQuery) and Concept B's command palette (closes over its own
 // paletteQuery) — a pure text->JSX helper doesn't need component state.
@@ -3157,7 +3175,8 @@ export default function LessonView({ onBookmark }) {
       (unit) =>
         !isSearchingSidebar ||
         unit.title.toLowerCase().includes(sidebarQuery) ||
-        unit.sub.some((s) => s.toLowerCase().includes(sidebarQuery)),
+        unit.sub.some((s) => s.toLowerCase().includes(sidebarQuery)) ||
+        unit.sub.some((_, i) => getTagMatch(unit.id, i, sidebarQuery)),
     );
 
   function highlightMatch(text) {
@@ -3376,6 +3395,14 @@ export default function LessonView({ onBookmark }) {
                               const isSelectedLesson =
                                 selectedLesson.unitId === unit.id &&
                                 selectedLesson.lessonIndex === i;
+                              const cleanItem = item.replace(/^(Community|Independent):\s*/, "");
+                              // Only surface the tag chip when the query didn't
+                              // already match the visible title — a text match is
+                              // self-explanatory via the highlight, so the row
+                              // shouldn't spend its right-edge slot on both.
+                              const isTextMatch =
+                                isSearchingSidebar && cleanItem.toLowerCase().includes(sidebarQuery);
+                              const tagMatch = isTextMatch ? null : getTagMatch(unit.id, i, sidebarQuery);
                               return (
                                 <div key={item}>
                                   <button
@@ -3389,9 +3416,17 @@ export default function LessonView({ onBookmark }) {
                                     <span
                                       className={`text-sm ${isSelectedLesson ? "font-semibold text-brand-text" : "text-brand-text"}`}
                                     >
-                                      {highlightMatch(item.replace(/^(Community|Independent):\s*/, ""))}
+                                      {highlightMatch(cleanItem)}
                                     </span>
-                                    {unit.completed ? (
+                                    {tagMatch ? (
+                                      <span
+                                        className="inline-flex items-center gap-1 max-w-[130px] px-2 py-0.5 ml-2 rounded-full text-[11px] font-medium bg-mtw-amberLight text-brand-text border border-mtw-amber/30 flex-shrink-0"
+                                        title={`Matches tag: ${tagMatch}`}
+                                      >
+                                        <Tag size={10} className="shrink-0" />
+                                        <span className="truncate">{tagMatch}</span>
+                                      </span>
+                                    ) : unit.completed ? (
                                       <CheckCircle2
                                         size={18}
                                         className="flex-shrink-0 text-dessa-teal"
