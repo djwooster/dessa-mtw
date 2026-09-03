@@ -85,7 +85,7 @@ export default function Ratings() {
   const maxTotal = Math.max(...gradeData.map((r) => r.total))
 
   return (
-    <div className="max-w-screen-xl mx-auto px-6 py-8">
+    <div className="px-6 py-8">
       {/* Header */}
       <motion.div {...stagger(0)} className="flex items-end justify-between mb-6">
         <div>

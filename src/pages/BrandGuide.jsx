@@ -465,7 +465,7 @@ export default function BrandGuide() {
   const [mergerConcept, setMergerConcept] = useState('foundation')
 
   return (
-    <div className="max-w-screen-xl mx-auto px-6 pt-20 pb-8">
+    <div className="px-6 pt-20 pb-8">
 
       {/* ── Tab switcher ── */}
       <div className="flex items-center gap-5 border-b border-brand-border mb-8">
@@ -948,7 +948,7 @@ wrapper: AnimatePresence`}</pre>
             <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-4">Page Layout</p>
             <div className="space-y-2.5 text-sm">
               {[
-                ['Max width', 'max-w-screen-xl', 'All page containers'],
+                ['Max width', 'none (full-bleed)', 'All page containers span the full viewport width'],
                 ['Horizontal padding', 'px-6', 'Page gutters'],
                 ['Top padding', 'pt-20', 'Clears 56px sticky nav + breathing room'],
                 ['Bottom padding', 'pb-8', 'Page bottom'],

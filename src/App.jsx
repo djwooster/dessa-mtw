@@ -21,7 +21,7 @@ import JoinPage from './pages/JoinPage'
 
 function Placeholder({ title }) {
   return (
-    <div className="max-w-screen-xl mx-auto px-6 py-16 text-center">
+    <div className="px-6 py-16 text-center">
       <h1 className="text-2xl font-semibold text-brand-text mb-2">{title}</h1>
       <p className="text-brand-subtext text-sm">Coming soon in a future prototype iteration.</p>
     </div>

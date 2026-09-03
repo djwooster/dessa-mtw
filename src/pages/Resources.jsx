@@ -1302,7 +1302,7 @@ export default function Resources() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-screen-xl mx-auto px-6 pb-16"
+      className="px-6 pb-16"
     >
       {/* 3A/3B/3C — all three use the same full-page gate; nothing else on
           the page mounts until a grade is confirmed, so there's no backdrop
@@ -1326,7 +1326,7 @@ export default function Resources() {
       {/* Sticky right under the nav (top-14 = nav's h-14) so the query stays
           visible while scrolling through a long results list. */}
       <div className="w-screen mx-[calc(50%-50vw)] bg-brand-bg border-b border-brand-border sticky top-14 z-40">
-      <div className="max-w-screen-xl mx-auto px-6 pt-[1.35rem] pb-4">
+      <div className="px-6 pt-[1.35rem] pb-4">
 
         {/* Search — results list only updates on submit (Enter or the
             search button), not while typing. */}

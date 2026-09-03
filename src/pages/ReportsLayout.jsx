@@ -42,7 +42,7 @@ export default function ReportsLayout() {
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)]">
       <aside className="w-72 flex-shrink-0 border-r border-brand-border bg-white pt-6 overflow-y-auto">
-        <div className="flex items-center justify-between px-5 mb-4">
+        <div className="flex items-center justify-between px-6 mb-4">
           <h2 className="text-sm font-semibold text-brand-text">Reports</h2>
           <ChevronLeft size={14} className="text-brand-subtext" />
         </div>
@@ -50,12 +50,12 @@ export default function ReportsLayout() {
         <nav className="flex flex-col pb-6">
           {REPORT_GROUPS.map((group) => (
             <div key={group.label} className="mb-4">
-              <p className="px-5 mb-3 text-[15px] font-semibold text-brand-text">
+              <p className="px-6 mb-3 text-[15px] font-semibold text-brand-text">
                 {group.label}
               </p>
               {group.items.map((item) =>
                 typeof item === 'string' ? (
-                  <span key={item} className="block px-5 py-1.5 text-sm text-brand-subtext cursor-default">
+                  <span key={item} className="block px-6 py-1.5 text-sm text-brand-subtext cursor-default">
                     {item}
                   </span>
                 ) : (
@@ -63,7 +63,7 @@ export default function ReportsLayout() {
                     key={item.to}
                     to={item.to}
                     className={({ isActive }) =>
-                      `block px-5 py-1.5 text-sm transition-colors ${
+                      `block px-6 py-1.5 text-sm transition-colors ${
                         isActive
                           ? 'font-semibold text-dessa-teal'
                           : 'text-brand-text hover:text-dessa-teal'

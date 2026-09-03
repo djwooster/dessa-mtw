@@ -708,7 +708,7 @@ export default function Report2() {
       ]
 
   return (
-    <div className="max-w-screen-xl mx-auto px-6 pt-8 pb-8">
+    <div className="px-6 pt-8 pb-8">
 
       {/* Filter card */}
       <div className="bg-white rounded-xl border border-brand-border p-5 mb-6">

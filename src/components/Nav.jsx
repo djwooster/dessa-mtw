@@ -25,7 +25,7 @@ export default function Nav() {
 
   return (
     <nav className="bg-white border-b border-brand-border shadow-sm sticky top-0 z-50">
-      <div className="max-w-screen-xl mx-auto px-6 h-14 flex items-center gap-6">
+      <div className="px-6 h-14 flex items-center gap-6">
 
         {/* Logo */}
         <div className="flex items-center mr-4 flex-shrink-0">
@@ -42,7 +42,7 @@ export default function Nav() {
               className={({ isActive }) =>
                 `px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                   isActive
-                    ? 'text-brand-text bg-brand-bg'
+                    ? 'text-dessa-teal bg-dessa-tealLight'
                     : 'text-brand-subtext hover:text-brand-text hover:bg-brand-bg'
                 }`
               }
@@ -147,8 +147,8 @@ export default function Nav() {
           </button>
           <Popover.Root>
             <Popover.Trigger asChild>
-              <button className="w-8 h-8 rounded-full bg-dessa-teal flex items-center justify-center text-white text-xs font-semibold ml-1 hover:brightness-105 transition-all">
-                TR
+              <button className="text-brand-subtext hover:text-brand-text transition-colors p-1.5 rounded hover:bg-brand-bg">
+                <Settings size={16} />
               </button>
             </Popover.Trigger>
             <Popover.Portal>

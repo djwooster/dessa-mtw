@@ -135,7 +135,7 @@ export default function Curriculum() {
   }
 
   return (
-    <div className="max-w-screen-xl mx-auto px-6 pt-20 pb-8">
+    <div className="px-6 pt-20 pb-8">
 
       <Tabs defaultValue="all">
 
