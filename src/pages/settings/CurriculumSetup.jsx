@@ -65,8 +65,10 @@ function GoalPicker({ value, onChange, size = 'md', markValue }) {
           }`}
         >
           {n}
-          {markValue === n && n !== value && (
-            <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-dessa-teal/50" />
+          {markValue === n && (
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center justify-center rounded-full whitespace-nowrap tracking-[0.07em] uppercase font-medium text-[9px] leading-none px-[5.5px] py-[3px] border border-dessa-teal/25 shadow bg-white text-dessa-teal pointer-events-none">
+              Default
+            </span>
           )}
         </button>
       ))}
@@ -1402,28 +1404,13 @@ export default function CurriculumSetup() {
           Days per week a user must access a lesson to be on track.
         </p>
 
-        <div className="mb-3">
+        <div className="mt-2.5 mb-4">
           <GoalPicker
             value={isSiteLeaderCustom ? siteLeaderOverride.weeklyGoal : goal}
             onChange={setSiteLeaderGoal}
             markValue={goal}
           />
         </div>
-
-        {isSiteLeaderCustom && (
-          <div className="flex items-center gap-3 mb-4">
-            <span className="text-xs font-medium text-dessa-teal bg-dessa-tealLight border border-dessa-teal/[7%] rounded px-1 py-0.5">
-              Custom
-            </span>
-            <button
-              type="button"
-              onClick={useSiteLeaderDefault}
-              className="text-xs font-medium text-dessa-teal hover:underline"
-            >
-              Reset to program default
-            </button>
-          </div>
-        )}
 
         <p className="flex items-center gap-1.5 text-xs text-brand-subtext">
           <Info size={13} className="shrink-0" />
