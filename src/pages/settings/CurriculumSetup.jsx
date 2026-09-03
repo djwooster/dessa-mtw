@@ -49,7 +49,7 @@ function pageWindow(current, total) {
 // the Site Leader's override, and all four admin-summary concepts below,
 // so a value always reads/edits the same way regardless of which concept
 // or which "side" of the setting it's rendered for.
-function GoalPicker({ value, onChange, size = 'md' }) {
+function GoalPicker({ value, onChange, size = 'md', markValue }) {
   const dim = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'
   return (
     <div className="flex gap-1.5">
@@ -58,13 +58,16 @@ function GoalPicker({ value, onChange, size = 'md' }) {
           key={n}
           type="button"
           onClick={() => onChange(n)}
-          className={`${dim} rounded-md border font-medium transition-colors ${
+          className={`relative ${dim} rounded-md border font-medium transition-colors ${
             value === n
               ? 'bg-dessa-teal text-white border-dessa-teal'
               : 'bg-white text-brand-text border-brand-border hover:bg-brand-bg'
           }`}
         >
           {n}
+          {markValue === n && n !== value && (
+            <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-dessa-teal/50" />
+          )}
         </button>
       ))}
     </div>
@@ -725,12 +728,18 @@ export default function CurriculumSetup() {
     setOverrides((os) => os.filter((o) => o.school.id !== SITE_LEADER_SCHOOL.id))
   }
 
-  function customizeSiteLeaderGoal() {
-    setOverrides((os) => [...os, { school: SITE_LEADER_SCHOOL, weeklyGoal: goal }])
-  }
-
+  // Picking a day directly customizes this site for that day, no separate
+  // "customize" step first. Picking the day that matches the program
+  // default just reverts to following the default instead of leaving a
+  // redundant override sitting at the same value.
   function setSiteLeaderGoal(day) {
-    setOverrides((os) => os.map((o) => (o.school.id === SITE_LEADER_SCHOOL.id ? { ...o, weeklyGoal: day } : o)))
+    if (day === goal) {
+      useSiteLeaderDefault()
+    } else if (isSiteLeaderCustom) {
+      setOverrides((os) => os.map((o) => (o.school.id === SITE_LEADER_SCHOOL.id ? { ...o, weeklyGoal: day } : o)))
+    } else {
+      setOverrides((os) => [...os, { school: SITE_LEADER_SCHOOL, weeklyGoal: day }])
+    }
   }
 
   // `schools` (familyAccessData.js) is generated in place/suffix/type
@@ -998,13 +1007,15 @@ export default function CurriculumSetup() {
                 */}
                 <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
                   <div>
-                    {selectedSchoolIds.size > 0 && (
+                    {selectedSchoolIds.size > 0 ? (
                       <SelectionCommandBar
                         count={selectedSchoolIds.size}
                         onSetGoal={bulkSetGoal}
                         onReset={bulkStageReset}
                         onClear={() => setSelectedSchoolIds(new Set())}
                       />
+                    ) : (
+                      <p className="text-sm font-semibold text-brand-text">Your Sites</p>
                     )}
                   </div>
                   <div className="flex items-center flex-wrap gap-3">
@@ -1373,10 +1384,13 @@ export default function CurriculumSetup() {
 
     {/* Site Leader's own Weekly Goal control (the other half of AP-4933,
         previously not built at all — this whole card was just hidden
-        instead). "Use program default" / "Customize for this site" mirrors
-        the ticket's two states exactly; the day-picker only appears once
-        Custom is selected. Single-site only (SITE_LEADER_SCHOOL) — multi-
-        site switching is still an open question. */}
+        instead). No toggle: the picker itself is always live, so picking a
+        day customizes this site immediately, and picking the program
+        default's own day reverts to following it (see setSiteLeaderGoal).
+        A quiet dot marks the default's day even once a different one is
+        picked, so the baseline stays visible without a separate readout.
+        Single-site only (SITE_LEADER_SCHOOL) — multi-site switching is
+        still an open question. */}
     {isSiteLeaderView && (
     <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
       <div className="p-6">
@@ -1388,41 +1402,32 @@ export default function CurriculumSetup() {
           Days per week a user must access a lesson to be on track.
         </p>
 
-        <div className="inline-flex rounded-md border border-brand-border overflow-hidden text-sm font-medium mb-4">
-          <button
-            type="button"
-            onClick={useSiteLeaderDefault}
-            className={`px-3 py-1.5 transition-colors ${
-              !isSiteLeaderCustom ? 'bg-dessa-teal text-white' : 'text-brand-subtext hover:bg-brand-bg'
-            }`}
-          >
-            Use program default
-          </button>
-          <button
-            type="button"
-            onClick={customizeSiteLeaderGoal}
-            className={`px-3 py-1.5 border-l border-brand-border transition-colors ${
-              isSiteLeaderCustom ? 'bg-dessa-teal text-white' : 'text-brand-subtext hover:bg-brand-bg'
-            }`}
-          >
-            Customize for this site
-          </button>
+        <div className="mb-3">
+          <GoalPicker
+            value={isSiteLeaderCustom ? siteLeaderOverride.weeklyGoal : goal}
+            onChange={setSiteLeaderGoal}
+            markValue={goal}
+          />
         </div>
 
-        {isSiteLeaderCustom ? (
-          <div className="mb-4">
-            <GoalPicker value={siteLeaderOverride.weeklyGoal} onChange={setSiteLeaderGoal} />
-          </div>
-        ) : (
-          <div className="rounded-lg border border-brand-border bg-brand-bg px-4 py-3 mb-4 inline-block">
-            <p className="text-sm font-semibold text-brand-text">{goal} day{goal === 1 ? '' : 's'} per week</p>
-            <p className="text-xs text-brand-subtext mt-0.5">Set by your program admin</p>
+        {isSiteLeaderCustom && (
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-xs font-medium text-dessa-teal bg-dessa-tealLight border border-dessa-teal/[7%] rounded px-1 py-0.5">
+              Custom
+            </span>
+            <button
+              type="button"
+              onClick={useSiteLeaderDefault}
+              className="text-xs font-medium text-dessa-teal hover:underline"
+            >
+              Reset to program default
+            </button>
           </div>
         )}
 
         <p className="flex items-center gap-1.5 text-xs text-brand-subtext">
           <Info size={13} className="shrink-0" />
-          Your program admin can see this choice.
+          Your program admin sets the default and can see if you customize it for your site.
         </p>
       </div>
     </div>
@@ -1492,7 +1497,7 @@ export default function CurriculumSetup() {
           <h3 className="text-sm font-semibold text-brand-text mb-1.5">What is Family Access?</h3>
           <p className="text-sm text-brand-subtext leading-relaxed">
             Family Access gives families a way to create their own account and connect it to your
-            site, so they can complete supportive SEL activities at home with their student —
+            site, so they can complete supportive SEL activities at home with their student,
             without sharing a single login across your whole district.
           </p>
         </div>
@@ -1526,7 +1531,7 @@ export default function CurriculumSetup() {
         <div>
           <h3 className="text-sm font-semibold text-brand-text mb-1.5">Access expiration</h3>
           <p className="text-sm text-brand-subtext leading-relaxed">
-            Family access follows your district's account — if it doesn't renew, Family logins
+            Family access follows your district's account. If it doesn't renew, Family logins
             provisioned under it lose access automatically.
           </p>
         </div>
@@ -1573,7 +1578,7 @@ export default function CurriculumSetup() {
             <p className="text-base font-semibold text-brand-text">Weekly Goal by Site</p>
             <div className="flex items-center gap-4">
               <p className="text-xs text-brand-subtext">
-                Weekly goal by site — program default is {goal} day{goal === 1 ? '' : 's'}/week.
+                Weekly goal by site. Program default is {goal} day{goal === 1 ? '' : 's'} per week.
               </p>
               <button
                 type="button"
