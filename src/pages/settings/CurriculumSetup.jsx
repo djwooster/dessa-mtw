@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useOutletContext } from 'react-router-dom'
 import * as Popover from '@radix-ui/react-popover'
 import { Info, Plus, Pencil, Trash2, Check, X, ChevronDown, Search, RotateCcw, ArrowUp, ArrowDown, ArrowUpDown, MoreHorizontal } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
@@ -8,7 +8,6 @@ import { toast } from 'sonner'
 import FamilyAccessCodes from './FamilyAccessCodes'
 import { SidePanel } from '../../components/ui/side-panel'
 import { DatePicker } from '../../components/ui/date-picker'
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table'
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis,
@@ -130,7 +129,7 @@ function SortableHeader({ label, active, dir, onClick, align = 'left' }) {
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-1 text-sm font-semibold transition-colors group ${
+      className={`inline-flex items-center gap-1 text-xs font-semibold transition-colors group ${
         align === 'right' ? 'flex-row-reverse' : ''
       } ${active ? 'text-brand-text' : 'text-brand-subtext hover:text-brand-text'}`}
     >
@@ -152,10 +151,9 @@ function SortableHeader({ label, active, dir, onClick, align = 'left' }) {
 // the per-value Notion-style colors read as "off" rather than helpful, so
 // every pill is plain light-gray with a subtle border for now regardless of
 // value or Default/Custom status; real color-coding, if any, is a later
-// pass. No longer takes a `muted` prop — callers that still pass one (e.g.
-// GoalColorDropdown below) have it silently ignored here, since there's
-// nothing left to vary; `muted` still matters one level up, though, where
-// it suppresses the checkmark for a Default row's placeholder value.
+// pass. Doesn't take a `muted` prop — GoalColorDropdown used to have one
+// (suppressing its list's checkmark on Default rows) but that's retired as
+// of 2026-09-03, see the comment above GoalColorDropdown.
 // `interactive` adds a small caret so a plain gray pill (no color left to
 // hint "click me") still reads as clickable where it actually is — only
 // GoalColorDropdown's trigger passes this; the inert pending-reset pill and
@@ -182,10 +180,14 @@ function GoalPill({ n, size = 'md', interactive = false }) {
 // menu; a standard select-style list reads more familiar), not pills. z-[60]
 // on the content since it needs to render above the modal's own z-50
 // overlay (Concept D only — harmless no-op for Concept C, which has no
-// overlay to sit above). `muted` just passes through to the trigger pill —
-// a Default row opening this still lists the normal options, since picking
-// one is what customizes it.
-function GoalColorDropdown({ value, onChange, muted = false }) {
+// overlay to sit above). Styled to match StatusFilterDropdown's popover
+// (2026-09-03 — w-40/text-xs, was w-44/text-sm). The checkmark/highlight
+// always tracks `value`, including on Default rows — an earlier `muted`
+// flag used to suppress it there, but with the program default itself
+// sitting at 3 days, that made most rows in the table look like nothing was
+// selected, which read as a bug rather than an "inherited vs. chosen"
+// distinction.
+function GoalColorDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false)
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -198,19 +200,19 @@ function GoalColorDropdown({ value, onChange, muted = false }) {
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="z-[60] w-44 bg-white border border-brand-border rounded-lg shadow-lg outline-none overflow-hidden py-1"
+          className="z-[60] w-40 bg-white border border-brand-border rounded-lg shadow-lg outline-none overflow-hidden py-1"
         >
           {GOAL_OPTIONS.map((n) => (
             <button
               key={n}
               type="button"
               onClick={() => { onChange(n); setOpen(false) }}
-              className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 text-sm text-left font-medium text-brand-text transition-colors ${
-                value === n && !muted ? 'bg-brand-bg' : 'hover:bg-brand-bg'
+              className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 text-xs text-left font-medium text-brand-text transition-colors ${
+                value === n ? 'bg-brand-bg' : 'hover:bg-brand-bg'
               }`}
             >
               {n} {n === 1 ? 'Day' : 'Days'}
-              {value === n && !muted && <Check size={13} className="text-dessa-teal shrink-0" />}
+              {value === n && <Check size={13} className="text-dessa-teal shrink-0" />}
             </button>
           ))}
         </Popover.Content>
@@ -312,7 +314,7 @@ function StatusFilterDropdown({ value, onChange }) {
               key={o.value}
               type="button"
               onClick={() => { onChange(o.value); setOpen(false) }}
-              className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 text-sm text-left font-medium text-brand-text transition-colors ${
+              className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 text-xs text-left font-medium text-brand-text transition-colors ${
                 value === o.value ? 'bg-brand-bg' : 'hover:bg-brand-bg'
               }`}
             >
@@ -434,8 +436,14 @@ export default function CurriculumSetup() {
   const [tab, setTab] = useState('engagement')
   const [goal, setGoal] = useState(3)
   const [familyAccessTab, setFamilyAccessTab] = useState('codes')
-  const [isSiteLeaderView, setIsSiteLeaderView] = useState(false)
+  // Role toggle moved to the bottom of the Settings sidebar (SettingsLayout)
+  // 2026-09-03 — was a Tabs control in the page flow here. Read-only from
+  // this side; only SettingsLayout's toggle can change it, passed down via
+  // <Outlet context={...}> since it's shared page chrome, not per-page
+  // state, even though nothing outside Curriculum Setup honors it yet.
+  const { isSiteLeaderView } = useOutletContext()
   const [helpOpen, setHelpOpen] = useState(false)
+  const [weeklyGoalHelpOpen, setWeeklyGoalHelpOpen] = useState(false)
 
   // Program Admin's Weekly-goal overrides (AP-4933) — kept as real state
   // (not a plain constant) so a Save/Reset in the expanded row actually
@@ -649,7 +657,17 @@ export default function CurriculumSetup() {
     setSelectedSchoolIds(new Set())
   }
 
+  // Concept D's bulk Reset only *stages* the removal (dimmed row + a
+  // per-row Undo) and commits when the modal closes, via closeOverridesPanel
+  // below. Concept C has no modal/close event to commit on, so the same
+  // staging there would silently never remove the override — fixed
+  // 2026-09-03 by having Concept C commit immediately instead of staging.
   function bulkStageReset() {
+    if (adminConcept === 'c') {
+      setOverrides((os) => os.filter((o) => !selectedSchoolIds.has(o.school.id)))
+      setSelectedSchoolIds(new Set())
+      return
+    }
     setPendingResets((prev) => {
       const next = new Set(prev)
       selectedSchoolIds.forEach((id) => next.add(id))
@@ -840,22 +858,6 @@ export default function CurriculumSetup() {
   return (
     <>
     <div className="flex flex-col gap-8">
-    {/* Internal-only role switcher — not a real end-user control, just lets
-        the team flip between the Program Admin and Site Leader views of
-        this page while reviewing the design. Drives the same
-        isSiteLeaderView state the old single toggle button did. */}
-    <div className="flex items-center justify-end">
-      <Tabs
-        value={isSiteLeaderView ? 'site_leader' : 'program_admin'}
-        onValueChange={(v) => setIsSiteLeaderView(v === 'site_leader')}
-      >
-        <TabsList>
-          <TabsTrigger value="program_admin">Program Admin</TabsTrigger>
-          <TabsTrigger value="site_leader">Site Leader</TabsTrigger>
-        </TabsList>
-      </Tabs>
-    </div>
-
     {!isSiteLeaderView && (
     <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
       <div className="p-6 pb-0">
@@ -887,7 +889,16 @@ export default function CurriculumSetup() {
           </div>
 
           <div className="px-6 py-5">
-            <p className="text-sm font-semibold text-brand-text">Weekly goal</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-semibold text-brand-text">Weekly goal</p>
+              <button
+                onClick={() => setWeeklyGoalHelpOpen(true)}
+                aria-label="About Weekly Goal"
+                className="text-brand-subtext hover:text-brand-text transition-colors"
+              >
+                <Info size={14} />
+              </button>
+            </div>
             <p className="text-sm text-brand-subtext mt-0.5 mb-3">
               Days per week a user must access a lesson to be on track.
             </p>
@@ -1005,7 +1016,7 @@ export default function CurriculumSetup() {
                         value={overridesSearch}
                         onChange={(e) => setOverridesSearch(e.target.value)}
                         placeholder={`Search ${schools.length} sites`}
-                        className="w-full pl-8 pr-2 h-8 text-sm border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                        className="w-full pl-8 pr-2 h-8 text-xs border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
                       />
                     </div>
                     <OverridesMoreMenu onResetAll={resetAllOverrides} />
@@ -1065,7 +1076,7 @@ export default function CurriculumSetup() {
                             <TableRow
                               key={school.id}
                               onClick={() => toggleSchoolSelected(school.id)}
-                              className={`cursor-pointer ${isSelected ? 'bg-dessa-teal/[8%] hover:bg-dessa-teal/[16%]' : ''}`}
+                              className={`cursor-pointer duration-300 ${isSelected ? 'bg-dessa-teal/[8%] hover:bg-dessa-teal/10' : ''}`}
                             >
                               <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center justify-center h-full">
@@ -1088,12 +1099,22 @@ export default function CurriculumSetup() {
                                   )}
                                 </span>
                               </TableCell>
+                              {/* When this row is part of the current selection,
+                                  picking a value applies to every selected
+                                  site (via bulkSetGoal) instead of just this
+                                  one — same as using the bulk command bar,
+                                  just triggered from any selected row's own
+                                  dropdown. Unselected rows keep the existing
+                                  single-row behavior below. */}
                               <TableCell className="py-2 text-right" onClick={(e) => e.stopPropagation()}>
                                 {isPendingReset ? (
                                   <GoalColorDropdown
                                     value={goal}
-                                    muted
                                     onChange={(n) => {
+                                      if (isSelected) {
+                                        bulkSetGoal(n)
+                                        return
+                                      }
                                       togglePendingReset(school.id)
                                       setOverrides((os) =>
                                         os.map((o) => (o.school.id === school.id ? { ...o, weeklyGoal: n } : o))
@@ -1104,16 +1125,21 @@ export default function CurriculumSetup() {
                                   <GoalColorDropdown
                                     value={override.weeklyGoal}
                                     onChange={(n) =>
-                                      setOverrides((os) =>
-                                        os.map((o) => (o.school.id === school.id ? { ...o, weeklyGoal: n } : o))
-                                      )
+                                      isSelected
+                                        ? bulkSetGoal(n)
+                                        : setOverrides((os) =>
+                                            os.map((o) => (o.school.id === school.id ? { ...o, weeklyGoal: n } : o))
+                                          )
                                     }
                                   />
                                 ) : (
                                   <GoalColorDropdown
                                     value={goal}
-                                    muted
-                                    onChange={(n) => setOverrides((os) => [...os, { school, weeklyGoal: n }])}
+                                    onChange={(n) =>
+                                      isSelected
+                                        ? bulkSetGoal(n)
+                                        : setOverrides((os) => [...os, { school, weeklyGoal: n }])
+                                    }
                                   />
                                 )}
                               </TableCell>
@@ -1176,6 +1202,13 @@ export default function CurriculumSetup() {
             </div>
           )}
 
+          {/* Concept C's inline table already sits directly above this bar
+              with its own bulk actions, and its "Learn more" half (below)
+              never rendered for Concept C anyway (b/d only) — so for C this
+              would just be an empty bordered strip. Skipped entirely rather
+              than only hiding the Cancel/Save buttons and leaving that dead
+              space. */}
+          {adminConcept !== 'c' && (
           <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-brand-border">
             {/* AP-4933 — Concepts B/D's drawer/modal trigger, relocated here
                 from a header pill (found unclear as an "open this" control
@@ -1213,6 +1246,7 @@ export default function CurriculumSetup() {
               </button>
             </div>
           </div>
+          )}
         </>
       )}
 
@@ -1430,6 +1464,28 @@ export default function CurriculumSetup() {
     </div>
     </div>
 
+    <SidePanel open={weeklyGoalHelpOpen} onClose={() => setWeeklyGoalHelpOpen(false)} title="About Weekly Goal">
+      <div className="flex flex-col gap-6">
+        <div>
+          <h3 className="text-sm font-semibold text-brand-text mb-1.5">What this sets</h3>
+          <p className="text-sm text-brand-subtext leading-relaxed">
+            This is your program's default weekly goal, the number of days per week a user needs
+            to access a lesson to stay on track. It applies across every site in your district
+            unless a site customizes its own.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-brand-text mb-1.5">Site-level overrides</h3>
+          <p className="text-sm text-brand-subtext leading-relaxed">
+            Any site can set its own weekly goal instead of following the program default. This can
+            be done here, using Site overrides below, or by the Site Leader themselves from their
+            own Curriculum Setup page.
+          </p>
+        </div>
+      </div>
+    </SidePanel>
+
     <SidePanel open={helpOpen} onClose={() => setHelpOpen(false)} title="About Family Access">
       <div className="flex flex-col gap-6">
         <div>
@@ -1557,7 +1613,7 @@ export default function CurriculumSetup() {
                   value={overridesSearch}
                   onChange={(e) => setOverridesSearch(e.target.value)}
                   placeholder={`Search ${schools.length} sites`}
-                  className="w-full pl-8 pr-2 h-8 text-sm border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                  className="w-full pl-8 pr-2 h-8 text-xs border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
                 />
               </div>
               <OverridesMoreMenu onResetAll={resetAllOverrides} />
@@ -1608,7 +1664,7 @@ export default function CurriculumSetup() {
                         // class), so without this override it visually masks
                         // the selected tint entirely while the mouse still
                         // sits on the row you just clicked.
-                        className={`cursor-pointer ${isSelected ? 'bg-dessa-teal/[8%] hover:bg-dessa-teal/[16%]' : ''}`}
+                        className={`cursor-pointer duration-300 ${isSelected ? 'bg-dessa-teal/[8%] hover:bg-dessa-teal/10' : ''}`}
                       >
                         <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center h-full">
@@ -1637,6 +1693,13 @@ export default function CurriculumSetup() {
                             )}
                           </span>
                         </TableCell>
+                        {/* When this row is part of the current selection,
+                            picking a value applies to every selected site
+                            (via bulkSetGoal) instead of just this one —
+                            same as using the bulk command bar, just
+                            triggered from any selected row's own dropdown.
+                            Unselected rows keep the existing single-row
+                            behavior below. */}
                         <TableCell className="py-2 text-right" onClick={(e) => e.stopPropagation()}>
                           {isPendingReset ? (
                             // Previewing the reverted (default) value, but
@@ -1646,8 +1709,11 @@ export default function CurriculumSetup() {
                             // instead, same as picking one on a Default row.
                             <GoalColorDropdown
                               value={goal}
-                              muted
                               onChange={(n) => {
+                                if (isSelected) {
+                                  bulkSetGoal(n)
+                                  return
+                                }
                                 togglePendingReset(school.id)
                                 setOverrides((os) =>
                                   os.map((o) => (o.school.id === school.id ? { ...o, weeklyGoal: n } : o))
@@ -1658,9 +1724,11 @@ export default function CurriculumSetup() {
                             <GoalColorDropdown
                               value={override.weeklyGoal}
                               onChange={(n) =>
-                                setOverrides((os) =>
-                                  os.map((o) => (o.school.id === school.id ? { ...o, weeklyGoal: n } : o))
-                                )
+                                isSelected
+                                  ? bulkSetGoal(n)
+                                  : setOverrides((os) =>
+                                      os.map((o) => (o.school.id === school.id ? { ...o, weeklyGoal: n } : o))
+                                    )
                               }
                             />
                           ) : (
@@ -1669,8 +1737,11 @@ export default function CurriculumSetup() {
                             // (see the Action-column note above).
                             <GoalColorDropdown
                               value={goal}
-                              muted
-                              onChange={(n) => setOverrides((os) => [...os, { school, weeklyGoal: n }])}
+                              onChange={(n) =>
+                                isSelected
+                                  ? bulkSetGoal(n)
+                                  : setOverrides((os) => [...os, { school, weeklyGoal: n }])
+                              }
                             />
                           )}
                         </TableCell>
