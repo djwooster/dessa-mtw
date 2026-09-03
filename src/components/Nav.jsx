@@ -28,9 +28,9 @@ export default function Nav() {
       <div className="px-6 h-14 flex items-center gap-6">
 
         {/* Logo */}
-        <div className="flex items-center mr-4 flex-shrink-0">
+        <NavLink to="/" className="flex items-center mr-4 flex-shrink-0">
           <img src="/dessa-mtw-logo.svg" alt="DESSA x Move This World" className="h-5 w-auto" />
-        </div>
+        </NavLink>
 
         {/* Nav items */}
         <div className="flex items-center gap-0.5 flex-1">
