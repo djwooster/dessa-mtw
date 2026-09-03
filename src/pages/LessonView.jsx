@@ -2909,6 +2909,10 @@ function AudioLibraryView({ grade }) {
 const lessonTags = {
   "5-2": ["Brain Break"],
   "5-3": ["Brain Break"],
+  // Reuses the longest existing tag string (also on "12-3") on a lesson in
+  // the same unit as the "Brain Break" tags above, so both pill lengths are
+  // visible together in the sidebar for a stress test of the pill's width.
+  "5-4": ["Self-Regulation Strategy"],
   "12-3": ["Self-Regulation Strategy"],
 };
 
@@ -3414,13 +3418,14 @@ export default function LessonView({ onBookmark }) {
                                     }}
                                   >
                                     <span
-                                      className={`text-sm ${isSelectedLesson ? "font-semibold text-brand-text" : "text-brand-text"}`}
+                                      className={`flex-1 min-w-0 truncate text-sm ${isSelectedLesson ? "font-semibold text-brand-text" : "text-brand-text"}`}
+                                      title={cleanItem}
                                     >
                                       {highlightMatch(cleanItem)}
                                     </span>
                                     {tagMatch ? (
                                       <span
-                                        className="inline-flex items-center gap-1 max-w-[130px] px-2 py-0.5 ml-2 rounded-full text-[11px] font-medium bg-mtw-amberLight text-brand-text border border-mtw-amber/30 flex-shrink-0"
+                                        className="inline-flex items-center gap-1 max-w-[96px] px-2 py-0.5 ml-2 rounded-full text-[11px] font-medium bg-mtw-amberLight text-brand-text border border-mtw-amber/30 flex-shrink-0"
                                         title={`Matches tag: ${tagMatch}`}
                                       >
                                         <Tag size={10} className="shrink-0" />
