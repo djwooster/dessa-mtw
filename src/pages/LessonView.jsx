@@ -3046,22 +3046,16 @@ export default function LessonView({ onBookmark }) {
   const [pendingNavigate, setPendingNavigate] = useState(null);
   const [showInactive, setShowInactive] = useState(true);
   const [sidebarSearch, setSidebarSearch] = useState("");
-  // 2026-08-31: Concept A (the always-visible sidebar search box, filtering
-  // the unit tree down to matches) is the kept lesson-search direction —
-  // confirmed to match `main`'s original hide-non-matches + "No lessons
-  // found" behavior (see visibleUnits below), unlike B/C's command-palette
-  // overlay approach. The Nav.jsx A/B/C toggle and B/C's own JSX (the
-  // trigger-button branch below, Concept C's floating pill, and the
-  // command-palette overlay itself) are commented out rather than deleted
-  // — kept for the record, same treatment as Resources.jsx's retired
-  // concepts. Concept A's box now always renders unconditionally rather
-  // than being gated on a `searchConcept` check, so that variable itself
-  // is dead too — commented out along with everything that used to read it.
-  // const searchConcept = "a";
-  // Concepts B/C's command-palette state — retired alongside their JSX
-  // below (search this file for "Concepts B/C" to find the rest).
-  // const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  // const [paletteQuery, setPaletteQuery] = useState("");
+  // "Search within a course" concept comparison — revived 2026-09-08 to
+  // compare a new 4th concept against the earlier A/B/C set. A is the
+  // always-visible sidebar search box (filters the unit tree down to
+  // matches in place); B swaps that box for a trigger that opens a full
+  // command-palette overlay; C drops the sidebar element entirely for a
+  // fixed bottom-right pill triggering that same overlay. Controlled via
+  // the Nav-hosted switcher (see Nav.jsx) reading `?searchConcept=`.
+  const searchConcept = searchParams.get('searchConcept') || 'a';
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState("");
   const [language, setLanguage] = useState("English");
   const [langOpen, setLangOpen] = useState(false);
   const [showNextLesson, setShowNextLesson] = useState(false);
@@ -3087,15 +3081,14 @@ export default function LessonView({ onBookmark }) {
     setStornawayWatched(false);
   }, [selectedLesson]);
 
-  // Concepts B/C — Escape closed the command palette; retired with it.
-  // useEffect(() => {
-  //   if (!commandPaletteOpen) return;
-  //   function onKeyDown(e) {
-  //     if (e.key === "Escape") setCommandPaletteOpen(false);
-  //   }
-  //   window.addEventListener("keydown", onKeyDown);
-  //   return () => window.removeEventListener("keydown", onKeyDown);
-  // }, [commandPaletteOpen]);
+  useEffect(() => {
+    if (!commandPaletteOpen) return;
+    function onKeyDown(e) {
+      if (e.key === "Escape") setCommandPaletteOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [commandPaletteOpen]);
 
   useEffect(() => {
     const el = mainRef.current;
@@ -3263,32 +3256,30 @@ export default function LessonView({ onBookmark }) {
     return highlightMatchText(text, sidebarQuery);
   }
 
-  // Concepts B/C — command palette results, retired along with their JSX
-  // and state (search this file for "Concepts B/C" for the rest).
-  // const normalizedPaletteQuery = paletteQuery.trim().toLowerCase();
-  // const paletteResults = normalizedPaletteQuery
-  //   ? visibleUnits.flatMap((unit) => {
-  //       if (unit.sub.length === 0) {
-  //         return unit.title.toLowerCase().includes(normalizedPaletteQuery)
-  //           ? [{ unitId: unit.id, lessonIndex: 0, unitTitle: unit.title, lessonTitle: unit.title }]
-  //           : [];
-  //       }
-  //       return unit.sub
-  //         .map((item, i) => ({ i, cleanItem: item.replace(/^(Community|Independent):\s*/, "") }))
-  //         .filter(
-  //           ({ cleanItem }) =>
-  //             unit.title.toLowerCase().includes(normalizedPaletteQuery) ||
-  //             cleanItem.toLowerCase().includes(normalizedPaletteQuery),
-  //         )
-  //         .map(({ i, cleanItem }) => ({ unitId: unit.id, lessonIndex: i, unitTitle: unit.title, lessonTitle: cleanItem }));
-  //     })
-  //   : [];
-  //
-  // function selectFromPalette(unitId, lessonIndex) {
-  //   setCommandPaletteOpen(false);
-  //   setPaletteQuery("");
-  //   handleSelectLesson(unitId, lessonIndex);
-  // }
+  const normalizedPaletteQuery = paletteQuery.trim().toLowerCase();
+  const paletteResults = normalizedPaletteQuery
+    ? visibleUnits.flatMap((unit) => {
+        if (unit.sub.length === 0) {
+          return unit.title.toLowerCase().includes(normalizedPaletteQuery)
+            ? [{ unitId: unit.id, lessonIndex: 0, unitTitle: unit.title, lessonTitle: unit.title }]
+            : [];
+        }
+        return unit.sub
+          .map((item, i) => ({ i, cleanItem: item.replace(/^(Community|Independent):\s*/, "") }))
+          .filter(
+            ({ cleanItem }) =>
+              unit.title.toLowerCase().includes(normalizedPaletteQuery) ||
+              cleanItem.toLowerCase().includes(normalizedPaletteQuery),
+          )
+          .map(({ i, cleanItem }) => ({ unitId: unit.id, lessonIndex: i, unitTitle: unit.title, lessonTitle: cleanItem }));
+      })
+    : [];
+
+  function selectFromPalette(unitId, lessonIndex) {
+    setCommandPaletteOpen(false);
+    setPaletteQuery("");
+    handleSelectLesson(unitId, lessonIndex);
+  }
 
   return (
     <div className="flex h-[calc(100vh-56px)] overflow-hidden">
@@ -3308,9 +3299,6 @@ export default function LessonView({ onBookmark }) {
             Back
           </button>
           <div className="flex items-center gap-2">
-            {/* Design-review toggle relocated to Nav's top-right actions
-                cluster (see Nav.jsx) — this page just reads the resulting
-                `?searchConcept=` param above. */}
             <button
               onClick={() => setShowInactive((v) => !v)}
               className="flex items-center gap-1.5 text-xs font-medium text-brand-subtext hover:text-brand-text border border-brand-border rounded-md px-2.5 py-1 hover:bg-brand-bg transition-colors"
@@ -3321,38 +3309,12 @@ export default function LessonView({ onBookmark }) {
           </div>
         </div>
 
-        {/* Concept A — the kept lesson-search UI (see the block comment
-            above `searchConcept`). B's trigger-button branch and C's
-            "no search slot here at all" treatment are preserved below in
-            a comment for the record, not deleted. */}
-        <div className="px-4 py-3 border-b border-brand-border">
-          <div className="relative">
-            <Search
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none"
-            />
-            <input
-              type="text"
-              value={sidebarSearch}
-              onChange={(e) => setSidebarSearch(e.target.value)}
-              placeholder="Search lessons…"
-              className="w-full pl-8 pr-8 h-9 text-sm border border-brand-border rounded-md bg-brand-bg text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal focus:bg-white transition-colors"
-            />
-            {sidebarSearch && (
-              <button
-                onClick={() => setSidebarSearch("")}
-                aria-label="Clear search"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text transition-colors"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Concepts B/C — retired 2026-08-31 (Concept A confirmed as the
-            kept direction); kept for reference, not rendered now that
-            `searchConcept` is hardcoded to "a".
+        {/* Design-review toggle lives in Nav's top-right actions cluster
+            (see Nav.jsx) — this page just reads the resulting
+            `?searchConcept=` param. A is the always-visible sidebar search
+            box below; B swaps it for a trigger opening a full
+            command-palette overlay; C drops this slot entirely (see the
+            fixed bottom-right pill rendered near the end of this file). */}
         {searchConcept !== "c" && (
         <div className="px-4 py-3 border-b border-brand-border">
           {searchConcept === "a" ? (
@@ -3393,7 +3355,6 @@ export default function LessonView({ onBookmark }) {
           )}
         </div>
         )}
-        */}
 
         <div className="flex-1 overflow-y-auto py-1">
           {isSearchingSidebar && visibleUnits.length === 0 ? (
@@ -3633,17 +3594,9 @@ export default function LessonView({ onBookmark }) {
         )}
       </aside>
 
-      {/* Concepts B/C — retired 2026-08-31 (Concept A confirmed as the kept
-          lesson-search direction); kept for reference, not rendered now
-          that `searchConcept` is hardcoded to "a" and commandPaletteOpen
-          can never become true (no trigger left to set it). The two nested
-          comments this block already had are flattened (their comment
-          delimiters removed) so they don't prematurely close this outer
-          comment.
-
-          Concept C — no sidebar search element at all; a fixed pill button
+      {/* Concept C — no sidebar search element at all; a fixed pill button
           in the bottom-right corner of the viewport opens the same command
-          palette overlay Concept B uses.
+          palette overlay Concept B uses. */}
       {searchConcept === "c" && (
         <button
           type="button"
@@ -3655,10 +3608,10 @@ export default function LessonView({ onBookmark }) {
         </button>
       )}
 
-          Concept B — command palette overlay. Fixed positioning so it sits
+      {/* Concept B — command palette overlay. Fixed positioning so it sits
           above the whole page, not just the sidebar; clicking the backdrop
           or pressing Escape (see effect above) closes it without selecting
-          a lesson.
+          a lesson. */}
       {commandPaletteOpen && (
         <div
           className="fixed inset-0 z-50 flex items-start justify-center pt-32 bg-black/40"
@@ -3716,7 +3669,6 @@ export default function LessonView({ onBookmark }) {
           </div>
         </div>
       )}
-      */}
 
       {/* ── Main content ── */}
       <main ref={mainRef} className="flex-1 overflow-y-auto bg-brand-bg">
