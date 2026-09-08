@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { familyUnitsByGrade, adultWellnessUnits, tier2EarlyElementaryUnits } from "../lib/lessonUnitsData";
 import {
   CheckCircle2,
@@ -1080,7 +1080,7 @@ function PracticeTypeCallout({ isCommunity }) {
         <h3 className="text-base font-bold text-dessa-navy leading-snug">
           {isCommunity ? "Group Exercise" : "Independent Practice"}
         </h3>
-        <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "15px" }}>
+        <p className="text-brand-subtext leading-relaxed" style={{ fontSize: "14px" }}>
           {isCommunity
             ? "Facilitate this activity live with your team or classroom — it's designed for group discussion and shared reflection."
             : "Complete this on your own, at your own pace — no facilitation needed, just press play whenever it fits your day."}
@@ -1090,7 +1090,52 @@ function PracticeTypeCallout({ isCommunity }) {
   );
 }
 
-function AudioReflectionLayout({ items, isCommunity, isIndependent }) {
+// Shared pill used by concepts B and C below. `hero` styles it as a dark,
+// semi-transparent overlay (to sit on the video hero, matching the existing
+// duration/language corner badges); otherwise it's a soft light pill for use
+// inline on the page (title row, or the Independent audio card's header).
+function PracticeTypeBadge({ isCommunity, hero = false }) {
+  const Icon = isCommunity ? Users : User;
+  const label = isCommunity ? "Group Exercise" : "Independent Practice";
+  if (hero) {
+    return (
+      <div
+        className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white"
+        style={{ background: isCommunity ? "rgba(232,101,58,0.85)" : "rgba(42,127,143,0.85)" }}
+      >
+        <Icon size={12} />
+        {label}
+      </div>
+    );
+  }
+  const color = isCommunity ? "#E8653A" : "#2A7F8F";
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0"
+      style={{ background: isCommunity ? "rgba(232,101,58,0.1)" : "rgba(42,127,143,0.1)", color }}
+    >
+      <Icon size={12} />
+      {label}
+    </span>
+  );
+}
+
+// Concept B — compact pill + one-line description on the title row, above
+// the video, instead of a full box below it.
+function PracticeTypeInline({ isCommunity }) {
+  return (
+    <div className="flex items-center justify-end gap-2 flex-wrap mb-5">
+      <PracticeTypeBadge isCommunity={isCommunity} />
+      <span className="text-sm text-brand-subtext">
+        {isCommunity
+          ? "Facilitate live with your team or classroom."
+          : "Complete on your own, at your own pace."}
+      </span>
+    </div>
+  );
+}
+
+function AudioReflectionLayout({ items, isCommunity, isIndependent, calloutConcept }) {
   const audioItem = items.find((it) => it.type === "audio");
   const reflectionItem = items.find((it) => it.type === "reflection");
   const [audioPlaying, setAudioPlaying] = useState(false);
@@ -1103,6 +1148,11 @@ function AudioReflectionLayout({ items, isCommunity, isIndependent }) {
     <div className="flex flex-col gap-6">
       {audioItem && (
         <div className="rounded-2xl border border-brand-border bg-white p-5">
+          {calloutConcept === "c" && (isCommunity || isIndependent) && (
+            <div className="mb-3">
+              <PracticeTypeBadge isCommunity={isCommunity} />
+            </div>
+          )}
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="min-w-0 flex items-start gap-3">
               {audioItem.speakerImage && (
@@ -1172,8 +1222,6 @@ function AudioReflectionLayout({ items, isCommunity, isIndependent }) {
         </div>
       )}
 
-      {(isCommunity || isIndependent) && <PracticeTypeCallout isCommunity={isCommunity} />}
-
       {reflectionItem && reflectionItem.image ? (
         <div>
           <h2 className="text-xl font-semibold text-brand-text mb-4">{reflectionItem.title}</h2>
@@ -1236,7 +1284,7 @@ function AudioReflectionLayout({ items, isCommunity, isIndependent }) {
 
 // One-off layout for "Independent: Breathe Easier" — a notes section (synopsis
 // + tips) stacked above the video player, instead of the tabbed media switcher.
-function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen, isCommunity, isIndependent }) {
+function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen, isCommunity, isIndependent, calloutConcept }) {
   const notesItem = items.find((it) => it.type === "notes");
   const videoItem = items.find((it) => it.type === "video");
   return (
@@ -1254,11 +1302,12 @@ function NotesVideoLayout({ items, language, langOpen, setLanguage, setLangOpen,
           <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ background: "rgba(0,0,0,0.45)" }}>
             <Clock size={11} />{videoItem.duration}
           </div>
+          {calloutConcept === "c" && (isCommunity || isIndependent) && (
+            <PracticeTypeBadge isCommunity={isCommunity} hero />
+          )}
           <LanguagePicker language={language} langOpen={langOpen} setLanguage={setLanguage} setLangOpen={setLangOpen} />
         </div>
       )}
-
-      {(isCommunity || isIndependent) && <PracticeTypeCallout isCommunity={isCommunity} />}
 
       {notesItem && notesItem.guideImage ? (
         <a
@@ -2944,6 +2993,14 @@ function highlightMatchText(text, query) {
 export default function LessonView({ onBookmark }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Adult Wellness-only design-review toggle comparing where the practice-type
+  // (Independent/Group) callout surfaces in the page: A above the video, B a
+  // compact badge on the title row, C baked into the video/audio hero itself.
+  // Controlled via the Nav-hosted switcher (see Nav.jsx) reading `?calloutConcept=`.
+  // Units with `groupByPracticeType` (e.g. "Team & Community Building") default
+  // to C — see the effect below — but the switcher can still override.
+  const calloutConcept = searchParams.get('calloutConcept') || 'a';
   const course = location.state?.course;
   const isGrade2 = course?.grade === "Grade 2";
   const isTier2EE = course?.level === 'Tier 2';
@@ -2962,6 +3019,11 @@ export default function LessonView({ onBookmark }) {
   const [expandedUnit, setExpandedUnit] = useState(
     isTier2EE ? 9 : isAdultWellness ? 1 : isFamily ? 1 : isGrade2 ? 31 : 5,
   );
+  // Second-level sidebar expand state for units that opt into grouping their
+  // lessons by practice type (see `groupByPracticeType` on unit data, e.g.
+  // Adult Wellness's "Team & Community Building"). Keyed by `${unitId}:${groupKey}`;
+  // a missing entry means expanded, so both groups default open.
+  const [expandedSubgroups, setExpandedSubgroups] = useState({});
   const [selectedLesson, setSelectedLesson] = useState(
     isTier2EE
       ? { unitId: 9, lessonIndex: 0 }
@@ -3048,6 +3110,20 @@ export default function LessonView({ onBookmark }) {
   const competency = course?.competency ?? "Self-Awareness";
 
   const activeUnit = activeUnits.find((u) => u.id === selectedLesson.unitId);
+
+  // Units grouped by practice type default their in-lesson view to Concept C
+  // (the switcher can still override afterward — see calloutConcept above).
+  // useLayoutEffect (not useEffect) so the URL param — and therefore the
+  // rendered concept and the Nav switcher's highlighted state — are in sync
+  // before paint, with no A-then-C flash on first load.
+  useLayoutEffect(() => {
+    if (activeUnit?.groupByPracticeType && !searchParams.get('calloutConcept')) {
+      const next = new URLSearchParams(searchParams);
+      next.set('calloutConcept', 'c');
+      setSearchParams(next, { replace: true, state: location.state });
+    }
+  }, [activeUnit?.id]);
+
   const isAudioLibrary = selectedLesson.unitId === "audio";
   const lastContentUnit = [...activeUnits].reverse().find(u => u.sub && u.sub.length > 0 && u.id !== 37);
   const isLastLesson =
@@ -3326,7 +3402,66 @@ export default function LessonView({ onBookmark }) {
               <p className="text-xs text-brand-subtext">Try a different search term.</p>
             </div>
           ) : (
-          visibleUnits
+          (() => {
+          // Shared lesson-row renderer, used both for a unit's flat lesson
+          // list and for the grouped-by-practice-type sub-lists below (see
+          // `groupByPracticeType` on unit data). `lessonIndex` (`i`) always
+          // stays the flat index into `unit.sub` regardless of how the row
+          // is grouped for display, so selection/navigation is unaffected.
+          const renderLessonRow = (unit, item, i, { indent = 56, showDivider = true } = {}) => {
+            const isSelectedLesson =
+              selectedLesson.unitId === unit.id &&
+              selectedLesson.lessonIndex === i;
+            const cleanItem = item.replace(/^(Community|Independent):\s*/, "");
+            // Only surface the tag chip when the query didn't
+            // already match the visible title — a text match is
+            // self-explanatory via the highlight, so the row
+            // shouldn't spend its right-edge slot on both.
+            const isTextMatch =
+              isSearchingSidebar && cleanItem.toLowerCase().includes(sidebarQuery);
+            const tagMatch = isTextMatch ? null : getTagMatch(unit.id, i, sidebarQuery);
+            return (
+              <div key={item}>
+                <button
+                  onClick={() => handleSelectLesson(unit.id, i)}
+                  className={`w-full flex items-center justify-between py-2.5 text-left transition-colors ${isSelectedLesson ? "bg-mtw-amberLight rounded-lg" : "hover:bg-brand-bg"}`}
+                  style={{
+                    paddingLeft: `${indent}px`,
+                    paddingRight: "8px",
+                  }}
+                >
+                  <span
+                    className={`flex-1 min-w-0 truncate text-sm ${isSelectedLesson ? "font-semibold text-brand-text" : "text-brand-text"}`}
+                    title={cleanItem}
+                  >
+                    {highlightMatch(cleanItem)}
+                  </span>
+                  {tagMatch ? (
+                    <span
+                      className="inline-flex items-center gap-1 max-w-[96px] px-2 py-0.5 ml-2 rounded-full text-[11px] font-medium bg-mtw-amberLight text-brand-text border border-mtw-amber/30 flex-shrink-0"
+                      title={`Matches tag: ${tagMatch}`}
+                    >
+                      <Tag size={10} className="shrink-0" />
+                      <span className="truncate">{tagMatch}</span>
+                    </span>
+                  ) : unit.completed ? (
+                    <CheckCircle2
+                      size={18}
+                      className="flex-shrink-0 text-dessa-teal"
+                    />
+                  ) : (
+                    <Circle
+                      size={18}
+                      className={`flex-shrink-0 ${isSelectedLesson ? "text-mtw-amber" : "text-brand-border"}`}
+                    />
+                  )}
+                </button>
+                {showDivider && <div className="border-t border-brand-border" />}
+              </div>
+            );
+          };
+
+          return visibleUnits
             .map((unit) => {
               const isExpanded = isSearchingSidebar ? true : expandedUnit === unit.id;
               const toggle = () => setExpandedUnit(isExpanded ? null : unit.id);
@@ -3395,67 +3530,77 @@ export default function LessonView({ onBookmark }) {
                         className="overflow-hidden"
                       >
                         <div className="mr-3 mb-1">
-                          {unit.sub.map((item, i) => {
-                              const isSelectedLesson =
-                                selectedLesson.unitId === unit.id &&
-                                selectedLesson.lessonIndex === i;
-                              const cleanItem = item.replace(/^(Community|Independent):\s*/, "");
-                              // Only surface the tag chip when the query didn't
-                              // already match the visible title — a text match is
-                              // self-explanatory via the highlight, so the row
-                              // shouldn't spend its right-edge slot on both.
-                              const isTextMatch =
-                                isSearchingSidebar && cleanItem.toLowerCase().includes(sidebarQuery);
-                              const tagMatch = isTextMatch ? null : getTagMatch(unit.id, i, sidebarQuery);
-                              return (
-                                <div key={item}>
-                                  <button
-                                    onClick={() => handleSelectLesson(unit.id, i)}
-                                    className={`w-full flex items-center justify-between py-2.5 text-left transition-colors ${isSelectedLesson ? "bg-mtw-amberLight rounded-lg" : "hover:bg-brand-bg"}`}
-                                    style={{
-                                      paddingLeft: "56px",
-                                      paddingRight: "8px",
-                                    }}
-                                  >
-                                    <span
-                                      className={`flex-1 min-w-0 truncate text-sm ${isSelectedLesson ? "font-semibold text-brand-text" : "text-brand-text"}`}
-                                      title={cleanItem}
+                          {unit.groupByPracticeType && !isSearchingSidebar ? (
+                            [
+                              { key: "community", label: "Group Exercises", icon: Users, color: "#E8653A", prefix: "Community:" },
+                              { key: "independent", label: "Independent Practice", icon: User, color: "#2A7F8F", prefix: "Independent:" },
+                            ]
+                              .map((group) => ({
+                                ...group,
+                                items: unit.sub
+                                  .map((item, i) => ({ item, i }))
+                                  .filter(({ item }) => item.startsWith(group.prefix)),
+                              }))
+                              .filter((group) => group.items.length > 0)
+                              .map((group) => {
+                                const subKey = `${unit.id}:${group.key}`;
+                                const isSubExpanded = expandedSubgroups[subKey] !== false;
+                                const GroupIcon = group.icon;
+                                return (
+                                  <div key={group.key}>
+                                    <button
+                                      onClick={() =>
+                                        setExpandedSubgroups((prev) => ({ ...prev, [subKey]: !isSubExpanded }))
+                                      }
+                                      className="w-full flex items-center gap-2 py-2 text-left transition-colors hover:bg-brand-bg"
+                                      style={{ paddingLeft: "40px", paddingRight: "8px" }}
                                     >
-                                      {highlightMatch(cleanItem)}
-                                    </span>
-                                    {tagMatch ? (
+                                      <GroupIcon size={13} className="flex-shrink-0" style={{ color: group.color }} />
                                       <span
-                                        className="inline-flex items-center gap-1 max-w-[96px] px-2 py-0.5 ml-2 rounded-full text-[11px] font-medium bg-mtw-amberLight text-brand-text border border-mtw-amber/30 flex-shrink-0"
-                                        title={`Matches tag: ${tagMatch}`}
+                                        className="flex-1 text-sm leading-snug"
+                                        style={{ color: "#4b5465" }}
                                       >
-                                        <Tag size={10} className="shrink-0" />
-                                        <span className="truncate">{tagMatch}</span>
+                                        {group.label}
                                       </span>
-                                    ) : unit.completed ? (
-                                      <CheckCircle2
-                                        size={18}
-                                        className="flex-shrink-0 text-dessa-teal"
+                                      <ChevronDown
+                                        size={12}
+                                        className={`flex-shrink-0 text-brand-subtext transition-transform duration-200 ${isSubExpanded ? "" : "-rotate-90"}`}
                                       />
-                                    ) : (
-                                      <Circle
-                                        size={18}
-                                        className={`flex-shrink-0 ${isSelectedLesson ? "text-mtw-amber" : "text-brand-border"}`}
-                                      />
-                                    )}
-                                  </button>
-                                  {i < unit.sub.length - 1 && (
-                                    <div className="border-t border-brand-border" />
-                                  )}
-                                </div>
-                              );
-                            })}
+                                    </button>
+                                    <AnimatePresence initial={false}>
+                                      {isSubExpanded && (
+                                        <motion.div
+                                          initial={{ height: 0, opacity: 0 }}
+                                          animate={{ height: "auto", opacity: 1 }}
+                                          exit={{ height: 0, opacity: 0 }}
+                                          transition={{ duration: 0.16, ease: "easeInOut" }}
+                                          className="overflow-hidden"
+                                        >
+                                          {group.items.map(({ item, i }, idx) =>
+                                            renderLessonRow(unit, item, i, {
+                                              indent: 72,
+                                              showDivider: idx < group.items.length - 1,
+                                            })
+                                          )}
+                                        </motion.div>
+                                      )}
+                                    </AnimatePresence>
+                                  </div>
+                                );
+                              })
+                          ) : (
+                            unit.sub.map((item, i) =>
+                              renderLessonRow(unit, item, i, { indent: 56, showDivider: i < unit.sub.length - 1 })
+                            )
+                          )}
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
               );
-            })
+            });
+          })()
           )}
         </div>
 
@@ -3816,8 +3961,16 @@ export default function LessonView({ onBookmark }) {
                     {displayTitle}
                   </h1>
                 </div>
+                {calloutConcept === "b" && (isCommunity || isIndependent) && (
+                  <PracticeTypeInline isCommunity={isCommunity} />
+                )}
+                {calloutConcept === "a" && (isCommunity || isIndependent) && (
+                  <div className="mb-6">
+                    <PracticeTypeCallout isCommunity={isCommunity} />
+                  </div>
+                )}
                 {hasAudio ? (
-                  <AudioReflectionLayout items={items} isCommunity={isCommunity} isIndependent={isIndependent} />
+                  <AudioReflectionLayout items={items} isCommunity={isCommunity} isIndependent={isIndependent} calloutConcept={calloutConcept} />
                 ) : (
                   <NotesVideoLayout
                     items={items}
@@ -3827,6 +3980,7 @@ export default function LessonView({ onBookmark }) {
                     setLangOpen={setLangOpen}
                     isCommunity={isCommunity}
                     isIndependent={isIndependent}
+                    calloutConcept={calloutConcept}
                   />
                 )}
               </div>

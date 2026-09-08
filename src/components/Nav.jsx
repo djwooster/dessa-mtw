@@ -100,6 +100,42 @@ export default function Nav() {
               <option value="d">D — Modal</option>
             </select>
           )}
+
+          {/* Adult Wellness lesson-only design-review toggle (2026-09-04) —
+              stakeholder feedback was that the Independent/Group practice-type
+              callout "feels lost" below the video; comparing three ways to
+              surface it higher: A moves the existing box above the video, B
+              swaps it for a compact pill + one-line description on the title
+              row, C bakes a badge directly into the video/audio hero. See
+              PracticeTypeCallout/PracticeTypeInline/PracticeTypeBadge in
+              LessonView.jsx. */}
+          {location.pathname === '/mtw/lesson' && location.state?.course?.grade === 'Adult Wellness' && (
+            <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0 ml-2">
+              {[
+                { value: 'a', label: 'A', title: 'A — Callout above video' },
+                { value: 'b', label: 'B', title: 'B — Title row badge' },
+                { value: 'c', label: 'C', title: 'C — Badge in video hero' },
+              ].map(({ value, label, title }, i) => (
+                <button
+                  key={value}
+                  onClick={() => {
+                    const next = new URLSearchParams(searchParams)
+                    next.set('calloutConcept', value)
+                    setSearchParams(next, { state: location.state })
+                  }}
+                  title={title}
+                  aria-label={title}
+                  className={`px-2 py-1 transition-colors ${i > 0 ? 'border-l border-brand-border' : ''} ${
+                    (searchParams.get('calloutConcept') || 'a') === value
+                      ? 'bg-dessa-teal text-white'
+                      : 'text-brand-subtext hover:bg-brand-bg'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right actions */}
