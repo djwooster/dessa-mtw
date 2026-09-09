@@ -1301,29 +1301,44 @@ export default function CurriculumSetup() {
               onClick={() => setBulkConfirm(null)}
             >
               <div
-                className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
+                className="relative bg-white rounded-2xl shadow-xl w-full max-w-[440px] p-6"
                 onClick={(e) => e.stopPropagation()}
               >
-                <p className="text-base font-semibold text-brand-text mb-2">
+                <button
+                  type="button"
+                  onClick={() => setBulkConfirm(null)}
+                  aria-label="Close"
+                  className="absolute top-4 right-4 text-brand-subtext hover:text-brand-text transition-colors"
+                >
+                  <X size={18} />
+                </button>
+                <div className="rounded-xl bg-dessa-tealLight w-fit p-3 mb-4">
+                  {bulkConfirm.type === 'goal' ? (
+                    <Pencil size={20} className="text-dessa-teal" />
+                  ) : (
+                    <RotateCcw size={20} className="text-dessa-teal" />
+                  )}
+                </div>
+                <p className="text-xl font-bold text-brand-text">
                   {bulkConfirm.type === 'goal' ? 'Change weekly goal?' : 'Reset to program default?'}
                 </p>
-                <p className="text-sm text-brand-subtext mb-6">
+                <p className="text-sm text-brand-subtext mt-2 mb-8">
                   {bulkConfirm.type === 'goal'
                     ? `This will set the weekly goal to ${bulkConfirm.value} ${bulkConfirm.value === 1 ? 'day' : 'days'} for ${selectedSchoolIds.size} selected sites.`
                     : `This will remove the custom weekly goal for ${selectedSchoolIds.size} selected sites and return them to the program default.`}
                 </p>
-                <div className="flex justify-end gap-2">
+                <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={() => setBulkConfirm(null)}
-                    className="h-9 px-4 rounded-md text-sm font-medium text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors"
+                    className="flex-1 h-9 px-4 rounded-md text-sm font-medium text-brand-text border border-brand-border hover:bg-brand-bg transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={confirmBulkAction}
-                    className="h-9 px-4 rounded-md text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors"
+                    className="flex-1 h-9 px-4 rounded-md text-sm font-medium text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors"
                   >
                     {bulkConfirm.type === 'goal' ? 'Change goal' : 'Reset sites'}
                   </button>
