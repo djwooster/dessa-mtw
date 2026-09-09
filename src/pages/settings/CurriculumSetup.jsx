@@ -730,7 +730,16 @@ export default function CurriculumSetup() {
   function confirmBulkAction() {
     if (bulkConfirm?.type === 'goal') bulkSetGoal(bulkConfirm.value)
     else if (bulkConfirm?.type === 'reset') bulkStageReset()
+    else if (bulkConfirm?.type === 'resetAll') resetAllOverrides()
     setBulkConfirm(null)
+  }
+
+  // Concept C only, same modal as requestBulkSetGoal/requestBulkReset above
+  // — a district-wide reset is always confirmed, no "size > 1" bypass,
+  // since there's no single-site case to skip past. Concept D's own
+  // OverridesMoreMenu still calls resetAllOverrides directly.
+  function requestResetAll() {
+    setBulkConfirm({ type: 'resetAll' })
   }
 
   function togglePendingReset(schoolId) {
@@ -1102,7 +1111,7 @@ export default function CurriculumSetup() {
                           className="w-full pl-8 pr-2 h-8 text-xs border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
                         />
                       </div>
-                      <OverridesMoreMenu onResetAll={resetAllOverrides} />
+                      <OverridesMoreMenu onResetAll={requestResetAll} />
                     </div>
                   )}
                 </div>
@@ -1320,11 +1329,17 @@ export default function CurriculumSetup() {
                   )}
                 </div>
                 <p className="text-xl font-bold text-brand-text">
-                  {bulkConfirm.type === 'goal' ? 'Change weekly goal?' : 'Reset to program default?'}
+                  {bulkConfirm.type === 'goal'
+                    ? 'Change weekly goal?'
+                    : bulkConfirm.type === 'resetAll'
+                    ? 'Reset all sites to default?'
+                    : 'Reset to program default?'}
                 </p>
                 <p className="text-sm text-brand-subtext mt-2 mb-8">
                   {bulkConfirm.type === 'goal'
                     ? `This will set the weekly goal to ${bulkConfirm.value} ${bulkConfirm.value === 1 ? 'day' : 'days'} for ${selectedSchoolIds.size} selected sites.`
+                    : bulkConfirm.type === 'resetAll'
+                    ? `This will remove custom weekly goals for all ${overrides.length} customized ${overrides.length === 1 ? 'site' : 'sites'} and return them to the program default.`
                     : `This will remove the custom weekly goal for ${selectedSchoolIds.size} selected sites and return them to the program default.`}
                 </p>
                 <div className="flex gap-3">
