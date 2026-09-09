@@ -444,7 +444,14 @@ export default function CurriculumSetup() {
   // in-card (top-right of this card's own header), unlike every other
   // concept switcher in this app which lives in Nav.jsx — an intentional
   // exception per explicit request, not an oversight.
-  const siteLeaderConcept = searchParams.get('siteLeaderConcept') || 'a'
+  const siteLeaderConcept = searchParams.get('siteLeaderConcept') || 'b'
+  // Concept B's info banner layout (2026-09-09): 'new' puts the header/
+  // subheader and the banner in one justify-between row, banner width
+  // hugging its own content; 'old' is the original stacked layout (banner
+  // full-width, on its own row below the subheader). Switcher rendered
+  // inline next to "Weekly goal" so it's only visible when Concept B is
+  // showing.
+  const bannerLayout = searchParams.get('bannerLayout') || 'new'
 
   const [tab, setTab] = useState('engagement')
   const [goal, setGoal] = useState(3)
@@ -1081,7 +1088,10 @@ export default function CurriculumSetup() {
                   </div>
                   {overridesTableOpen && (
                     <div className="flex items-center flex-wrap gap-3">
-                      <StatusFilterDropdown value={overridesView} onChange={setOverridesView} />
+                      {/* Commented out 2026-09-09 per request. overridesView
+                          still defaults to 'all' in state, so filtering logic
+                          is untouched — just no UI to change it. */}
+                      {/* <StatusFilterDropdown value={overridesView} onChange={setOverridesView} /> */}
                       <div className="relative flex-1 min-w-[140px] max-w-xs">
                         <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
                         <input
@@ -1513,6 +1523,10 @@ export default function CurriculumSetup() {
       <div className="p-6">
         <div className="flex items-start justify-between gap-3 mb-1">
           <h1 className="text-2xl font-semibold text-brand-text">Curriculum Setup</h1>
+          {/* Commented out 2026-09-09 — Concept B settled on, switcher no
+              longer needs to be user-facing. siteLeaderConcept now defaults
+              to 'b' above; A/C branches below are left implemented in case
+              this comparison needs to be revisited.
           <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0">
             {['a', 'b', 'c'].map((value, i) => (
               <button
@@ -1532,8 +1546,9 @@ export default function CurriculumSetup() {
               </button>
             ))}
           </div>
+          */}
         </div>
-        <p className="text-sm text-brand-subtext mb-5">{SITE_LEADER_SCHOOL.name}</p>
+        <p className="text-sm text-brand-subtext mb-8">{SITE_LEADER_SCHOOL.name}</p>
 
         {siteLeaderConcept === 'b' ? (
           <>
@@ -1541,18 +1556,35 @@ export default function CurriculumSetup() {
             <p className="text-sm text-brand-subtext mt-0.5 mb-3">
               Days per week a user must access a lesson to be on track.
             </p>
-            <div className="flex items-center gap-2 rounded-lg bg-brand-bg px-3 py-2 mb-3">
-              <Info size={13} className="shrink-0 text-brand-subtext" />
-              <p className="text-xs text-brand-subtext">
-                Program default is <span className="font-semibold text-brand-text">{goal} {goal === 1 ? 'day' : 'days'}</span> per week.
-              </p>
-            </div>
-            <div className="mb-3">
-              <GoalPicker
-                value={isSiteLeaderCustom ? siteLeaderOverride.weeklyGoal : goal}
-                onChange={setSiteLeaderGoal}
-              />
-            </div>
+            {bannerLayout === 'new' ? (
+              <div className="flex items-center gap-3 mb-3">
+                <GoalPicker
+                  value={isSiteLeaderCustom ? siteLeaderOverride.weeklyGoal : goal}
+                  onChange={setSiteLeaderGoal}
+                />
+                <div className="flex items-center gap-2 rounded-lg bg-brand-bg px-3 py-2 w-fit shrink-0">
+                  <Info size={13} className="shrink-0 text-brand-subtext" />
+                  <p className="text-xs text-brand-subtext whitespace-nowrap">
+                    Your program's weekly goal is <span className="font-semibold text-brand-text">{goal} {goal === 1 ? 'day' : 'days'}</span>.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 rounded-lg bg-brand-bg px-3 py-2 mb-3">
+                  <Info size={13} className="shrink-0 text-brand-subtext" />
+                  <p className="text-xs text-brand-subtext">
+                    Your program's weekly goal is <span className="font-semibold text-brand-text">{goal} {goal === 1 ? 'day' : 'days'}</span>.
+                  </p>
+                </div>
+                <div className="mb-3">
+                  <GoalPicker
+                    value={isSiteLeaderCustom ? siteLeaderOverride.weeklyGoal : goal}
+                    onChange={setSiteLeaderGoal}
+                  />
+                </div>
+              </>
+            )}
             {isSiteLeaderCustom && (
               <button
                 type="button"

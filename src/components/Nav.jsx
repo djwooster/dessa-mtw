@@ -84,6 +84,10 @@ export default function Nav() {
               table (search + bulk-select + pagination), C inline in the
               page and D in a centered modal. See the block comment above
               GoalPicker in CurriculumSetup.jsx. */}
+          {/* Commented out 2026-09-09 — C vs. D comparison concluded, Concept
+              C is the settled design, so the switcher no longer needs to be
+              user-facing. adminConcept still defaults to 'c' in
+              CurriculumSetup.jsx, so nothing about the rendered page changes.
           {location.pathname === '/settings/curriculum-setup' && (
             <select
               value={searchParams.get('adminConcept') || 'c'}
@@ -94,12 +98,11 @@ export default function Nav() {
               }}
               className="ml-2 h-7 pl-2 pr-6 text-xs font-medium border border-brand-border rounded-md bg-white text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
             >
-              {/* <option value="a">A — Inline table</option> */}
-              {/* <option value="b">B — Side drawer</option> */}
               <option value="c">C — Report table</option>
               <option value="d">D — Modal</option>
             </select>
           )}
+          */}
 
           {/* Adult Wellness lesson-only design-review toggle — retired
               2026-09-09 (Concept C confirmed as the pattern for every
