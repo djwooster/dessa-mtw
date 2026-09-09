@@ -517,6 +517,17 @@ export default function CurriculumSetup() {
   // confusing) and when the modal closes.
   const [selectedSchoolIds, setSelectedSchoolIds] = useState(new Set())
 
+  // Concept C only — the whole Weekly Goal by Site table (toolbar/table/pagination)
+  // lives collapsed behind a single summary row by default; expanding it
+  // reveals the same experience Concept C always had. Concept D keeps its
+  // own always-triggered modal, unaffected by this.
+  const [overridesTableOpen, setOverridesTableOpen] = useState(false)
+  // Concept C only — confirmation gate for bulk goal-change/reset actions
+  // affecting more than 1 selected site. null = no modal; otherwise
+  // { type: 'goal', value } or { type: 'reset' } describes the pending
+  // action, applied via confirmBulkAction below if the user confirms.
+  const [bulkConfirm, setBulkConfirm] = useState(null)
+
   // Concept D's modal is a fixed-position overlay, so the settings page
   // behind it keeps scrolling on its own unless we lock it explicitly.
   useEffect(() => {
@@ -679,6 +690,32 @@ export default function CurriculumSetup() {
       return next
     })
     setSelectedSchoolIds(new Set())
+  }
+
+  // Concept C only — gate bulkSetGoal/bulkStageReset behind a confirmation
+  // modal when the action would affect more than 1 selected site. A
+  // selection of exactly 1 applies immediately, same as today, since
+  // there's nothing to double-check ("bulk" of one is just editing that row).
+  function requestBulkSetGoal(n) {
+    if (selectedSchoolIds.size > 1) {
+      setBulkConfirm({ type: 'goal', value: n })
+    } else {
+      bulkSetGoal(n)
+    }
+  }
+
+  function requestBulkReset() {
+    if (selectedSchoolIds.size > 1) {
+      setBulkConfirm({ type: 'reset' })
+    } else {
+      bulkStageReset()
+    }
+  }
+
+  function confirmBulkAction() {
+    if (bulkConfirm?.type === 'goal') bulkSetGoal(bulkConfirm.value)
+    else if (bulkConfirm?.type === 'reset') bulkStageReset()
+    setBulkConfirm(null)
   }
 
   function togglePendingReset(schoolId) {
@@ -998,44 +1035,62 @@ export default function CurriculumSetup() {
           {adminConcept === 'c' && (
             <div className="px-6 pb-6">
               <div className="border-t border-brand-border pt-5">
-                {/* Heading/description commented out for the moment while the
-                    copy/placement is reconsidered — the toolbar below now
-                    sits left-aligned where that text used to be, instead of
-                    being pinned right against an empty counterpart div.
-                <p className="text-sm font-semibold text-brand-text mb-1">Site overrides</p>
-                <p className="text-sm text-brand-subtext">
-                  Customize the weekly goal for individual sites, or leave them on the program default.
-                </p>
+                {/* The whole Weekly Goal by Site experience (toolbar, table,
+                    pagination) lives collapsed behind this single summary
+                    row by default — expanding it reveals exactly what
+                    Concept C always rendered inline, unchanged below. */}
+                {/* "N customized" count badge — commented out per request,
+                    not deleted.
+                {overrides.length > 0 && (
+                  <span className="text-xs font-medium text-dessa-teal bg-dessa-tealLight border border-dessa-teal/[7%] rounded px-1.5 py-0.5">
+                    {overrides.length} customized
+                  </span>
+                )}
                 */}
-                <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+                <div className={`flex items-center justify-between flex-wrap gap-3 ${overridesTableOpen ? 'mb-3' : ''}`}>
                   <div>
                     {selectedSchoolIds.size > 0 ? (
                       <SelectionCommandBar
                         count={selectedSchoolIds.size}
-                        onSetGoal={bulkSetGoal}
-                        onReset={bulkStageReset}
+                        onSetGoal={requestBulkSetGoal}
+                        onReset={requestBulkReset}
                         onClear={() => setSelectedSchoolIds(new Set())}
                       />
                     ) : (
-                      <p className="text-sm font-semibold text-brand-text">Your Sites</p>
+                      <button
+                        type="button"
+                        onClick={() => setOverridesTableOpen((v) => !v)}
+                        aria-expanded={overridesTableOpen}
+                        className="flex items-center gap-1.5"
+                      >
+                        <span className="text-sm font-semibold text-brand-text">Weekly Goal by Site</span>
+                        <ChevronDown
+                          size={16}
+                          className={`text-brand-subtext transition-transform ${overridesTableOpen ? 'rotate-180' : ''}`}
+                        />
+                      </button>
                     )}
                   </div>
-                  <div className="flex items-center flex-wrap gap-3">
-                    <StatusFilterDropdown value={overridesView} onChange={setOverridesView} />
-                    <div className="relative flex-1 min-w-[140px] max-w-xs">
-                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-                      <input
-                        type="text"
-                        value={overridesSearch}
-                        onChange={(e) => setOverridesSearch(e.target.value)}
-                        placeholder={`Search ${schools.length} sites`}
-                        className="w-full pl-8 pr-2 h-8 text-xs border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-                      />
+                  {overridesTableOpen && (
+                    <div className="flex items-center flex-wrap gap-3">
+                      <StatusFilterDropdown value={overridesView} onChange={setOverridesView} />
+                      <div className="relative flex-1 min-w-[140px] max-w-xs">
+                        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+                        <input
+                          type="text"
+                          value={overridesSearch}
+                          onChange={(e) => setOverridesSearch(e.target.value)}
+                          placeholder={`Search ${schools.length} sites`}
+                          className="w-full pl-8 pr-2 h-8 text-xs border border-brand-border rounded-md bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                        />
+                      </div>
+                      <OverridesMoreMenu onResetAll={resetAllOverrides} />
                     </div>
-                    <OverridesMoreMenu onResetAll={resetAllOverrides} />
-                  </div>
+                  )}
                 </div>
 
+                {overridesTableOpen && (
+                <>
                 <div className="rounded-lg border border-brand-border overflow-hidden">
                   <Table>
                     <TableHeader className="bg-brand-bg/60">
@@ -1125,7 +1180,7 @@ export default function CurriculumSetup() {
                                     value={goal}
                                     onChange={(n) => {
                                       if (isSelected) {
-                                        bulkSetGoal(n)
+                                        requestBulkSetGoal(n)
                                         return
                                       }
                                       togglePendingReset(school.id)
@@ -1139,7 +1194,7 @@ export default function CurriculumSetup() {
                                     value={override.weeklyGoal}
                                     onChange={(n) =>
                                       isSelected
-                                        ? bulkSetGoal(n)
+                                        ? requestBulkSetGoal(n)
                                         : setOverrides((os) =>
                                             os.map((o) => (o.school.id === school.id ? { ...o, weeklyGoal: n } : o))
                                           )
@@ -1150,7 +1205,7 @@ export default function CurriculumSetup() {
                                     value={goal}
                                     onChange={(n) =>
                                       isSelected
-                                        ? bulkSetGoal(n)
+                                        ? requestBulkSetGoal(n)
                                         : setOverrides((os) => [...os, { school, weeklyGoal: n }])
                                     }
                                   />
@@ -1210,6 +1265,50 @@ export default function CurriculumSetup() {
                     </select>
                     <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
                   </div>
+                </div>
+                </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Concept C only — confirms a bulk goal-change or reset before
+              applying it to more than 1 selected site (a selection of
+              exactly 1 still applies immediately via requestBulkSetGoal/
+              requestBulkReset above). Concept D is unaffected — its own
+              call sites still use bulkSetGoal/bulkStageReset directly. */}
+          {adminConcept === 'c' && bulkConfirm && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6"
+              onClick={() => setBulkConfirm(null)}
+            >
+              <div
+                className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="text-base font-semibold text-brand-text mb-2">
+                  {bulkConfirm.type === 'goal' ? 'Change weekly goal?' : 'Reset to program default?'}
+                </p>
+                <p className="text-sm text-brand-subtext mb-6">
+                  {bulkConfirm.type === 'goal'
+                    ? `This will set the weekly goal to ${bulkConfirm.value} ${bulkConfirm.value === 1 ? 'day' : 'days'} for ${selectedSchoolIds.size} selected sites.`
+                    : `This will remove the custom weekly goal for ${selectedSchoolIds.size} selected sites and return them to the program default.`}
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBulkConfirm(null)}
+                    className="h-9 px-4 rounded-md text-sm font-medium text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmBulkAction}
+                    className="h-9 px-4 rounded-md text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors"
+                  >
+                    {bulkConfirm.type === 'goal' ? 'Change goal' : 'Reset sites'}
+                  </button>
                 </div>
               </div>
             </div>
