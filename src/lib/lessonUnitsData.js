@@ -123,7 +123,7 @@ export const adultWellnessUnits = [
     "Independent: Write Away", "Independent: Sensational", "Independent: Attachments",
     "Independent: \"Outlets\"", "Independent: Breathing the Body", "Independent: Other Side of the Door",
   ]},
-  { id: 5, title: "Team & Community Building", groupByPracticeType: true, sub: [
+  { id: 5, title: "Team & Community Building", sub: [
     "Community: Kudos!", "Community: Someone Beside You", "Community: Mirror Mirror",
     "Independent: The Name Game", "Independent: Wonder Words", "Independent: Good Breath", "Independent: Myself With Others",
   ]},

@@ -430,13 +430,21 @@ const FAMILY_ACCESS_TABS = [
 ]
 
 export default function CurriculumSetup() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   // Which of the 4 admin-summary concepts is showing (see the block comment
   // above ADMIN_OVERRIDE_CONCEPTS) — driven by Nav's dropdown, not local
   // state, same reasoning as the retired Resources decor switcher: a
   // reviewer flips it from the nav without this page needing its own
   // control for something that's purely a design-comparison toggle.
   const adminConcept = searchParams.get('adminConcept') || 'c'
+
+  // Site Leader Weekly Goal card — 3 concepts for how the program default is
+  // communicated alongside the site's own picker. A is the current shipped
+  // design (floating "Default" pill + info text below). Switcher rendered
+  // in-card (top-right of this card's own header), unlike every other
+  // concept switcher in this app which lives in Nav.jsx — an intentional
+  // exception per explicit request, not an oversight.
+  const siteLeaderConcept = searchParams.get('siteLeaderConcept') || 'a'
 
   const [tab, setTab] = useState('engagement')
   const [goal, setGoal] = useState(3)
@@ -1488,33 +1496,107 @@ export default function CurriculumSetup() {
         instead). No toggle: the picker itself is always live, so picking a
         day customizes this site immediately, and picking the program
         default's own day reverts to following it (see setSiteLeaderGoal).
-        A quiet dot marks the default's day even once a different one is
-        picked, so the baseline stays visible without a separate readout.
         Single-site only (SITE_LEADER_SCHOOL) — multi-site switching is
-        still an open question. */}
+        still an open question.
+
+        3 concepts (2026-09-09) for how the program default is communicated
+        alongside the picker — switcher lives in this card's own header
+        (top-right), not Nav, per explicit request:
+        A — current shipped design: a quiet "Default" pill floats above
+            the default's own day, plus an info line below the picker.
+        B — an info banner states the default up front (no floating pill);
+            a "Reset to default" link appears once customized.
+        C — a small bold heading states the default and invites
+            customizing, in place of the plain "Weekly goal" subtext. */}
     {isSiteLeaderView && (
     <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
       <div className="p-6">
-        <h1 className="text-2xl font-semibold text-brand-text mb-1">Curriculum Setup</h1>
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <h1 className="text-2xl font-semibold text-brand-text">Curriculum Setup</h1>
+          <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0">
+            {['a', 'b', 'c'].map((value, i) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  const next = new URLSearchParams(searchParams)
+                  next.set('siteLeaderConcept', value)
+                  setSearchParams(next)
+                }}
+                aria-label={`Site Leader concept ${value.toUpperCase()}`}
+                className={`px-2 py-1 transition-colors ${i > 0 ? 'border-l border-brand-border' : ''} ${
+                  siteLeaderConcept === value ? 'bg-dessa-teal text-white' : 'text-brand-subtext hover:bg-brand-bg'
+                }`}
+              >
+                {value.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
         <p className="text-sm text-brand-subtext mb-5">{SITE_LEADER_SCHOOL.name}</p>
 
-        <p className="text-sm font-semibold text-brand-text">Weekly goal</p>
-        <p className="text-sm text-brand-subtext mt-0.5 mb-3">
-          Days per week a user must access a lesson to be on track.
-        </p>
+        {siteLeaderConcept === 'b' ? (
+          <>
+            <p className="text-sm font-semibold text-brand-text">Weekly goal</p>
+            <p className="text-sm text-brand-subtext mt-0.5 mb-3">
+              Days per week a user must access a lesson to be on track.
+            </p>
+            <div className="flex items-center gap-2 rounded-lg bg-brand-bg px-3 py-2 mb-3">
+              <Info size={13} className="shrink-0 text-brand-subtext" />
+              <p className="text-xs text-brand-subtext">
+                Program default is <span className="font-semibold text-brand-text">{goal} {goal === 1 ? 'day' : 'days'}</span> per week.
+              </p>
+            </div>
+            <div className="mb-3">
+              <GoalPicker
+                value={isSiteLeaderCustom ? siteLeaderOverride.weeklyGoal : goal}
+                onChange={setSiteLeaderGoal}
+              />
+            </div>
+            {isSiteLeaderCustom && (
+              <button
+                type="button"
+                onClick={useSiteLeaderDefault}
+                className="text-xs font-medium text-dessa-teal hover:underline"
+              >
+                Reset to default
+              </button>
+            )}
+          </>
+        ) : siteLeaderConcept === 'c' ? (
+          <>
+            <p className="text-sm font-semibold text-brand-text">Weekly goal</p>
+            <p className="text-xs font-normal text-brand-subtext mt-0.5 mb-3">
+              Program default is {goal} {goal === 1 ? 'day' : 'days'} — set your own for this site below.
+            </p>
+            <div className="mb-4">
+              <GoalPicker
+                value={isSiteLeaderCustom ? siteLeaderOverride.weeklyGoal : goal}
+                onChange={setSiteLeaderGoal}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-semibold text-brand-text">Weekly goal</p>
+            <p className="text-sm text-brand-subtext mt-0.5 mb-3">
+              Days per week a user must access a lesson to be on track.
+            </p>
 
-        <div className="mt-2.5 mb-4">
-          <GoalPicker
-            value={isSiteLeaderCustom ? siteLeaderOverride.weeklyGoal : goal}
-            onChange={setSiteLeaderGoal}
-            markValue={goal}
-          />
-        </div>
+            <div className="mt-2.5 mb-4">
+              <GoalPicker
+                value={isSiteLeaderCustom ? siteLeaderOverride.weeklyGoal : goal}
+                onChange={setSiteLeaderGoal}
+                markValue={goal}
+              />
+            </div>
 
-        <p className="flex items-center gap-1.5 text-xs text-brand-subtext">
-          <Info size={13} className="shrink-0" />
-          Your program admin sets the default and can see if you customize it for your site.
-        </p>
+            <p className="flex items-center gap-1.5 text-xs text-brand-subtext">
+              <Info size={13} className="shrink-0" />
+              Your program admin sets the default and can see if you customize it for your site.
+            </p>
+          </>
+        )}
       </div>
     </div>
     )}

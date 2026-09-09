@@ -101,14 +101,20 @@ export default function Nav() {
             </select>
           )}
 
-          {/* Adult Wellness lesson-only design-review toggle (2026-09-04) —
-              stakeholder feedback was that the Independent/Group practice-type
-              callout "feels lost" below the video; comparing three ways to
-              surface it higher: A moves the existing box above the video, B
-              swaps it for a compact pill + one-line description on the title
-              row, C bakes a badge directly into the video/audio hero. See
-              PracticeTypeCallout/PracticeTypeInline/PracticeTypeBadge in
-              LessonView.jsx. */}
+          {/* Adult Wellness lesson-only design-review toggle — retired
+              2026-09-09 (Concept C confirmed as the pattern for every
+              Adult Wellness lesson; LessonView.jsx now hardcodes
+              calloutConcept = "c" rather than reading `?calloutConcept=`).
+              Kept commented rather than deleted, same treatment as this
+              file's other retired concepts, in case this comparison needs
+              to be revisited.
+          Compared three ways to surface the Independent/Group practice-type
+          callout higher on the page (stakeholder feedback was that it "felt
+          lost" below the video): A moved the existing box above the video, B
+          swapped it for a compact pill + one-line description on the title
+          row, C baked a badge directly into the video/audio hero. See
+          PracticeTypeCallout/PracticeTypeInline/PracticeTypeBadge in
+          LessonView.jsx.
           {location.pathname === '/mtw/lesson' && location.state?.course?.grade === 'Adult Wellness' && (
             <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0 ml-2">
               {[
@@ -136,6 +142,7 @@ export default function Nav() {
               ))}
             </div>
           )}
+          */}
         </div>
 
         {/* Right actions */}

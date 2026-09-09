@@ -2994,13 +2994,15 @@ export default function LessonView({ onBookmark }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  // Adult Wellness-only design-review toggle comparing where the practice-type
-  // (Independent/Group) callout surfaces in the page: A above the video, B a
-  // compact badge on the title row, C baked into the video/audio hero itself.
-  // Controlled via the Nav-hosted switcher (see Nav.jsx) reading `?calloutConcept=`.
-  // Units with `groupByPracticeType` (e.g. "Team & Community Building") default
-  // to C — see the effect below — but the switcher can still override.
-  const calloutConcept = searchParams.get('calloutConcept') || 'a';
+  // Adult Wellness practice-type (Independent/Group) callout placement.
+  // Was a 3-way design-review comparison (A above the video, B a compact
+  // title-row badge, C baked into the video/audio hero) — Concept C won
+  // and is now the pattern for every Adult Wellness lesson. The Nav-hosted
+  // A/B/C switcher (Nav.jsx) and the A/B render branches below are
+  // commented out, not deleted, in case this comparison needs to be
+  // revisited.
+  // const calloutConcept = searchParams.get('calloutConcept') || 'a';
+  const calloutConcept = "c";
   const course = location.state?.course;
   const isGrade2 = course?.grade === "Grade 2";
   const isTier2EE = course?.level === 'Tier 2';
@@ -3019,10 +3021,11 @@ export default function LessonView({ onBookmark }) {
   const [expandedUnit, setExpandedUnit] = useState(
     isTier2EE ? 9 : isAdultWellness ? 1 : isFamily ? 1 : isGrade2 ? 31 : 5,
   );
-  // Second-level sidebar expand state for units that opt into grouping their
-  // lessons by practice type (see `groupByPracticeType` on unit data, e.g.
-  // Adult Wellness's "Team & Community Building"). Keyed by `${unitId}:${groupKey}`;
-  // a missing entry means expanded, so both groups default open.
+  // Second-level sidebar expand state for units whose lessons use the
+  // Community:/Independent: prefix (grouped automatically — see
+  // hasPracticeTypes below, e.g. Adult Wellness's "Team & Community
+  // Building"). Keyed by `${unitId}:${groupKey}`; a missing entry means
+  // expanded, so both groups default open.
   const [expandedSubgroups, setExpandedSubgroups] = useState({});
   const [selectedLesson, setSelectedLesson] = useState(
     isTier2EE
@@ -3104,18 +3107,17 @@ export default function LessonView({ onBookmark }) {
 
   const activeUnit = activeUnits.find((u) => u.id === selectedLesson.unitId);
 
-  // Units grouped by practice type default their in-lesson view to Concept C
-  // (the switcher can still override afterward — see calloutConcept above).
-  // useLayoutEffect (not useEffect) so the URL param — and therefore the
-  // rendered concept and the Nav switcher's highlighted state — are in sync
-  // before paint, with no A-then-C flash on first load.
-  useLayoutEffect(() => {
-    if (activeUnit?.groupByPracticeType && !searchParams.get('calloutConcept')) {
-      const next = new URLSearchParams(searchParams);
-      next.set('calloutConcept', 'c');
-      setSearchParams(next, { replace: true, state: location.state });
-    }
-  }, [activeUnit?.id]);
+  // Only existed to default groupByPracticeType units to Concept C while the
+  // A/B/C comparison was still live — no longer needed now that Concept C
+  // is hardcoded above. Commented out, not deleted, alongside the rest of
+  // the retired comparison (see calloutConcept above).
+  // useLayoutEffect(() => {
+  //   if (activeUnit?.groupByPracticeType && !searchParams.get('calloutConcept')) {
+  //     const next = new URLSearchParams(searchParams);
+  //     next.set('calloutConcept', 'c');
+  //     setSearchParams(next, { replace: true, state: location.state });
+  //   }
+  // }, [activeUnit?.id]);
 
   const isAudioLibrary = selectedLesson.unitId === "audio";
   const lastContentUnit = [...activeUnits].reverse().find(u => u.sub && u.sub.length > 0 && u.id !== 37);
@@ -3365,10 +3367,11 @@ export default function LessonView({ onBookmark }) {
           ) : (
           (() => {
           // Shared lesson-row renderer, used both for a unit's flat lesson
-          // list and for the grouped-by-practice-type sub-lists below (see
-          // `groupByPracticeType` on unit data). `lessonIndex` (`i`) always
-          // stays the flat index into `unit.sub` regardless of how the row
-          // is grouped for display, so selection/navigation is unaffected.
+          // list and for the grouped-by-practice-type sub-lists below (any
+          // unit whose lessons use the Community:/Independent: prefix —
+          // see hasPracticeTypes below). `lessonIndex` (`i`) always stays
+          // the flat index into `unit.sub` regardless of how the row is
+          // grouped for display, so selection/navigation is unaffected.
           const renderLessonRow = (unit, item, i, { indent = 56, showDivider = true } = {}) => {
             const isSelectedLesson =
               selectedLesson.unitId === unit.id &&
@@ -3491,7 +3494,11 @@ export default function LessonView({ onBookmark }) {
                         className="overflow-hidden"
                       >
                         <div className="mr-3 mb-1">
-                          {unit.groupByPracticeType && !isSearchingSidebar ? (
+                          {(() => {
+                            const hasPracticeTypes = unit.sub.some(
+                              (item) => item.startsWith("Community:") || item.startsWith("Independent:"),
+                            );
+                            return hasPracticeTypes && !isSearchingSidebar ? (
                             [
                               { key: "community", label: "Group Exercises", icon: Users, color: "#E8653A", prefix: "Community:" },
                               { key: "independent", label: "Independent Practice", icon: User, color: "#2A7F8F", prefix: "Independent:" },
@@ -3553,7 +3560,8 @@ export default function LessonView({ onBookmark }) {
                             unit.sub.map((item, i) =>
                               renderLessonRow(unit, item, i, { indent: 56, showDivider: i < unit.sub.length - 1 })
                             )
-                          )}
+                          );
+                          })()}
                         </div>
                       </motion.div>
                     )}
@@ -3913,6 +3921,11 @@ export default function LessonView({ onBookmark }) {
                     {displayTitle}
                   </h1>
                 </div>
+                {/* Concepts A/B — retired 2026-09-09 (Concept C confirmed as
+                    the pattern for every Adult Wellness lesson). Commented
+                    out, not deleted, in case this comparison needs to be
+                    revisited — same treatment as this file's other retired
+                    concepts.
                 {calloutConcept === "b" && (isCommunity || isIndependent) && (
                   <PracticeTypeInline isCommunity={isCommunity} />
                 )}
@@ -3921,6 +3934,7 @@ export default function LessonView({ onBookmark }) {
                     <PracticeTypeCallout isCommunity={isCommunity} />
                   </div>
                 )}
+                */}
                 {hasAudio ? (
                   <AudioReflectionLayout items={items} isCommunity={isCommunity} isIndependent={isIndependent} calloutConcept={calloutConcept} />
                 ) : (
