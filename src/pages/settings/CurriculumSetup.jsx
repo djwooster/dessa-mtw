@@ -971,8 +971,8 @@ export default function CurriculumSetup() {
                 <Info size={14} />
               </button>
             </div>
-            <p className="text-sm text-brand-subtext mt-0.5 mb-3">
-              Days per week a user must access a lesson to be on track.
+            <p className="text-sm text-brand-subtext mt-0.5 mb-6 max-w-[680px]">
+              This sets how many days a week users should access their curriculum to stay on track. It applies program-wide by default, and you can override it for individual sites below if their needs differ.
             </p>
             <GoalPicker value={goal} onChange={setGoal} />
           </div>
@@ -1583,8 +1583,8 @@ export default function CurriculumSetup() {
         {siteLeaderConcept === 'b' ? (
           <>
             <p className="text-sm font-semibold text-brand-text">Weekly goal</p>
-            <p className="text-sm text-brand-subtext mt-0.5 mb-3">
-              Days per week a user must access a lesson to be on track.
+            <p className="text-sm text-brand-subtext mt-0.5 mb-6 max-w-[680px]">
+              This sets how many days a week users should access their curriculum to stay on track. Your program sets this by default, and you can customize it for this site below if your needs differ.
             </p>
             {bannerLayout === 'new' ? (
               <div className="flex items-center gap-3 mb-3">
