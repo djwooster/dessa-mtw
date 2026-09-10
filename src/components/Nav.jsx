@@ -1,5 +1,5 @@
 import { NavLink, useLocation, useSearchParams } from 'react-router-dom'
-import { Search, HelpCircle, Settings, Palette } from 'lucide-react'
+import { Search, HelpCircle, Settings, Palette, MessageSquareText } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
@@ -17,6 +17,7 @@ const navItems = [
 const userMenuItems = [
   { label: 'Settings', to: '/settings', icon: Settings },
   { label: 'Brand Guide', to: '/brand', icon: Palette },
+  { label: 'User Feedback', to: '/user-feedback', icon: MessageSquareText },
 ]
 
 export default function Nav() {

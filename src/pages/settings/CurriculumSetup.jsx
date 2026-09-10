@@ -1578,7 +1578,7 @@ export default function CurriculumSetup() {
           </div>
           */}
         </div>
-        <p className="text-sm text-brand-subtext mb-8">{SITE_LEADER_SCHOOL.name}</p>
+        <p className="text-sm text-brand-subtext mb-6">{SITE_LEADER_SCHOOL.name}</p>
 
         {siteLeaderConcept === 'b' ? (
           <>

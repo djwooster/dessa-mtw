@@ -45,6 +45,13 @@ export default {
           focus:   '#2A7F8F',
         },
         'interactive-blue': '#0061FF',
+        // /user-feedback only — black/white (Tailwind's built-in black,
+        // white, gray-*) plus this one accent, so the research protocol
+        // reads as its own document rather than another part of the app.
+        research: {
+          accent:     '#4D7FAA',
+          accentTint: '#E3ECF3',
+        },
       },
     },
   },

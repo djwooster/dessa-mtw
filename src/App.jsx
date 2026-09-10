@@ -11,6 +11,7 @@ import ClassRatingsLayout from './pages/ClassRatingsLayout'
 import RecommendedContent from './pages/RecommendedContent'
 import RatingSummary from './pages/RatingSummary'
 import BrandGuide from './pages/BrandGuide'
+import UserFeedback from './pages/UserFeedback'
 import Report1C from './pages/Report1C'
 import Report2 from './pages/Report2'
 import ReportsLayout from './pages/ReportsLayout'
@@ -89,6 +90,7 @@ function AppShell({ handleBookmark }) {
         <Route path="/strategies" element={<Placeholder title="Strategies" />} />
         <Route path="/training" element={<Placeholder title="Training" />} />
         <Route path="/brand" element={<BrandGuide />} />
+        <Route path="/user-feedback" element={<UserFeedback />} />
       </Routes>
     </div>
   )
