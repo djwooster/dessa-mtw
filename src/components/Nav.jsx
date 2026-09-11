@@ -1,5 +1,6 @@
-import { NavLink, useLocation, useSearchParams } from 'react-router-dom'
-import { Search, HelpCircle, Settings, Palette, MessageSquareText } from 'lucide-react'
+import { useState } from 'react'
+import { NavLink, useLocation, useSearchParams, useNavigate } from 'react-router-dom'
+import { Search, HelpCircle, Settings, Palette, MessageSquareText, GitCompare, LayoutGrid, ChevronDown } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
@@ -14,15 +15,39 @@ const navItems = [
   { label: 'Training', to: '/training' },
 ]
 
+// Resources-only hover dropdown (concept work, 2026-09-11) — testing
+// whether a nav-level grade picker (TPT/LearningMole-inspired) could
+// replace the page-level grade gate on /resources. Deliberately routes to
+// the /resources-concepts sandbox (Concept E, which has no landing page of
+// its own — hovering here and picking a grade is the entire concept)
+// rather than the live, already-shipped /resources page, which still uses
+// the settled gate flow — see ResourcesConcepts.jsx. Plain clicks on the
+// nav item are untouched and still go to /resources normally; only hover
+// is special-cased.
+const RESOURCES_GRADE_GROUPS = [
+  { label: 'Elementary', grades: ['Pre-K', 'Kindergarten', '1st Grade', '2nd Grade', '3rd Grade', '4th Grade', '5th Grade'] },
+  { label: 'Middle School', grades: ['6th Grade', '7th Grade', '8th Grade'] },
+  { label: 'High School', grades: ['9th Grade', '10th Grade', '11th Grade', '12th Grade'] },
+]
+
 const userMenuItems = [
   { label: 'Settings', to: '/settings', icon: Settings },
   { label: 'Brand Guide', to: '/brand', icon: Palette },
   { label: 'User Feedback', to: '/user-feedback', icon: MessageSquareText },
+  { label: 'Competitive Analysis', to: '/competitive-analysis', icon: GitCompare },
+  { label: 'Resources Concepts', to: '/resources-concepts', icon: LayoutGrid },
 ]
 
 export default function Nav() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
+
+  function goToGrade(grade) {
+    setGradeMenuOpen(false)
+    navigate(`/resources-concepts?concept=e&grade=${encodeURIComponent(grade)}`)
+  }
 
   return (
     <nav className="bg-white border-b border-brand-border shadow-sm sticky top-0 z-50">
@@ -35,22 +60,77 @@ export default function Nav() {
 
         {/* Nav items */}
         <div className="flex items-center gap-0.5 flex-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) =>
-                `px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                  isActive
-                    ? 'text-dessa-teal bg-dessa-tealLight'
-                    : 'text-brand-subtext hover:text-brand-text hover:bg-brand-bg'
-                }`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
+          {navItems.map((item) =>
+            item.to === '/resources' ? (
+              <div
+                key={item.to}
+                className="relative"
+                onMouseEnter={() => setGradeMenuOpen(true)}
+                onMouseLeave={() => setGradeMenuOpen(false)}
+              >
+                <NavLink
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                      isActive || gradeMenuOpen
+                        ? 'text-dessa-teal bg-dessa-tealLight'
+                        : 'text-brand-subtext hover:text-brand-text hover:bg-brand-bg'
+                    }`
+                  }
+                >
+                  {item.label}
+                  <ChevronDown size={12} className={`transition-transform ${gradeMenuOpen ? 'rotate-180' : ''}`} />
+                </NavLink>
+                {gradeMenuOpen && (
+                  <div className="absolute left-0 top-full pt-1 z-50">
+                    <div className="bg-white border border-brand-border rounded-2xl shadow-lg p-6 grid grid-cols-3 gap-8 min-w-[420px]">
+                      {RESOURCES_GRADE_GROUPS.map((col) => (
+                        <div key={col.label}>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-brand-subtext mb-2">{col.label}</p>
+                          <div className="flex flex-col gap-1.5 items-start">
+                            {col.grades.map((g) => (
+                              <button
+                                key={g}
+                                type="button"
+                                className="text-left text-sm text-brand-text hover:text-dessa-teal transition-colors"
+                                onClick={() => goToGrade(g)}
+                              >
+                                {g}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      <div className="col-span-3 pt-3 border-t border-brand-border">
+                        <button
+                          type="button"
+                          className="text-left text-sm text-brand-text hover:text-dessa-teal transition-colors"
+                          onClick={() => goToGrade('All Grades')}
+                        >
+                          All Grades
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/'}
+                className={({ isActive }) =>
+                  `px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                    isActive
+                      ? 'text-dessa-teal bg-dessa-tealLight'
+                      : 'text-brand-subtext hover:text-brand-text hover:bg-brand-bg'
+                  }`
+                }
+              >
+                {item.label}
+              </NavLink>
+            )
+          )}
 
           {/* Resources-only design-review toggle — retired 2026-08-28
               (manager picked Concept C, left-aligned + scrolling rows, as
