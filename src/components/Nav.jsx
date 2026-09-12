@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { NavLink, useLocation, useSearchParams, useNavigate } from 'react-router-dom'
-import { Search, HelpCircle, Settings, Palette, MessageSquareText, GitCompare, LayoutGrid, ChevronDown } from 'lucide-react'
+import { HelpCircle, Settings, Palette, MessageSquareText, GitCompare, ChevronDown } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
+import { useResourcesConcept } from '../lib/resourcesConceptContext'
+import { RESOURCES_GRADE_GROUPS } from '../pages/ResourcesAltConcepts'
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 
@@ -15,38 +17,37 @@ const navItems = [
   { label: 'Training', to: '/training' },
 ]
 
-// Resources-only hover dropdown (concept work, 2026-09-11) — testing
-// whether a nav-level grade picker (TPT/LearningMole-inspired) could
-// replace the page-level grade gate on /resources. Deliberately routes to
-// the /resources-concepts sandbox (Concept E, which has no landing page of
-// its own — hovering here and picking a grade is the entire concept)
-// rather than the live, already-shipped /resources page, which still uses
-// the settled gate flow — see ResourcesConcepts.jsx. Plain clicks on the
-// nav item are untouched and still go to /resources normally; only hover
-// is special-cased.
-const RESOURCES_GRADE_GROUPS = [
-  { label: 'Elementary', grades: ['Pre-K', 'Kindergarten', '1st Grade', '2nd Grade', '3rd Grade', '4th Grade', '5th Grade'] },
-  { label: 'Middle School', grades: ['6th Grade', '7th Grade', '8th Grade'] },
-  { label: 'High School', grades: ['9th Grade', '10th Grade', '11th Grade', '12th Grade'] },
-]
-
+// Resources-only hover dropdown — the nav-level grade picker for Concept D
+// (see resourcesConceptContext.jsx + ResourcesAltConcepts.jsx's ConceptD,
+// which has no landing page of its own; hovering here and picking a grade
+// is the entire concept). Only appears when the A/B/C/D switcher below is
+// set to D — for A/B/C the "Resources" nav item is a plain link with no
+// chevron. Plain clicks on the nav item are always untouched and go to
+// /resources normally regardless of which concept is active.
 const userMenuItems = [
   { label: 'Settings', to: '/settings', icon: Settings },
   { label: 'Brand Guide', to: '/brand', icon: Palette },
   { label: 'User Feedback', to: '/user-feedback', icon: MessageSquareText },
   { label: 'Competitive Analysis', to: '/competitive-analysis', icon: GitCompare },
-  { label: 'Resources Concepts', to: '/resources-concepts', icon: LayoutGrid },
+]
+
+const RESOURCES_CONCEPTS = [
+  { value: 'a', label: 'A', title: 'A — Current experience' },
+  { value: 'b', label: 'B', title: 'B — Search hero + browse cards' },
+  { value: 'c', label: 'C', title: 'C — Visual browse cards' },
+  { value: 'd', label: 'D', title: 'D — Nav hover only, no page' },
 ]
 
 export default function Nav() {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const { resourcesConcept, setResourcesConcept } = useResourcesConcept()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
     setGradeMenuOpen(false)
-    navigate(`/resources-concepts?concept=e&grade=${encodeURIComponent(grade)}`)
+    navigate(`/resources?grade=${encodeURIComponent(grade)}`)
   }
 
   return (
@@ -61,7 +62,7 @@ export default function Nav() {
         {/* Nav items */}
         <div className="flex items-center gap-0.5 flex-1">
           {navItems.map((item) =>
-            item.to === '/resources' ? (
+            item.to === '/resources' && resourcesConcept === 'd' ? (
               <div
                 key={item.to}
                 className="relative"
@@ -262,9 +263,30 @@ export default function Nav() {
               ))}
             </div>
           )}
-          <button className="text-brand-subtext hover:text-brand-text transition-colors p-1.5 rounded hover:bg-brand-bg">
-            <Search size={16} />
-          </button>
+          {/* Resources page-concept switcher (replaces the old search icon,
+              2026-09-11) — single place to pick which of the four Resources
+              page concepts is active (see resourcesConceptContext.jsx).
+              Visible everywhere, not just on /resources, since picking a
+              letter here only sets the selection — it doesn't navigate you
+              anywhere. D additionally changes the "Resources" nav item
+              above into the hover-triggered grade mega-menu. */}
+          <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0 mr-1">
+            {RESOURCES_CONCEPTS.map(({ value, label, title }, i) => (
+              <button
+                key={value}
+                onClick={() => setResourcesConcept(value)}
+                title={title}
+                aria-label={title}
+                className={`px-2 py-1 transition-colors ${i > 0 ? 'border-l border-brand-border' : ''} ${
+                  resourcesConcept === value
+                    ? 'bg-dessa-teal text-white'
+                    : 'text-brand-subtext hover:bg-brand-bg'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <button className="text-brand-subtext hover:text-brand-text transition-colors p-1.5 rounded hover:bg-brand-bg">
             <HelpCircle size={16} />
           </button>

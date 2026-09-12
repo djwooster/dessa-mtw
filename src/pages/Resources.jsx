@@ -12,6 +12,8 @@ import {
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis,
 } from '../components/ui/pagination'
+import { useResourcesConcept } from '../lib/resourcesConceptContext'
+import { ConceptB, ConceptC, ConceptD } from './ResourcesAltConcepts'
 
 // "Adult Wellness" is excluded from every picker on this page now, per
 // explicit request — both the grade pickers (sidebar Grade facet, all three
@@ -989,6 +991,12 @@ function FilterBarC({
 
 export default function Resources() {
   const navigate = useNavigate()
+  // A/B/C/D switcher lives in Nav.jsx now (see resourcesConceptContext) —
+  // 'a' is this component's own implementation (below, unchanged); b/c/d
+  // hand off to ResourcesAltConcepts entirely. All of this component's own
+  // hooks still run every render regardless of which branch is active, so
+  // switching concepts never changes hook call order.
+  const { resourcesConcept } = useResourcesConcept()
   // 2026-08-26: manager picked 3C as the final direction for the mandatory
   // grade gate. The Nav switcher that let reviewers flip between 3A/3B/3C
   // via a `?concept=` param has been removed (see Nav.jsx), so `concept`
@@ -1297,6 +1305,10 @@ export default function Resources() {
   }
 
   const gateOpen = selectedGrades.length === 0
+
+  if (resourcesConcept === 'b') return <ConceptB />
+  if (resourcesConcept === 'c') return <ConceptC />
+  if (resourcesConcept === 'd') return <ConceptD />
 
   return (
     <motion.div

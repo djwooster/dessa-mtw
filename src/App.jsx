@@ -13,7 +13,6 @@ import RatingSummary from './pages/RatingSummary'
 import BrandGuide from './pages/BrandGuide'
 import UserFeedback from './pages/UserFeedback'
 import CompetitiveAnalysis from './pages/CompetitiveAnalysis'
-import ResourcesConcepts from './pages/ResourcesConcepts'
 import Report1C from './pages/Report1C'
 import Report2 from './pages/Report2'
 import ReportsLayout from './pages/ReportsLayout'
@@ -21,6 +20,7 @@ import SettingsLayout from './pages/settings/SettingsLayout'
 import SettingsPlaceholder from './pages/settings/SettingsPlaceholder'
 import CurriculumSetup from './pages/settings/CurriculumSetup'
 import JoinPage from './pages/JoinPage'
+import { ResourcesConceptProvider } from './lib/resourcesConceptContext'
 
 function Placeholder({ title }) {
   return (
@@ -46,7 +46,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-center" richColors />
-      <AppShell handleBookmark={handleBookmark} />
+      <ResourcesConceptProvider>
+        <AppShell handleBookmark={handleBookmark} />
+      </ResourcesConceptProvider>
     </BrowserRouter>
   )
 }
@@ -94,7 +96,6 @@ function AppShell({ handleBookmark }) {
         <Route path="/brand" element={<BrandGuide />} />
         <Route path="/user-feedback" element={<UserFeedback />} />
         <Route path="/competitive-analysis" element={<CompetitiveAnalysis />} />
-        <Route path="/resources-concepts" element={<ResourcesConcepts />} />
       </Routes>
     </div>
   )
