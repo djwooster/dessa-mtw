@@ -8,18 +8,18 @@ Fidelity bar: **confident design exploration** — not a wireframe, not producti
 ---
 
 ## UX/UI quality bar
-Even though this is "just" a prototype for an internal manager review, treat every screen and concept variant — including throwaway comparison ones — as if a senior product/UX designer at an enterprise SaaS company built it. That means real rigor on contrast, spacing, layout, friction points, affordances, and error prevention/recovery, not just "does it look okay." Ground decisions in established practice rather than improvising from scratch each time:
-- **Nielsen Norman Group's 10 usability heuristics** — visibility of system status, user control & freedom, consistency & standards, error prevention, recognition over recall, aesthetic & minimalist design, help users recognize/diagnose/recover from errors, etc.
-- **Apple Human Interface Guidelines** and **Material Design** — platform-level interaction, motion, and information-density patterns.
-- **WCAG 2.1 AA** — color contrast, visible focus states, ~44px minimum hit targets. This app is used by educators across a wide age range, so treat accessibility/legibility as a requirement, not a nice-to-have, even in mocked prototype UI.
-- **Laws of UX** (Fitts's Law, Hick's Law, etc.) for spacing and choice-architecture calls.
-- Invoke the `ui-ux-pro-max` skill when building or reviewing a UI surface — it has style/palette/accessibility guidance built in for exactly this kind of work.
+Treat every screen — including throwaway comparison concepts — as if a senior product/UX designer at an enterprise SaaS company built it: real rigor on contrast, spacing, layout, friction points, affordances, and error prevention/recovery, not just "does it look okay." Ground decisions in established practice:
+- Nielsen Norman Group's 10 usability heuristics
+- Apple HIG and Material Design for interaction/motion/density patterns
+- WCAG 2.1 AA — this app serves educators across a wide age range, so accessibility is a requirement, not a nice-to-have
+- Laws of UX (Fitts's Law, Hick's Law, etc.)
+- Invoke the `ui-ux-pro-max` skill when building or reviewing UI
 
-**Aesthetic direction:** tightening toward **Notion/Linear** — both tighter density (smaller paddings, thin 1px `brand-border` hairlines over drop shadows, more compact rows/cards) and restrained color (mostly neutral surfaces; brand color reserved for actions, active states, and key data points, not decoration). Within that, still make room for **delight**: motion (see Design system below) plus occasional warmer touches — empty-state illustrations, friendlier copy, small celebratory moments (e.g. finishing a lesson) — without tipping into feeling unprofessional. Professional and delightful are not in tension here; Notion and Linear both manage it.
+**Aesthetic direction:** tightening toward Notion/Linear — tighter density, thin borders over shadows, restrained color (brand color for actions/data points, not decoration) — with room for delight through motion and occasional warmer touches, not through flashier core interactions.
 
-**Conventions learned the hard way (add to this list — don't reintroduce):**
-- Never patch a confusing interaction with adjacent explainer/caption text (e.g. "Grade is part of the search, not a separate step"). If a control needs a sentence next to it to be understood, the interaction itself is the problem — redesign it, don't caption it.
-- Don't invent a one-off hex or arbitrary Tailwind value (`text-[13px]`, `text-[#5B6878]`) for something the type/color scale below already covers. If a new value recurs more than once, promote it into `tailwind.config.js` rather than pasting the arbitrary value again.
+**Standing rules:**
+- Don't patch a confusing interaction with adjacent explainer/caption text — if a control needs a sentence next to it to be understood, redesign the control instead.
+- Don't invent a one-off hex or arbitrary Tailwind value for something the design system below already covers.
 
 ---
 
@@ -37,19 +37,18 @@ A small, reusable set of styles — not exhaustive component coverage, just enou
 | Body-large | 16px (`text-base`) regular | `brand-subtext` | Intro/subcopy sitting under a headline |
 | Caption | 12px (`text-xs`) medium | `brand-subtext` | Timestamps, meta text, badge labels |
 
-Two text colors, full stop: `brand-text` (primary) and `brand-subtext` (secondary/muted). Don't reach for a third gray or a manually-darkened hex (e.g. the retired `#5B6878` label color, now folded into `brand-subtext`) — if something needs to feel disabled/placeholder, reduce opacity on `brand-subtext` rather than introduce a new shade.
+Two text colors, full stop: `brand-text` (primary) and `brand-subtext` (secondary/muted). Don't reach for a third gray or a manually-darkened hex — for a disabled/placeholder feel, reduce opacity on `brand-subtext` instead of introducing a new shade.
 
 **Color roles beyond brand/DESSA/MTW:**
 - **State colors** (`state.error` / `state.warning` / `state.success` / `state.info`, each with a `*Light` tint) — added specifically for UI states like form validation and alerts, deliberately separate from the `dessa-green`/`dessa-blue`/`dessa-salmon` data-viz palette (which means strength/typical/need on charts, not error/warning/success — don't conflate the two).
 - Brand color (`dessa-teal`, `mtw-amber`, etc.) is for actions and key data points, per the Notion/Linear direction above — not for decorating unrelated surfaces.
 
 **Spacing & density** (Notion/Linear direction):
-- **Standard page container: `px-6` side padding, no max-width cap.** This is what Dashboard, Ratings, Curriculum, and the live "Current" Resources page all use — content runs the full viewport width with a flat 24px gutter on each side. Any regular content page (lists, tables, filter+results layouts, admin screens) should match this exactly, not invent its own margin.
-- The wider `md:px-[172px]` margin is a **special case reserved for full-bleed marketing-style hero/landing sections only** (e.g. Resources' split grade-gate screen, or a card-grid landing before any content loads) — never apply it to a page that's actually showing a list/table of real content, even if that page also happens to have a hero-like header above it. Mixing the two reads as the page being narrower than the rest of the app, which is a real bug, not a style choice (confirmed on Resources Concept B, 2026-09-12 — it had inherited the hero margin from a page it no longer resembled).
-- Prefer `p-4`/`p-5` for card bodies over `p-6`+ — tighter than a lot of existing screens currently run.
-- Prefer a thin `border border-brand-border` over `shadow-md`/`shadow-lg` for resting-state surfaces; reserve real shadows for things that float above content (popovers, modals, dropdowns).
-- Reuse Tailwind's default spacing scale (4px increments) rather than arbitrary pixel values — arbitrary values are a signal the design isn't reusing an established rhythm.
-- **Row/card layouts inside a component that might render in more than one container width** (e.g. a shared results list that can appear both full-width and next to a filter sidebar) **must use flexible, truncating widths (`flex-1 min-w-0` + `truncate`), not fixed pixel widths with `shrink-0`.** Fixed-width, non-shrinking flex children don't compress when the container is narrower than expected — they overflow, and whichever element is positioned last (often the most important one, like a status badge) gets pushed past the visible edge instead of gracefully truncating.
+- Standard page container: `px-6` side padding, no max-width cap — same gutter Dashboard, Nav, and every other page uses, no exceptions (including hero/landing-style screens).
+- Prefer `p-4`/`p-5` for card bodies over `p-6`+.
+- Prefer a thin `border border-brand-border` over `shadow-md`/`shadow-lg` for resting-state surfaces; save real shadows for things that float above content (popovers, modals, dropdowns).
+- Reuse Tailwind's default spacing scale (4px increments) rather than arbitrary pixel values.
+- Row/card layouts that might render at more than one container width should use flexible, truncating widths (`flex-1 min-w-0` + `truncate`), not fixed pixel widths with `shrink-0` — fixed non-shrinking widths overflow instead of compressing.
 
 **Buttons:**
 - DESSA-context buttons: `rounded-md`. MTW-context buttons: `rounded-full`. This split is intentional (see brand personalities below) — don't unify the shape language across contexts.

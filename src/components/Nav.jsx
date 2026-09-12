@@ -86,16 +86,16 @@ export default function Nav() {
                 </NavLink>
                 {gradeMenuOpen && (
                   <div className="absolute left-0 top-full pt-1 z-50">
-                    <div className="bg-white border border-brand-border rounded-2xl shadow-lg p-6 grid grid-cols-3 gap-8 min-w-[420px]">
+                    <div className="bg-white border border-brand-border rounded-2xl shadow-lg p-6 grid grid-cols-3 gap-8 min-w-[500px]">
                       {RESOURCES_GRADE_GROUPS.map((col) => (
                         <div key={col.label}>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-brand-subtext mb-2">{col.label}</p>
+                          <p className="text-xs font-semibold text-brand-text mb-2 whitespace-nowrap">{col.label}</p>
                           <div className="flex flex-col gap-1.5 items-start">
                             {col.grades.map((g) => (
                               <button
                                 key={g}
                                 type="button"
-                                className="text-left text-sm text-brand-text hover:text-dessa-teal transition-colors"
+                                className="text-left text-sm text-brand-subtext hover:text-dessa-teal hover:bg-brand-bg transition-colors rounded-md -mx-1.5 px-1.5 py-0.5"
                                 onClick={() => goToGrade(g)}
                               >
                                 {g}
@@ -107,7 +107,7 @@ export default function Nav() {
                       <div className="col-span-3 pt-3 border-t border-brand-border">
                         <button
                           type="button"
-                          className="text-left text-sm text-brand-text hover:text-dessa-teal transition-colors"
+                          className="text-left text-sm text-brand-subtext hover:text-dessa-teal hover:bg-brand-bg transition-colors rounded-md -mx-1.5 px-1.5 py-0.5"
                           onClick={() => goToGrade('All Grades')}
                         >
                           All Grades

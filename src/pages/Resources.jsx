@@ -484,7 +484,7 @@ function GateFullPage({ onConfirm, defaultRemember, decorConcept }) {
   // are otherwise unrelated to Concept B's grid/tiles backdrop.
   if (decorConcept === 'c') {
     return (
-      <div className="relative w-screen mx-[calc(50%-50vw)] grid grid-cols-1 md:grid-cols-2 gap-16 items-center pt-28 pb-16 px-6 md:px-[172px] overflow-hidden">
+      <div className="relative grid grid-cols-1 md:grid-cols-2 gap-16 items-center pt-28 pb-16 overflow-hidden">
         {/* Grid, not flex — grid-cols-2 forces a true 50/50 split
             regardless of content width. flex-1 alone doesn't guarantee
             that: flex items default to a content-based min-width, so the

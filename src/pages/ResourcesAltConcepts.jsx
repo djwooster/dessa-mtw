@@ -579,7 +579,7 @@ export function ConceptC() {
 
   if (!band) {
     return (
-      <div className="w-screen mx-[calc(50%-50vw)] pt-28 pb-16 px-6 md:px-[172px]">
+      <div className="pt-28 pb-16 px-6">
         <GateHeading heading="Curriculum Resource Library" subcopy={SUBCOPY} />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
           {grades.map((b) => (
