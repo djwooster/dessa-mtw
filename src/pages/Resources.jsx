@@ -13,7 +13,7 @@ import {
   Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis,
 } from '../components/ui/pagination'
 import { useResourcesConcept } from '../lib/resourcesConceptContext'
-import { ConceptB, ConceptC, ConceptD } from './ResourcesAltConcepts'
+import { ConceptB, ConceptC, ConceptD, ConceptE } from './ResourcesAltConcepts'
 
 // "Adult Wellness" is excluded from every picker on this page now, per
 // explicit request — both the grade pickers (sidebar Grade facet, all three
@@ -1309,6 +1309,7 @@ export default function Resources() {
   if (resourcesConcept === 'b') return <ConceptB />
   if (resourcesConcept === 'c') return <ConceptC />
   if (resourcesConcept === 'd') return <ConceptD />
+  if (resourcesConcept === 'e') return <ConceptE />
 
   return (
     <motion.div

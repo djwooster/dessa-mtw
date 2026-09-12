@@ -44,6 +44,21 @@ export default {
           border:  '#E2E6EA',
           focus:   '#2A7F8F',
         },
+        // UI-state semantics (validation, toasts, alerts) — deliberately
+        // separate from the dessa-green/blue/salmon data-viz palette above,
+        // which means strength/typical/need on charts, not error/warning/
+        // success. Keeping them apart means a chart can show "need" in
+        // salmon without it ever being mistaken for a form error.
+        state: {
+          error:        '#D64545',
+          errorLight:   '#FBEAEA',
+          warning:      '#C77D1F',
+          warningLight: '#FBF0DE',
+          success:      '#2F9E5B',
+          successLight: '#E6F6EC',
+          info:         '#3366CC',
+          infoLight:    '#EAF0FC',
+        },
         'interactive-blue': '#0061FF',
         // /user-feedback only — black/white (Tailwind's built-in black,
         // white, gray-*) plus this one accent, so the research protocol

@@ -7,6 +7,57 @@ Fidelity bar: **confident design exploration** — not a wireframe, not producti
 
 ---
 
+## UX/UI quality bar
+Even though this is "just" a prototype for an internal manager review, treat every screen and concept variant — including throwaway comparison ones — as if a senior product/UX designer at an enterprise SaaS company built it. That means real rigor on contrast, spacing, layout, friction points, affordances, and error prevention/recovery, not just "does it look okay." Ground decisions in established practice rather than improvising from scratch each time:
+- **Nielsen Norman Group's 10 usability heuristics** — visibility of system status, user control & freedom, consistency & standards, error prevention, recognition over recall, aesthetic & minimalist design, help users recognize/diagnose/recover from errors, etc.
+- **Apple Human Interface Guidelines** and **Material Design** — platform-level interaction, motion, and information-density patterns.
+- **WCAG 2.1 AA** — color contrast, visible focus states, ~44px minimum hit targets. This app is used by educators across a wide age range, so treat accessibility/legibility as a requirement, not a nice-to-have, even in mocked prototype UI.
+- **Laws of UX** (Fitts's Law, Hick's Law, etc.) for spacing and choice-architecture calls.
+- Invoke the `ui-ux-pro-max` skill when building or reviewing a UI surface — it has style/palette/accessibility guidance built in for exactly this kind of work.
+
+**Aesthetic direction:** tightening toward **Notion/Linear** — both tighter density (smaller paddings, thin 1px `brand-border` hairlines over drop shadows, more compact rows/cards) and restrained color (mostly neutral surfaces; brand color reserved for actions, active states, and key data points, not decoration). Within that, still make room for **delight**: motion (see Design system below) plus occasional warmer touches — empty-state illustrations, friendlier copy, small celebratory moments (e.g. finishing a lesson) — without tipping into feeling unprofessional. Professional and delightful are not in tension here; Notion and Linear both manage it.
+
+**Conventions learned the hard way (add to this list — don't reintroduce):**
+- Never patch a confusing interaction with adjacent explainer/caption text (e.g. "Grade is part of the search, not a separate step"). If a control needs a sentence next to it to be understood, the interaction itself is the problem — redesign it, don't caption it.
+- Don't invent a one-off hex or arbitrary Tailwind value (`text-[13px]`, `text-[#5B6878]`) for something the type/color scale below already covers. If a new value recurs more than once, promote it into `tailwind.config.js` rather than pasting the arbitrary value again.
+
+---
+
+## Design system
+A small, reusable set of styles — not exhaustive component coverage, just enough to stop text sizes/colors drifting into one-offs and to move quickly by drawing from these instead of inventing new values per screen.
+
+**Typography** — built on the existing `brand-text`/`brand-subtext` tokens, no new colors needed for type:
+| Role | Size / weight | Color | Use |
+|---|---|---|---|
+| H1 | 36px (`text-4xl`) semibold | `brand-text` | Page hero headline only |
+| H2 | 24px (`text-2xl`) semibold | `brand-text` | Section headers |
+| H3 | 18px (`text-lg`) semibold | `brand-text` | Card titles |
+| Eyebrow/Label | 13px (`text-xs`) semibold, uppercase, tracking-wide | `brand-subtext` | Facet titles, column headers, small caps labels |
+| Body | 14px (`text-sm`) regular | `brand-text` | Default UI copy, table cells |
+| Body-large | 16px (`text-base`) regular | `brand-subtext` | Intro/subcopy sitting under a headline |
+| Caption | 12px (`text-xs`) medium | `brand-subtext` | Timestamps, meta text, badge labels |
+
+Two text colors, full stop: `brand-text` (primary) and `brand-subtext` (secondary/muted). Don't reach for a third gray or a manually-darkened hex (e.g. the retired `#5B6878` label color, now folded into `brand-subtext`) — if something needs to feel disabled/placeholder, reduce opacity on `brand-subtext` rather than introduce a new shade.
+
+**Color roles beyond brand/DESSA/MTW:**
+- **State colors** (`state.error` / `state.warning` / `state.success` / `state.info`, each with a `*Light` tint) — added specifically for UI states like form validation and alerts, deliberately separate from the `dessa-green`/`dessa-blue`/`dessa-salmon` data-viz palette (which means strength/typical/need on charts, not error/warning/success — don't conflate the two).
+- Brand color (`dessa-teal`, `mtw-amber`, etc.) is for actions and key data points, per the Notion/Linear direction above — not for decorating unrelated surfaces.
+
+**Spacing & density** (Notion/Linear direction):
+- Prefer `p-4`/`p-5` for card bodies over `p-6`+ — tighter than a lot of existing screens currently run.
+- Prefer a thin `border border-brand-border` over `shadow-md`/`shadow-lg` for resting-state surfaces; reserve real shadows for things that float above content (popovers, modals, dropdowns).
+- Reuse Tailwind's default spacing scale (4px increments) rather than arbitrary pixel values — arbitrary values are a signal the design isn't reusing an established rhythm.
+
+**Buttons:**
+- DESSA-context buttons: `rounded-md`. MTW-context buttons: `rounded-full`. This split is intentional (see brand personalities below) — don't unify the shape language across contexts.
+- Default height `h-10`–`h-11` for primary actions; horizontal padding scales with size (`px-4` small / `px-6` default / `px-8` large).
+
+**Motion & delight:**
+- Page reveals `{opacity:0, y:8} → {opacity:1, y:0}`, card hover `{y:-2}` (existing Framer Motion conventions — keep using these as the baseline, don't invent new easing/timing per screen).
+- Delight lives in *restrained* extra touches on top of that baseline — a friendlier empty state, a small celebratory moment on completion — not in flashier core interactions. If a motion choice makes a control feel less predictable or slower to use, it's not delight, it's friction.
+
+---
+
 ## Tech stack
 - **React + Vite** — `npm run dev` to start, `npm run build` for Vercel deploy
 - **Tailwind CSS v3** — custom palette only, no default Tailwind colors used
@@ -46,7 +97,7 @@ No `components.json` — components are added manually to `src/components/ui/` a
 ---
 
 ## Design tokens — `tailwind.config.js`
-Two brand personalities sharing one card shell:
+Two brand personalities sharing one card shell (type scale and state colors are covered above, under Design system):
 
 **DESSA** — cool, clinical, trustworthy
 - Primary action: `dessa-teal` (#2A7F8F) — buttons use `rounded-md`
@@ -62,6 +113,7 @@ Two brand personalities sharing one card shell:
 - Body text: `brand-text` (#1B2B4B)
 - Muted text: `brand-subtext` (#6B7A8D)
 - Card border: `brand-border` (#E2E6EA)
+- State colors: `state-error`/`state-warning`/`state-success`/`state-info` (+ `*Light` tints) — form validation, alerts, toasts. See Design system above for why these are kept separate from the data-viz palette.
 
 ---
 

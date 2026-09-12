@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useLocation, useSearchParams, useNavigate } from 'react-router-dom'
-import { HelpCircle, Settings, Palette, MessageSquareText, GitCompare, ChevronDown } from 'lucide-react'
+import { HelpCircle, Settings, Palette, MessageSquareText, GitCompare, ScrollText, ChevronDown } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { useResourcesConcept } from '../lib/resourcesConceptContext'
 import { RESOURCES_GRADE_GROUPS } from '../pages/ResourcesAltConcepts'
@@ -29,13 +29,15 @@ const userMenuItems = [
   { label: 'Brand Guide', to: '/brand', icon: Palette },
   { label: 'User Feedback', to: '/user-feedback', icon: MessageSquareText },
   { label: 'Competitive Analysis', to: '/competitive-analysis', icon: GitCompare },
+  { label: 'Process Journal', to: '/process-journal', icon: ScrollText },
 ]
 
 const RESOURCES_CONCEPTS = [
   { value: 'a', label: 'A', title: 'A — Current experience' },
-  { value: 'b', label: 'B', title: 'B — Search hero + browse cards' },
+  { value: 'b', label: 'B', title: 'B — Search hero' },
   { value: 'c', label: 'C', title: 'C — Visual browse cards' },
   { value: 'd', label: 'D', title: 'D — Nav hover only, no page' },
+  { value: 'e', label: 'E', title: 'E — Paired grade + search field' },
 ]
 
 export default function Nav() {

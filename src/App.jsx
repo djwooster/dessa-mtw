@@ -13,6 +13,7 @@ import RatingSummary from './pages/RatingSummary'
 import BrandGuide from './pages/BrandGuide'
 import UserFeedback from './pages/UserFeedback'
 import CompetitiveAnalysis from './pages/CompetitiveAnalysis'
+import ProcessJournal from './pages/ProcessJournal'
 import Report1C from './pages/Report1C'
 import Report2 from './pages/Report2'
 import ReportsLayout from './pages/ReportsLayout'
@@ -96,6 +97,7 @@ function AppShell({ handleBookmark }) {
         <Route path="/brand" element={<BrandGuide />} />
         <Route path="/user-feedback" element={<UserFeedback />} />
         <Route path="/competitive-analysis" element={<CompetitiveAnalysis />} />
+        <Route path="/process-journal" element={<ProcessJournal />} />
       </Routes>
     </div>
   )
