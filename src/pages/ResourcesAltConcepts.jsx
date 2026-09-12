@@ -126,27 +126,31 @@ function ResultRows({ rows, showDividers }) {
               </div>
             )}
             <div
-              className={`w-full flex items-center gap-3 px-6 py-4 hover:bg-[rgba(15,148,172,0.1)] transition-colors cursor-pointer ${
+              className={`w-full flex items-center gap-4 px-6 py-4 hover:bg-[rgba(15,148,172,0.1)] transition-colors cursor-pointer ${
                 isLast ? 'rounded-b-2xl' : 'border-b border-brand-border'
               }`}
             >
-              <div className="w-72 shrink-0">
+              {/* Title and description are flexible + truncating (not
+                  fixed pixel widths) so this row degrades gracefully when
+                  its container is narrower than a full-width page — e.g.
+                  Concept B's permanent sidebar eats real width that the
+                  no-sidebar "Current" page doesn't have to share. Only the
+                  trailing badge cluster stays shrink-0; everything else
+                  absorbs the squeeze via min-w-0 + truncate instead of
+                  pushing the badges past the visible edge. */}
+              <div className="flex-1 min-w-0">
                 <p className="text-[16px] font-semibold text-brand-text truncate">{r.title}</p>
                 <p className="text-xs text-brand-subtext truncate mt-0.5">{r.unit}</p>
               </div>
-              <p className="w-[550px] shrink-0 truncate text-left text-sm text-brand-subtext">{r.desc}</p>
-              <div className="flex items-center gap-3 shrink-0 ml-auto">
-                <div className="w-20 shrink-0">
-                  <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] ${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`}>
-                    <typeMeta.icon size={14} />
-                    <span className="text-xs font-medium">{typeMeta.label}</span>
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 min-w-[130px] shrink-0">
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-[5px] bg-brand-bg text-brand-text text-xs font-medium shrink-0">
-                    {r.competency}
-                  </span>
-                </div>
+              <p className="hidden lg:block flex-1 min-w-0 truncate text-left text-sm text-brand-subtext">{r.desc}</p>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] whitespace-nowrap ${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`}>
+                  <typeMeta.icon size={14} />
+                  <span className="text-xs font-medium">{typeMeta.label}</span>
+                </span>
+                <span className="hidden md:inline-flex items-center px-2.5 py-1 rounded-[5px] bg-brand-bg text-brand-text text-xs font-medium max-w-[160px] truncate">
+                  {r.competency}
+                </span>
               </div>
             </div>
           </div>
@@ -397,7 +401,7 @@ function ResultsExperience({ grade, topLeft }) {
   )
 
   return (
-    <div className="mt-2">
+    <div className="px-6 pt-2 pb-16">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div>{topLeft}</div>
         <SegToggle options={FILTER_MECHANIC_OPTIONS} value={filterMechanic} onChange={setFilterMechanic} />
@@ -464,87 +468,101 @@ function GradeCardImage({ grade, className = '' }) {
 
 const SUBCOPY = 'Explore a full range of resources organized by topic and skill area, from student-facing lesson videos and worksheets to tools for school engagement and implementation, built for every grade level.'
 
-// ── Concept B — Search hero ──
-// (was sandbox "Concept A") — eyebrow + centered headline + search bar +
-// single-select pill row per individual grade. Used to also have a
-// "Browse by grade" card grid below the pills, but that duplicated Concept
-// C's card grid one-for-one — condensed (2026-09-12) so the card-grid
-// pattern lives only in C; B is now just the hero.
-const GRADES_B = [
-  { id: 'All Grades', label: 'All Grades', grades: SELECTABLE_GRADES },
-  ...ELEMENTARY_GROUP.map((g) => ({ id: g, label: g, grades: [g] })),
-  ...MIDDLE_GROUP.map((g) => ({ id: g, label: g, grades: [g] })),
-  ...HIGH_GROUP.map((g) => ({ id: g, label: g, grades: [g] })),
-]
-
-function GradePillB({ label, onChange }) {
-  return (
-    <button
-      type="button"
-      onClick={onChange}
-      className="px-3 py-2 rounded-full text-xs font-medium bg-white border border-brand-border text-brand-text hover:border-dessa-teal/50 transition-colors"
-    >
-      {label}
-    </button>
-  )
-}
-
+// ── Concept B — Everything visible, filter down ──
+// (was sandbox "Concept A") — rebuilt (2026-09-12) from a centered marketing
+// hero into a plain utility page: left-aligned "Resources" title, a search
+// bar in its own small container up top, and a persistent left filter
+// sidebar next to results that are visible immediately — no grade gate,
+// upfront or fused, anywhere. This is the deliberate control concept,
+// testing whether the mandatory gate is needed at all.
+//
+// B's sidebar is its own thing, not the shared FilterSidebarShared/
+// FilterBarShared used by C/D/E — it always renders as a sidebar
+// (explicitly not wired to the shared filterMechanic toggle, since the
+// left-panel layout is part of this concept's identity) and it includes
+// Grade as a facet, which the shared sidebar deliberately leaves out
+// (there, grade is already fixed by the entry concept; here, there's no
+// gate to fix it, so Grade has to live somewhere). Results view (List/
+// Cards) still comes from the shared context, since that axis is genuinely
+// orthogonal to how filtering is presented.
 export function ConceptB() {
-  const [band, setBand] = useState(null)
+  const { resultsView, setResultsView } = useResourcesConcept()
+  const [grades, setGrades] = useState([])
+  const [courseTypes, setCourseTypes] = useState([])
+  const [competencies, setCompetencies] = useState([])
+  const [types, setTypes] = useState([])
+  const [search, setSearch] = useState('')
 
-  if (!band) {
-    return (
-      <div className="w-screen mx-[calc(50%-50vw)]">
-        <div className="bg-brand-bg border-b border-brand-border px-6 pt-20 pb-16 flex flex-col items-center text-center">
-          <span className="inline-block px-3 py-1 rounded-full bg-dessa-tealLight text-dessa-teal text-xs font-semibold mb-4">
-            Resource Library
-          </span>
-          <h1 className="text-[38px] font-semibold text-brand-text max-w-2xl mb-4 leading-[1.15]">
-            Everything you need to teach SEL, by grade
-          </h1>
-          <p className="text-base text-brand-subtext max-w-xl mb-8">
-            Lesson videos, worksheets, and guides organized by grade level and SEL competency.
-          </p>
-          <div className="flex items-stretch gap-3 w-full max-w-xl mb-6">
-            <div className="relative flex-1">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search guides, videos, worksheets..."
-                className="w-full pl-11 pr-4 h-12 rounded-full border border-brand-border bg-white text-sm text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-              />
-            </div>
-            <button type="button" className="shrink-0 px-6 h-12 rounded-full text-sm font-semibold bg-dessa-teal text-white hover:bg-dessa-teal/90 transition-colors">
-              Search
-            </button>
-          </div>
-          <div className="flex flex-wrap justify-center gap-2 max-w-3xl">
-            {GRADES_B.map((g) => (
-              <GradePillB key={g.id} label={g.label} onChange={() => setBand(g)} />
-            ))}
-          </div>
-        </div>
-      </div>
-    )
+  function toggle(setFn, current, value) {
+    setFn(current.includes(value) ? current.filter((v) => v !== value) : [...current, value])
+  }
+  function resetAll() {
+    setGrades([])
+    setCourseTypes([])
+    setCompetencies([])
+    setTypes([])
   }
 
+  const q = search.trim().toLowerCase()
+  let rows = MOCK_RESOURCES
+  if (grades.length) rows = rows.filter((r) => grades.includes(r.grade))
+  if (courseTypes.length) rows = rows.filter((r) => courseTypes.includes(r.courseType))
+  if (competencies.length) rows = rows.filter((r) => competencies.includes(r.competency))
+  if (types.length) rows = rows.filter((r) => types.includes(r.type))
+  if (q) rows = rows.filter((r) => r.title.toLowerCase().includes(q))
+  const hasActiveFilters = grades.length > 0 || courseTypes.length > 0 || competencies.length > 0 || types.length > 0
+  const chips = [...grades, ...courseTypes, ...competencies, ...types.map((t) => TYPE_META[t].label)]
+
   return (
-    <>
-      <SearchBand />
-      <ResultsExperience
-        key={band.label}
-        grade={band.label}
-        topLeft={
-          <p className="text-sm text-brand-subtext">
-            Browsing <span className="font-semibold text-brand-text">{band.label}</span>
-            {' · '}
-            <button type="button" onClick={() => setBand(null)} className="font-medium text-dessa-teal hover:underline">
-              Browse a different grade
-            </button>
-          </p>
-        }
-      />
-    </>
+    <div className="px-6 pt-10 pb-16">
+      <h1 className="text-2xl font-semibold text-brand-text mb-5">Resources</h1>
+
+      {/* Own container, 10px internal padding — pill-shaped input/button
+          floating inside a slightly larger rounded card rather than a
+          full-bleed search band. */}
+      <div className="rounded-2xl border border-brand-border bg-white p-2.5 mb-6">
+        <div className="flex items-stretch gap-2.5">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search guides, videos, worksheets..."
+              className="w-full pl-11 pr-4 h-11 rounded-full border border-brand-border bg-white text-sm text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+            />
+          </div>
+          <button type="button" className="shrink-0 px-6 h-11 rounded-full text-sm font-semibold bg-dessa-teal text-white hover:bg-dessa-teal/90 transition-colors">
+            Search
+          </button>
+        </div>
+      </div>
+
+      <div className="flex gap-6 items-start">
+        <div className="w-64 shrink-0 flex flex-col gap-4">
+          <p className="text-base font-semibold text-brand-text">Filters</p>
+          <SidebarFacetGroup label="Grade" options={SELECTABLE_GRADES} selected={grades} onToggle={(v) => toggle(setGrades, grades, v)} />
+          <SidebarFacetGroup label="Course Type" options={COURSE_TYPES} selected={courseTypes} onToggle={(v) => toggle(setCourseTypes, courseTypes, v)} />
+          <SidebarFacetGroup label="Competency" options={COMPETENCIES} selected={competencies} onToggle={(v) => toggle(setCompetencies, competencies, v)} />
+          <SidebarFacetGroup label="Type" options={Object.keys(TYPE_META)} selected={types} onToggle={(v) => toggle(setTypes, types, v)} />
+          <button
+            type="button"
+            onClick={resetAll}
+            disabled={!hasActiveFilters}
+            className="w-full px-4 py-2.5 rounded-full text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors disabled:bg-brand-border disabled:text-brand-subtext"
+          >
+            Reset all filters
+          </button>
+        </div>
+        <div className="flex-1 min-w-0 rounded-2xl border border-brand-border bg-white">
+          <ResultsHeader
+            chips={chips}
+            right={<SegToggle options={RESULTS_VIEW_OPTIONS} value={resultsView} onChange={setResultsView} />}
+          />
+          {resultsView === 'cards' ? <ResultsCards rows={rows} /> : <ResultRows rows={rows} showDividers={grades.length !== 1} />}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -654,19 +672,17 @@ export function ConceptD() {
   }
 
   return (
-    <div className="pt-6">
-      <ResultsExperience
-        key={selectedGrade}
-        grade={selectedGrade}
-        topLeft={
-          <p className="text-sm">
-            <span className="text-brand-subtext">Resources</span>
-            <span className="mx-1.5 text-brand-border">/</span>
-            <span className="font-semibold text-brand-text">{selectedGrade}</span>
-          </p>
-        }
-      />
-    </div>
+    <ResultsExperience
+      key={selectedGrade}
+      grade={selectedGrade}
+      topLeft={
+        <p className="text-sm">
+          <span className="text-brand-subtext">Resources</span>
+          <span className="mx-1.5 text-brand-border">/</span>
+          <span className="font-semibold text-brand-text">{selectedGrade}</span>
+        </p>
+      }
+    />
   )
 }
 
@@ -682,22 +698,39 @@ export function ConceptD() {
 // gradeless search and doesn't block with an error either — it just opens
 // the grade dropdown, since picking a grade IS what was missing to complete
 // the search, not a prerequisite screen before it.
+// Grade selector redesigned (2026-09-12) from a left-side segmented field
+// into a rounded-full chip floating inside the search bar's right edge,
+// 12px in — reads as a filter chip riding inside the field rather than a
+// separate joined segment, and frees the field from needing a visible
+// Search button (Enter submits, same handleSubmit logic as before: no
+// grade yet just reopens this same dropdown instead of searching blind).
 function PairedSearchField({ grade, onGradeChange, query, onQueryChange, open, onOpenChange, onSubmit }) {
   return (
-    <div className="flex items-stretch h-12 w-full max-w-2xl rounded-full border border-brand-border bg-white overflow-hidden shadow-sm">
+    <div className="relative flex items-center h-12 w-full max-w-2xl rounded-full border border-brand-border bg-white shadow-sm">
+      <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => onQueryChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onSubmit()
+        }}
+        placeholder="Search guides, videos, worksheets..."
+        className="w-full h-full pl-12 pr-36 text-sm text-brand-text placeholder:text-brand-subtext bg-transparent rounded-full focus:outline-none"
+      />
       <Popover.Root open={open} onOpenChange={onOpenChange}>
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="shrink-0 pl-5 pr-3 flex items-center gap-1.5 h-full text-sm font-medium text-brand-text border-r border-brand-border hover:bg-brand-bg transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pl-3.5 pr-2.5 h-8 rounded-full text-xs font-semibold bg-dessa-tealLight text-dessa-teal hover:bg-dessa-teal/20 transition-colors"
           >
             {grade || 'Grade'}
-            <ChevronDown size={14} className="text-brand-subtext" />
+            <ChevronDown size={14} />
           </button>
         </Popover.Trigger>
         <Popover.Portal>
           <Popover.Content
-            align="start"
+            align="end"
             sideOffset={8}
             className="z-30 w-56 max-h-72 overflow-y-auto bg-white border border-brand-border rounded-xl shadow-lg outline-none p-1.5"
           >
@@ -719,23 +752,6 @@ function PairedSearchField({ grade, onGradeChange, query, onQueryChange, open, o
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => onQueryChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') onSubmit()
-        }}
-        placeholder="Search guides, videos, worksheets..."
-        className="flex-1 min-w-0 px-4 text-sm text-brand-text placeholder:text-brand-subtext focus:outline-none"
-      />
-      <button
-        type="button"
-        onClick={onSubmit}
-        className="shrink-0 px-6 h-full text-sm font-semibold bg-dessa-teal text-white hover:bg-dessa-teal/90 transition-colors"
-      >
-        Search
-      </button>
     </div>
   )
 }

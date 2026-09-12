@@ -271,12 +271,22 @@ export default function Nav() {
               Visible everywhere, not just on /resources, since picking a
               letter here only sets the selection — it doesn't navigate you
               anywhere. D additionally changes the "Resources" nav item
-              above into the hover-triggered grade mega-menu. */}
+              above into the hover-triggered grade mega-menu. D is also the
+              one exception to "no navigation": since D's whole premise is
+              that hovering the nav from *any* page is the only way in,
+              picking D also jumps to the Dashboard so that's immediately
+              demonstrable rather than leaving the reviewer wherever they
+              already were (which, if that happened to be /resources
+              itself, would just show D's "hover above" placeholder — a
+              much weaker demo of "works from anywhere"). */}
           <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0 mr-1">
             {RESOURCES_CONCEPTS.map(({ value, label, title }, i) => (
               <button
                 key={value}
-                onClick={() => setResourcesConcept(value)}
+                onClick={() => {
+                  setResourcesConcept(value)
+                  if (value === 'd') navigate('/')
+                }}
                 title={title}
                 aria-label={title}
                 className={`px-2 py-1 transition-colors ${i > 0 ? 'border-l border-brand-border' : ''} ${

@@ -44,9 +44,12 @@ Two text colors, full stop: `brand-text` (primary) and `brand-subtext` (secondar
 - Brand color (`dessa-teal`, `mtw-amber`, etc.) is for actions and key data points, per the Notion/Linear direction above — not for decorating unrelated surfaces.
 
 **Spacing & density** (Notion/Linear direction):
+- **Standard page container: `px-6` side padding, no max-width cap.** This is what Dashboard, Ratings, Curriculum, and the live "Current" Resources page all use — content runs the full viewport width with a flat 24px gutter on each side. Any regular content page (lists, tables, filter+results layouts, admin screens) should match this exactly, not invent its own margin.
+- The wider `md:px-[172px]` margin is a **special case reserved for full-bleed marketing-style hero/landing sections only** (e.g. Resources' split grade-gate screen, or a card-grid landing before any content loads) — never apply it to a page that's actually showing a list/table of real content, even if that page also happens to have a hero-like header above it. Mixing the two reads as the page being narrower than the rest of the app, which is a real bug, not a style choice (confirmed on Resources Concept B, 2026-09-12 — it had inherited the hero margin from a page it no longer resembled).
 - Prefer `p-4`/`p-5` for card bodies over `p-6`+ — tighter than a lot of existing screens currently run.
 - Prefer a thin `border border-brand-border` over `shadow-md`/`shadow-lg` for resting-state surfaces; reserve real shadows for things that float above content (popovers, modals, dropdowns).
 - Reuse Tailwind's default spacing scale (4px increments) rather than arbitrary pixel values — arbitrary values are a signal the design isn't reusing an established rhythm.
+- **Row/card layouts inside a component that might render in more than one container width** (e.g. a shared results list that can appear both full-width and next to a filter sidebar) **must use flexible, truncating widths (`flex-1 min-w-0` + `truncate`), not fixed pixel widths with `shrink-0`.** Fixed-width, non-shrinking flex children don't compress when the container is narrower than expected — they overflow, and whichever element is positioned last (often the most important one, like a status badge) gets pushed past the visible edge instead of gracefully truncating.
 
 **Buttons:**
 - DESSA-context buttons: `rounded-md`. MTW-context buttons: `rounded-full`. This split is intentional (see brand personalities below) — don't unify the shape language across contexts.
