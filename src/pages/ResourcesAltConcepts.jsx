@@ -449,11 +449,14 @@ function slugifyGrade(label) {
 // translucent circle, avatar-placeholder-style) rather than a flat gray box,
 // per explicit feedback that the plain gray+icon treatment wasn't inviting.
 // Falls through to 'All Grades' for anything that isn't a specific grade.
+// `tint`/`iconColor` are full literal class strings (not built from `color`
+// via a template string) so Tailwind's JIT scanner — which greps this file's
+// raw text, not runtime output — actually finds and generates them.
 const CARD_TIERS = [
-  { test: (g) => ELEMENTARY_GROUP.includes(g), icon: BookOpen, gradient: 'from-mtw-amber to-mtw-coral' },
-  { test: (g) => MIDDLE_GROUP.includes(g), icon: Users, gradient: 'from-mtw-teal to-dessa-teal' },
-  { test: (g) => HIGH_GROUP.includes(g), icon: GraduationCap, gradient: 'from-mtw-blue to-mtw-purple' },
-  { test: () => true, icon: Layers, gradient: 'from-dessa-teal to-mtw-amber' },
+  { test: (g) => ELEMENTARY_GROUP.includes(g), icon: BookOpen, gradient: 'from-mtw-amber to-mtw-coral', tint: 'from-mtw-amber/12', iconColor: 'text-mtw-amber' },
+  { test: (g) => MIDDLE_GROUP.includes(g), icon: Users, gradient: 'from-mtw-teal to-dessa-teal', tint: 'from-mtw-teal/12', iconColor: 'text-mtw-teal' },
+  { test: (g) => HIGH_GROUP.includes(g), icon: GraduationCap, gradient: 'from-mtw-blue to-mtw-purple', tint: 'from-mtw-blue/12', iconColor: 'text-mtw-blue' },
+  { test: () => true, icon: Layers, gradient: 'from-dessa-teal to-mtw-amber', tint: 'from-dessa-teal/12', iconColor: 'text-dessa-teal' },
 ]
 
 function tierFor(grade) {
@@ -561,12 +564,30 @@ export function ConceptB() {
     <div className="px-6 pt-10 pb-16">
       <h1 className="text-2xl font-semibold text-brand-text mb-6">Resources</h1>
 
+      {/* Search bar: its own full-width row, sitting above the
+          sidebar+results split entirely (not scoped to either column). */}
+      <div className="rounded-2xl border border-brand-border bg-white p-2.5 mb-6">
+        <div className="flex items-stretch gap-2.5">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search guides, videos, worksheets..."
+              className="w-full pl-11 pr-4 h-11 rounded-full border border-brand-border bg-white text-sm text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+            />
+          </div>
+          <button type="button" className="shrink-0 px-6 h-11 rounded-full text-sm font-semibold bg-dessa-teal text-white hover:bg-dessa-teal/90 transition-colors">
+            Search
+          </button>
+        </div>
+      </div>
+
       {/* Sidebar is one unified card (matching the results panel's
           border/radius/bg) instead of a stack of individually-boxed facet
-          groups — the two columns now read as a matched pair rather than
-          "loose boxes" next to "one solid card". The search bar lives
-          inside the results column, scoped to its width, directly above
-          what it searches — not full-bleed above both columns. */}
+          groups — the two columns read as a matched pair rather than
+          "loose boxes" next to "one solid card". */}
       <div className="flex gap-6 items-start">
         <div className="w-64 shrink-0 rounded-2xl border border-brand-border bg-white p-5 flex flex-col gap-5">
           <p className="text-base font-semibold text-brand-text">Filters</p>
@@ -584,33 +605,13 @@ export function ConceptB() {
           </button>
         </div>
 
-        <div className="flex-1 min-w-0 flex flex-col gap-4">
-          <div className="rounded-2xl border border-brand-border bg-white p-2.5">
-            <div className="flex items-stretch gap-2.5">
-              <div className="relative flex-1">
-                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search guides, videos, worksheets..."
-                  className="w-full pl-11 pr-4 h-11 rounded-full border border-brand-border bg-white text-sm text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-                />
-              </div>
-              <button type="button" className="shrink-0 px-6 h-11 rounded-full text-sm font-semibold bg-dessa-teal text-white hover:bg-dessa-teal/90 transition-colors">
-                Search
-              </button>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-brand-border bg-white">
-            <ResultsHeader
-              chips={chips}
-              count={rows.length}
-              right={<SegToggle options={RESULTS_VIEW_OPTIONS} value={resultsView} onChange={setResultsView} />}
-            />
-            {resultsView === 'cards' ? <ResultsCards rows={rows} /> : <ResultRows rows={rows} showDividers={grades.length !== 1} />}
-          </div>
+        <div className="flex-1 min-w-0 rounded-2xl border border-brand-border bg-white">
+          <ResultsHeader
+            chips={chips}
+            count={rows.length}
+            right={<SegToggle options={RESULTS_VIEW_OPTIONS} value={resultsView} onChange={setResultsView} />}
+          />
+          {resultsView === 'cards' ? <ResultsCards rows={rows} /> : <ResultRows rows={rows} showDividers={grades.length !== 1} />}
         </div>
       </div>
     </div>
@@ -624,31 +625,74 @@ export function ConceptB() {
 // a real photo via GradeCardImage — falls back to an icon tile if the file
 // isn't there yet, so real photos can be dropped into
 // /public/resources-grade-cards/ later with no code changes.
-export function ConceptC() {
-  const grades = SELECTABLE_GRADES.map((g) => ({ label: g, grades: g === 'All Grades' ? SELECTABLE_GRADES : [g] }))
-  const [band, setBand] = useState(null)
-  const [search, setSearch] = useState('')
+// Card composition and search field modeled on a reference screenshot (a
+// help-center dashboard: search bar up top, a small-caps section label,
+// then a grid of plain icon+title+description cards — no photo, no
+// button). Grade selection now reuses Concept E's PairedSearchField
+// verbatim (staged pendingGrade, confirmed activeGrade, same handleSubmit
+// semantics) instead of a separate search band bolted on after the fact —
+// a grade card click confirms immediately (skips staging), same as
+// picking a grade from the field's own dropdown post-gate.
+function gradeCardDescription(grade) {
+  return grade === 'All Grades'
+    ? 'Browse the full library across every grade level.'
+    : `Browse lesson videos, worksheets, and guides for ${grade}.`
+}
 
-  if (!band) {
+export function ConceptC() {
+  const [pendingGrade, setPendingGrade] = useState(null)
+  const [query, setQuery] = useState('')
+  const [gradeOpen, setGradeOpen] = useState(false)
+  const [activeGrade, setActiveGrade] = useState(null)
+
+  function handleSubmit() {
+    if (!pendingGrade) {
+      setGradeOpen(true)
+      return
+    }
+    setActiveGrade(pendingGrade)
+  }
+
+  function pickGrade(g) {
+    setPendingGrade(g)
+    setActiveGrade(g)
+  }
+
+  if (!activeGrade) {
     return (
       <div className="pt-10 pb-16 px-6">
         <GateHeading heading="Curriculum Resource Library" subcopy={SUBCOPY} />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          {grades.map((b) => (
-            <div key={b.label} className="rounded-2xl border border-brand-border bg-white overflow-hidden shadow-sm text-left">
-              <GradeCardImage grade={b.label} className="h-32 w-full" />
-              <div className="p-4">
-                <p className="text-base font-semibold text-brand-text mb-3">{b.label}</p>
-                <button
-                  type="button"
-                  onClick={() => setBand(b)}
-                  className="w-full px-4 py-2 rounded-full text-sm font-semibold text-white bg-dessa-teal hover:bg-dessa-teal/90 transition-colors"
-                >
-                  View Resources
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="mb-10">
+          <PairedSearchField
+            grade={pendingGrade}
+            onGradeChange={setPendingGrade}
+            query={query}
+            onQueryChange={setQuery}
+            open={gradeOpen}
+            onOpenChange={setGradeOpen}
+            onSubmit={handleSubmit}
+          />
+        </div>
+        <p className="text-xs font-semibold text-brand-subtext uppercase tracking-wide mb-4">Browse by Grade</p>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {SELECTABLE_GRADES.map((g) => {
+            const { icon: Icon, tint, iconColor } = tierFor(g)
+            return (
+              <button
+                key={g}
+                type="button"
+                onClick={() => pickGrade(g)}
+                className="relative overflow-hidden text-left rounded-2xl border border-brand-border bg-white p-5 hover:border-dessa-teal/40 hover:shadow-sm transition-all"
+              >
+                <div className={`absolute inset-x-0 top-0 h-16 bg-gradient-to-b ${tint} to-transparent pointer-events-none`} />
+                <div className="relative">
+                  <Icon size={34} className={`${iconColor} mb-4`} strokeWidth={1.5} />
+                  <p className="text-base font-semibold text-brand-text mb-1.5">{g}</p>
+                  <p className="text-sm text-brand-subtext leading-relaxed line-clamp-3">{gradeCardDescription(g)}</p>
+                </div>
+              </button>
+            )
+          })}
         </div>
       </div>
     )
@@ -656,18 +700,20 @@ export function ConceptC() {
 
   return (
     <>
-      <SearchBand value={search} onChange={setSearch}>
-        <p className="text-sm">
-          <span className="text-brand-subtext">Resources</span>
-          <span className="mx-1.5 text-brand-border">/</span>
-          <span className="font-semibold text-brand-text">{band.label}</span>
-          <span className="mx-1.5 text-brand-border">·</span>
-          <button type="button" onClick={() => setBand(null)} className="font-medium text-dessa-teal hover:underline">
-            Browse a different grade
-          </button>
-        </p>
-      </SearchBand>
-      <ResultsExperience key={band.label} grade={band.label} query={search} />
+      <div className="w-screen mx-[calc(50%-50vw)] bg-brand-bg border-b border-brand-border sticky top-14 z-40">
+        <div className="px-6 pt-[1.35rem] pb-4 flex justify-center">
+          <PairedSearchField
+            grade={pendingGrade}
+            onGradeChange={pickGrade}
+            query={query}
+            onQueryChange={setQuery}
+            open={gradeOpen}
+            onOpenChange={setGradeOpen}
+            onSubmit={handleSubmit}
+          />
+        </div>
+      </div>
+      <ResultsExperience key={activeGrade} grade={activeGrade} query={query} />
     </>
   )
 }
