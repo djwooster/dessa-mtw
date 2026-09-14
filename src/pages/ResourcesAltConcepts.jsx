@@ -69,16 +69,22 @@ const MOCK_RESOURCES = [
 
 // ── Shared leaf pieces, used by two or more of B/C/D ──
 
-function SearchBand() {
+// `children` (Concept C's grade breadcrumb) renders inside the same banded
+// strip as the search row, so the sticky header reads as one cohesive block
+// instead of a teal-tinted search band followed by a separate, disconnected
+// breadcrumb line sitting in the plain page background below it.
+function SearchBand({ children, value, onChange }) {
   return (
     <div className="w-screen mx-[calc(50%-50vw)] bg-brand-bg border-b border-brand-border sticky top-14 z-40">
-      <div className="px-6 pt-[1.35rem] pb-4">
+      <div className="px-6 pt-[1.35rem] pb-4 flex flex-col gap-3">
         <div className="flex items-stretch gap-4">
           <div className="relative w-[500px] shrink-0">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
             <input
               type="text"
-              placeholder="Search by competency, file type, or grade level"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="Search by competency or file type"
               className="w-full pl-10 pr-9 h-11 text-sm border border-brand-border rounded-full bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
             />
           </div>
@@ -86,6 +92,7 @@ function SearchBand() {
             Search
           </button>
         </div>
+        {children}
       </div>
     </div>
   )
@@ -160,10 +167,15 @@ function ResultRows({ rows, showDividers }) {
   )
 }
 
-function ResultsHeader({ chips, right }) {
+function ResultsHeader({ chips, count, right }) {
   return (
     <div className="px-6 pt-6 pb-4 flex items-center justify-between gap-4">
-      <div className="flex flex-wrap gap-2 flex-1">
+      <div className="flex flex-wrap items-center gap-2 flex-1">
+        {typeof count === 'number' && (
+          <span className="text-sm text-brand-subtext">
+            {count} {count === 1 ? 'resource' : 'resources'}
+          </span>
+        )}
         {chips.map((c) => (
           <span key={c} className="inline-flex items-center pl-3 pr-3 py-1.5 rounded-full bg-dessa-tealLight text-dessa-teal text-sm font-medium">
             {c}
@@ -327,11 +339,15 @@ function FilterField({ label, options, selected, onToggle }) {
 function FilterSidebarShared({ courseTypes, competencies, types, onToggleCourseType, onToggleCompetency, onToggleType, onResetAll }) {
   const hasActiveFilters = courseTypes.length > 0 || competencies.length > 0 || types.length > 0
   return (
-    <div className="w-64 shrink-0 flex flex-col gap-4">
+    // One unified card (matching the results panel), not a stack of
+    // individually-boxed facet groups — same fix applied to Concept B's
+    // sidebar, since the shared results experience (C/D/E in sidebar mode)
+    // had the identical "loose boxes next to one solid card" mismatch.
+    <div className="w-64 shrink-0 rounded-2xl border border-brand-border bg-white p-5 flex flex-col gap-5">
       <p className="text-base font-semibold text-brand-text">Filters</p>
-      <SidebarFacetGroup label="Course Type" options={COURSE_TYPES} selected={courseTypes} onToggle={onToggleCourseType} />
-      <SidebarFacetGroup label="Competency" options={COMPETENCIES} selected={competencies} onToggle={onToggleCompetency} />
-      <SidebarFacetGroup label="Type" options={Object.keys(TYPE_META)} selected={types} onToggle={onToggleType} />
+      <PlainFacetGroup label="Course Type" options={COURSE_TYPES} selected={courseTypes} onToggle={onToggleCourseType} />
+      <PlainFacetGroup label="Competency" options={COMPETENCIES} selected={competencies} onToggle={onToggleCompetency} />
+      <PlainFacetGroup label="Type" options={Object.keys(TYPE_META)} selected={types} onToggle={onToggleType} />
       <button
         type="button"
         onClick={onResetAll}
@@ -360,7 +376,7 @@ const FILTER_MECHANIC_OPTIONS = [
 // each concept's own way of surfacing/changing the current grade (a
 // "Browse a different grade" link for B/C, nothing for D since its whole
 // premise is nav-hover-only, the paired field itself for E).
-function ResultsExperience({ grade, topLeft }) {
+function ResultsExperience({ grade, topLeft, query }) {
   const { resultsView, setResultsView, filterMechanic, setFilterMechanic } = useResourcesConcept()
   const [courseTypes, setCourseTypes] = useState([])
   const [competencies, setCompetencies] = useState([])
@@ -377,6 +393,8 @@ function ResultsExperience({ grade, topLeft }) {
 
   const matchGrades = grade === 'All Grades' ? SELECTABLE_GRADES : [grade]
   let rows = MOCK_RESOURCES.filter((r) => matchGrades.includes(r.grade))
+  const q = (query || '').trim().toLowerCase()
+  if (q) rows = rows.filter((r) => r.title.toLowerCase().includes(q))
   if (courseTypes.length) rows = rows.filter((r) => courseTypes.includes(r.courseType))
   if (competencies.length) rows = rows.filter((r) => competencies.includes(r.competency))
   if (types.length) rows = rows.filter((r) => types.includes(r.type))
@@ -394,6 +412,7 @@ function ResultsExperience({ grade, topLeft }) {
     <div className="flex-1 min-w-0 rounded-2xl border border-brand-border bg-white">
       <ResultsHeader
         chips={chips}
+        count={rows.length}
         right={<SegToggle options={RESULTS_VIEW_OPTIONS} value={resultsView} onChange={setResultsView} />}
       />
       {resultsView === 'cards' ? <ResultsCards rows={rows} /> : <ResultRows rows={rows} showDividers={false} />}
@@ -468,6 +487,31 @@ function GradeCardImage({ grade, className = '' }) {
 
 const SUBCOPY = 'Explore a full range of resources organized by topic and skill area, from student-facing lesson videos and worksheets to tools for school engagement and implementation, built for every grade level.'
 
+// A facet is just a label + checkbox list, meant to sit inside a single
+// parent card (Concept B's sidebar, or FilterSidebarShared for C/D/E) —
+// not boxed in its own nested border, so the sidebar reads as one unified
+// card rather than a stack of loose mini-cards next to the results panel.
+function PlainFacetGroup({ label, options, selected, onToggle, scroll }) {
+  return (
+    <div>
+      <p className="text-sm font-semibold text-brand-text mb-3">{label}</p>
+      <div className={`flex flex-col gap-2 ${scroll ? 'max-h-48 overflow-y-auto pr-1' : ''}`}>
+        {options.map((opt) => (
+          <label key={opt} className="flex items-center gap-2 text-sm text-brand-text cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selected.includes(opt)}
+              onChange={() => onToggle(opt)}
+              className="accent-dessa-teal w-3.5 h-3.5"
+            />
+            {opt}
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Concept B — Everything visible, filter down ──
 // (was sandbox "Concept A") — rebuilt (2026-09-12) from a centered marketing
 // hero into a plain utility page: left-aligned "Resources" title, a search
@@ -515,36 +559,21 @@ export function ConceptB() {
 
   return (
     <div className="px-6 pt-10 pb-16">
-      <h1 className="text-2xl font-semibold text-brand-text mb-5">Resources</h1>
+      <h1 className="text-2xl font-semibold text-brand-text mb-6">Resources</h1>
 
-      {/* Own container, 10px internal padding — pill-shaped input/button
-          floating inside a slightly larger rounded card rather than a
-          full-bleed search band. */}
-      <div className="rounded-2xl border border-brand-border bg-white p-2.5 mb-6">
-        <div className="flex items-stretch gap-2.5">
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search guides, videos, worksheets..."
-              className="w-full pl-11 pr-4 h-11 rounded-full border border-brand-border bg-white text-sm text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-            />
-          </div>
-          <button type="button" className="shrink-0 px-6 h-11 rounded-full text-sm font-semibold bg-dessa-teal text-white hover:bg-dessa-teal/90 transition-colors">
-            Search
-          </button>
-        </div>
-      </div>
-
+      {/* Sidebar is one unified card (matching the results panel's
+          border/radius/bg) instead of a stack of individually-boxed facet
+          groups — the two columns now read as a matched pair rather than
+          "loose boxes" next to "one solid card". The search bar lives
+          inside the results column, scoped to its width, directly above
+          what it searches — not full-bleed above both columns. */}
       <div className="flex gap-6 items-start">
-        <div className="w-64 shrink-0 flex flex-col gap-4">
+        <div className="w-64 shrink-0 rounded-2xl border border-brand-border bg-white p-5 flex flex-col gap-5">
           <p className="text-base font-semibold text-brand-text">Filters</p>
-          <SidebarFacetGroup label="Grade" options={SELECTABLE_GRADES} selected={grades} onToggle={(v) => toggle(setGrades, grades, v)} />
-          <SidebarFacetGroup label="Course Type" options={COURSE_TYPES} selected={courseTypes} onToggle={(v) => toggle(setCourseTypes, courseTypes, v)} />
-          <SidebarFacetGroup label="Competency" options={COMPETENCIES} selected={competencies} onToggle={(v) => toggle(setCompetencies, competencies, v)} />
-          <SidebarFacetGroup label="Type" options={Object.keys(TYPE_META)} selected={types} onToggle={(v) => toggle(setTypes, types, v)} />
+          <PlainFacetGroup label="Grade" options={SELECTABLE_GRADES} selected={grades} onToggle={(v) => toggle(setGrades, grades, v)} scroll />
+          <PlainFacetGroup label="Course Type" options={COURSE_TYPES} selected={courseTypes} onToggle={(v) => toggle(setCourseTypes, courseTypes, v)} />
+          <PlainFacetGroup label="Competency" options={COMPETENCIES} selected={competencies} onToggle={(v) => toggle(setCompetencies, competencies, v)} />
+          <PlainFacetGroup label="Type" options={Object.keys(TYPE_META)} selected={types} onToggle={(v) => toggle(setTypes, types, v)} />
           <button
             type="button"
             onClick={resetAll}
@@ -554,12 +583,34 @@ export function ConceptB() {
             Reset all filters
           </button>
         </div>
-        <div className="flex-1 min-w-0 rounded-2xl border border-brand-border bg-white">
-          <ResultsHeader
-            chips={chips}
-            right={<SegToggle options={RESULTS_VIEW_OPTIONS} value={resultsView} onChange={setResultsView} />}
-          />
-          {resultsView === 'cards' ? <ResultsCards rows={rows} /> : <ResultRows rows={rows} showDividers={grades.length !== 1} />}
+
+        <div className="flex-1 min-w-0 flex flex-col gap-4">
+          <div className="rounded-2xl border border-brand-border bg-white p-2.5">
+            <div className="flex items-stretch gap-2.5">
+              <div className="relative flex-1">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search guides, videos, worksheets..."
+                  className="w-full pl-11 pr-4 h-11 rounded-full border border-brand-border bg-white text-sm text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+                />
+              </div>
+              <button type="button" className="shrink-0 px-6 h-11 rounded-full text-sm font-semibold bg-dessa-teal text-white hover:bg-dessa-teal/90 transition-colors">
+                Search
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-brand-border bg-white">
+            <ResultsHeader
+              chips={chips}
+              count={rows.length}
+              right={<SegToggle options={RESULTS_VIEW_OPTIONS} value={resultsView} onChange={setResultsView} />}
+            />
+            {resultsView === 'cards' ? <ResultsCards rows={rows} /> : <ResultRows rows={rows} showDividers={grades.length !== 1} />}
+          </div>
         </div>
       </div>
     </div>
@@ -576,10 +627,11 @@ export function ConceptB() {
 export function ConceptC() {
   const grades = SELECTABLE_GRADES.map((g) => ({ label: g, grades: g === 'All Grades' ? SELECTABLE_GRADES : [g] }))
   const [band, setBand] = useState(null)
+  const [search, setSearch] = useState('')
 
   if (!band) {
     return (
-      <div className="pt-28 pb-16 px-6">
+      <div className="pt-10 pb-16 px-6">
         <GateHeading heading="Curriculum Resource Library" subcopy={SUBCOPY} />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
           {grades.map((b) => (
@@ -604,20 +656,18 @@ export function ConceptC() {
 
   return (
     <>
-      <SearchBand />
-      <ResultsExperience
-        key={band.label}
-        grade={band.label}
-        topLeft={
-          <p className="text-sm text-brand-subtext">
-            Browsing <span className="font-semibold text-brand-text">{band.label}</span>
-            {' · '}
-            <button type="button" onClick={() => setBand(null)} className="font-medium text-dessa-teal hover:underline">
-              Browse a different grade
-            </button>
-          </p>
-        }
-      />
+      <SearchBand value={search} onChange={setSearch}>
+        <p className="text-sm">
+          <span className="text-brand-subtext">Resources</span>
+          <span className="mx-1.5 text-brand-border">/</span>
+          <span className="font-semibold text-brand-text">{band.label}</span>
+          <span className="mx-1.5 text-brand-border">·</span>
+          <button type="button" onClick={() => setBand(null)} className="font-medium text-dessa-teal hover:underline">
+            Browse a different grade
+          </button>
+        </p>
+      </SearchBand>
+      <ResultsExperience key={band.label} grade={band.label} query={search} />
     </>
   )
 }
@@ -628,27 +678,6 @@ export function ConceptC() {
 // picking a grade, which sets the `grade` URL param this reads. Left-
 // sidebar filters + right-side row list, structure borrowed from
 // LearningMole's filter sidebar (see the competitive-analysis reference).
-function SidebarFacetGroup({ label, options, selected, onToggle }) {
-  return (
-    <div className="rounded-2xl border border-brand-border bg-white p-4">
-      <p className="text-sm font-semibold text-brand-text mb-3">{label}</p>
-      <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
-        {options.map((opt) => (
-          <label key={opt} className="flex items-center gap-2 text-sm text-brand-text cursor-pointer">
-            <input
-              type="checkbox"
-              checked={selected.includes(opt)}
-              onChange={() => onToggle(opt)}
-              className="accent-dessa-teal w-3.5 h-3.5"
-            />
-            {opt}
-          </label>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // Grade is derived straight from the URL param and never changes without
 // leaving via the nav hover again — no inline "change grade" control here,
 // which reinforces rather than undermines the concept's premise (hovering
@@ -701,9 +730,10 @@ export function ConceptD() {
 // Grade selector redesigned (2026-09-12) from a left-side segmented field
 // into a rounded-full chip floating inside the search bar's right edge,
 // 12px in — reads as a filter chip riding inside the field rather than a
-// separate joined segment, and frees the field from needing a visible
-// Search button (Enter submits, same handleSubmit logic as before: no
-// grade yet just reopens this same dropdown instead of searching blind).
+// separate joined segment. A visible Search button now sits just to the
+// right of that chip (both in one right-anchored cluster) — Enter still
+// submits too, but a field with no visible way to submit besides Enter
+// isn't a safe assumption for every user to discover.
 function PairedSearchField({ grade, onGradeChange, query, onQueryChange, open, onOpenChange, onSubmit }) {
   return (
     <div className="relative flex items-center h-12 w-full max-w-2xl rounded-full border border-brand-border bg-white shadow-sm">
@@ -716,42 +746,51 @@ function PairedSearchField({ grade, onGradeChange, query, onQueryChange, open, o
           if (e.key === 'Enter') onSubmit()
         }}
         placeholder="Search guides, videos, worksheets..."
-        className="w-full h-full pl-12 pr-36 text-sm text-brand-text placeholder:text-brand-subtext bg-transparent rounded-full focus:outline-none"
+        className="w-full h-full pl-12 pr-56 text-sm text-brand-text placeholder:text-brand-subtext bg-transparent rounded-full focus:outline-none"
       />
-      <Popover.Root open={open} onOpenChange={onOpenChange}>
-        <Popover.Trigger asChild>
-          <button
-            type="button"
-            className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pl-3.5 pr-2.5 h-8 rounded-full text-xs font-semibold bg-dessa-tealLight text-dessa-teal hover:bg-dessa-teal/20 transition-colors"
-          >
-            {grade || 'Grade'}
-            <ChevronDown size={14} />
-          </button>
-        </Popover.Trigger>
-        <Popover.Portal>
-          <Popover.Content
-            align="end"
-            sideOffset={8}
-            className="z-30 w-56 max-h-72 overflow-y-auto bg-white border border-brand-border rounded-xl shadow-lg outline-none p-1.5"
-          >
-            {SELECTABLE_GRADES.map((g) => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => {
-                  onGradeChange(g)
-                  onOpenChange(false)
-                }}
-                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-                  g === grade ? 'bg-dessa-tealLight text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
-                }`}
-              >
-                {g}
-              </button>
-            ))}
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+        <Popover.Root open={open} onOpenChange={onOpenChange}>
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-1 pl-3.5 pr-2.5 h-8 rounded-full text-xs font-semibold bg-dessa-tealLight text-dessa-teal hover:bg-dessa-teal/20 transition-colors"
+            >
+              {grade || 'Grade'}
+              <ChevronDown size={14} />
+            </button>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              align="end"
+              sideOffset={8}
+              className="z-30 w-56 max-h-72 overflow-y-auto bg-white border border-brand-border rounded-xl shadow-lg outline-none p-1.5"
+            >
+              {SELECTABLE_GRADES.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => {
+                    onGradeChange(g)
+                    onOpenChange(false)
+                  }}
+                  className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
+                    g === grade ? 'bg-dessa-tealLight text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+        <button
+          type="button"
+          onClick={onSubmit}
+          className="shrink-0 h-8 px-4 rounded-full text-xs font-semibold bg-dessa-teal text-white hover:bg-dessa-teal/90 transition-colors"
+        >
+          Search
+        </button>
+      </div>
     </div>
   )
 }
@@ -820,7 +859,7 @@ export function ConceptE() {
           />
         </div>
       </div>
-      <ResultsExperience key={activeGrade} grade={activeGrade} />
+      <ResultsExperience key={activeGrade} grade={activeGrade} query={query} />
     </>
   )
 }
