@@ -596,7 +596,10 @@ const RESULTS_VIEW_OPTIONS = [
 // leaving the page.
 function ResultsExperience({ grade, topLeft }) {
   const { resultsView, setResultsView } = useResourcesConcept()
-  const [grades, setGrades] = useState([])
+  // Seeded from the entry gate's grade (same convention as ResultsDashE),
+  // so the Grade facet reflects what you actually picked to get here
+  // instead of landing empty/unchecked.
+  const [grades, setGrades] = useState(() => (grade === 'All Grades' ? [...SELECTABLE_GRADES] : [grade]))
   const [courseTypes, setCourseTypes] = useState([])
   const [competencies, setCompetencies] = useState([])
   const [types, setTypes] = useState([])
@@ -613,8 +616,11 @@ function ResultsExperience({ grade, topLeft }) {
     setTypes([])
   }
 
-  const matchGrades = grade === 'All Grades' ? SELECTABLE_GRADES : [grade]
-  let rows = MOCK_RESOURCES.filter((r) => matchGrades.includes(r.grade))
+  // No separate hard grade constraint from the entry gate — `grades` above
+  // already starts seeded to it, but from here it's a facet like any
+  // other (same convention as ResultsDashE), so clearing it means "no
+  // grade restriction" instead of silently re-imposing the entry grade.
+  let rows = MOCK_RESOURCES
   if (grades.length) rows = rows.filter((r) => grades.includes(r.grade))
   const q = ownQuery.trim().toLowerCase()
   if (q) rows = rows.filter((r) => r.title.toLowerCase().includes(q))
@@ -1077,8 +1083,8 @@ function PairedSearchField({ grade, onGradeChange, query, onQueryChange, open, o
                 initial={{ x: 0 }}
                 animate={showGradeError ? { x: [0, -4, 4, -3, 3, 0] } : { x: 0 }}
                 transition={{ duration: 0.4, ease: 'easeInOut' }}
-                className={`flex items-center gap-1 pl-3.5 pr-2.5 h-8 rounded-full text-xs font-semibold bg-dessa-tealLight text-dessa-teal hover:bg-dessa-teal/20 transition-colors border-2 ${
-                  showGradeError ? 'border-state-error' : 'border-transparent'
+                className={`flex items-center gap-1 pl-3.5 pr-2.5 h-8 rounded-full text-xs font-semibold bg-dessa-tealLight text-dessa-teal hover:bg-dessa-teal/20 transition-colors border-[1.5px] ${
+                  showGradeError ? 'border-state-error/90' : 'border-transparent'
                 }`}
               >
                 {grade || gradePlaceholder}
@@ -1314,10 +1320,10 @@ export function ConceptE() {
             Resource Library
           </span>
           <h1 className="text-[38px] font-semibold text-brand-text max-w-2xl mb-4 leading-[1.15]">
-            Everything you need to teach, by grade
+            Everything you need to teach, by grade level
           </h1>
           <p className="text-base text-brand-subtext max-w-xl mb-6">
-            Lesson videos, worksheets, and guides organized by grade level and competency.
+            Lesson videos, worksheets, and guides organized by grade level.
           </p>
           <PairedSearchField
             grade={pendingGrade}
