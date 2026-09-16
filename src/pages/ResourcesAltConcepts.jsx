@@ -1245,7 +1245,7 @@ function ResultsDashE({ grade, query }) {
   rows = [...rows].sort((a, b) => (sortKey === 'grade' ? a.grade.localeCompare(b.grade) : a.title.localeCompare(b.title)))
 
   return (
-    <div className="px-6 pt-6 pb-16">
+    <div className="px-6 pb-16">
       <FilterBarShared
         grades={[selectedGrade]}
         courseTypes={courseTypes}
@@ -1396,8 +1396,8 @@ export function ConceptE() {
 
   return (
     <>
-      <div className="w-screen mx-[calc(50%-50vw)] bg-brand-bg border-b border-brand-border sticky top-14 z-40">
-        <div className="px-6 pt-[1.35rem] pb-4 flex justify-center">
+      <div className="w-screen mx-[calc(50%-50vw)] bg-brand-bg sticky top-14 z-40">
+        <div className="px-6 pt-[1.35rem] pb-4 flex justify-start">
           <PairedSearchField
             grade={pendingGrade}
             onGradeChange={(g) => {
