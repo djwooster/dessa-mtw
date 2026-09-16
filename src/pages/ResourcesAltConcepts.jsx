@@ -369,15 +369,18 @@ function ResultRows({ rows, showDividers, onSelect }) {
                 isLast ? 'rounded-b-2xl' : 'border-b border-brand-border'
               }`}
             >
-              {/* Title and description are flexible + truncating (not
-                  fixed pixel widths) so this row degrades gracefully when
-                  its container is narrower than a full-width page — e.g.
+              {/* Title/unit is a fixed (but still shrinkable) width rather
+                  than flex-1, so the description column's left edge lands
+                  in the same place on every row — with both columns as
+                  flex-1, that boundary used to be wherever the trailing
+                  badge cluster's own (row-by-row varying) width happened to
+                  leave it. No shrink-0 here though: it still compresses
+                  via min-w-0 + truncate rather than overflowing when the
+                  container is narrower than a full-width page — e.g.
                   Concept B's permanent sidebar eats real width that the
                   no-sidebar "Current" page doesn't have to share. Only the
-                  trailing badge cluster stays shrink-0; everything else
-                  absorbs the squeeze via min-w-0 + truncate instead of
-                  pushing the badges past the visible edge. */}
-              <div className="flex-1 min-w-0">
+                  trailing badge cluster stays shrink-0. */}
+              <div className="w-64 min-w-0">
                 <p className="text-[16px] font-semibold text-brand-text truncate">{r.title}</p>
                 <p className="text-xs text-brand-subtext truncate mt-0.5">{r.unit}</p>
               </div>
@@ -500,8 +503,16 @@ function ResultsCards({ rows, onSelect }) {
 // Grade is a facet here too as of the same change, rather than staying
 // fixed-by-entry-gate-only, so any concept using this bar can broaden/
 // re-narrow past whatever grade got you here without leaving the page.
-function FilterBarShared({ grades, courseTypes, competencies, types, onToggleGrade, onToggleCourseType, onToggleCompetency, onToggleType, onResetAll }) {
+// Single-select (radio, not checkbox) — you're always looking at exactly
+// one grade scope (a specific grade, or "All Grades") at a time, never a
+// combination of several, unlike the other three facets.
+function FilterBarShared({ grades, courseTypes, competencies, types, onSelectGrade, onToggleCourseType, onToggleCompetency, onToggleType, onResetAll }) {
   const [expanded, setExpanded] = useState(false)
+  // A specific grade counts as "active" the same way a non-empty
+  // Course Type/Competency/Type selection does — "All Grades" is the
+  // unrestricted default, not a real filter — so this dot means the same
+  // thing whether it's Grade or any other facet that's engaged.
+  const hasActiveFilters = (grades[0] && grades[0] !== 'All Grades') || courseTypes.length > 0 || competencies.length > 0 || types.length > 0
   return (
     <div className="mb-6 rounded-2xl border border-brand-border bg-white">
       <button
@@ -511,12 +522,13 @@ function FilterBarShared({ grades, courseTypes, competencies, types, onToggleGra
         className="w-full flex items-center gap-1.5 px-5 py-4 text-base font-semibold text-brand-text"
       >
         Filters
+        {hasActiveFilters && <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-dessa-teal" />}
         <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
       {expanded && (
         <div className="px-5 pt-5 pb-5 border-t border-brand-border">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <FilterField label="Grade" options={SELECTABLE_GRADES} selected={grades} onToggle={onToggleGrade} />
+            <FilterField label="Grade" options={SELECTABLE_GRADES} selected={grades} onToggle={onSelectGrade} single />
             <FilterField label="Course Type" options={COURSE_TYPES} selected={courseTypes} onToggle={onToggleCourseType} />
             <FilterField label="Competency" options={COMPETENCIES} selected={competencies} onToggle={onToggleCompetency} />
             <FilterField
@@ -537,7 +549,7 @@ function FilterBarShared({ grades, courseTypes, competencies, types, onToggleGra
   )
 }
 
-function FilterField({ label, options, selected, onToggle }) {
+function FilterField({ label, options, selected, onToggle, single = false }) {
   const [open, setOpen] = useState(false)
   const summary = selected.length === 0 ? 'All' : selected.length === 1 ? selected[0] : `${selected.length} selected`
   return (
@@ -559,13 +571,21 @@ function FilterField({ label, options, selected, onToggle }) {
               <button
                 key={opt}
                 type="button"
-                onClick={() => onToggle(opt)}
+                role={single ? 'radio' : 'checkbox'}
+                aria-checked={isSelected}
+                onClick={() => {
+                  onToggle(opt)
+                  if (single) setOpen(false)
+                }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left rounded-md transition-colors ${
                   isSelected ? 'bg-[rgba(15,148,172,0.1)] text-brand-text' : 'text-brand-text hover:bg-brand-bg'
                 }`}
               >
-                <span className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${isSelected ? 'bg-dessa-teal border-dessa-teal' : 'border-brand-border'}`}>
-                  {isSelected && <Check size={11} strokeWidth={3} className="text-white" />}
+                <span className={`w-4 h-4 flex items-center justify-center shrink-0 border-2 ${single ? 'rounded-full' : 'rounded'} ${isSelected ? 'bg-dessa-teal border-dessa-teal' : 'border-brand-border'}`}>
+                  {isSelected && (single
+                    ? <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                    : <Check size={11} strokeWidth={3} className="text-white" />
+                  )}
                 </span>
                 <span className="truncate">{opt}</span>
               </button>
@@ -596,10 +616,10 @@ const RESULTS_VIEW_OPTIONS = [
 // leaving the page.
 function ResultsExperience({ grade, topLeft }) {
   const { resultsView, setResultsView } = useResourcesConcept()
-  // Seeded from the entry gate's grade (same convention as ResultsDashE),
-  // so the Grade facet reflects what you actually picked to get here
-  // instead of landing empty/unchecked.
-  const [grades, setGrades] = useState(() => (grade === 'All Grades' ? [...SELECTABLE_GRADES] : [grade]))
+  // Single-select, seeded from the entry gate's grade — always exactly one
+  // value ("All Grades" included), never a combination, so this stays a
+  // plain single value rather than the array the other facets use.
+  const [selectedGrade, setSelectedGrade] = useState(grade)
   const [courseTypes, setCourseTypes] = useState([])
   const [competencies, setCompetencies] = useState([])
   const [types, setTypes] = useState([])
@@ -610,18 +630,18 @@ function ResultsExperience({ grade, topLeft }) {
     setFn(current.includes(value) ? current.filter((v) => v !== value) : [...current, value])
   }
   function resetAll() {
-    setGrades([])
+    setSelectedGrade('All Grades')
     setCourseTypes([])
     setCompetencies([])
     setTypes([])
   }
 
-  // No separate hard grade constraint from the entry gate — `grades` above
-  // already starts seeded to it, but from here it's a facet like any
-  // other (same convention as ResultsDashE), so clearing it means "no
-  // grade restriction" instead of silently re-imposing the entry grade.
+  // No separate hard grade constraint from the entry gate — `selectedGrade`
+  // above already starts seeded to it, but from here it's a facet like any
+  // other (same convention as ResultsDashE), so switching it means the
+  // entry grade no longer applies.
   let rows = MOCK_RESOURCES
-  if (grades.length) rows = rows.filter((r) => grades.includes(r.grade))
+  if (selectedGrade !== 'All Grades') rows = rows.filter((r) => r.grade === selectedGrade)
   const q = ownQuery.trim().toLowerCase()
   if (q) rows = rows.filter((r) => r.title.toLowerCase().includes(q))
   if (courseTypes.length) rows = rows.filter((r) => courseTypes.includes(r.courseType))
@@ -629,14 +649,17 @@ function ResultsExperience({ grade, topLeft }) {
   if (types.length) rows = rows.filter((r) => types.includes(r.type))
 
   const filterProps = {
-    grades, courseTypes, competencies, types,
-    onToggleGrade: (v) => toggle(setGrades, grades, v),
+    grades: [selectedGrade], courseTypes, competencies, types,
+    onSelectGrade: setSelectedGrade,
     onToggleCourseType: (v) => toggle(setCourseTypes, courseTypes, v),
     onToggleCompetency: (v) => toggle(setCompetencies, competencies, v),
     onToggleType: (v) => toggle(setTypes, types, v),
     onResetAll: resetAll,
   }
-  const chips = [...grades, ...courseTypes, ...competencies, ...types.map((t) => TYPE_META[t].label)]
+  // Grade no longer shows as its own chip here (2026-09-16) — with grade
+  // single-select and basically always "on," a permanent pill just read as
+  // clutter/redundant with the Filters bar's own dot indicator below.
+  const chips = [...courseTypes, ...competencies, ...types.map((t) => TYPE_META[t].label)]
 
   return (
     <div className="px-6 pt-2 pb-16">
@@ -1192,11 +1215,10 @@ function SortByPill({ value, onChange }) {
 }
 
 function ResultsDashE({ grade, query }) {
-  // Grade starts seeded from whichever grade was picked in the search
-  // field's chip (or every grade, if "All Grades"), but from here it's a
-  // pill like any other — multi-select, and clearing it means "no grade
-  // restriction," same convention as Course Type/Competency/Type below.
-  const [grades, setGrades] = useState(() => (grade === 'All Grades' ? [...SELECTABLE_GRADES] : [grade]))
+  // Single-select, seeded from whichever grade was picked in the search
+  // field's chip — always exactly one value ("All Grades" included), never
+  // a combination, same convention as ResultsExperience (C/D) now uses.
+  const [selectedGrade, setSelectedGrade] = useState(grade)
   const [courseTypes, setCourseTypes] = useState([])
   const [competencies, setCompetencies] = useState([])
   const [types, setTypes] = useState([])
@@ -1207,14 +1229,14 @@ function ResultsDashE({ grade, query }) {
     setFn(current.includes(value) ? current.filter((v) => v !== value) : [...current, value])
   }
   function resetAll() {
-    setGrades([])
+    setSelectedGrade('All Grades')
     setCourseTypes([])
     setCompetencies([])
     setTypes([])
   }
 
   let rows = MOCK_RESOURCES
-  if (grades.length) rows = rows.filter((r) => grades.includes(r.grade))
+  if (selectedGrade !== 'All Grades') rows = rows.filter((r) => r.grade === selectedGrade)
   const q = (query || '').trim().toLowerCase()
   if (q) rows = rows.filter((r) => r.title.toLowerCase().includes(q))
   if (courseTypes.length) rows = rows.filter((r) => courseTypes.includes(r.courseType))
@@ -1224,22 +1246,22 @@ function ResultsDashE({ grade, query }) {
 
   return (
     <div className="px-6 pt-6 pb-16">
-      <div className="flex items-center justify-end mb-1">
-        <SortByPill value={sortKey} onChange={setSortKey} />
-      </div>
       <FilterBarShared
-        grades={grades}
+        grades={[selectedGrade]}
         courseTypes={courseTypes}
         competencies={competencies}
         types={types}
-        onToggleGrade={(v) => toggle(setGrades, grades, v)}
+        onSelectGrade={setSelectedGrade}
         onToggleCourseType={(v) => toggle(setCourseTypes, courseTypes, v)}
         onToggleCompetency={(v) => toggle(setCompetencies, competencies, v)}
         onToggleType={(v) => toggle(setTypes, types, v)}
         onResetAll={resetAll}
       />
 
-      <h2 className="text-2xl font-bold text-brand-text mb-4">Resources</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold text-brand-text">Resources</h2>
+        <SortByPill value={sortKey} onChange={setSortKey} />
+      </div>
 
       {rows.length === 0 ? (
         <div className="rounded-2xl border border-brand-border bg-white px-6 py-12 text-center">
