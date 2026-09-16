@@ -12,7 +12,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis,
 } from '../../components/ui/pagination'
-import { schools, SITE_LEADER_SCHOOL } from '../../lib/familyAccessData'
+import { schools, SITE_LEADER_SCHOOLS } from '../../lib/familyAccessData'
 
 const TABS = [
   { key: 'engagement', label: 'Engagement' },
@@ -438,21 +438,6 @@ export default function CurriculumSetup() {
   // control for something that's purely a design-comparison toggle.
   const adminConcept = searchParams.get('adminConcept') || 'c'
 
-  // Site Leader Weekly Goal card — 3 concepts for how the program default is
-  // communicated alongside the site's own picker. A is the current shipped
-  // design (floating "Default" pill + info text below). Switcher rendered
-  // in-card (top-right of this card's own header), unlike every other
-  // concept switcher in this app which lives in Nav.jsx — an intentional
-  // exception per explicit request, not an oversight.
-  const siteLeaderConcept = searchParams.get('siteLeaderConcept') || 'b'
-  // Concept B's info banner layout (2026-09-09): 'new' puts the header/
-  // subheader and the banner in one justify-between row, banner width
-  // hugging its own content; 'old' is the original stacked layout (banner
-  // full-width, on its own row below the subheader). Switcher rendered
-  // inline next to "Weekly goal" so it's only visible when Concept B is
-  // showing.
-  const bannerLayout = searchParams.get('bannerLayout') || 'new'
-
   const [tab, setTab] = useState('engagement')
   const [goal, setGoal] = useState(3)
   const [familyAccessTab, setFamilyAccessTab] = useState('codes')
@@ -779,30 +764,21 @@ export default function CurriculumSetup() {
     toast.success('All sites reset to the program default')
   }
 
-  // Site Leader side — single-site for now (multi-site switching is still
-  // an open question per the ticket). "Customized" is derived, not tracked
-  // separately: this site is custom exactly when it's present in the same
-  // `overrides` array the admin concepts read/write, so a change from
-  // either side shows up immediately on the other.
-  const siteLeaderOverride = overrides.find((o) => o.school.id === SITE_LEADER_SCHOOL.id)
-  const isSiteLeaderCustom = !!siteLeaderOverride
-
-  function useSiteLeaderDefault() {
-    setOverrides((os) => os.filter((o) => o.school.id !== SITE_LEADER_SCHOOL.id))
-  }
-
-  // Picking a day directly customizes this site for that day, no separate
-  // "customize" step first. Picking the day that matches the program
-  // default just reverts to following the default instead of leaving a
-  // redundant override sitting at the same value.
-  function setSiteLeaderGoal(day) {
-    if (day === goal) {
-      useSiteLeaderDefault()
-    } else if (isSiteLeaderCustom) {
-      setOverrides((os) => os.map((o) => (o.school.id === SITE_LEADER_SCHOOL.id ? { ...o, weeklyGoal: day } : o)))
-    } else {
-      setOverrides((os) => [...os, { school: SITE_LEADER_SCHOOL, weeklyGoal: day }])
-    }
+  // Site Leader side — SITE_LEADER_SCHOOLS (2 sites), reusing the exact same
+  // per-row override pattern as the Program Admin's Concept C table below,
+  // just scoped to this Site Leader's own roster instead of the full
+  // district. "Customized" is derived, not tracked separately: a site is
+  // custom exactly when it's present in the same `overrides` array the
+  // admin concepts read/write, so a change from either side shows up
+  // immediately on the other. Picking a value always sets an explicit
+  // override — no separate "reset to default" affordance, same as the
+  // admin table's own GoalColorDropdown cells.
+  function setSiteOverrideGoal(schoolId, day) {
+    setOverrides((os) =>
+      os.some((o) => o.school.id === schoolId)
+        ? os.map((o) => (o.school.id === schoolId ? { ...o, weeklyGoal: day } : o))
+        : [...os, { school: SITE_LEADER_SCHOOLS.find((s) => s.id === schoolId), weeklyGoal: day }]
+    )
   }
 
   // `schools` (familyAccessData.js) is generated in place/suffix/type
@@ -1531,134 +1507,58 @@ export default function CurriculumSetup() {
     </div>
     )}
 
-    {/* Site Leader's own Weekly Goal control (the other half of AP-4933,
+    {/* Site Leader's own Weekly Goal table (the other half of AP-4933,
         previously not built at all — this whole card was just hidden
-        instead). No toggle: the picker itself is always live, so picking a
-        day customizes this site immediately, and picking the program
-        default's own day reverts to following it (see setSiteLeaderGoal).
-        Single-site only (SITE_LEADER_SCHOOL) — multi-site switching is
-        still an open question.
-
-        3 concepts (2026-09-09) for how the program default is communicated
-        alongside the picker — switcher lives in this card's own header
-        (top-right), not Nav, per explicit request:
-        A — current shipped design: a quiet "Default" pill floats above
-            the default's own day, plus an info line below the picker.
-        B — an info banner states the default up front (no floating pill);
-            a "Reset to default" link appears once customized.
-        C — a small bold heading states the default and invites
-            customizing, in place of the plain "Weekly goal" subtext. */}
+        instead). Reuses the exact same table structure as the Program
+        Admin's Concept C table below (Site column with a "Custom" badge,
+        click-to-edit GoalColorDropdown cell) — just scoped to this Site
+        Leader's own SITE_LEADER_SCHOOLS roster instead of the full
+        district, and without the checkbox multi-select/bulk bar, search, or
+        pagination those exist for at 150-site scale — nothing to
+        bulk-select or page through across just 2 sites. No "reset to
+        default" affordance either: picking a value from the dropdown is
+        the only interaction, same as every row in the admin table below. */}
     {isSiteLeaderView && (
     <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
       <div className="p-6">
-        <div className="flex items-start justify-between gap-3 mb-1">
-          <h1 className="text-2xl font-semibold text-brand-text">Curriculum Setup</h1>
-          {/* Commented out 2026-09-09 — Concept B settled on, switcher no
-              longer needs to be user-facing. siteLeaderConcept now defaults
-              to 'b' above; A/C branches below are left implemented in case
-              this comparison needs to be revisited.
-          <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0">
-            {['a', 'b', 'c'].map((value, i) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => {
-                  const next = new URLSearchParams(searchParams)
-                  next.set('siteLeaderConcept', value)
-                  setSearchParams(next)
-                }}
-                aria-label={`Site Leader concept ${value.toUpperCase()}`}
-                className={`px-2 py-1 transition-colors ${i > 0 ? 'border-l border-brand-border' : ''} ${
-                  siteLeaderConcept === value ? 'bg-dessa-teal text-white' : 'text-brand-subtext hover:bg-brand-bg'
-                }`}
-              >
-                {value.toUpperCase()}
-              </button>
-            ))}
-          </div>
-          */}
+        <h1 className="text-2xl font-semibold text-brand-text mb-4">Curriculum Setup</h1>
+        <p className="text-sm font-semibold text-brand-text mb-3">Weekly Goal by Site</p>
+        <div className="rounded-lg border border-brand-border overflow-hidden">
+          <Table>
+            <TableHeader className="bg-brand-bg/60">
+              <TableRow>
+                <TableHead className="normal-case">Site</TableHead>
+                <TableHead className="normal-case text-right">Weekly goal</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {SITE_LEADER_SCHOOLS.map((school) => {
+                const override = overrides.find((o) => o.school.id === school.id)
+                const isCustom = !!override
+                return (
+                  <TableRow key={school.id}>
+                    <TableCell className="py-2 text-[13px] font-medium">
+                      <span className="inline-flex items-center gap-2">
+                        {school.name}
+                        {isCustom && (
+                          <span className="text-xs font-medium text-dessa-teal bg-dessa-tealLight border border-dessa-teal/[7%] rounded px-1 py-0.5 shrink-0">
+                            Custom
+                          </span>
+                        )}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-2 text-right">
+                      <GoalColorDropdown
+                        value={isCustom ? override.weeklyGoal : goal}
+                        onChange={(n) => setSiteOverrideGoal(school.id, n)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
         </div>
-        <p className="text-sm text-brand-subtext mb-6">{SITE_LEADER_SCHOOL.name}</p>
-
-        {siteLeaderConcept === 'b' ? (
-          <>
-            <p className="text-sm font-semibold text-brand-text">Weekly goal</p>
-            <p className="text-sm text-brand-subtext mt-0.5 mb-6 max-w-[680px]">
-              This sets how many days a week users should access their curriculum to stay on track. Your program sets this by default, and you can customize it for this site below if your needs differ.
-            </p>
-            {bannerLayout === 'new' ? (
-              <div className="flex items-center gap-3 mb-3">
-                <GoalPicker
-                  value={isSiteLeaderCustom ? siteLeaderOverride.weeklyGoal : goal}
-                  onChange={setSiteLeaderGoal}
-                />
-                <div className="flex items-center gap-2 rounded-lg bg-brand-bg px-3 py-2 w-fit shrink-0">
-                  <Info size={13} className="shrink-0 text-brand-subtext" />
-                  <p className="text-xs text-brand-subtext whitespace-nowrap">
-                    Your program's weekly goal is <span className="font-semibold text-brand-text">{goal} {goal === 1 ? 'day' : 'days'}</span>.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 rounded-lg bg-brand-bg px-3 py-2 mb-3">
-                  <Info size={13} className="shrink-0 text-brand-subtext" />
-                  <p className="text-xs text-brand-subtext">
-                    Your program's weekly goal is <span className="font-semibold text-brand-text">{goal} {goal === 1 ? 'day' : 'days'}</span>.
-                  </p>
-                </div>
-                <div className="mb-3">
-                  <GoalPicker
-                    value={isSiteLeaderCustom ? siteLeaderOverride.weeklyGoal : goal}
-                    onChange={setSiteLeaderGoal}
-                  />
-                </div>
-              </>
-            )}
-            {isSiteLeaderCustom && (
-              <button
-                type="button"
-                onClick={useSiteLeaderDefault}
-                className="text-xs font-medium text-dessa-teal hover:underline"
-              >
-                Reset to default
-              </button>
-            )}
-          </>
-        ) : siteLeaderConcept === 'c' ? (
-          <>
-            <p className="text-sm font-semibold text-brand-text">Weekly goal</p>
-            <p className="text-xs font-normal text-brand-subtext mt-0.5 mb-3">
-              Program default is {goal} {goal === 1 ? 'day' : 'days'} — set your own for this site below.
-            </p>
-            <div className="mb-4">
-              <GoalPicker
-                value={isSiteLeaderCustom ? siteLeaderOverride.weeklyGoal : goal}
-                onChange={setSiteLeaderGoal}
-              />
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="text-sm font-semibold text-brand-text">Weekly goal</p>
-            <p className="text-sm text-brand-subtext mt-0.5 mb-3">
-              Days per week a user must access a lesson to be on track.
-            </p>
-
-            <div className="mt-2.5 mb-4">
-              <GoalPicker
-                value={isSiteLeaderCustom ? siteLeaderOverride.weeklyGoal : goal}
-                onChange={setSiteLeaderGoal}
-                markValue={goal}
-              />
-            </div>
-
-            <p className="flex items-center gap-1.5 text-xs text-brand-subtext">
-              <Info size={13} className="shrink-0" />
-              Your program admin sets the default and can see if you customize it for your site.
-            </p>
-          </>
-        )}
       </div>
     </div>
     )}

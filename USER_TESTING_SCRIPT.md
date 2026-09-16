@@ -48,11 +48,16 @@ watch how each concept handles "nothing found."
 - **B** — go to `/resources`; everything (sidebar filters + results) is
   visible immediately, no gate.
 - **C** — go to `/resources`; a grade-card grid is the landing screen, click
-  a grade card to enter.
+  a grade card to enter. No search field on this concept anymore — grade
+  cards are the only way in, and filtering happens after that via the
+  Bar/Sidebar toggle, same as D.
 - **D** — after clicking "D" in the switcher (which jumps you to the
   Dashboard), hover "Resources" in the nav and pick a grade from the flyout.
 - **E** — go to `/resources`; grade lives inside the search field itself (a
-  chip on the right edge) — type, or pick the chip, then submit.
+  chip on the right edge) — type, or pick the chip, then submit. Results
+  render as a pill-filter row (Grade/Course Type/Competency/Type, each its
+  own dropdown) over bordered resource rows — a different look from B/C/D's
+  shared filter bar/sidebar, but the same underlying task.
 
 **Task 1 — Happy path**
 > "Find a [type] resource for [grade] on [topic]."
@@ -67,16 +72,22 @@ don't expect the same title to show up in both halves).
 | A | "Find a video lesson for Grade 3." | Any Grade 3 (Self-Awareness) video lesson — every grade has video content. |
 | B/C/D/E | "You teach 3rd grade. Find a worksheet on relationship skills, like active listening." | "Active Listening Worksheet" |
 
-Probe after: How did you get there? Did the path make sense? Anything you
-expected to see that wasn't there?
+Once they've found it, add: **"Now open it."** Clicking a result in every
+concept opens a modal with the resource's title, type, competency, and
+description — this is the actual task completion point, not just spotting
+the right row in a list. Watch whether they naturally click the row/card
+itself or go looking for a button that isn't there.
+
+Probe after: How did you get there? Did the path make sense? Was it obvious
+you could click into the result? Anything you expected to see that wasn't
+there?
 
 **Task 2 — Deliberate dead end**
-> "Now find a [competency] resource for [grade]."
 
 | Concept | Say this | Expected result |
 |---|---|---|
 | A | "Now find a Relationship Skills resource for Grade 3." | Zero results — Grade 3 only ever maps to Self-Awareness in the real curriculum. |
-| B/C/D/E | "Now find a Relationship Skills resource for 12th grade." | Zero results — no 12th-grade row in the mock catalog is tagged Relationship Skills. |
+| B/C/D/E | "Now find an Audio resource on Self-Awareness for Kindergarten." | Zero results — verified empty in the mock catalog. (Note: this combo needed updating once the catalog grew to 15 items/grade — a plain grade+competency combo like the old "12th grade + Relationship Skills" test no longer reliably empty on its own now that coverage is denser; this one adds Type as a third facet to guarantee a real gap.) |
 
 Probe after: What did you expect to happen? Is it clear why nothing showed
 up? Do they know what to do next (clear filters, try a different grade)?
@@ -91,13 +102,13 @@ Does the empty state feel like an answer, or like something broke?
 
 ## Known limitations — don't let these surprise you mid-session
 
-- **Rows and cards in B/C/D/E's results (List and Cards views) don't open
-  anything when clicked.** They're styled as clickable (hover state,
-  pointer cursor) but there's no destination wired up yet. If a participant
-  tries to click into a result to "open" it, that's expected to do nothing
-  right now — worth noting as a reaction, not something to troubleshoot live.
-- Search behavior differs by concept: B, C, and E's search fields filter by
-  title text; D has no search field at all (browse-only, by design).
-- Content is real curriculum data in A, but a small hand-authored 22-item
-  mock catalog in B/C/D/E — don't expect the same resource to exist by the
-  same name in both places.
+- Clicking a result now opens a real modal (title, type, competency,
+  description) in every concept — but it's a simple preview, not actual
+  playable video/PDF content. If a participant expects a video to start
+  playing or a PDF to download, that's expected; note the reaction, it's
+  not a bug to fix live.
+- Search behavior differs by concept: B and E's search fields filter by
+  title text; C and D have no search field at all (browse + filter only).
+- Content is real curriculum data in A, but a separate hand-authored
+  210-item mock catalog in B/C/D/E (15 per grade) — don't expect the same resource to exist
+  by the same name in both places.

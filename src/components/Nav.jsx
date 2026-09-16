@@ -33,8 +33,10 @@ const userMenuItems = [
 ]
 
 const RESOURCES_CONCEPTS = [
-  { value: 'a', label: 'A', title: 'A — Current experience' },
-  { value: 'b', label: 'B', title: 'B — Search hero' },
+  // Commented out 2026-09-16 per request, not deleted — A and B are no
+  // longer part of the reviewer-facing comparison in this switcher.
+  // { value: 'a', label: 'A', title: 'A — Current experience' },
+  // { value: 'b', label: 'B', title: 'B — Search hero' },
   { value: 'c', label: 'C', title: 'C — Visual browse cards' },
   { value: 'd', label: 'D', title: 'D — Nav hover only, no page' },
   { value: 'e', label: 'E', title: 'E — Paired grade + search field' },
@@ -44,7 +46,7 @@ export default function Nav() {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { resourcesConcept, setResourcesConcept } = useResourcesConcept()
+  const { resourcesConcept, setResourcesConcept, setResultsView, bumpReset } = useResourcesConcept()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
@@ -268,37 +270,42 @@ export default function Nav() {
           {/* Resources page-concept switcher (replaces the old search icon,
               2026-09-11) — single place to pick which of the four Resources
               page concepts is active (see resourcesConceptContext.jsx).
-              Visible everywhere, not just on /resources, since picking a
-              letter here only sets the selection — it doesn't navigate you
-              anywhere. D additionally changes the "Resources" nav item
-              above into the hover-triggered grade mega-menu. D is also the
-              one exception to "no navigation": since D's whole premise is
-              that hovering the nav from *any* page is the only way in,
-              picking D also jumps to the Dashboard so that's immediately
-              demonstrable rather than leaving the reviewer wherever they
-              already were (which, if that happened to be /resources
-              itself, would just show D's "hover above" placeholder — a
-              much weaker demo of "works from anywhere"). */}
-          <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0 mr-1">
-            {RESOURCES_CONCEPTS.map(({ value, label, title }, i) => (
-              <button
-                key={value}
-                onClick={() => {
-                  setResourcesConcept(value)
-                  if (value === 'd') navigate('/')
-                }}
-                title={title}
-                aria-label={title}
-                className={`px-2 py-1 transition-colors ${i > 0 ? 'border-l border-brand-border' : ''} ${
-                  resourcesConcept === value
-                    ? 'bg-dessa-teal text-white'
-                    : 'text-brand-subtext hover:bg-brand-bg'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+              Visible everywhere except Curriculum (any /mtw* route) — it
+              only sets the selection, it doesn't navigate you anywhere, but
+              it's noise on a section of the app it has nothing to do with.
+              D additionally changes the "Resources" nav item above into the
+              hover-triggered grade mega-menu. D is also the one exception to
+              "no navigation": since D's whole premise is that hovering the
+              nav from *any* page is the only way in, picking D also jumps
+              to the Dashboard so that's immediately demonstrable rather
+              than leaving the reviewer wherever they already were (which,
+              if that happened to be /resources itself, would just show D's
+              "hover above" placeholder — a much weaker demo of "works from
+              anywhere"). */}
+          {!location.pathname.startsWith('/mtw') && (
+            <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0 mr-1">
+              {RESOURCES_CONCEPTS.map(({ value, label, title }, i) => (
+                <button
+                  key={value}
+                  onClick={() => {
+                    setResourcesConcept(value)
+                    setResultsView('list')
+                    bumpReset()
+                    if (value === 'd') navigate('/')
+                  }}
+                  title={title}
+                  aria-label={title}
+                  className={`px-2 py-1 transition-colors ${i > 0 ? 'border-l border-brand-border' : ''} ${
+                    resourcesConcept === value
+                      ? 'bg-dessa-teal text-white'
+                      : 'text-brand-subtext hover:bg-brand-bg'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           <button className="text-brand-subtext hover:text-brand-text transition-colors p-1.5 rounded hover:bg-brand-bg">
             <HelpCircle size={16} />
           </button>

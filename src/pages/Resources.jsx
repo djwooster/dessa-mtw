@@ -326,7 +326,7 @@ function GateFields({ pending, togglePending, remember, setRemember, onConfirm, 
       <p className={`text-base text-brand-subtext mb-8 ${isLeft ? 'max-w-lg' : 'max-w-md text-center'}`}>
         {isLeft
           ? 'Explore a full range of resources organized by topic and skill area, from student-facing lesson videos and worksheets to tools for school engagement and implementation, built for every grade level.'
-          : 'Browse lesson videos, activity guides, and printable worksheets organized by grade and SEL competency.'}
+          : 'Browse lesson videos, activity guides, and printable worksheets organized by grade and competency.'}
       </p>
       <h6 className="text-xs font-semibold text-[#5B6878] uppercase tracking-wide mb-4">
         Select one or more grade levels
@@ -996,7 +996,7 @@ export default function Resources() {
   // hand off to ResourcesAltConcepts entirely. All of this component's own
   // hooks still run every render regardless of which branch is active, so
   // switching concepts never changes hook call order.
-  const { resourcesConcept } = useResourcesConcept()
+  const { resourcesConcept, resetNonce } = useResourcesConcept()
   // 2026-08-26: manager picked 3C as the final direction for the mandatory
   // grade gate. The Nav switcher that let reviewers flip between 3A/3B/3C
   // via a `?concept=` param has been removed (see Nav.jsx), so `concept`
@@ -1306,10 +1306,10 @@ export default function Resources() {
 
   const gateOpen = selectedGrades.length === 0
 
-  if (resourcesConcept === 'b') return <ConceptB />
-  if (resourcesConcept === 'c') return <ConceptC />
+  if (resourcesConcept === 'b') return <ConceptB key={resetNonce} />
+  if (resourcesConcept === 'c') return <ConceptC key={resetNonce} />
   if (resourcesConcept === 'd') return <ConceptD />
-  if (resourcesConcept === 'e') return <ConceptE />
+  if (resourcesConcept === 'e') return <ConceptE key={resetNonce} />
 
   return (
     <motion.div

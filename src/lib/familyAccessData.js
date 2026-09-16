@@ -25,6 +25,12 @@ export const schools = generateSchools(150)
 
 export const SITE_LEADER_SCHOOL = schools[0]
 
+// This Site Leader oversees 2 sites, not just one — used by Curriculum
+// Setup's Weekly Goal by Site table. SITE_LEADER_SCHOOL above stays
+// untouched since Report2.jsx and FamilyAccessCodes.jsx still key off the
+// single-site case.
+export const SITE_LEADER_SCHOOLS = [schools[0], schools[1]]
+
 export const JOIN_PATH = '/join'
 export const JOIN_URL_DISPLAY = 'app.dessa-mtw.com/join'
 
