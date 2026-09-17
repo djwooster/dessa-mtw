@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { useResourcesConcept } from '../lib/resourcesConceptContext'
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbSeparator } from '../components/ui/breadcrumb'
 
 // ─── Resources — alternate concepts B/C/D/E ────────────────────────────────
 // Rendered by Resources.jsx whenever the nav's A/B/C/D/E switcher (see
@@ -333,7 +334,24 @@ function ResourceDetailModal({ resource, onClose }) {
   )
 }
 
-function ResultRows({ rows, showDividers, onSelect }) {
+// Leading icon tile (2026-09-16, per user-testing feedback) — icon over
+// label, stacked, in place of the trailing icon+label pill. Light tint
+// background (30% opacity, not the near-solid tint the trailing pill's own
+// 10% used, since a bigger tile at 10% read as too washed out) with the
+// type's own color carried through to both the icon and the label text so
+// it reads legibly against that lighter fill instead of white-on-solid.
+// Shared by Concept C's rows (ResultRows below) and Concept E's
+// (ResultsDashE) — Concept D keeps the older trailing-pill treatment.
+function TypeIconTile({ typeMeta }) {
+  return (
+    <div className={`w-16 shrink-0 py-2.5 rounded-xl flex flex-col items-center justify-center gap-1 ${typeMeta.bg} bg-opacity-30`}>
+      <typeMeta.icon size={20} className={typeMeta.color} />
+      <span className={`text-xs font-medium ${typeMeta.color}`}>{typeMeta.label}</span>
+    </div>
+  )
+}
+
+function ResultRows({ rows, showDividers, onSelect, leftIcon = false }) {
   if (rows.length === 0) {
     return (
       <div className="px-6 py-12 text-center">
@@ -369,6 +387,7 @@ function ResultRows({ rows, showDividers, onSelect }) {
                 isLast ? 'rounded-b-2xl' : 'border-b border-brand-border'
               }`}
             >
+              {leftIcon && <TypeIconTile typeMeta={typeMeta} />}
               {/* Title/unit is a fixed (but still shrinkable) width rather
                   than flex-1, so the description column's left edge lands
                   in the same place on every row — with both columns as
@@ -381,15 +400,17 @@ function ResultRows({ rows, showDividers, onSelect }) {
                   no-sidebar "Current" page doesn't have to share. Only the
                   trailing badge cluster stays shrink-0. */}
               <div className="w-64 min-w-0">
-                <p className="text-[16px] font-semibold text-brand-text truncate">{r.title}</p>
+                <p className="text-[15px] font-semibold text-brand-text truncate">{r.title}</p>
                 <p className="text-xs text-brand-subtext truncate mt-0.5">{r.unit}</p>
               </div>
               <p className="hidden lg:block flex-1 min-w-0 truncate text-left text-sm text-brand-subtext">{r.desc}</p>
               <div className="flex items-center gap-3 shrink-0">
-                <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] whitespace-nowrap ${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`}>
-                  <typeMeta.icon size={14} />
-                  <span className="text-xs font-medium">{typeMeta.label}</span>
-                </span>
+                {!leftIcon && (
+                  <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] whitespace-nowrap ${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`}>
+                    <typeMeta.icon size={14} />
+                    <span className="text-xs font-medium">{typeMeta.label}</span>
+                  </span>
+                )}
                 <span className="hidden md:inline-flex items-center px-2.5 py-1 rounded-[5px] bg-brand-bg text-brand-text text-xs font-medium max-w-[160px] truncate">
                   {r.competency}
                 </span>
@@ -609,12 +630,13 @@ const RESULTS_VIEW_OPTIONS = [
 // filter), and now always its own search field above that bar, so the only
 // thing that differs between concepts is how you arrive here (the gate
 // itself) — not what the results look like once you have. `topLeft` is
-// each concept's own way of surfacing/changing the current grade (a
-// "Browse a different grade" link for C, nothing for D since its whole
-// premise is nav-hover-only). The Grade facet inside FilterBarShared lets
+// each concept's own breadcrumb (Resources / {grade} for C, nothing for D
+// since its whole premise is nav-hover-only) — no "change grade" link
+// there anymore (removed 2026-09-16 per user-testing feedback), since the
+// Grade facet inside FilterBarShared lets
 // you broaden/re-narrow past whatever grade the entry gate fixed, without
 // leaving the page.
-function ResultsExperience({ grade, topLeft }) {
+function ResultsExperience({ grade, topLeft, leftIcon = false }) {
   const { resultsView, setResultsView } = useResourcesConcept()
   // Single-select, seeded from the entry gate's grade — always exactly one
   // value ("All Grades" included), never a combination, so this stays a
@@ -686,7 +708,7 @@ function ResultsExperience({ grade, topLeft }) {
           count={rows.length}
           right={<SegToggle options={RESULTS_VIEW_OPTIONS} value={resultsView} onChange={setResultsView} />}
         />
-        {resultsView === 'cards' ? <ResultsCards rows={rows} onSelect={setSelected} /> : <ResultRows rows={rows} showDividers={false} onSelect={setSelected} />}
+        {resultsView === 'cards' ? <ResultsCards rows={rows} onSelect={setSelected} /> : <ResultRows rows={rows} showDividers={false} onSelect={setSelected} leftIcon={leftIcon} />}
       </div>
       <ResourceDetailModal resource={selected} onClose={() => setSelected(null)} />
     </div>
@@ -979,16 +1001,15 @@ export function ConceptC() {
     <ResultsExperience
       key={activeGrade}
       grade={activeGrade}
+      leftIcon
       topLeft={
-        <p className="text-sm">
-          <span className="text-brand-subtext">Resources</span>
-          <span className="mx-1.5 text-brand-border">/</span>
-          <span className="font-semibold text-brand-text">{activeGrade}</span>
-          <span className="mx-1.5 text-brand-border">·</span>
-          <button type="button" onClick={() => setActiveGrade(null)} className="font-medium text-dessa-teal hover:underline">
-            Browse a different grade
-          </button>
-        </p>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>Resources</BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>{activeGrade}</BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
       }
     />
   )
@@ -1026,11 +1047,13 @@ export function ConceptD() {
       key={selectedGrade}
       grade={selectedGrade}
       topLeft={
-        <p className="text-sm">
-          <span className="text-brand-subtext">Resources</span>
-          <span className="mx-1.5 text-brand-border">/</span>
-          <span className="font-semibold text-brand-text">{selectedGrade}</span>
-        </p>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>Resources</BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>{selectedGrade}</BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
       }
     />
   )
@@ -1283,18 +1306,12 @@ function ResultsDashE({ grade, query }) {
                 }}
                 className="flex items-center gap-4 p-4 rounded-2xl border border-brand-border bg-white hover:border-dessa-teal/30 transition-colors cursor-pointer"
               >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${typeMeta.bg}`}>
-                  <typeMeta.icon size={20} className="text-white" />
-                </div>
+                <TypeIconTile typeMeta={typeMeta} />
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-semibold text-brand-text truncate">{r.title}</p>
                   <p className="text-sm text-brand-subtext truncate mt-0.5">{r.unit} · {r.grade}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full whitespace-nowrap ${typeMeta.bg} bg-opacity-10 ${typeMeta.color} text-xs font-medium`}>
-                    <typeMeta.icon size={12} />
-                    {typeMeta.label}
-                  </span>
                   <span className="hidden md:inline-flex px-2.5 py-1 rounded-full bg-brand-bg text-brand-text text-xs font-medium max-w-[160px] truncate">
                     {r.competency}
                   </span>

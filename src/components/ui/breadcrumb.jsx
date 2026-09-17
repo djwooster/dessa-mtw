@@ -42,7 +42,7 @@ export function BreadcrumbPage({ className, ...props }) {
 
 export function BreadcrumbSeparator({ className, ...props }) {
   return (
-    <li aria-hidden className={cn("text-brand-border", className)} {...props}>
+    <li aria-hidden className={cn("text-brand-subtext", className)} {...props}>
       <ChevronRight size={14} />
     </li>
   );
