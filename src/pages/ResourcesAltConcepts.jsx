@@ -335,18 +335,17 @@ function ResourceDetailModal({ resource, onClose }) {
 }
 
 // Leading icon tile (2026-09-16, per user-testing feedback) — icon over
-// label, stacked, in place of the trailing icon+label pill. Light tint
-// background (30% opacity, not the near-solid tint the trailing pill's own
-// 10% used, since a bigger tile at 10% read as too washed out) with the
-// type's own color carried through to both the icon and the label text so
-// it reads legibly against that lighter fill instead of white-on-solid.
+// label, stacked, in place of the trailing icon+label pill. Same light
+// 10% tint the trailing pill itself always used, with the type's own
+// color carried through to both the icon and the label text so it reads
+// legibly against that lighter fill instead of white-on-solid.
 // Shared by Concept C's rows (ResultRows below) and Concept E's
 // (ResultsDashE) — Concept D keeps the older trailing-pill treatment.
 function TypeIconTile({ typeMeta }) {
   return (
-    <div className={`w-16 shrink-0 py-2.5 rounded-xl flex flex-col items-center justify-center gap-1 ${typeMeta.bg} bg-opacity-30`}>
+    <div className={`w-12 h-12 shrink-0 rounded-lg flex flex-col items-center justify-center gap-0.5 ${typeMeta.bg} bg-opacity-10`}>
       <typeMeta.icon size={20} className={typeMeta.color} />
-      <span className={`text-xs font-medium ${typeMeta.color}`}>{typeMeta.label}</span>
+      <span className={`text-[11px] font-medium leading-none truncate max-w-full px-1 ${typeMeta.color}`}>{typeMeta.label}</span>
     </div>
   )
 }
@@ -529,6 +528,15 @@ function ResultsCards({ rows, onSelect }) {
 // combination of several, unlike the other three facets.
 function FilterBarShared({ grades, courseTypes, competencies, types, onSelectGrade, onToggleCourseType, onToggleCompetency, onToggleType, onResetAll }) {
   const [expanded, setExpanded] = useState(false)
+  // Which single field's dropdown is open, if any ('grade'/'courseType'/
+  // 'competency'/'type'/null) — lifted up here, shared across all four
+  // FilterFields below, instead of each one owning its own open state.
+  // That's what makes "only one open at a time" and "clicking a different
+  // filter closes the first one" work: they're all just reading/writing
+  // the same value, so opening one is what closes whichever was open.
+  // Reset to null on collapse too, so re-expanding later doesn't reopen
+  // whatever was left open when the section collapsed.
+  const [openField, setOpenField] = useState(null)
   // A specific grade counts as "active" the same way a non-empty
   // Course Type/Competency/Type selection does — "All Grades" is the
   // unrestricted default, not a real filter — so this dot means the same
@@ -538,7 +546,10 @@ function FilterBarShared({ grades, courseTypes, competencies, types, onSelectGra
     <div className="mb-6 rounded-2xl border border-brand-border bg-white">
       <button
         type="button"
-        onClick={() => setExpanded((e) => !e)}
+        onClick={() => {
+          setExpanded((e) => !e)
+          setOpenField(null)
+        }}
         aria-expanded={expanded}
         className="w-full flex items-center gap-1.5 px-5 py-4 text-base font-semibold text-brand-text"
       >
@@ -549,14 +560,38 @@ function FilterBarShared({ grades, courseTypes, competencies, types, onSelectGra
       {expanded && (
         <div className="px-5 pt-5 pb-5 border-t border-brand-border">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <FilterField label="Grade" options={SELECTABLE_GRADES} selected={grades} onToggle={onSelectGrade} single />
-            <FilterField label="Course Type" options={COURSE_TYPES} selected={courseTypes} onToggle={onToggleCourseType} />
-            <FilterField label="Competency" options={COMPETENCIES} selected={competencies} onToggle={onToggleCompetency} />
+            <FilterField
+              label="Grade"
+              options={SELECTABLE_GRADES}
+              selected={grades}
+              onToggle={onSelectGrade}
+              single
+              open={openField === 'grade'}
+              onOpenChange={(o) => setOpenField(o ? 'grade' : null)}
+            />
+            <FilterField
+              label="Course Type"
+              options={COURSE_TYPES}
+              selected={courseTypes}
+              onToggle={onToggleCourseType}
+              open={openField === 'courseType'}
+              onOpenChange={(o) => setOpenField(o ? 'courseType' : null)}
+            />
+            <FilterField
+              label="Competency"
+              options={COMPETENCIES}
+              selected={competencies}
+              onToggle={onToggleCompetency}
+              open={openField === 'competency'}
+              onOpenChange={(o) => setOpenField(o ? 'competency' : null)}
+            />
             <FilterField
               label="Type"
               options={Object.keys(TYPE_META).map((t) => TYPE_META[t].label)}
               selected={types.map((t) => TYPE_META[t].label)}
               onToggle={(label) => onToggleType(Object.keys(TYPE_META).find((t) => TYPE_META[t].label === label))}
+              open={openField === 'type'}
+              onOpenChange={(o) => setOpenField(o ? 'type' : null)}
             />
           </div>
           <div className="flex items-center gap-4 mt-5">
@@ -570,50 +605,63 @@ function FilterBarShared({ grades, courseTypes, competencies, types, onSelectGra
   )
 }
 
-function FilterField({ label, options, selected, onToggle, single = false }) {
-  const [open, setOpen] = useState(false)
+// Radix Popover instead of a plain absolutely-positioned div (2026-09-17,
+// per user-testing feedback — these used to each own their own open state,
+// so all four could sit open at once, and none of them closed on an
+// outside click). `open`/`onOpenChange` are controlled by FilterBarShared
+// above, not local state, so opening one is what closes whichever else
+// was open; Radix's own outside-click/Escape dismissal handles closing on
+// a click anywhere else on the page for free.
+function FilterField({ label, options, selected, onToggle, single = false, open, onOpenChange }) {
   const summary = selected.length === 0 ? 'All' : selected.length === 1 ? selected[0] : `${selected.length} selected`
   return (
-    <div className="flex flex-col gap-1.5 relative">
+    <div className="flex flex-col gap-1.5">
       <p className="text-sm font-semibold text-brand-text">{label}</p>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-2 h-10 px-3 text-sm border border-brand-border rounded-md bg-white text-brand-subtext hover:border-dessa-teal/50 transition-colors"
-      >
-        <span className="truncate text-left">{summary}</span>
-        <ChevronDown size={14} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 w-full z-30 bg-white border border-brand-border rounded-xl shadow-lg p-2 max-h-56 overflow-y-auto">
-          {options.map((opt) => {
-            const isSelected = selected.includes(opt)
-            return (
-              <button
-                key={opt}
-                type="button"
-                role={single ? 'radio' : 'checkbox'}
-                aria-checked={isSelected}
-                onClick={() => {
-                  onToggle(opt)
-                  if (single) setOpen(false)
-                }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left rounded-md transition-colors ${
-                  isSelected ? 'bg-[rgba(15,148,172,0.1)] text-brand-text' : 'text-brand-text hover:bg-brand-bg'
-                }`}
-              >
-                <span className={`w-4 h-4 flex items-center justify-center shrink-0 border-2 ${single ? 'rounded-full' : 'rounded'} ${isSelected ? 'bg-dessa-teal border-dessa-teal' : 'border-brand-border'}`}>
-                  {isSelected && (single
-                    ? <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                    : <Check size={11} strokeWidth={3} className="text-white" />
-                  )}
-                </span>
-                <span className="truncate">{opt}</span>
-              </button>
-            )
-          })}
-        </div>
-      )}
+      <Popover.Root open={open} onOpenChange={onOpenChange}>
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className="w-full flex items-center justify-between gap-2 h-10 px-3 text-sm border border-brand-border rounded-md bg-white text-brand-subtext hover:border-dessa-teal/50 transition-colors"
+          >
+            <span className="truncate text-left">{summary}</span>
+            <ChevronDown size={14} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            align="start"
+            sideOffset={4}
+            className="z-30 w-[--radix-popover-trigger-width] bg-white border border-brand-border rounded-xl shadow-lg outline-none p-2 max-h-56 overflow-y-auto"
+          >
+            {options.map((opt) => {
+              const isSelected = selected.includes(opt)
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  role={single ? 'radio' : 'checkbox'}
+                  aria-checked={isSelected}
+                  onClick={() => {
+                    onToggle(opt)
+                    if (single) onOpenChange(false)
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left rounded-md transition-colors ${
+                    isSelected ? 'bg-[rgba(15,148,172,0.1)] text-brand-text' : 'text-brand-text hover:bg-brand-bg'
+                  }`}
+                >
+                  <span className={`w-4 h-4 flex items-center justify-center shrink-0 border-2 ${single ? 'rounded-full' : 'rounded'} ${isSelected ? 'bg-dessa-teal border-dessa-teal' : 'border-brand-border'}`}>
+                    {isSelected && (single
+                      ? <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                      : <Check size={11} strokeWidth={3} className="text-white" />
+                    )}
+                  </span>
+                  <span className="truncate">{opt}</span>
+                </button>
+              )
+            })}
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
     </div>
   )
 }
