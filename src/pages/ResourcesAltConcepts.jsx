@@ -34,7 +34,11 @@ const COMPETENCIES = ['Self-Awareness', 'Self-Management', 'Relationship Skills'
 const TYPE_META = {
   Video: { icon: Video, label: 'Video', color: 'text-dessa-magenta', bg: 'bg-dessa-magenta' },
   PDF: { icon: FileText, label: 'PDF', color: 'text-mtw-purple', bg: 'bg-mtw-purple' },
-  Worksheet: { icon: ClipboardList, label: 'Worksheet', color: 'text-mtw-coral', bg: 'bg-mtw-coral' },
+  // tileLabel is TypeIconTile's own shorter stand-in for the label, used
+  // only there — everywhere else (Type filter options, other badges)
+  // still reads the real "Worksheet", since that's not too long to fit
+  // where it's actually used elsewhere. Falls back to `label` when unset.
+  Worksheet: { icon: ClipboardList, label: 'Worksheet', tileLabel: 'Sheet', color: 'text-mtw-coral', bg: 'bg-mtw-coral' },
   Audio: { icon: Mic, label: 'Audio', color: 'text-mtw-blue', bg: 'bg-mtw-blue' },
   Webinar: { icon: Presentation, label: 'Webinar', color: 'text-mtw-green', bg: 'bg-mtw-green' },
   Lesson: { icon: PlayCircle, label: 'Lesson', color: 'text-mtw-amber', bg: 'bg-mtw-amber' },
@@ -345,12 +349,12 @@ function TypeIconTile({ typeMeta }) {
   return (
     <div className={`w-12 h-12 shrink-0 rounded-lg flex flex-col items-center justify-center gap-0.5 ${typeMeta.bg} bg-opacity-10`}>
       <typeMeta.icon size={20} className={typeMeta.color} />
-      <span className={`text-[11px] font-medium leading-none truncate max-w-full px-1 ${typeMeta.color}`}>{typeMeta.label}</span>
+      <span className={`text-[11px] font-medium leading-none truncate max-w-full px-1 ${typeMeta.color}`}>{typeMeta.tileLabel || typeMeta.label}</span>
     </div>
   )
 }
 
-function ResultRows({ rows, showDividers, onSelect, leftIcon = false }) {
+function ResultRows({ rows, showDividers, onSelect, leftIcon = false, badgeAboveTitle = false }) {
   if (rows.length === 0) {
     return (
       <div className="px-6 py-12 text-center">
@@ -397,14 +401,26 @@ function ResultRows({ rows, showDividers, onSelect, leftIcon = false }) {
                   container is narrower than a full-width page — e.g.
                   Concept B's permanent sidebar eats real width that the
                   no-sidebar "Current" page doesn't have to share. Only the
-                  trailing badge cluster stays shrink-0. */}
-              <div className="w-64 min-w-0">
+                  trailing badge cluster stays shrink-0. Concept D
+                  (badgeAboveTitle, 2026-09-17 per user-testing feedback)
+                  widens this column instead (w-80, not flex-1 — titles
+                  were clipping at w-64) and moves the type badge above the
+                  title instead of into the trailing cluster, which is why
+                  it's the one variant that isn't shrink-0-adjacent to a
+                  varying badge cluster width the same way. */}
+              <div className={badgeAboveTitle ? 'w-80 min-w-0' : 'w-64 min-w-0'}>
+                {badgeAboveTitle && (
+                  <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] whitespace-nowrap mb-1.5 ${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`}>
+                    <typeMeta.icon size={14} />
+                    <span className="text-xs font-medium">{typeMeta.label}</span>
+                  </span>
+                )}
                 <p className="text-[15px] font-semibold text-brand-text truncate">{r.title}</p>
                 <p className="text-xs text-brand-subtext truncate mt-0.5">{r.unit}</p>
               </div>
-              <p className="hidden lg:block flex-1 min-w-0 truncate text-left text-sm text-brand-subtext">{r.desc}</p>
+              <p className={`hidden lg:block flex-1 min-w-0 truncate text-left text-sm text-brand-subtext ${badgeAboveTitle ? 'ml-6' : ''}`}>{r.desc}</p>
               <div className="flex items-center gap-3 shrink-0">
-                {!leftIcon && (
+                {!leftIcon && !badgeAboveTitle && (
                   <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] whitespace-nowrap ${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`}>
                     <typeMeta.icon size={14} />
                     <span className="text-xs font-medium">{typeMeta.label}</span>
@@ -684,7 +700,7 @@ const RESULTS_VIEW_OPTIONS = [
 // Grade facet inside FilterBarShared lets
 // you broaden/re-narrow past whatever grade the entry gate fixed, without
 // leaving the page.
-function ResultsExperience({ grade, topLeft, leftIcon = false }) {
+function ResultsExperience({ grade, topLeft, leftIcon = false, badgeAboveTitle = false }) {
   const { resultsView, setResultsView } = useResourcesConcept()
   // Single-select, seeded from the entry gate's grade — always exactly one
   // value ("All Grades" included), never a combination, so this stays a
@@ -756,7 +772,7 @@ function ResultsExperience({ grade, topLeft, leftIcon = false }) {
           count={rows.length}
           right={<SegToggle options={RESULTS_VIEW_OPTIONS} value={resultsView} onChange={setResultsView} />}
         />
-        {resultsView === 'cards' ? <ResultsCards rows={rows} onSelect={setSelected} /> : <ResultRows rows={rows} showDividers={false} onSelect={setSelected} leftIcon={leftIcon} />}
+        {resultsView === 'cards' ? <ResultsCards rows={rows} onSelect={setSelected} /> : <ResultRows rows={rows} showDividers={false} onSelect={setSelected} leftIcon={leftIcon} badgeAboveTitle={badgeAboveTitle} />}
       </div>
       <ResourceDetailModal resource={selected} onClose={() => setSelected(null)} />
     </div>
@@ -1094,6 +1110,7 @@ export function ConceptD() {
     <ResultsExperience
       key={selectedGrade}
       grade={selectedGrade}
+      badgeAboveTitle
       topLeft={
         <Breadcrumb>
           <BreadcrumbList>
