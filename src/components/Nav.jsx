@@ -32,21 +32,11 @@ const userMenuItems = [
   { label: 'Process Journal', to: '/process-journal', icon: ScrollText },
 ]
 
-const RESOURCES_CONCEPTS = [
-  // Commented out 2026-09-16 per request, not deleted — A and B are no
-  // longer part of the reviewer-facing comparison in this switcher.
-  // { value: 'a', label: 'A', title: 'A — Current experience' },
-  // { value: 'b', label: 'B', title: 'B — Search hero' },
-  { value: 'c', label: 'C', title: 'C — Visual browse cards' },
-  { value: 'd', label: 'D', title: 'D — Nav hover only, no page' },
-  { value: 'e', label: 'E', title: 'E — Paired grade + search field' },
-]
-
 export default function Nav() {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { resourcesConcept, setResourcesConcept, setResultsView, bumpReset } = useResourcesConcept()
+  const { resourcesConcept, resultsLayout, setResultsLayout } = useResourcesConcept()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
@@ -267,36 +257,19 @@ export default function Nav() {
               ))}
             </div>
           )}
-          {/* Resources page-concept switcher (replaces the old search icon,
-              2026-09-11) — single place to pick which of the four Resources
-              page concepts is active (see resourcesConceptContext.jsx).
-              Visible everywhere except Curriculum (any /mtw* route) — it
-              only sets the selection, it doesn't navigate you anywhere, but
-              it's noise on a section of the app it has nothing to do with.
-              D additionally changes the "Resources" nav item above into the
-              hover-triggered grade mega-menu. D is also the one exception to
-              "no navigation": since D's whole premise is that hovering the
-              nav from *any* page is the only way in, picking D also jumps
-              to the Dashboard so that's immediately demonstrable rather
-              than leaving the reviewer wherever they already were (which,
-              if that happened to be /resources itself, would just show D's
-              "hover above" placeholder — a much weaker demo of "works from
-              anywhere"). */}
+          {/* Concept D layout switcher (2026-09-18) — Rows vs. the new
+              condensed Table, for comparing side by side in manager
+              review. Pure preference, same "visible everywhere except
+              Curriculum, doesn't navigate" convention the old B/C/D/E
+              concept switcher used before it was retired. */}
           {!location.pathname.startsWith('/mtw') && (
             <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0 mr-1">
-              {RESOURCES_CONCEPTS.map(({ value, label, title }, i) => (
+              {[{ value: 'rows', label: 'Rows' }, { value: 'table', label: 'Table' }].map(({ value, label }, i) => (
                 <button
                   key={value}
-                  onClick={() => {
-                    setResourcesConcept(value)
-                    setResultsView('list')
-                    bumpReset()
-                    if (value === 'd') navigate('/')
-                  }}
-                  title={title}
-                  aria-label={title}
-                  className={`px-2 py-1 transition-colors ${i > 0 ? 'border-l border-brand-border' : ''} ${
-                    resourcesConcept === value
+                  onClick={() => setResultsLayout(value)}
+                  className={`px-2.5 py-1 transition-colors ${i > 0 ? 'border-l border-brand-border' : ''} ${
+                    resultsLayout === value
                       ? 'bg-dessa-teal text-white'
                       : 'text-brand-subtext hover:bg-brand-bg'
                   }`}

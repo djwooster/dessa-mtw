@@ -32,7 +32,8 @@ A small, reusable set of styles — not exhaustive component coverage, just enou
 | H1 | 36px (`text-4xl`) semibold | `brand-text` | Page hero headline only |
 | H2 | 24px (`text-2xl`) semibold | `brand-text` | Section headers |
 | H3 | 18px (`text-lg`) semibold | `brand-text` | Card titles |
-| Eyebrow/Label | 13px (`text-xs`) semibold, uppercase, tracking-wide | `brand-subtext` | Facet titles, column headers, small caps labels |
+| Eyebrow/Label | 13px (`text-xs`) semibold, uppercase, tracking-wide | `brand-subtext` | Facet titles, small caps labels |
+| Table Header | 14px (`text-sm`) semibold, sentence case | `brand-text` on `brand-bg` | Table/list column headers (see `ui/table.jsx`'s `TableHeader`/`TableHead`) |
 | Body | 14px (`text-sm`) regular | `brand-text` | Default UI copy, table cells |
 | Body-large | 16px (`text-base`) regular | `brand-subtext` | Intro/subcopy sitting under a headline |
 | Caption | 12px (`text-xs`) medium | `brand-subtext` | Timestamps, meta text, badge labels |

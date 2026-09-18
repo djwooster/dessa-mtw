@@ -13,7 +13,7 @@ const Table = React.forwardRef(({ className, ...props }, ref) => (
 Table.displayName = 'Table'
 
 const TableHeader = React.forwardRef(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn('[&_tr]:border-b [&_tr]:border-brand-border', className)} {...props} />
+  <thead ref={ref} className={cn('bg-brand-bg [&_tr]:border-b [&_tr]:border-brand-border', className)} {...props} />
 ))
 TableHeader.displayName = 'TableHeader'
 
@@ -38,11 +38,13 @@ const TableRow = React.forwardRef(({ className, ...props }, ref) => (
 ))
 TableRow.displayName = 'TableRow'
 
+// Table Header role (see CLAUDE.md design system) — 14px semibold,
+// brand-text, sentence case, sitting on TableHeader's brand-bg row.
 const TableHead = React.forwardRef(({ className, ...props }, ref) => (
   <th
     ref={ref}
     className={cn(
-      'h-9 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wider text-brand-subtext whitespace-nowrap',
+      'h-9 px-4 text-left align-middle text-sm font-semibold text-brand-text whitespace-nowrap',
       className
     )}
     {...props}

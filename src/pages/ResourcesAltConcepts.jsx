@@ -4,11 +4,11 @@ import { motion } from 'framer-motion'
 import {
   Search, Video, FileText, Mic, ClipboardList, MousePointerClick,
   BookOpen, Users, GraduationCap, Layers, ChevronDown, Presentation, PlayCircle,
-  Check, LayoutList, LayoutGrid, ExternalLink, ArrowRight, X,
+  Check, LayoutList, LayoutGrid, ExternalLink, ArrowRight, X, Download,
 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { useResourcesConcept } from '../lib/resourcesConceptContext'
-import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbSeparator } from '../components/ui/breadcrumb'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 
 // ─── Resources — alternate concepts B/C/D/E ────────────────────────────────
 // Rendered by Resources.jsx whenever the nav's A/B/C/D/E switcher (see
@@ -24,7 +24,7 @@ const ELEMENTARY_GROUP = ['Pre-K', 'Kindergarten', '1st Grade', '2nd Grade', '3r
 const MIDDLE_GROUP = ['6th Grade', '7th Grade', '8th Grade']
 const HIGH_GROUP = ['9th Grade', '10th Grade', '11th Grade', '12th Grade']
 const SELECTABLE_GRADES = [...ELEMENTARY_GROUP, ...MIDDLE_GROUP, ...HIGH_GROUP, 'All Grades']
-const COURSE_TYPES = ['Tier 1', 'Tier 2', 'Family']
+const COURSE_TYPES = ['Tier 1', 'Tier 2', 'Family', 'Adult Wellness']
 const COMPETENCIES = ['Self-Awareness', 'Self-Management', 'Relationship Skills', 'Social Awareness', 'Responsible Decision-Making']
 
 // Six types, covering every base the Monday review needs to demonstrate:
@@ -75,194 +75,194 @@ const MOCK_RESOURCES = [
   { title: 'Staying Organized Audio Series', type: 'Audio', grade: '12th Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit 6: Staying Organized', desc: 'A short audio series on building sustainable study systems before graduation.' },
   { title: 'Decision-Making Roleplay Video', type: 'Video', grade: '5th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit 13: Weighing Consequences', desc: 'Modeled roleplay walking through weighing a tough decision out loud.' },
   { title: 'Weekly Check-In Webinar for Families', type: 'Webinar', grade: '8th Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit 8: Resolving Conflict', desc: 'Recorded session on keeping communication open during the middle school years.' },
-  { title: 'Pre-K Feelings Check-In Video', type: 'Video', grade: 'Pre-K', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for Pre-K.' },
-  { title: 'Pre-K Self-Management Toolkit Guide', type: 'PDF', grade: 'Pre-K', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for Pre-K.' },
-  { title: 'Pre-K Communication Skills Worksheet', type: 'Worksheet', grade: 'Pre-K', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
-  { title: 'Pre-K Community Building Audio', type: 'Audio', grade: 'Pre-K', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short audio track supporting Social Awareness practice.' },
-  { title: 'Kindergarten Calm-Down Strategies Video', type: 'Video', grade: 'Kindergarten', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for Kindergarten.' },
-  { title: 'Kindergarten Building Friendships Guide', type: 'PDF', grade: 'Kindergarten', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for Kindergarten.' },
-  { title: 'Kindergarten Perspective-Taking Worksheet', type: 'Worksheet', grade: 'Kindergarten', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A worksheet activity for practicing Social Awareness.' },
-  { title: 'Kindergarten Guiding Responsible Choices Webinar', type: 'Webinar', grade: 'Kindergarten', competency: 'Responsible Decision-Making', courseType: 'Family', unit: 'Unit: Weighing Consequences', desc: 'A recorded session for families on supporting Responsible Decision-Making at home.' },
-  { title: '1st Grade Active Listening Video', type: 'Video', grade: '1st Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 1st Grade.' },
-  { title: '1st Grade Empathy in Action Guide', type: 'PDF', grade: '1st Grade', competency: 'Social Awareness', courseType: 'Tier 2', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 1st Grade.' },
-  { title: '1st Grade Decision-Making Scenarios Worksheet', type: 'Worksheet', grade: '1st Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A worksheet activity for practicing Responsible Decision-Making.' },
-  { title: '1st Grade Naming Emotions: Full Lesson', type: 'Lesson', grade: '1st Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'Opens the full guided lesson inside the course for 1st Grade.' },
-  { title: '2nd Grade Understanding Others Video', type: 'Video', grade: '2nd Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 2nd Grade.' },
-  { title: '2nd Grade Weighing Consequences Guide', type: 'PDF', grade: '2nd Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 2nd Grade.' },
-  { title: '2nd Grade Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '2nd Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
-  { title: '2nd Grade Guided Breathing Audio', type: 'Audio', grade: '2nd Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A short audio track supporting Self-Management practice.' },
-  { title: '3rd Grade Making Good Choices Video', type: 'Video', grade: '3rd Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 3rd Grade.' },
-  { title: '3rd Grade Naming Emotions Guide', type: 'PDF', grade: '3rd Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 3rd Grade.' },
-  { title: '3rd Grade Managing Big Feelings Worksheet', type: 'Worksheet', grade: '3rd Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
-  { title: '3rd Grade Strengthening Peer Relationships Webinar', type: 'Webinar', grade: '3rd Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A recorded session for families on supporting Relationship Skills at home.' },
-  { title: '4th Grade Feelings Check-In Video', type: 'Video', grade: '4th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 4th Grade.' },
-  { title: '4th Grade Self-Management Toolkit Guide', type: 'PDF', grade: '4th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 4th Grade.' },
-  { title: '4th Grade Communication Skills Worksheet', type: 'Worksheet', grade: '4th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
-  { title: '4th Grade Social Awareness: Full Lesson', type: 'Lesson', grade: '4th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'Opens the full guided lesson inside the course for 4th Grade.' },
-  { title: '5th Grade Calm-Down Strategies Video', type: 'Video', grade: '5th Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 5th Grade.' },
-  { title: '5th Grade Building Friendships Guide', type: 'PDF', grade: '5th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 5th Grade.' },
-  { title: '5th Grade Perspective-Taking Worksheet', type: 'Worksheet', grade: '5th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A worksheet activity for practicing Social Awareness.' },
-  { title: '5th Grade Thinking It Through Audio', type: 'Audio', grade: '5th Grade', competency: 'Responsible Decision-Making', courseType: 'Family', unit: 'Unit: Weighing Consequences', desc: 'A short audio track supporting Responsible Decision-Making practice.' },
-  { title: '6th Grade Active Listening Video', type: 'Video', grade: '6th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 6th Grade.' },
-  { title: '6th Grade Empathy in Action Guide', type: 'PDF', grade: '6th Grade', competency: 'Social Awareness', courseType: 'Tier 2', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 6th Grade.' },
-  { title: '6th Grade Decision-Making Scenarios Worksheet', type: 'Worksheet', grade: '6th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A worksheet activity for practicing Responsible Decision-Making.' },
-  { title: '6th Grade Understanding Your Child\'s Emotions Webinar', type: 'Webinar', grade: '6th Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'A recorded session for families on supporting Self-Awareness at home.' },
-  { title: '7th Grade Understanding Others Video', type: 'Video', grade: '7th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 7th Grade.' },
-  { title: '7th Grade Weighing Consequences Guide', type: 'PDF', grade: '7th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 7th Grade.' },
-  { title: '7th Grade Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '7th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
-  { title: '7th Grade Self-Management Basics: Full Lesson', type: 'Lesson', grade: '7th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'Opens the full guided lesson inside the course for 7th Grade.' },
-  { title: '8th Grade Making Good Choices Video', type: 'Video', grade: '8th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 8th Grade.' },
-  { title: '8th Grade Naming Emotions Guide', type: 'PDF', grade: '8th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 8th Grade.' },
-  { title: '8th Grade Managing Big Feelings Worksheet', type: 'Worksheet', grade: '8th Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
-  { title: '8th Grade Conflict Resolution Audio', type: 'Audio', grade: '8th Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A short audio track supporting Relationship Skills practice.' },
-  { title: '9th Grade Feelings Check-In Video', type: 'Video', grade: '9th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 9th Grade.' },
-  { title: '9th Grade Self-Management Toolkit Guide', type: 'PDF', grade: '9th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 9th Grade.' },
-  { title: '9th Grade Communication Skills Worksheet', type: 'Worksheet', grade: '9th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
-  { title: '9th Grade Raising Empathetic Kids Webinar', type: 'Webinar', grade: '9th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A recorded session for families on supporting Social Awareness at home.' },
-  { title: '10th Grade Calm-Down Strategies Video', type: 'Video', grade: '10th Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 10th Grade.' },
-  { title: '10th Grade Building Friendships Guide', type: 'PDF', grade: '10th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 10th Grade.' },
-  { title: '10th Grade Perspective-Taking Worksheet', type: 'Worksheet', grade: '10th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A worksheet activity for practicing Social Awareness.' },
-  { title: '10th Grade Responsible Decision-Making: Full Lesson', type: 'Lesson', grade: '10th Grade', competency: 'Responsible Decision-Making', courseType: 'Family', unit: 'Unit: Weighing Consequences', desc: 'Opens the full guided lesson inside the course for 10th Grade.' },
-  { title: '11th Grade Active Listening Video', type: 'Video', grade: '11th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 11th Grade.' },
-  { title: '11th Grade Empathy in Action Guide', type: 'PDF', grade: '11th Grade', competency: 'Social Awareness', courseType: 'Tier 2', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 11th Grade.' },
-  { title: '11th Grade Decision-Making Scenarios Worksheet', type: 'Worksheet', grade: '11th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A worksheet activity for practicing Responsible Decision-Making.' },
-  { title: '11th Grade Mindful Check-In Audio', type: 'Audio', grade: '11th Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'A short audio track supporting Self-Awareness practice.' },
-  { title: '12th Grade Understanding Others Video', type: 'Video', grade: '12th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 12th Grade.' },
-  { title: '12th Grade Weighing Consequences Guide', type: 'PDF', grade: '12th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 12th Grade.' },
-  { title: '12th Grade Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '12th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
-  { title: '12th Grade Supporting Self-Regulation at Home Webinar', type: 'Webinar', grade: '12th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A recorded session for families on supporting Self-Management at home.' },
-  { title: 'Pre-K Calm-Down Strategies Video', type: 'Video', grade: 'Pre-K', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for Pre-K.' },
-  { title: 'Pre-K Active Listening Video', type: 'Video', grade: 'Pre-K', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for Pre-K.' },
-  { title: 'Pre-K Understanding Others Video', type: 'Video', grade: 'Pre-K', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for Pre-K.' },
-  { title: 'Pre-K Making Good Choices Video', type: 'Video', grade: 'Pre-K', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for Pre-K.' },
-  { title: 'Pre-K Naming Emotions Guide', type: 'PDF', grade: 'Pre-K', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for Pre-K.' },
-  { title: 'Pre-K Building Friendships Guide', type: 'PDF', grade: 'Pre-K', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for Pre-K.' },
-  { title: 'Pre-K Empathy in Action Guide', type: 'PDF', grade: 'Pre-K', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for Pre-K.' },
-  { title: 'Pre-K Weighing Consequences Guide', type: 'PDF', grade: 'Pre-K', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for Pre-K.' },
-  { title: 'Pre-K Managing Big Feelings Worksheet', type: 'Worksheet', grade: 'Pre-K', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
-  { title: 'Pre-K Perspective-Taking Worksheet', type: 'Worksheet', grade: 'Pre-K', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A worksheet activity for practicing Social Awareness.' },
-  { title: 'Kindergarten Active Listening Video', type: 'Video', grade: 'Kindergarten', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for Kindergarten.' },
-  { title: 'Kindergarten Understanding Others Video', type: 'Video', grade: 'Kindergarten', competency: 'Social Awareness', courseType: 'Tier 2', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for Kindergarten.' },
-  { title: 'Kindergarten Making Good Choices Video', type: 'Video', grade: 'Kindergarten', competency: 'Responsible Decision-Making', courseType: 'Family', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for Kindergarten.' },
-  { title: 'Kindergarten Naming Emotions Guide', type: 'PDF', grade: 'Kindergarten', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for Kindergarten.' },
-  { title: 'Kindergarten Self-Management Toolkit Guide', type: 'PDF', grade: 'Kindergarten', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for Kindergarten.' },
-  { title: 'Kindergarten Empathy in Action Guide', type: 'PDF', grade: 'Kindergarten', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for Kindergarten.' },
-  { title: 'Kindergarten Weighing Consequences Guide', type: 'PDF', grade: 'Kindergarten', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for Kindergarten.' },
-  { title: 'Kindergarten Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: 'Kindergarten', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
-  { title: 'Kindergarten Managing Big Feelings Worksheet', type: 'Worksheet', grade: 'Kindergarten', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
-  { title: '1st Grade Feelings Check-In Video', type: 'Video', grade: '1st Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 1st Grade.' },
-  { title: '1st Grade Calm-Down Strategies Video', type: 'Video', grade: '1st Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 1st Grade.' },
-  { title: '1st Grade Understanding Others Video', type: 'Video', grade: '1st Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 1st Grade.' },
-  { title: '1st Grade Making Good Choices Video', type: 'Video', grade: '1st Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 1st Grade.' },
-  { title: '1st Grade Naming Emotions Guide', type: 'PDF', grade: '1st Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 1st Grade.' },
-  { title: '1st Grade Building Friendships Guide', type: 'PDF', grade: '1st Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 1st Grade.' },
-  { title: '1st Grade Weighing Consequences Guide', type: 'PDF', grade: '1st Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 1st Grade.' },
-  { title: '1st Grade Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '1st Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
-  { title: '1st Grade Managing Big Feelings Worksheet', type: 'Worksheet', grade: '1st Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
-  { title: '1st Grade Communication Skills Worksheet', type: 'Worksheet', grade: '1st Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
-  { title: '2nd Grade Feelings Check-In Video', type: 'Video', grade: '2nd Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 2nd Grade.' },
-  { title: '2nd Grade Calm-Down Strategies Video', type: 'Video', grade: '2nd Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 2nd Grade.' },
-  { title: '2nd Grade Active Listening Video', type: 'Video', grade: '2nd Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 2nd Grade.' },
-  { title: '2nd Grade Making Good Choices Video', type: 'Video', grade: '2nd Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 2nd Grade.' },
-  { title: '2nd Grade Self-Management Toolkit Guide', type: 'PDF', grade: '2nd Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 2nd Grade.' },
-  { title: '2nd Grade Building Friendships Guide', type: 'PDF', grade: '2nd Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 2nd Grade.' },
-  { title: '2nd Grade Empathy in Action Guide', type: 'PDF', grade: '2nd Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 2nd Grade.' },
-  { title: '2nd Grade Managing Big Feelings Worksheet', type: 'Worksheet', grade: '2nd Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
-  { title: '2nd Grade Communication Skills Worksheet', type: 'Worksheet', grade: '2nd Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
-  { title: '3rd Grade Feelings Check-In Video', type: 'Video', grade: '3rd Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 3rd Grade.' },
-  { title: '3rd Grade Calm-Down Strategies Video', type: 'Video', grade: '3rd Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 3rd Grade.' },
-  { title: '3rd Grade Active Listening Video', type: 'Video', grade: '3rd Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 3rd Grade.' },
-  { title: '3rd Grade Understanding Others Video', type: 'Video', grade: '3rd Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 3rd Grade.' },
-  { title: '3rd Grade Self-Management Toolkit Guide', type: 'PDF', grade: '3rd Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 3rd Grade.' },
-  { title: '3rd Grade Building Friendships Guide', type: 'PDF', grade: '3rd Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 3rd Grade.' },
-  { title: '3rd Grade Empathy in Action Guide', type: 'PDF', grade: '3rd Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 3rd Grade.' },
-  { title: '3rd Grade Weighing Consequences Guide', type: 'PDF', grade: '3rd Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 3rd Grade.' },
-  { title: '3rd Grade Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '3rd Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
-  { title: '4th Grade Calm-Down Strategies Video', type: 'Video', grade: '4th Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 4th Grade.' },
-  { title: '4th Grade Active Listening Video', type: 'Video', grade: '4th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 4th Grade.' },
-  { title: '4th Grade Understanding Others Video', type: 'Video', grade: '4th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 4th Grade.' },
-  { title: '4th Grade Making Good Choices Video', type: 'Video', grade: '4th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 4th Grade.' },
-  { title: '4th Grade Building Friendships Guide', type: 'PDF', grade: '4th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 4th Grade.' },
-  { title: '4th Grade Empathy in Action Guide', type: 'PDF', grade: '4th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 4th Grade.' },
-  { title: '4th Grade Weighing Consequences Guide', type: 'PDF', grade: '4th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 4th Grade.' },
-  { title: '4th Grade Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '4th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
-  { title: '4th Grade Managing Big Feelings Worksheet', type: 'Worksheet', grade: '4th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
-  { title: '5th Grade Feelings Check-In Video', type: 'Video', grade: '5th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 5th Grade.' },
-  { title: '5th Grade Active Listening Video', type: 'Video', grade: '5th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 5th Grade.' },
-  { title: '5th Grade Understanding Others Video', type: 'Video', grade: '5th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 5th Grade.' },
-  { title: '5th Grade Naming Emotions Guide', type: 'PDF', grade: '5th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 5th Grade.' },
-  { title: '5th Grade Self-Management Toolkit Guide', type: 'PDF', grade: '5th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 5th Grade.' },
-  { title: '5th Grade Empathy in Action Guide', type: 'PDF', grade: '5th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 5th Grade.' },
-  { title: '5th Grade Weighing Consequences Guide', type: 'PDF', grade: '5th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 5th Grade.' },
-  { title: '5th Grade Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '5th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
-  { title: '5th Grade Managing Big Feelings Worksheet', type: 'Worksheet', grade: '5th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
-  { title: '6th Grade Feelings Check-In Video', type: 'Video', grade: '6th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 6th Grade.' },
-  { title: '6th Grade Calm-Down Strategies Video', type: 'Video', grade: '6th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 6th Grade.' },
-  { title: '6th Grade Understanding Others Video', type: 'Video', grade: '6th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 6th Grade.' },
-  { title: '6th Grade Making Good Choices Video', type: 'Video', grade: '6th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 6th Grade.' },
-  { title: '6th Grade Naming Emotions Guide', type: 'PDF', grade: '6th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 6th Grade.' },
-  { title: '6th Grade Self-Management Toolkit Guide', type: 'PDF', grade: '6th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 6th Grade.' },
-  { title: '6th Grade Weighing Consequences Guide', type: 'PDF', grade: '6th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 6th Grade.' },
-  { title: '6th Grade Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '6th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
-  { title: '6th Grade Managing Big Feelings Worksheet', type: 'Worksheet', grade: '6th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
-  { title: '7th Grade Feelings Check-In Video', type: 'Video', grade: '7th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 7th Grade.' },
-  { title: '7th Grade Calm-Down Strategies Video', type: 'Video', grade: '7th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 7th Grade.' },
-  { title: '7th Grade Active Listening Video', type: 'Video', grade: '7th Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 7th Grade.' },
-  { title: '7th Grade Making Good Choices Video', type: 'Video', grade: '7th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 7th Grade.' },
-  { title: '7th Grade Naming Emotions Guide', type: 'PDF', grade: '7th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 7th Grade.' },
-  { title: '7th Grade Self-Management Toolkit Guide', type: 'PDF', grade: '7th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 7th Grade.' },
-  { title: '7th Grade Building Friendships Guide', type: 'PDF', grade: '7th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 7th Grade.' },
-  { title: '7th Grade Empathy in Action Guide', type: 'PDF', grade: '7th Grade', competency: 'Social Awareness', courseType: 'Tier 2', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 7th Grade.' },
-  { title: '7th Grade Managing Big Feelings Worksheet', type: 'Worksheet', grade: '7th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
-  { title: '7th Grade Communication Skills Worksheet', type: 'Worksheet', grade: '7th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
-  { title: '8th Grade Feelings Check-In Video', type: 'Video', grade: '8th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 8th Grade.' },
-  { title: '8th Grade Calm-Down Strategies Video', type: 'Video', grade: '8th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 8th Grade.' },
-  { title: '8th Grade Active Listening Video', type: 'Video', grade: '8th Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 8th Grade.' },
-  { title: '8th Grade Understanding Others Video', type: 'Video', grade: '8th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 8th Grade.' },
-  { title: '8th Grade Self-Management Toolkit Guide', type: 'PDF', grade: '8th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 8th Grade.' },
-  { title: '8th Grade Building Friendships Guide', type: 'PDF', grade: '8th Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 8th Grade.' },
-  { title: '8th Grade Empathy in Action Guide', type: 'PDF', grade: '8th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 8th Grade.' },
-  { title: '8th Grade Weighing Consequences Guide', type: 'PDF', grade: '8th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 8th Grade.' },
-  { title: '8th Grade Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '8th Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
-  { title: '9th Grade Calm-Down Strategies Video', type: 'Video', grade: '9th Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 9th Grade.' },
-  { title: '9th Grade Active Listening Video', type: 'Video', grade: '9th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 9th Grade.' },
-  { title: '9th Grade Understanding Others Video', type: 'Video', grade: '9th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 9th Grade.' },
-  { title: '9th Grade Making Good Choices Video', type: 'Video', grade: '9th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 9th Grade.' },
-  { title: '9th Grade Naming Emotions Guide', type: 'PDF', grade: '9th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 9th Grade.' },
-  { title: '9th Grade Building Friendships Guide', type: 'PDF', grade: '9th Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 9th Grade.' },
-  { title: '9th Grade Empathy in Action Guide', type: 'PDF', grade: '9th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 9th Grade.' },
-  { title: '9th Grade Weighing Consequences Guide', type: 'PDF', grade: '9th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 9th Grade.' },
-  { title: '9th Grade Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '9th Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
-  { title: '10th Grade Feelings Check-In Video', type: 'Video', grade: '10th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 10th Grade.' },
-  { title: '10th Grade Active Listening Video', type: 'Video', grade: '10th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 10th Grade.' },
-  { title: '10th Grade Understanding Others Video', type: 'Video', grade: '10th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 10th Grade.' },
-  { title: '10th Grade Making Good Choices Video', type: 'Video', grade: '10th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 10th Grade.' },
-  { title: '10th Grade Naming Emotions Guide', type: 'PDF', grade: '10th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 10th Grade.' },
-  { title: '10th Grade Self-Management Toolkit Guide', type: 'PDF', grade: '10th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 10th Grade.' },
-  { title: '10th Grade Empathy in Action Guide', type: 'PDF', grade: '10th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 10th Grade.' },
-  { title: '10th Grade Weighing Consequences Guide', type: 'PDF', grade: '10th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 10th Grade.' },
-  { title: '10th Grade Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '10th Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
-  { title: '10th Grade Managing Big Feelings Worksheet', type: 'Worksheet', grade: '10th Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
-  { title: '11th Grade Feelings Check-In Video', type: 'Video', grade: '11th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 11th Grade.' },
-  { title: '11th Grade Calm-Down Strategies Video', type: 'Video', grade: '11th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 11th Grade.' },
-  { title: '11th Grade Understanding Others Video', type: 'Video', grade: '11th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 11th Grade.' },
-  { title: '11th Grade Making Good Choices Video', type: 'Video', grade: '11th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 11th Grade.' },
-  { title: '11th Grade Naming Emotions Guide', type: 'PDF', grade: '11th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 11th Grade.' },
-  { title: '11th Grade Self-Management Toolkit Guide', type: 'PDF', grade: '11th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 11th Grade.' },
-  { title: '11th Grade Building Friendships Guide', type: 'PDF', grade: '11th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 11th Grade.' },
-  { title: '11th Grade Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '11th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
-  { title: '11th Grade Managing Big Feelings Worksheet', type: 'Worksheet', grade: '11th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
-  { title: '11th Grade Communication Skills Worksheet', type: 'Worksheet', grade: '11th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
-  { title: '12th Grade Feelings Check-In Video', type: 'Video', grade: '12th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 12th Grade.' },
-  { title: '12th Grade Calm-Down Strategies Video', type: 'Video', grade: '12th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 12th Grade.' },
-  { title: '12th Grade Active Listening Video', type: 'Video', grade: '12th Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 12th Grade.' },
-  { title: '12th Grade Making Good Choices Video', type: 'Video', grade: '12th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 12th Grade.' },
-  { title: '12th Grade Naming Emotions Guide', type: 'PDF', grade: '12th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 12th Grade.' },
-  { title: '12th Grade Self-Management Toolkit Guide', type: 'PDF', grade: '12th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 12th Grade.' },
-  { title: '12th Grade Building Friendships Guide', type: 'PDF', grade: '12th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 12th Grade.' },
-  { title: '12th Grade Empathy in Action Guide', type: 'PDF', grade: '12th Grade', competency: 'Social Awareness', courseType: 'Tier 2', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 12th Grade.' },
-  { title: '12th Grade Managing Big Feelings Worksheet', type: 'Worksheet', grade: '12th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
-  { title: '12th Grade Communication Skills Worksheet', type: 'Worksheet', grade: '12th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
+  { title: 'Feelings Check-In Video', type: 'Video', grade: 'Pre-K', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for Pre-K.' },
+  { title: 'Self-Management Toolkit Guide', type: 'PDF', grade: 'Pre-K', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for Pre-K.' },
+  { title: 'Communication Skills Worksheet', type: 'Worksheet', grade: 'Pre-K', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
+  { title: 'Community Building Audio', type: 'Audio', grade: 'Pre-K', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short audio track supporting Social Awareness practice.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: 'Kindergarten', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for Kindergarten.' },
+  { title: 'Building Friendships Guide', type: 'PDF', grade: 'Kindergarten', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for Kindergarten.' },
+  { title: 'Perspective-Taking Worksheet', type: 'Worksheet', grade: 'Kindergarten', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A worksheet activity for practicing Social Awareness.' },
+  { title: 'Guiding Responsible Choices Webinar', type: 'Webinar', grade: 'Kindergarten', competency: 'Responsible Decision-Making', courseType: 'Family', unit: 'Unit: Weighing Consequences', desc: 'A recorded session for families on supporting Responsible Decision-Making at home.' },
+  { title: 'Active Listening Video', type: 'Video', grade: '1st Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 1st Grade.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: '1st Grade', competency: 'Social Awareness', courseType: 'Tier 2', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 1st Grade.' },
+  { title: 'Decision-Making Scenarios Worksheet', type: 'Worksheet', grade: '1st Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A worksheet activity for practicing Responsible Decision-Making.' },
+  { title: 'Naming Emotions: Full Lesson', type: 'Lesson', grade: '1st Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'Opens the full guided lesson inside the course for 1st Grade.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: '2nd Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 2nd Grade.' },
+  { title: 'Weighing Consequences Guide', type: 'PDF', grade: '2nd Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 2nd Grade.' },
+  { title: 'Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '2nd Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
+  { title: 'Guided Breathing Audio', type: 'Audio', grade: '2nd Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A short audio track supporting Self-Management practice.' },
+  { title: 'Making Good Choices Video', type: 'Video', grade: '3rd Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 3rd Grade.' },
+  { title: 'Naming Emotions Guide', type: 'PDF', grade: '3rd Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 3rd Grade.' },
+  { title: 'Managing Big Feelings Worksheet', type: 'Worksheet', grade: '3rd Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
+  { title: 'Strengthening Peer Relationships Webinar', type: 'Webinar', grade: '3rd Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A recorded session for families on supporting Relationship Skills at home.' },
+  { title: 'Feelings Check-In Video', type: 'Video', grade: '4th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 4th Grade.' },
+  { title: 'Self-Management Toolkit Guide', type: 'PDF', grade: '4th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 4th Grade.' },
+  { title: 'Communication Skills Worksheet', type: 'Worksheet', grade: '4th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
+  { title: 'Social Awareness: Full Lesson', type: 'Lesson', grade: '4th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'Opens the full guided lesson inside the course for 4th Grade.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: '5th Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 5th Grade.' },
+  { title: 'Building Friendships Guide', type: 'PDF', grade: '5th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 5th Grade.' },
+  { title: 'Perspective-Taking Worksheet', type: 'Worksheet', grade: '5th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A worksheet activity for practicing Social Awareness.' },
+  { title: 'Thinking It Through Audio', type: 'Audio', grade: '5th Grade', competency: 'Responsible Decision-Making', courseType: 'Family', unit: 'Unit: Weighing Consequences', desc: 'A short audio track supporting Responsible Decision-Making practice.' },
+  { title: 'Active Listening Video', type: 'Video', grade: '6th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 6th Grade.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: '6th Grade', competency: 'Social Awareness', courseType: 'Tier 2', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 6th Grade.' },
+  { title: 'Decision-Making Scenarios Worksheet', type: 'Worksheet', grade: '6th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A worksheet activity for practicing Responsible Decision-Making.' },
+  { title: 'Understanding Your Child\'s Emotions Webinar', type: 'Webinar', grade: '6th Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'A recorded session for families on supporting Self-Awareness at home.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: '7th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 7th Grade.' },
+  { title: 'Weighing Consequences Guide', type: 'PDF', grade: '7th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 7th Grade.' },
+  { title: 'Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '7th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
+  { title: 'Self-Management Basics: Full Lesson', type: 'Lesson', grade: '7th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'Opens the full guided lesson inside the course for 7th Grade.' },
+  { title: 'Making Good Choices Video', type: 'Video', grade: '8th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 8th Grade.' },
+  { title: 'Naming Emotions Guide', type: 'PDF', grade: '8th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 8th Grade.' },
+  { title: 'Managing Big Feelings Worksheet', type: 'Worksheet', grade: '8th Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
+  { title: 'Conflict Resolution Audio', type: 'Audio', grade: '8th Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A short audio track supporting Relationship Skills practice.' },
+  { title: 'Feelings Check-In Video', type: 'Video', grade: '9th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 9th Grade.' },
+  { title: 'Self-Management Toolkit Guide', type: 'PDF', grade: '9th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 9th Grade.' },
+  { title: 'Communication Skills Worksheet', type: 'Worksheet', grade: '9th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
+  { title: 'Raising Empathetic Kids Webinar', type: 'Webinar', grade: '9th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A recorded session for families on supporting Social Awareness at home.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: '10th Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 10th Grade.' },
+  { title: 'Building Friendships Guide', type: 'PDF', grade: '10th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 10th Grade.' },
+  { title: 'Perspective-Taking Worksheet', type: 'Worksheet', grade: '10th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A worksheet activity for practicing Social Awareness.' },
+  { title: 'Responsible Decision-Making: Full Lesson', type: 'Lesson', grade: '10th Grade', competency: 'Responsible Decision-Making', courseType: 'Family', unit: 'Unit: Weighing Consequences', desc: 'Opens the full guided lesson inside the course for 10th Grade.' },
+  { title: 'Active Listening Video', type: 'Video', grade: '11th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 11th Grade.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: '11th Grade', competency: 'Social Awareness', courseType: 'Tier 2', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 11th Grade.' },
+  { title: 'Decision-Making Scenarios Worksheet', type: 'Worksheet', grade: '11th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A worksheet activity for practicing Responsible Decision-Making.' },
+  { title: 'Mindful Check-In Audio', type: 'Audio', grade: '11th Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'A short audio track supporting Self-Awareness practice.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: '12th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 12th Grade.' },
+  { title: 'Weighing Consequences Guide', type: 'PDF', grade: '12th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 12th Grade.' },
+  { title: 'Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '12th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
+  { title: 'Supporting Self-Regulation at Home Webinar', type: 'Webinar', grade: '12th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A recorded session for families on supporting Self-Management at home.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: 'Pre-K', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for Pre-K.' },
+  { title: 'Active Listening Video', type: 'Video', grade: 'Pre-K', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for Pre-K.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: 'Pre-K', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for Pre-K.' },
+  { title: 'Making Good Choices Video', type: 'Video', grade: 'Pre-K', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for Pre-K.' },
+  { title: 'Naming Emotions Guide', type: 'PDF', grade: 'Pre-K', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for Pre-K.' },
+  { title: 'Building Friendships Guide', type: 'PDF', grade: 'Pre-K', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for Pre-K.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: 'Pre-K', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for Pre-K.' },
+  { title: 'Weighing Consequences Guide', type: 'PDF', grade: 'Pre-K', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for Pre-K.' },
+  { title: 'Managing Big Feelings Worksheet', type: 'Worksheet', grade: 'Pre-K', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
+  { title: 'Perspective-Taking Worksheet', type: 'Worksheet', grade: 'Pre-K', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A worksheet activity for practicing Social Awareness.' },
+  { title: 'Active Listening Video', type: 'Video', grade: 'Kindergarten', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for Kindergarten.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: 'Kindergarten', competency: 'Social Awareness', courseType: 'Tier 2', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for Kindergarten.' },
+  { title: 'Making Good Choices Video', type: 'Video', grade: 'Kindergarten', competency: 'Responsible Decision-Making', courseType: 'Family', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for Kindergarten.' },
+  { title: 'Naming Emotions Guide', type: 'PDF', grade: 'Kindergarten', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for Kindergarten.' },
+  { title: 'Self-Management Toolkit Guide', type: 'PDF', grade: 'Kindergarten', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for Kindergarten.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: 'Kindergarten', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for Kindergarten.' },
+  { title: 'Weighing Consequences Guide', type: 'PDF', grade: 'Kindergarten', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for Kindergarten.' },
+  { title: 'Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: 'Kindergarten', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
+  { title: 'Managing Big Feelings Worksheet', type: 'Worksheet', grade: 'Kindergarten', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
+  { title: 'Feelings Check-In Video', type: 'Video', grade: '1st Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 1st Grade.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: '1st Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 1st Grade.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: '1st Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 1st Grade.' },
+  { title: 'Making Good Choices Video', type: 'Video', grade: '1st Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 1st Grade.' },
+  { title: 'Naming Emotions Guide', type: 'PDF', grade: '1st Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 1st Grade.' },
+  { title: 'Building Friendships Guide', type: 'PDF', grade: '1st Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 1st Grade.' },
+  { title: 'Weighing Consequences Guide', type: 'PDF', grade: '1st Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 1st Grade.' },
+  { title: 'Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '1st Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
+  { title: 'Managing Big Feelings Worksheet', type: 'Worksheet', grade: '1st Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
+  { title: 'Communication Skills Worksheet', type: 'Worksheet', grade: '1st Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
+  { title: 'Feelings Check-In Video', type: 'Video', grade: '2nd Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 2nd Grade.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: '2nd Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 2nd Grade.' },
+  { title: 'Active Listening Video', type: 'Video', grade: '2nd Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 2nd Grade.' },
+  { title: 'Making Good Choices Video', type: 'Video', grade: '2nd Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 2nd Grade.' },
+  { title: 'Self-Management Toolkit Guide', type: 'PDF', grade: '2nd Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 2nd Grade.' },
+  { title: 'Building Friendships Guide', type: 'PDF', grade: '2nd Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 2nd Grade.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: '2nd Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 2nd Grade.' },
+  { title: 'Managing Big Feelings Worksheet', type: 'Worksheet', grade: '2nd Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
+  { title: 'Communication Skills Worksheet', type: 'Worksheet', grade: '2nd Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
+  { title: 'Feelings Check-In Video', type: 'Video', grade: '3rd Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 3rd Grade.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: '3rd Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 3rd Grade.' },
+  { title: 'Active Listening Video', type: 'Video', grade: '3rd Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 3rd Grade.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: '3rd Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 3rd Grade.' },
+  { title: 'Self-Management Toolkit Guide', type: 'PDF', grade: '3rd Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 3rd Grade.' },
+  { title: 'Building Friendships Guide', type: 'PDF', grade: '3rd Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 3rd Grade.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: '3rd Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 3rd Grade.' },
+  { title: 'Weighing Consequences Guide', type: 'PDF', grade: '3rd Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 3rd Grade.' },
+  { title: 'Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '3rd Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: '4th Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 4th Grade.' },
+  { title: 'Active Listening Video', type: 'Video', grade: '4th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 4th Grade.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: '4th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 4th Grade.' },
+  { title: 'Making Good Choices Video', type: 'Video', grade: '4th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 4th Grade.' },
+  { title: 'Building Friendships Guide', type: 'PDF', grade: '4th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 4th Grade.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: '4th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 4th Grade.' },
+  { title: 'Weighing Consequences Guide', type: 'PDF', grade: '4th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 4th Grade.' },
+  { title: 'Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '4th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
+  { title: 'Managing Big Feelings Worksheet', type: 'Worksheet', grade: '4th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
+  { title: 'Feelings Check-In Video', type: 'Video', grade: '5th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 5th Grade.' },
+  { title: 'Active Listening Video', type: 'Video', grade: '5th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 5th Grade.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: '5th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 5th Grade.' },
+  { title: 'Naming Emotions Guide', type: 'PDF', grade: '5th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 5th Grade.' },
+  { title: 'Self-Management Toolkit Guide', type: 'PDF', grade: '5th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 5th Grade.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: '5th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 5th Grade.' },
+  { title: 'Weighing Consequences Guide', type: 'PDF', grade: '5th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 5th Grade.' },
+  { title: 'Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '5th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
+  { title: 'Managing Big Feelings Worksheet', type: 'Worksheet', grade: '5th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
+  { title: 'Feelings Check-In Video', type: 'Video', grade: '6th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 6th Grade.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: '6th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 6th Grade.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: '6th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 6th Grade.' },
+  { title: 'Making Good Choices Video', type: 'Video', grade: '6th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 6th Grade.' },
+  { title: 'Naming Emotions Guide', type: 'PDF', grade: '6th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 6th Grade.' },
+  { title: 'Self-Management Toolkit Guide', type: 'PDF', grade: '6th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 6th Grade.' },
+  { title: 'Weighing Consequences Guide', type: 'PDF', grade: '6th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 6th Grade.' },
+  { title: 'Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '6th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
+  { title: 'Managing Big Feelings Worksheet', type: 'Worksheet', grade: '6th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
+  { title: 'Feelings Check-In Video', type: 'Video', grade: '7th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 7th Grade.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: '7th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 7th Grade.' },
+  { title: 'Active Listening Video', type: 'Video', grade: '7th Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 7th Grade.' },
+  { title: 'Making Good Choices Video', type: 'Video', grade: '7th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 7th Grade.' },
+  { title: 'Naming Emotions Guide', type: 'PDF', grade: '7th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 7th Grade.' },
+  { title: 'Self-Management Toolkit Guide', type: 'PDF', grade: '7th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 7th Grade.' },
+  { title: 'Building Friendships Guide', type: 'PDF', grade: '7th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 7th Grade.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: '7th Grade', competency: 'Social Awareness', courseType: 'Tier 2', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 7th Grade.' },
+  { title: 'Managing Big Feelings Worksheet', type: 'Worksheet', grade: '7th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
+  { title: 'Communication Skills Worksheet', type: 'Worksheet', grade: '7th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
+  { title: 'Feelings Check-In Video', type: 'Video', grade: '8th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 8th Grade.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: '8th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 8th Grade.' },
+  { title: 'Active Listening Video', type: 'Video', grade: '8th Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 8th Grade.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: '8th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 8th Grade.' },
+  { title: 'Self-Management Toolkit Guide', type: 'PDF', grade: '8th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 8th Grade.' },
+  { title: 'Building Friendships Guide', type: 'PDF', grade: '8th Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 8th Grade.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: '8th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 8th Grade.' },
+  { title: 'Weighing Consequences Guide', type: 'PDF', grade: '8th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 8th Grade.' },
+  { title: 'Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '8th Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: '9th Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 9th Grade.' },
+  { title: 'Active Listening Video', type: 'Video', grade: '9th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 9th Grade.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: '9th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 9th Grade.' },
+  { title: 'Making Good Choices Video', type: 'Video', grade: '9th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 9th Grade.' },
+  { title: 'Naming Emotions Guide', type: 'PDF', grade: '9th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 9th Grade.' },
+  { title: 'Building Friendships Guide', type: 'PDF', grade: '9th Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 9th Grade.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: '9th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 9th Grade.' },
+  { title: 'Weighing Consequences Guide', type: 'PDF', grade: '9th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 9th Grade.' },
+  { title: 'Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '9th Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
+  { title: 'Feelings Check-In Video', type: 'Video', grade: '10th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 10th Grade.' },
+  { title: 'Active Listening Video', type: 'Video', grade: '10th Grade', competency: 'Relationship Skills', courseType: 'Tier 2', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 10th Grade.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: '10th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 10th Grade.' },
+  { title: 'Making Good Choices Video', type: 'Video', grade: '10th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 10th Grade.' },
+  { title: 'Naming Emotions Guide', type: 'PDF', grade: '10th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 10th Grade.' },
+  { title: 'Self-Management Toolkit Guide', type: 'PDF', grade: '10th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 10th Grade.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: '10th Grade', competency: 'Social Awareness', courseType: 'Tier 1', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 10th Grade.' },
+  { title: 'Weighing Consequences Guide', type: 'PDF', grade: '10th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 2', unit: 'Unit: Weighing Consequences', desc: 'A printable guide supporting Responsible Decision-Making for 10th Grade.' },
+  { title: 'Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '10th Grade', competency: 'Self-Awareness', courseType: 'Family', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
+  { title: 'Managing Big Feelings Worksheet', type: 'Worksheet', grade: '10th Grade', competency: 'Self-Management', courseType: 'Tier 1', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
+  { title: 'Feelings Check-In Video', type: 'Video', grade: '11th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 11th Grade.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: '11th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 11th Grade.' },
+  { title: 'Understanding Others Video', type: 'Video', grade: '11th Grade', competency: 'Social Awareness', courseType: 'Family', unit: 'Unit: Understanding Others', desc: 'A short video introducing social awareness concepts for 11th Grade.' },
+  { title: 'Making Good Choices Video', type: 'Video', grade: '11th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 11th Grade.' },
+  { title: 'Naming Emotions Guide', type: 'PDF', grade: '11th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 11th Grade.' },
+  { title: 'Self-Management Toolkit Guide', type: 'PDF', grade: '11th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 11th Grade.' },
+  { title: 'Building Friendships Guide', type: 'PDF', grade: '11th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 11th Grade.' },
+  { title: 'Self-Awareness Reflection Worksheet', type: 'Worksheet', grade: '11th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A worksheet activity for practicing Self-Awareness.' },
+  { title: 'Managing Big Feelings Worksheet', type: 'Worksheet', grade: '11th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
+  { title: 'Communication Skills Worksheet', type: 'Worksheet', grade: '11th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
+  { title: 'Feelings Check-In Video', type: 'Video', grade: '12th Grade', competency: 'Self-Awareness', courseType: 'Tier 1', unit: 'Unit: Naming Emotions', desc: 'A short video introducing self-awareness concepts for 12th Grade.' },
+  { title: 'Calm-Down Strategies Video', type: 'Video', grade: '12th Grade', competency: 'Self-Management', courseType: 'Tier 2', unit: 'Unit: Self-Management Basics', desc: 'A short video introducing self-management concepts for 12th Grade.' },
+  { title: 'Active Listening Video', type: 'Video', grade: '12th Grade', competency: 'Relationship Skills', courseType: 'Family', unit: 'Unit: Communication Skills', desc: 'A short video introducing relationship skills concepts for 12th Grade.' },
+  { title: 'Making Good Choices Video', type: 'Video', grade: '12th Grade', competency: 'Responsible Decision-Making', courseType: 'Tier 1', unit: 'Unit: Weighing Consequences', desc: 'A short video introducing responsible decision-making concepts for 12th Grade.' },
+  { title: 'Naming Emotions Guide', type: 'PDF', grade: '12th Grade', competency: 'Self-Awareness', courseType: 'Tier 2', unit: 'Unit: Naming Emotions', desc: 'A printable guide supporting Self-Awareness for 12th Grade.' },
+  { title: 'Self-Management Toolkit Guide', type: 'PDF', grade: '12th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A printable guide supporting Self-Management for 12th Grade.' },
+  { title: 'Building Friendships Guide', type: 'PDF', grade: '12th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A printable guide supporting Relationship Skills for 12th Grade.' },
+  { title: 'Empathy in Action Guide', type: 'PDF', grade: '12th Grade', competency: 'Social Awareness', courseType: 'Tier 2', unit: 'Unit: Understanding Others', desc: 'A printable guide supporting Social Awareness for 12th Grade.' },
+  { title: 'Managing Big Feelings Worksheet', type: 'Worksheet', grade: '12th Grade', competency: 'Self-Management', courseType: 'Family', unit: 'Unit: Self-Management Basics', desc: 'A worksheet activity for practicing Self-Management.' },
+  { title: 'Communication Skills Worksheet', type: 'Worksheet', grade: '12th Grade', competency: 'Relationship Skills', courseType: 'Tier 1', unit: 'Unit: Communication Skills', desc: 'A worksheet activity for practicing Relationship Skills.' },
 ]
 
 // ── Shared leaf pieces, used by two or more of B/C/D ──
@@ -370,7 +370,7 @@ function ResultRows({ rows, showDividers, onSelect, leftIcon = false, badgeAbove
         const isLast = i === rows.length - 1
         const typeMeta = TYPE_META[r.type]
         return (
-          <div key={r.title}>
+          <div key={`${r.grade}-${r.title}`}>
             {showDivider && (
               <div
                 className="px-6 py-2 border-b border-brand-border text-xs font-semibold text-brand-text uppercase tracking-wide"
@@ -415,8 +415,8 @@ function ResultRows({ rows, showDividers, onSelect, leftIcon = false, badgeAbove
                     <span className="text-xs font-medium">{typeMeta.label}</span>
                   </span>
                 )}
-                <p className="text-[15px] font-semibold text-brand-text truncate">{r.title}</p>
-                <p className="text-xs text-brand-subtext truncate mt-0.5">{r.unit}</p>
+                <p className="text-sm font-semibold text-brand-text truncate">{r.title}</p>
+                {!badgeAboveTitle && <p className="text-xs text-brand-subtext truncate mt-0.5">{r.unit}</p>}
               </div>
               <p className={`hidden lg:block flex-1 min-w-0 truncate text-left text-sm text-brand-subtext ${badgeAboveTitle ? 'ml-6' : ''}`}>{r.desc}</p>
               <div className="flex items-center gap-3 shrink-0">
@@ -438,15 +438,131 @@ function ResultRows({ rows, showDividers, onSelect, leftIcon = false, badgeAbove
   )
 }
 
-function ResultsHeader({ chips, count, right }) {
+// Condensed, single-row-per-item table for Concept D (2026-09-18) — a
+// denser alternative to ResultRows above, built for reviewing lots of
+// results at once. Real <table> markup (see components/ui/table.jsx,
+// unused elsewhere so far) rather than the div-based rows, tightened
+// beyond that primitive's own default padding. Toggled via the "Rows" /
+// "Table" switcher in Nav.jsx (resultsLayout in resourcesConceptContext),
+// not a per-page control — same convention the old List/Cards toggle used
+// before it was removed.
+// Types that actually resolve to a downloadable file — Video/Audio/Webinar/
+// Lesson open a player or a recording, not a file, so no download affordance
+// makes sense for those rows.
+const DOWNLOADABLE_TYPES = ['Worksheet', 'PDF']
+
+// Column headers are click-to-sort (2026-09-18) — clicking a row still opens
+// the detail modal, this is a separate control living in the header row.
+function SortableHead({ label, sortKey, activeKey, dir, onSort }) {
+  const active = activeKey === sortKey
+  return (
+    <TableHead>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className="inline-flex items-center gap-1 hover:text-dessa-teal transition-colors"
+      >
+        {label}
+        <ChevronDown size={12} className={`transition-transform ${active ? 'text-dessa-teal' : 'text-brand-subtext/50'} ${active && dir === 'desc' ? 'rotate-180' : ''}`} />
+      </button>
+    </TableHead>
+  )
+}
+
+function CondensedResultsTable({ rows, onSelect }) {
+  const [sortKey, setSortKey] = useState(null)
+  const [sortDir, setSortDir] = useState('asc')
+
+  function handleSort(key) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
+  if (rows.length === 0) {
+    return (
+      <div className="px-6 py-12 text-center">
+        <p className="text-lg font-semibold text-brand-text mb-1.5">No resources found</p>
+        <p className="text-sm text-brand-subtext max-w-sm mx-auto">Try adjusting your keywords or clearing the filters.</p>
+      </div>
+    )
+  }
+
+  const sortedRows = sortKey
+    ? [...rows].sort((a, b) => {
+        const cmp = String(a[sortKey]).localeCompare(String(b[sortKey]))
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    : rows
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          <SortableHead label="Title" sortKey="title" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+          <SortableHead label="Type" sortKey="type" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+          <SortableHead label="Tier" sortKey="courseType" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+          <SortableHead label="Competency" sortKey="competency" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+          <TableHead className="w-12">
+            <span className="sr-only">Download</span>
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {sortedRows.map((r) => {
+          const typeMeta = TYPE_META[r.type]
+          return (
+            <TableRow key={`${r.grade}-${r.title}`} onClick={() => onSelect?.(r)} className="cursor-pointer">
+              <TableCell className="py-1.5">
+                {/* Real focusable element (not just the row's own onClick)
+                    so keyboard/screen-reader users have an actionable
+                    control here, not just a mouse-only row click. */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onSelect?.(r)
+                  }}
+                  className="text-left font-medium text-brand-text hover:text-dessa-teal hover:underline transition-colors truncate max-w-xs block"
+                >
+                  {r.title}
+                </button>
+              </TableCell>
+              <TableCell className="py-1.5">
+                <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] whitespace-nowrap ${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`}>
+                  <typeMeta.icon size={14} />
+                  <span className="text-xs font-medium">{typeMeta.label}</span>
+                </span>
+              </TableCell>
+              <TableCell className="py-1.5 whitespace-nowrap text-brand-subtext">{r.courseType}</TableCell>
+              <TableCell className="py-1.5 whitespace-nowrap text-brand-subtext">{r.competency}</TableCell>
+              <TableCell className="py-1.5 text-right">
+                {DOWNLOADABLE_TYPES.includes(r.type) && (
+                  <button
+                    type="button"
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Download ${r.title}`}
+                    className="p-1.5 rounded-md text-brand-subtext hover:text-dessa-teal hover:bg-brand-bg transition-colors"
+                  >
+                    <Download size={16} />
+                  </button>
+                )}
+              </TableCell>
+            </TableRow>
+          )
+        })}
+      </TableBody>
+    </Table>
+  )
+}
+
+function ResultsHeader({ chips, right }) {
   return (
     <div className="px-6 pt-6 pb-4 flex items-center justify-between gap-4">
       <div className="flex flex-wrap items-center gap-2 flex-1">
-        {typeof count === 'number' && (
-          <span className="text-sm text-brand-subtext">
-            {count} {count === 1 ? 'resource' : 'resources'}
-          </span>
-        )}
         {chips.map((c) => (
           <span key={c} className="inline-flex items-center pl-3 pr-3 py-1.5 rounded-full bg-dessa-tealLight text-dessa-teal text-sm font-medium">
             {c}
@@ -504,7 +620,7 @@ function ResultsCards({ rows, onSelect }) {
         const typeMeta = TYPE_META[r.type]
         return (
           <div
-            key={r.title}
+            key={`${r.grade}-${r.title}`}
             role="button"
             tabIndex={0}
             onClick={() => onSelect?.(r)}
@@ -543,7 +659,10 @@ function ResultsCards({ rows, onSelect }) {
 // one grade scope (a specific grade, or "All Grades") at a time, never a
 // combination of several, unlike the other three facets.
 function FilterBarShared({ grades, courseTypes, competencies, types, onSelectGrade, onToggleCourseType, onToggleCompetency, onToggleType, onResetAll }) {
-  const [expanded, setExpanded] = useState(false)
+  // Expanded by default (2026-09-18, Concept D) — D is the finalized
+  // concept going forward and the filters are core to its results page, not
+  // a secondary control worth hiding behind an extra click on first visit.
+  const [expanded, setExpanded] = useState(true)
   // Which single field's dropdown is open, if any ('grade'/'courseType'/
   // 'competency'/'type'/null) — lifted up here, shared across all four
   // FilterFields below, instead of each one owning its own open state.
@@ -569,15 +688,17 @@ function FilterBarShared({ grades, courseTypes, competencies, types, onSelectGra
         aria-expanded={expanded}
         className="w-full flex items-center gap-1.5 px-5 py-4 text-base font-semibold text-brand-text"
       >
-        Filters
-        {hasActiveFilters && <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-dessa-teal" />}
+        <span className="relative">
+          Filters
+          {hasActiveFilters && <span aria-hidden="true" className="absolute top-1 left-12 w-1.5 h-1.5 rounded-full bg-dessa-teal" />}
+        </span>
         <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
       {expanded && (
         <div className="px-5 pt-5 pb-5 border-t border-brand-border">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <FilterField
-              label="Grade"
+              label="Grade Level"
               options={SELECTABLE_GRADES}
               selected={grades}
               onToggle={onSelectGrade}
@@ -602,7 +723,7 @@ function FilterBarShared({ grades, courseTypes, competencies, types, onSelectGra
               onOpenChange={(o) => setOpenField(o ? 'competency' : null)}
             />
             <FilterField
-              label="Type"
+              label="File Type"
               options={Object.keys(TYPE_META).map((t) => TYPE_META[t].label)}
               selected={types.map((t) => TYPE_META[t].label)}
               onToggle={(label) => onToggleType(Object.keys(TYPE_META).find((t) => TYPE_META[t].label === label))}
@@ -647,7 +768,7 @@ function FilterField({ label, options, selected, onToggle, single = false, open,
           <Popover.Content
             align="start"
             sideOffset={4}
-            className="z-30 w-[--radix-popover-trigger-width] bg-white border border-brand-border rounded-xl shadow-lg outline-none p-2 max-h-56 overflow-y-auto"
+            className="z-30 min-w-[--radix-popover-trigger-width] w-max max-w-xs bg-white border border-brand-border rounded-xl shadow-lg outline-none p-2 max-h-56 overflow-y-auto"
           >
             {options.map((opt) => {
               const isSelected = selected.includes(opt)
@@ -671,7 +792,7 @@ function FilterField({ label, options, selected, onToggle, single = false, open,
                       : <Check size={11} strokeWidth={3} className="text-white" />
                     )}
                   </span>
-                  <span className="truncate">{opt}</span>
+                  <span>{opt}</span>
                 </button>
               )
             })}
@@ -700,8 +821,8 @@ const RESULTS_VIEW_OPTIONS = [
 // Grade facet inside FilterBarShared lets
 // you broaden/re-narrow past whatever grade the entry gate fixed, without
 // leaving the page.
-function ResultsExperience({ grade, topLeft, leftIcon = false, badgeAboveTitle = false }) {
-  const { resultsView, setResultsView } = useResourcesConcept()
+function ResultsExperience({ grade, leftIcon = false, badgeAboveTitle = false }) {
+  const { resultsLayout } = useResourcesConcept()
   // Single-select, seeded from the entry gate's grade — always exactly one
   // value ("All Grades" included), never a combination, so this stays a
   // plain single value rather than the array the other facets use.
@@ -749,13 +870,12 @@ function ResultsExperience({ grade, topLeft, leftIcon = false, badgeAboveTitle =
 
   return (
     <div className="px-6 pt-6 pb-16">
-      {/* Breadcrumb + search as their own card (2026-09-18, per user-testing
-          feedback) — same rounded-2xl/border/bg-white treatment as the
-          Filters bar and results panel below, so the top of the page
-          reads as a stack of three cards on the brand-bg canvas instead
-          of the breadcrumb/search floating loose above them. */}
+      {/* Search as its own card (2026-09-18, per user-testing feedback) —
+          same rounded-2xl/border/bg-white treatment as the Filters bar and
+          results panel below, so the top of the page reads as a stack of
+          three cards on the brand-bg canvas instead of the search field
+          floating loose above them. Breadcrumb removed 2026-09-18. */}
       <div className="rounded-2xl border border-brand-border bg-white p-5 mb-6">
-        <div className="mb-4">{topLeft}</div>
         <div className="flex items-stretch gap-2.5">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
@@ -773,13 +893,11 @@ function ResultsExperience({ grade, topLeft, leftIcon = false, badgeAboveTitle =
         </div>
       </div>
       <FilterBarShared {...filterProps} />
-      <div className="flex-1 min-w-0 rounded-2xl border border-brand-border bg-white">
-        <ResultsHeader
-          chips={chips}
-          count={rows.length}
-          right={<SegToggle options={RESULTS_VIEW_OPTIONS} value={resultsView} onChange={setResultsView} />}
-        />
-        {resultsView === 'cards' ? <ResultsCards rows={rows} onSelect={setSelected} /> : <ResultRows rows={rows} showDividers={false} onSelect={setSelected} leftIcon={leftIcon} badgeAboveTitle={badgeAboveTitle} />}
+      <div className="flex-1 min-w-0 rounded-2xl border border-brand-border bg-white overflow-hidden">
+        <ResultsHeader chips={chips} />
+        {resultsLayout === 'table'
+          ? <CondensedResultsTable rows={rows} onSelect={setSelected} />
+          : <ResultRows rows={rows} showDividers={false} onSelect={setSelected} leftIcon={leftIcon} badgeAboveTitle={badgeAboveTitle} />}
       </div>
       <ResourceDetailModal resource={selected} onClose={() => setSelected(null)} />
     </div>
@@ -1004,7 +1122,6 @@ export function ConceptB() {
         <div className="flex-1 min-w-0 rounded-2xl border border-brand-border bg-white">
           <ResultsHeader
             chips={chips}
-            count={rows.length}
             right={<SegToggle options={RESULTS_VIEW_OPTIONS} value={resultsView} onChange={setResultsView} />}
           />
           {resultsView === 'cards' ? <ResultsCards rows={rows} onSelect={setSelected} /> : <ResultRows rows={rows} showDividers={grades.length !== 1} onSelect={setSelected} />}
@@ -1073,15 +1190,6 @@ export function ConceptC() {
       key={activeGrade}
       grade={activeGrade}
       leftIcon
-      topLeft={
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>Resources</BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>{activeGrade}</BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      }
     />
   )
 }
@@ -1118,15 +1226,6 @@ export function ConceptD() {
       key={selectedGrade}
       grade={selectedGrade}
       badgeAboveTitle
-      topLeft={
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>Resources</BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>{selectedGrade}</BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      }
     />
   )
 }
@@ -1369,7 +1468,7 @@ function ResultsDashE({ grade, query }) {
             const typeMeta = TYPE_META[r.type]
             return (
               <div
-                key={r.title}
+                key={`${r.grade}-${r.title}`}
                 role="button"
                 tabIndex={0}
                 onClick={() => setSelected(r)}
@@ -1454,7 +1553,7 @@ export function ConceptE() {
               const typeMeta = TYPE_META[r.type]
               return (
                 <button
-                  key={r.title}
+                  key={`${r.grade}-${r.title}`}
                   type="button"
                   onClick={() => setSelectedRecent(r)}
                   className={`text-left rounded-2xl p-5 h-full flex flex-col justify-between gap-6 ${typeMeta.bg} text-white hover:brightness-110 transition-all`}

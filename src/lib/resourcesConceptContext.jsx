@@ -17,10 +17,17 @@ import { createContext, useContext, useState } from 'react'
 const ResourcesConceptContext = createContext(null)
 
 export function ResourcesConceptProvider({ children }) {
-  // Default landing concept for /resources — C as of 2026-09-16, per
-  // manager direction; was 'a' (the live shipped experience) before.
-  const [resourcesConcept, setResourcesConcept] = useState('c')
+  // Default landing concept for /resources — D as of 2026-09-18, per
+  // manager direction (user testing favored D); was 'c' before that, and
+  // 'a' (the live shipped experience) before that.
+  const [resourcesConcept, setResourcesConcept] = useState('d')
   const [resultsView, setResultsView] = useState('list')
+  // Rows vs. Table for Concept D's results (2026-09-18) — a manager-review
+  // comparison of the existing row list against a denser table layout.
+  // Lives here (not local state in ResourcesAltConcepts.jsx) because the
+  // control for it sits in Nav.jsx, same pattern as the old B/C/D/E
+  // switcher before it.
+  const [resultsLayout, setResultsLayout] = useState('rows')
   // Bumped on every switcher click (see Nav.jsx) — including re-clicking
   // the concept you're already on — so Resources.jsx can key the active
   // B/C/E concept component on it, forcing a fresh remount that clears all
@@ -36,6 +43,7 @@ export function ResourcesConceptProvider({ children }) {
       value={{
         resourcesConcept, setResourcesConcept,
         resultsView, setResultsView,
+        resultsLayout, setResultsLayout,
         resetNonce, bumpReset,
       }}
     >
