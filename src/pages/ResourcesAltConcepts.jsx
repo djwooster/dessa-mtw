@@ -748,22 +748,29 @@ function ResultsExperience({ grade, topLeft, leftIcon = false, badgeAboveTitle =
   const chips = [...courseTypes, ...competencies, ...types.map((t) => TYPE_META[t].label)]
 
   return (
-    <div className="px-6 pt-2 pb-16">
-      <div className="mb-4">{topLeft}</div>
-      <div className="flex items-stretch gap-2.5 mb-4">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
-          <input
-            type="text"
-            value={ownQuery}
-            onChange={(e) => setOwnQuery(e.target.value)}
-            placeholder="Search guides, videos, worksheets..."
-            className="w-full pl-11 pr-4 h-11 rounded-full border border-brand-border bg-white text-sm text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
-          />
+    <div className="px-6 pt-6 pb-16">
+      {/* Breadcrumb + search as their own card (2026-09-18, per user-testing
+          feedback) — same rounded-2xl/border/bg-white treatment as the
+          Filters bar and results panel below, so the top of the page
+          reads as a stack of three cards on the brand-bg canvas instead
+          of the breadcrumb/search floating loose above them. */}
+      <div className="rounded-2xl border border-brand-border bg-white p-5 mb-6">
+        <div className="mb-4">{topLeft}</div>
+        <div className="flex items-stretch gap-2.5">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+            <input
+              type="text"
+              value={ownQuery}
+              onChange={(e) => setOwnQuery(e.target.value)}
+              placeholder="Search guides, videos, worksheets..."
+              className="w-full pl-11 pr-4 h-11 rounded-full border border-brand-border bg-white text-sm text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+            />
+          </div>
+          <button type="button" className="shrink-0 px-6 h-11 rounded-full text-sm font-semibold bg-dessa-teal text-white hover:bg-dessa-teal/90 transition-colors">
+            Search
+          </button>
         </div>
-        <button type="button" className="shrink-0 px-6 h-11 rounded-full text-sm font-semibold bg-dessa-teal text-white hover:bg-dessa-teal/90 transition-colors">
-          Search
-        </button>
       </div>
       <FilterBarShared {...filterProps} />
       <div className="flex-1 min-w-0 rounded-2xl border border-brand-border bg-white">
