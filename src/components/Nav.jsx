@@ -102,7 +102,7 @@ export default function Nav() {
                           className="text-left text-sm text-brand-subtext hover:text-dessa-teal hover:bg-brand-bg transition-colors rounded-md -mx-1.5 px-1.5 py-0.5"
                           onClick={() => goToGrade('All Grades')}
                         >
-                          All Grades
+                          Any age
                         </button>
                       </div>
                     </div>

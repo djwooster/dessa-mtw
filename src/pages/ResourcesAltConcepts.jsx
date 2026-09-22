@@ -9,6 +9,9 @@ import {
 import * as Popover from '@radix-ui/react-popover'
 import { useResourcesConcept } from '../lib/resourcesConceptContext'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
+import {
+  Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis,
+} from '../components/ui/pagination'
 
 // ─── Resources — alternate concepts B/C/D/E ────────────────────────────────
 // Rendered by Resources.jsx whenever the nav's A/B/C/D/E switcher (see
@@ -451,6 +454,24 @@ function ResultRows({ rows, showDividers, onSelect, leftIcon = false, badgeAbove
 // makes sense for those rows.
 const DOWNLOADABLE_TYPES = ['Worksheet', 'PDF']
 
+const TABLE_PAGE_SIZE = 20
+
+// Windowed page list (first, last, current ±1) with gaps marked by
+// 'ellipsis' — same helper as Resources.jsx's/CurriculumSetup.jsx's/
+// FamilyAccessCodes.jsx's pageWindow (the actual canonical pagination
+// pattern per manager direction 2026-09-18), duplicated here rather than
+// extracted to a shared util, matching that same convention.
+function pageWindow(current, total) {
+  const shown = new Set([1, total, current - 1, current, current + 1])
+  const pages = [...shown].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b)
+  const withGaps = []
+  pages.forEach((p, i) => {
+    if (i > 0 && p - pages[i - 1] > 1) withGaps.push('ellipsis')
+    withGaps.push(p)
+  })
+  return withGaps
+}
+
 // Column headers are click-to-sort (2026-09-18) — clicking a row still opens
 // the detail modal, this is a separate control living in the header row.
 function SortableHead({ label, sortKey, activeKey, dir, onSort }) {
@@ -472,6 +493,19 @@ function SortableHead({ label, sortKey, activeKey, dir, onSort }) {
 function CondensedResultsTable({ rows, onSelect }) {
   const [sortKey, setSortKey] = useState(null)
   const [sortDir, setSortDir] = useState('asc')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(TABLE_PAGE_SIZE)
+
+  // Same synchronous-reset-during-render pattern Resources.jsx uses for its
+  // own pagination (a filterKey string compared against its previous
+  // value) — reset to page 1 whenever the actual set of matching rows
+  // changes, not just their sort order.
+  const rowsKey = rows.map((r) => `${r.grade}|${r.title}`).join(',')
+  const [prevRowsKey, setPrevRowsKey] = useState(rowsKey)
+  if (rowsKey !== prevRowsKey) {
+    setPrevRowsKey(rowsKey)
+    setPage(1)
+  }
 
   function handleSort(key) {
     if (sortKey === key) {
@@ -497,13 +531,17 @@ function CondensedResultsTable({ rows, onSelect }) {
         return sortDir === 'asc' ? cmp : -cmp
       })
     : rows
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize))
+  const pagedRows = sortedRows.slice((page - 1) * pageSize, page * pageSize)
 
   return (
+    <>
     <Table>
       <TableHeader>
         <TableRow className="hover:bg-transparent">
-          <SortableHead label="Title" sortKey="title" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
           <SortableHead label="Type" sortKey="type" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+          <SortableHead label="Title" sortKey="title" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+          <TableHead>Description</TableHead>
           <SortableHead label="Tier" sortKey="courseType" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
           <SortableHead label="Competency" sortKey="competency" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
           <TableHead className="w-12">
@@ -512,10 +550,16 @@ function CondensedResultsTable({ rows, onSelect }) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {sortedRows.map((r) => {
+        {pagedRows.map((r) => {
           const typeMeta = TYPE_META[r.type]
           return (
             <TableRow key={`${r.grade}-${r.title}`} onClick={() => onSelect?.(r)} className="cursor-pointer">
+              <TableCell className="py-1.5">
+                <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] whitespace-nowrap ${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`}>
+                  <typeMeta.icon size={14} />
+                  <span className="text-xs font-medium">{typeMeta.label}</span>
+                </span>
+              </TableCell>
               <TableCell className="py-1.5">
                 {/* Real focusable element (not just the row's own onClick)
                     so keyboard/screen-reader users have an actionable
@@ -531,12 +575,7 @@ function CondensedResultsTable({ rows, onSelect }) {
                   {r.title}
                 </button>
               </TableCell>
-              <TableCell className="py-1.5">
-                <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] whitespace-nowrap ${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`}>
-                  <typeMeta.icon size={14} />
-                  <span className="text-xs font-medium">{typeMeta.label}</span>
-                </span>
-              </TableCell>
+              <TableCell className="py-1.5 text-brand-subtext truncate max-w-xs">{r.desc}</TableCell>
               <TableCell className="py-1.5 whitespace-nowrap text-brand-subtext">{r.courseType}</TableCell>
               <TableCell className="py-1.5 whitespace-nowrap text-brand-subtext">{r.competency}</TableCell>
               <TableCell className="py-1.5 text-right">
@@ -556,6 +595,51 @@ function CondensedResultsTable({ rows, onSelect }) {
         })}
       </TableBody>
     </Table>
+    {/* Pagination footer — matches FamilyAccessCodes.jsx / CurriculumSetup's
+        canonical use of the shared ui/pagination.jsx component (2026-09-18,
+        per manager direction): windowed page numbers (pageWindow, ellipsis
+        for large counts) on the left, a plain page-size select (no visible
+        label, "n" not "n per page") on the right. No range label text and
+        no totalPages>1 guard — matches that reference exactly. */}
+    <div className="flex items-center justify-between px-6 py-4">
+      <Pagination>
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} />
+          </PaginationItem>
+          {pageWindow(page, totalPages).map((p, i) =>
+            p === 'ellipsis' ? (
+              <PaginationItem key={`ellipsis-${i}`}>
+                <PaginationEllipsis />
+              </PaginationItem>
+            ) : (
+              <PaginationItem key={p}>
+                <PaginationLink isActive={p === page} onClick={() => setPage(p)}>
+                  {p}
+                </PaginationLink>
+              </PaginationItem>
+            )
+          )}
+          <PaginationItem>
+            <PaginationNext onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+
+      <div className="relative">
+        <select
+          value={pageSize}
+          onChange={(e) => setPageSize(Number(e.target.value))}
+          className="appearance-none pl-3 pr-8 h-9 text-sm border border-brand-border rounded-md bg-white text-brand-text focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+        >
+          {[10, 20, 50, 100].map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+        <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+      </div>
+    </div>
+    </>
   )
 }
 
