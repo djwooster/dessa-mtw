@@ -1,20 +1,15 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, addDays, parseISO } from 'date-fns'
-import { Settings, MoreHorizontal, Download, Printer, X, ChevronLeft, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Search, Plus, Trash2, Lock, Pencil, CheckCircle2, XCircle, Calendar } from 'lucide-react'
+import { Settings, MoreHorizontal, Download, Printer, X, ChevronLeft, ChevronRight, ChevronDown, Check, Search, Plus, Trash2, Lock, Pencil, Calendar, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import {
-  schools, schoolWeeks, getWeekData,
-  getDistrictTrend, getSchoolTrend, getDistrictWeekData,
-  MOST_RECENT_WEEK,
+  schools, getWeekData,
+  getDistrictTrend, getSchoolTrend,
 } from '../lib/report2Data'
 import { toast } from 'sonner'
 import { DatePicker } from '../components/ui/date-picker'
 import { DateRangePicker } from '../components/ui/date-range-picker'
 import { DayPicker } from 'react-day-picker'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, Cell, ResponsiveContainer,
-} from 'recharts'
-import { ChartContainer, ChartTooltipContent } from '../components/ui/chart'
 
 const SITE_LEADER_SCHOOL = schools[0]
 
@@ -27,174 +22,134 @@ function weekLabel(weekStart, includeYear = false) {
   return includeYear ? `${range}, ${format(start, 'yyyy')}` : range
 }
 
-function groupWeeksByMonth(weeks) {
-  const groups = []
-  const seen = {}
-  ;[...weeks].reverse().forEach(w => {
-    const key = format(parseISO(w), 'MMMM yyyy')
-    if (!seen[key]) { seen[key] = []; groups.push({ label: key, weeks: seen[key] }) }
-    seen[key].push(w)
-  })
-  return groups
+// ─── Windowed comparison helpers ──────────────────────────────────────────────
+// The report used to be a single-week snapshot; it's now framed around a
+// trailing window (4 weeks by default, or a custom range) compared against
+// the equal-length window immediately before it. These two helpers derive
+// both windows from any full oldest→newest weekly trend array, so the same
+// logic drives the district-level stat cards and every per-site card.
+
+function currentWindow(fullTrend, rangeMode, dateFrom, dateTo) {
+  if (rangeMode === 'custom' && dateFrom && dateTo) {
+    return fullTrend.filter(d => d.weekStart >= dateFrom && d.weekStart <= dateTo)
+  }
+  return fullTrend.slice(-4)
 }
 
-// ─── Sort Button ─────────────────────────────────────────────────────────────
+function previousWindow(fullTrend, current) {
+  if (current.length === 0) return []
+  const firstIdx = fullTrend.findIndex(d => d.weekStart === current[0].weekStart)
+  const n = current.length
+  return fullTrend.slice(Math.max(0, firstIdx - n), firstIdx)
+}
 
-function SortBtn({ col, label, sortBy, sortDir, onSort }) {
-  const active = sortBy === col
+function avgPct(window) {
+  if (window.length === 0) return 0
+  return Math.round(window.reduce((s, d) => s + d.pct, 0) / window.length)
+}
+
+// Three tiers, in priority order — a site at or above 50% is "Thriving"
+// regardless of its trend direction; below that, only the trend (vs. its own
+// previous window) separates "Building momentum" from "Getting started".
+// Neutral/accent/success tokens only — no warning/danger token, per the
+// no-alarm-styling rule for this page.
+function growthTier(currentPct, delta) {
+  if (currentPct >= 50) return 'thriving'
+  if (delta > 0) return 'building'
+  return 'starting'
+}
+
+const TIER_META = {
+  thriving: { label: 'Thriving',          text: 'text-state-success', bg: 'bg-state-successLight' },
+  building: { label: 'Building momentum', text: 'text-dessa-teal',    bg: 'bg-dessa-tealLight' },
+  starting: { label: 'Getting started',   text: 'text-brand-subtext', bg: 'bg-brand-bg' },
+}
+
+// ─── Trend pill ───────────────────────────────────────────────────────────────
+// Same pill background in both directions — only the arrow flips — so a
+// declining number never reads as an alarm, just a direction.
+function TrendPill({ delta }) {
+  const isUp = delta >= 0
+  const Icon = isUp ? ArrowUpRight : ArrowDownRight
   return (
-    <button
-      onClick={() => onSort(col)}
-      className="flex items-center gap-1 text-xs font-semibold text-brand-subtext hover:text-brand-text transition-colors group"
-    >
-      {label}
-      {active
-        ? sortDir === 'desc'
-          ? <ArrowDown size={11} style={{ color: '#2A7F8F' }} />
-          : <ArrowUp   size={11} style={{ color: '#2A7F8F' }} />
-        : <ArrowUpDown size={11} className="opacity-40 group-hover:opacity-70" />}
-    </button>
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-state-successLight text-state-success text-xs font-semibold whitespace-nowrap">
+      <Icon size={12} />
+      {Math.abs(delta)} pts
+    </span>
   )
 }
 
-// ─── Site Combobox ────────────────────────────────────────────────────────────
+// ─── Engagement over time (basic SVG, no charting library) ───────────────────
+// Plots current window vs. previous window by position-within-window (not
+// calendar date) so a 4-point window always compares like-for-like even when
+// a custom range picks a different length. The current window's final
+// segment/point renders dashed and hollow — the most recently completed
+// week, styled as "still forming" rather than a finished low result.
+function EngagementTrendChart({ current, previous }) {
+  const width = 560
+  const height = 220
+  const padding = { top: 12, right: 16, bottom: 28, left: 34 }
+  const innerW = width - padding.left - padding.right
+  const innerH = height - padding.top - padding.bottom
 
-function SiteCombobox({ value, onChange }) {
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
-  const ref = useRef(null)
+  function toPoints(series) {
+    if (series.length === 0) return []
+    return series.map((d, i) => ({
+      x: padding.left + (series.length === 1 ? innerW / 2 : (i / (series.length - 1)) * innerW),
+      y: padding.top + innerH - (d.pct / 100) * innerH,
+      ...d,
+    }))
+  }
 
-  useEffect(() => {
-    if (!open) return
-    const handler = e => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setQuery('') } }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open])
+  const currentPts = toPoints(current)
+  const previousPts = toPoints(previous)
+  const gridLines = [0, 25, 50, 75, 100]
 
-  const schoolNames = schools.map(s => s.name)
-  const filtered = query.trim()
-    ? schoolNames.filter(s => s.toLowerCase().includes(query.toLowerCase()))
-    : schoolNames
+  function pathFor(pts) {
+    return pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
+  }
+
+  const completedPts = currentPts.slice(0, -1)
+  const lastSegment = currentPts.slice(-2)
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="flex items-center justify-between w-full px-3 h-[34px] text-sm border border-brand-subtext/50 rounded-lg bg-white text-brand-text hover:bg-brand-bg transition-colors"
-      >
-        <span className={value === 'All' ? 'text-brand-subtext' : ''}>{value === 'All' ? 'All sites' : value}</span>
-        <ChevronDown size={12} className={`text-brand-subtext transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 border border-brand-border rounded-lg overflow-hidden bg-white z-20 shadow-lg">
-          <div className="flex items-center gap-2 px-3 border-b border-brand-border">
-            <Search size={12} className="text-brand-subtext shrink-0" />
-            <input
-              autoFocus
-              type="text"
-              placeholder="Search schools…"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              className="flex-1 py-1.5 text-xs bg-transparent text-brand-text placeholder:text-brand-subtext focus:outline-none"
-            />
-            {query && <button onClick={() => setQuery('')} className="text-brand-subtext hover:text-brand-text"><X size={12} /></button>}
-          </div>
-          <div className="max-h-36 overflow-y-auto py-1">
-            <button
-              onClick={() => { onChange('All'); setOpen(false); setQuery('') }}
-              className={`flex items-center justify-between w-full px-3 py-1.5 text-xs text-left transition-colors ${value === 'All' ? 'text-dessa-teal font-medium bg-brand-bg' : 'text-brand-text hover:bg-brand-bg'}`}
-            >
-              All sites
-              {value === 'All' && <Check size={13} className="text-dessa-teal" />}
-            </button>
-            {filtered.map(s => (
-              <button
-                key={s}
-                onClick={() => { onChange(s); setOpen(false); setQuery('') }}
-                className={`flex items-center justify-between w-full px-3 py-2 text-sm text-left transition-colors ${value === s ? 'text-dessa-teal font-medium bg-brand-bg' : 'text-brand-text hover:bg-brand-bg'}`}
-              >
-                {s}
-                {value === s && <Check size={13} className="text-dessa-teal" />}
-              </button>
-            ))}
-          </div>
-        </div>
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" role="img" aria-label="District engagement over time, current window vs. previous window">
+      {gridLines.map(v => {
+        const y = padding.top + innerH - (v / 100) * innerH
+        return (
+          <g key={v}>
+            <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="#E2E6EA" strokeWidth={1} />
+            <text x={padding.left - 8} y={y + 3} textAnchor="end" fontSize={10} fill="#6B7A8D">{v}%</text>
+          </g>
+        )
+      })}
+
+      {previousPts.length > 1 && (
+        <path d={pathFor(previousPts)} fill="none" stroke="#B0B9C6" strokeWidth={1.5} strokeDasharray="4,3" />
       )}
-    </div>
-  )
-}
+      {previousPts.map(p => (
+        <circle key={`prev-${p.weekStart}`} cx={p.x} cy={p.y} r={2.5} fill="#B0B9C6" />
+      ))}
 
-// ─── Week Selector ────────────────────────────────────────────────────────────
+      {completedPts.length > 1 && (
+        <path d={pathFor(completedPts)} fill="none" stroke="#2A7F8F" strokeWidth={2} />
+      )}
+      {lastSegment.length === 2 && (
+        <path d={pathFor(lastSegment)} fill="none" stroke="#2A7F8F" strokeWidth={2} strokeDasharray="5,4" opacity={0.55} />
+      )}
+      {completedPts.map(p => (
+        <circle key={`cur-${p.weekStart}`} cx={p.x} cy={p.y} r={3} fill="#2A7F8F" />
+      ))}
+      {currentPts.slice(-1).map(p => (
+        <circle key={`cur-last-${p.weekStart}`} cx={p.x} cy={p.y} r={3.5} fill="white" stroke="#2A7F8F" strokeWidth={2} opacity={0.85} />
+      ))}
 
-function WeekSelector({ weeks, selected, onChange }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-
-  useEffect(() => {
-    if (!open) return
-    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open])
-
-  const idx     = weeks.indexOf(selected)
-  const canPrev = idx > 0
-  const canNext = idx < weeks.length - 1
-
-  const grouped = useMemo(() => groupWeeksByMonth(weeks), [weeks])
-
-  return (
-    <div className="flex items-center gap-2">
-      <button
-        className="w-8 h-8 rounded-lg border border-brand-border bg-white flex items-center justify-center hover:bg-brand-bg disabled:opacity-30 transition-colors"
-        onClick={() => onChange(weeks[idx - 1])}
-        disabled={!canPrev}
-      >
-        <ChevronLeft size={15} className="text-brand-text" />
-      </button>
-
-      <div className="relative" ref={ref}>
-        <button
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-brand-border bg-white text-sm font-semibold text-brand-text transition-all min-w-[210px] justify-between"
-          onClick={() => setOpen(o => !o)}
-        >
-          <span>{weekLabel(selected, true)}</span>
-          <ChevronDown size={13} className="text-brand-subtext flex-shrink-0" />
-        </button>
-
-        {open && (
-          <div className="absolute top-[calc(100%+6px)] left-1/2 -translate-x-1/2 bg-white rounded-xl border border-brand-border z-30 w-64 max-h-72 overflow-y-auto py-1.5">
-            {grouped.map(({ label, weeks: mw }) => (
-              <div key={label}>
-                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-brand-subtext sticky top-0 bg-white">
-                  {label}
-                </p>
-                {mw.map(w => (
-                  <button
-                    key={w}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-brand-bg transition-colors"
-                    onClick={() => { onChange(w); setOpen(false) }}
-                  >
-                    <span className={w === selected ? 'font-semibold text-brand-text' : 'text-brand-text'}>
-                      {weekLabel(w)}
-                    </span>
-                    {w === selected && <Check size={13} style={{ color: '#2A7F8F' }} />}
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <button
-        className="w-8 h-8 rounded-lg border border-brand-border bg-white flex items-center justify-center hover:bg-brand-bg disabled:opacity-30 transition-colors"
-        onClick={() => onChange(weeks[idx + 1])}
-        disabled={!canNext}
-      >
-        <ChevronRight size={15} className="text-brand-text" />
-      </button>
-    </div>
+      {currentPts.map(p => (
+        <text key={`x-${p.weekStart}`} x={p.x} y={height - 8} textAnchor="middle" fontSize={10} fill="#6B7A8D">
+          {weekLabel(p.weekStart)}
+        </text>
+      ))}
+    </svg>
   )
 }
 
@@ -219,65 +174,6 @@ function exportCSV(trendData, activeSchools, goal) {
   URL.revokeObjectURL(url)
 }
 
-// ─── Trend Chart ──────────────────────────────────────────────────────────────
-
-function TrendChart({ data, districtTarget, selectedWeek }) {
-  const chartData = data.map(d => ({
-    label: format(parseISO(d.weekStart), 'MMM d'),
-    pct: d.pct,
-    weekStart: d.weekStart,
-  }))
-
-  return (
-    <ChartContainer config={{ pct: { color: '#2A7F8F' } }} className="h-56">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }} barCategoryGap="30%">
-          <CartesianGrid vertical={false} stroke="#E2E6EA" strokeDasharray="0" />
-          <XAxis
-            dataKey="label"
-            tick={{ fontSize: 11, fill: '#6B7A8D' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            domain={[0, 100]}
-            tickFormatter={v => `${v}%`}
-            tick={{ fontSize: 11, fill: '#6B7A8D' }}
-            axisLine={false}
-            tickLine={false}
-            width={40}
-          />
-          <Tooltip
-            cursor={{ fill: 'rgba(42,127,143,0.06)' }}
-            content={<ChartTooltipContent formatter={v => `${v}%`} />}
-          />
-          <ReferenceLine
-            y={districtTarget}
-            stroke="#B0B9C6"
-            strokeDasharray="5 4"
-            strokeWidth={1.5}
-          />
-          <Bar dataKey="pct" name="Engagement" radius={[4, 4, 0, 0]}>
-            {chartData.map(entry => (
-              <Cell
-                key={entry.weekStart}
-                fill={entry.weekStart === selectedWeek ? '#1B2B4B' : '#2A7F8F'}
-              />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </ChartContainer>
-  )
-}
-
-// ─── Pct color helper ─────────────────────────────────────────────────────────
-
-function pctColor(pct) {
-  if (pct >= 80) return { text: '#166534', bg: '#DCFCE7' }   // dark green
-  if (pct >= 50) return { text: '#B45309', bg: '#FEF3C7' }   // accessible amber
-  return            { text: '#B91C1C', bg: '#FEE2E2' }        // red
-}
 
 // ─── Shared calendar helpers ──────────────────────────────────────────────────
 
@@ -570,22 +466,23 @@ export default function Report2() {
   const [goal, setGoal]                     = useState(3)
   const [districtTarget, setDistrictTarget] = useState(70)
   const [settingsOpen, setSettingsOpen]     = useState(false)
-  const [selectedWeek, setSelectedWeek]     = useState(MOST_RECENT_WEEK)
-  const [tablePage, setTablePage]           = useState(1)
-  const [sortBy, setSortBy]                 = useState('engagement')
-  const [sortDir, setSortDir]               = useState('desc')
+
+  // Rolling trailing window (2026-09-22 redesign) — replaces the old
+  // single-week snapshot. 'last4' is the default lens; 'custom' switches to
+  // whatever [dateFrom, dateTo] range is applied via the range popover.
+  const [rangeMode, setRangeMode]           = useState('last4')
   const [dateFrom, setDateFrom]             = useState('')
   const [dateTo, setDateTo]                 = useState('')
-  const [searchQ, setSearchQ]               = useState('')
-  const [showFilters, setShowFilters]         = useState(false)
   const [pendingDateFrom, setPendingDateFrom] = useState('')
   const [pendingDateTo, setPendingDateTo]     = useState('')
-  const [quickFilter, setQuickFilter]         = useState(null)
-  const [pendingQuickFilter, setPendingQuickFilter] = useState(null)
-  const [schoolFilter, setSchoolFilter]       = useState('All')
-  const [pendingSchoolFilter, setPendingSchoolFilter] = useState('All')
+  const [rangeMenuOpen, setRangeMenuOpen]     = useState(false)
+  const rangeMenuRef = useRef(null)
 
-  const TABLE_PAGE_SIZE = 10
+  const [searchQ, setSearchQ]               = useState('')
+  const [tierFilter, setTierFilter]         = useState('all')
+  const [sitePage, setSitePage]             = useState(1)
+  const SITE_PAGE_SIZE = 12
+
   const [menuOpen, setMenuOpen]             = useState(false)
   const menuRef  = useRef(null)
 
@@ -598,129 +495,158 @@ export default function Report2() {
     return () => document.removeEventListener('mousedown', handler)
   }, [menuOpen])
 
+  useEffect(() => {
+    if (!rangeMenuOpen) return
+    const handler = e => { if (rangeMenuRef.current && !rangeMenuRef.current.contains(e.target)) setRangeMenuOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [rangeMenuOpen])
 
-  // Trend data (oldest → newest for left-to-right chart)
+  // Full oldest → newest weekly trend (district, or the one school in the
+  // site-leader view — that toggle is currently commented out of the UI
+  // below, same as before this redesign, so this branch stays reachable
+  // only via manual state changes, not a live control).
   const rawTrend = useMemo(() => (
     role === 'site_leader' ? getSchoolTrend(SITE_LEADER_SCHOOL.id, goal) : getDistrictTrend(goal)
   ), [role, goal])
 
-  const trendData = useMemo(() => rawTrend.filter(d => {
-    if (dateFrom && d.weekStart < dateFrom) return false
-    if (dateTo   && d.weekStart > dateTo)   return false
-    return true
-  }), [rawTrend, dateFrom, dateTo])
+  const current  = useMemo(() => currentWindow(rawTrend, rangeMode, dateFrom, dateTo), [rawTrend, rangeMode, dateFrom, dateTo])
+  const previous = useMemo(() => previousWindow(rawTrend, current), [rawTrend, current])
 
-  // School table rows for the selected week
-  const selectedWeekSchools = useMemo(() => (
-    activeSchools.map(school => ({ school, ...getWeekData(school.id, selectedWeek, goal) }))
-  ), [selectedWeek, goal, role])
+  const currentAvg    = avgPct(current)
+  const previousAvg   = avgPct(previous)
+  const engagementDelta = currentAvg - previousAvg
 
-  useEffect(() => setTablePage(1), [selectedWeek, role, sortBy, sortDir, searchQ])
-
-  function handleSort(col) {
-    if (sortBy === col) setSortDir(d => d === 'desc' ? 'asc' : 'desc')
-    else { setSortBy(col); setSortDir('desc') }
-  }
-
-  function toggleFilters() {
-    if (showFilters) {
-      setShowFilters(false)
-    } else {
-      setPendingDateFrom(dateFrom)
-      setPendingDateTo(dateTo)
-      setPendingQuickFilter(quickFilter)
-      setPendingSchoolFilter(schoolFilter)
-      setShowFilters(true)
+  // Per-site current/previous window comparison — feeds both the site card
+  // grid and the "Sites building momentum" stat/list, so it's computed once
+  // here rather than twice.
+  const siteStats = useMemo(() => activeSchools.map(school => {
+    const fullSiteTrend  = getSchoolTrend(school.id, goal)
+    const siteCurrent    = currentWindow(fullSiteTrend, rangeMode, dateFrom, dateTo)
+    const sitePrevious   = previousWindow(fullSiteTrend, siteCurrent)
+    const siteCurrentAvg = avgPct(siteCurrent)
+    const sitePreviousAvg = avgPct(sitePrevious)
+    const delta = siteCurrentAvg - sitePreviousAvg
+    return {
+      school,
+      currentAvg: siteCurrentAvg,
+      delta,
+      hasPrevious: sitePrevious.length > 0,
+      tier: growthTier(siteCurrentAvg, delta),
     }
+  }), [activeSchools, goal, rangeMode, dateFrom, dateTo])
+
+  const sitesActive = siteStats.filter(s => s.currentAvg > 0).length
+  const buildingMomentumSites = siteStats.filter(s => s.hasPrevious && s.delta > 0)
+
+  function openRangeMenu() {
+    setPendingDateFrom(dateFrom)
+    setPendingDateTo(dateTo)
+    setRangeMenuOpen(o => !o)
   }
 
-  function applyFilters() {
+  function applyCustomRange() {
     setDateFrom(pendingDateFrom)
     setDateTo(pendingDateTo)
-    setQuickFilter(pendingQuickFilter)
-    setSchoolFilter(pendingSchoolFilter)
-    setShowFilters(false)
+    setRangeMode('custom')
+    setRangeMenuOpen(false)
   }
 
-  function resetFilters() {
+  function resetToLast4() {
+    setRangeMode('last4')
     setDateFrom(''); setDateTo('')
     setPendingDateFrom(''); setPendingDateTo('')
-    setQuickFilter(null); setPendingQuickFilter(null)
-    setSchoolFilter('All'); setPendingSchoolFilter('All')
-    setShowFilters(false)
+    setRangeMenuOpen(false)
   }
 
-  const activeFilters = (quickFilter ? 1 : 0) + (dateFrom || dateTo ? 1 : 0) + (schoolFilter !== 'All' ? 1 : 0)
+  const rangeLabel = rangeMode === 'custom' && dateFrom && dateTo
+    ? `${new Date(dateFrom + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(dateTo + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+    : 'Last 4 weeks'
 
-  const sortedSchools = useMemo(() => {
-    const getValue = row => ({
-      name:        row.school.name,
-      teachers:    row.totalTeachers,
-      reached:     row.pct,
-      engagement:  row.pct,
-    })[sortBy] ?? row.pct
-    return [...selectedWeekSchools].sort((a, b) => {
-      const av = getValue(a), bv = getValue(b)
-      return sortDir === 'desc'
-        ? (typeof av === 'string' ? bv.localeCompare(av) : bv - av)
-        : (typeof av === 'string' ? av.localeCompare(bv) : av - bv)
-    })
-  }, [selectedWeekSchools, sortBy, sortDir])
-
-  const filteredSchools = useMemo(() => {
-    let result = sortedSchools
+  const filteredSites = useMemo(() => {
+    let result = siteStats
     if (searchQ) {
       const q = searchQ.toLowerCase()
-      result = result.filter(r => r.school.name.toLowerCase().includes(q))
+      result = result.filter(s => s.school.name.toLowerCase().includes(q))
     }
-    if (schoolFilter !== 'All')            result = result.filter(r => r.school.name === schoolFilter)
-    if (quickFilter === 'meeting-goal')    result = result.filter(r => r.pct >= 80)
-    if (quickFilter === 'needs-attention') result = result.filter(r => r.pct < 50)
-    return result
-  }, [sortedSchools, searchQ, schoolFilter, quickFilter])
+    if (tierFilter !== 'all') result = result.filter(s => s.tier === tierFilter)
+    return [...result].sort((a, b) => a.school.name.localeCompare(b.school.name))
+  }, [siteStats, searchQ, tierFilter])
 
-  const totalTablePages = Math.ceil(filteredSchools.length / TABLE_PAGE_SIZE)
-  const visibleSchools  = filteredSchools.slice(
-    (tablePage - 1) * TABLE_PAGE_SIZE,
-    tablePage * TABLE_PAGE_SIZE
-  )
+  useEffect(() => setSitePage(1), [searchQ, tierFilter, rangeMode, dateFrom, dateTo])
 
-  // Aggregate stats for selected week
-  const weekStats = useMemo(() => (
-    role === 'site_leader'
-      ? getWeekData(SITE_LEADER_SCHOOL.id, selectedWeek, goal)
-      : getDistrictWeekData(selectedWeek, goal)
-  ), [role, selectedWeek, goal])
+  const totalSitePages = Math.max(1, Math.ceil(filteredSites.length / SITE_PAGE_SIZE))
+  const visibleSites = filteredSites.slice((sitePage - 1) * SITE_PAGE_SIZE, sitePage * SITE_PAGE_SIZE)
 
-  const schoolsEngaged = selectedWeekSchools.filter(d => d.pct > 0).length
-
-
-  const statCards = role === 'program_admin'
-    ? [
-        { label: 'Sites engaged',      value: `${schoolsEngaged} of ${schools.length}`, sub: weekLabel(selectedWeek, true) },
-        { label: 'Users meeting goal', value: `${weekStats.pct}%`,                      sub: 'district-wide'                       },
-        { label: 'Goal',                  value: `${goal}×`,                               sub: 'per week'        },
-      ]
-    : [
-        { label: 'Users on track', value: `${selectedWeekSchools[0]?.meetingGoal} of ${selectedWeekSchools[0]?.totalTeachers}`, sub: weekLabel(selectedWeek) },
-        { label: 'Engagement rate',   value: `${selectedWeekSchools[0]?.pct}%`,    sub: SITE_LEADER_SCHOOL.name                  },
-        { label: 'Goal',              value: `${goal}×`,                           sub: 'per week'           },
-      ]
+  const statCards = [
+    { label: 'Sites active',       value: `${sitesActive} of ${activeSchools.length}` },
+    { label: 'Average engagement', value: `${currentAvg}%`, delta: engagementDelta },
+    { label: 'Building momentum',  value: `${buildingMomentumSites.length} of ${activeSchools.length}`, sub: 'sites vs. their prior window' },
+    { label: 'Weekly goal',        value: `${goal}×`, sub: 'per week' },
+  ]
 
   return (
     <div className="px-6 pt-8 pb-8">
 
-      {/* Filter card */}
-      <div className="bg-white rounded-xl border border-brand-border p-5 mb-6">
-
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-semibold text-brand-text">Site Engagement</h2>
-            <p className="text-sm text-brand-subtext mt-1">This report shows Move This World lesson completion rates by site across your district.</p>
+      {/* Header — plain, no card chrome (2026-09-22 redesign replaced the
+          old always-expanded filter card with this lighter row: title +
+          description on the left, the rolling-window control and overflow
+          menu on the right). */}
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-semibold text-brand-text">Site Engagement</h2>
+          <p className="text-sm text-brand-subtext mt-1">This report shows Move This World lesson completion rates by site across your district.</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="relative" ref={rangeMenuRef}>
+            <button
+              onClick={openRangeMenu}
+              className="flex items-center gap-2 px-3 h-9 rounded-lg border border-brand-border bg-white text-sm font-medium text-brand-text hover:bg-brand-bg transition-colors"
+            >
+              <Calendar size={14} className="text-brand-subtext" />
+              {rangeLabel}
+              <ChevronDown size={13} className={`text-brand-subtext transition-transform ${rangeMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+            <AnimatePresence>
+              {rangeMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-[calc(100%+6px)] w-80 bg-white rounded-xl border border-brand-border shadow-lg z-30 p-4"
+                >
+                  <button
+                    onClick={resetToLast4}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-left transition-colors mb-3 ${
+                      rangeMode === 'last4' ? 'bg-dessa-tealLight text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
+                    }`}
+                  >
+                    Last 4 weeks
+                    {rangeMode === 'last4' && <Check size={14} className="text-dessa-teal" />}
+                  </button>
+                  <div className="pt-3 border-t border-brand-border">
+                    <p className="text-xs font-semibold text-brand-text mb-2">Custom range</p>
+                    <DateRangePicker
+                      from={pendingDateFrom}
+                      to={pendingDateTo}
+                      onFromChange={setPendingDateFrom}
+                      onToChange={setPendingDateTo}
+                      align="start"
+                      buttonClassName="w-full justify-between"
+                    />
+                    <button
+                      onClick={applyCustomRange}
+                      disabled={!pendingDateFrom || !pendingDateTo}
+                      className="w-full mt-3 h-8 rounded-md text-sm font-medium text-white bg-dessa-teal hover:opacity-90 disabled:opacity-40 transition-colors"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <div className="relative" ref={menuRef}>
             <button
-              className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
+              className="flex items-center justify-center w-9 h-9 rounded-lg border border-brand-border bg-white text-brand-text hover:bg-brand-bg transition-all"
               onClick={() => setMenuOpen(o => !o)}
             >
               <MoreHorizontal size={13} />
@@ -766,102 +692,11 @@ export default function Report2() {
             )}
           </div>
         </div>
-
-        <div className="flex items-center justify-between">
-          <button
-            onClick={toggleFilters}
-            className="flex items-center py-1 text-left transition-colors"
-          >
-            <span className="text-sm font-medium text-brand-text">Filters</span>
-            {activeFilters > 0 && (
-              <span className="ml-1.5 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center text-white" style={{ backgroundColor: '#2A7F8F' }}>
-                {activeFilters}
-              </span>
-            )}
-            <ChevronDown size={14} className={`ml-2 text-brand-subtext transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
-          </button>
-          <div className="relative">
-            {selectedWeek !== MOST_RECENT_WEEK && (
-              <button
-                onClick={() => setSelectedWeek(MOST_RECENT_WEEK)}
-                className="absolute -top-5 right-0 text-xs font-medium hover:underline whitespace-nowrap"
-                style={{ color: '#0061FF' }}
-              >
-                Back to current week
-              </button>
-            )}
-            <WeekSelector weeks={schoolWeeks} selected={selectedWeek} onChange={setSelectedWeek} />
-          </div>
-        </div>
-
-        {showFilters && (
-          <div className="mt-4 pt-4 border-t border-brand-border">
-            <div className="grid grid-cols-3 gap-6 items-start">
-
-              {/* Quick filters */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-brand-text">Quick Filters</span>
-                  {pendingQuickFilter && <button onClick={() => setPendingQuickFilter(null)} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
-                </div>
-                <div className="flex gap-2">
-                  {[
-                    { key: 'meeting-goal',    label: 'Meeting goal',    Icon: CheckCircle2 },
-                    { key: 'needs-attention', label: 'Needs attention', Icon: XCircle      },
-                  ].map(({ key, label, Icon }) => (
-                    <button
-                      key={key}
-                      onClick={() => setPendingQuickFilter(q => q === key ? null : key)}
-                      className={`flex items-center gap-2 px-3 h-[34px] text-sm rounded-lg border transition-colors ${
-                        pendingQuickFilter === key
-                          ? 'bg-dessa-teal/10 border-dessa-teal text-dessa-teal font-medium'
-                          : 'bg-white border-brand-subtext/50 text-brand-text hover:bg-brand-bg'
-                      }`}
-                    >
-                      <Icon size={15} className="shrink-0" />{label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Date range */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-brand-text">Date Range</span>
-                  {(pendingDateFrom || pendingDateTo) && <button onClick={() => { setPendingDateFrom(''); setPendingDateTo('') }} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
-                </div>
-                <DateRangePicker
-                  from={pendingDateFrom}
-                  to={pendingDateTo}
-                  onFromChange={setPendingDateFrom}
-                  onToChange={setPendingDateTo}
-                  align="start"
-                  buttonClassName="w-full justify-between"
-                />
-              </div>
-
-              {/* Site */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-brand-text">Site</span>
-                  {pendingSchoolFilter !== 'All' && <button onClick={() => setPendingSchoolFilter('All')} className="text-xs font-medium hover:opacity-70" style={{ color: '#0061FF' }}>Clear</button>}
-                </div>
-                <SiteCombobox value={pendingSchoolFilter} onChange={setPendingSchoolFilter} />
-              </div>
-
-            </div>
-
-            <div className="flex items-center justify-start gap-2 mt-5">
-              <button onClick={applyFilters} className="px-3 h-8 text-sm font-medium text-white rounded-md transition-colors hover:opacity-90 bg-dessa-teal">Apply</button>
-              <button onClick={resetFilters} className="px-3 h-8 text-sm font-medium text-brand-text border border-brand-border rounded-md hover:bg-brand-bg transition-colors">Reset filters</button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        {statCards.map(({ label, value, sub }, i) => (
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        {statCards.map(({ label, value, sub, delta }, i) => (
           <motion.div
             key={label}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -869,55 +704,65 @@ export default function Report2() {
             className="bg-white rounded-xl border border-brand-border px-5 py-4"
           >
             <p className="text-sm font-medium text-brand-subtext mb-4">{label}</p>
-            <p className="text-2xl font-bold text-brand-text">{value}</p>
-            <p className="text-xs text-brand-subtext mt-0.5">{sub}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-2xl font-bold text-brand-text">{value}</p>
+              {typeof delta === 'number' && <TrendPill delta={delta} />}
+            </div>
+            {sub && <p className="text-xs text-brand-subtext mt-0.5">{sub}</p>}
           </motion.div>
         ))}
       </div>
 
-      {/* Trend chart card — commented out
-      <motion.div
-        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.2 }}
-        className="bg-white rounded-xl border border-brand-border mb-6 overflow-hidden"
-      >
-        <div className="px-5 pt-5 pb-2">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-2xl font-semibold text-brand-text">
-                Weekly curriculum engagement
-              </p>
+      {/* Engagement over time + Sites building momentum */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.2 }}
+          className="col-span-2 bg-white rounded-xl border border-brand-border p-5"
+        >
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <p className="text-lg font-semibold text-brand-text">Engagement over time</p>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-3 h-2 rounded-sm bg-dessa-teal" />
+                <span className="text-xs text-brand-subtext">Current window</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <svg width="18" height="8" viewBox="0 0 18 8"><line x1="0" y1="4" x2="18" y2="4" stroke="#B0B9C6" strokeWidth="1.5" strokeDasharray="4,3" /></svg>
+                <span className="text-xs text-brand-subtext">Previous window</span>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-5 mt-3">
-            <div className="flex items-center gap-1.5">
-              <span className="inline-block w-3 h-3 rounded-sm bg-dessa-teal" />
-              <span className="text-xs text-brand-subtext">Engagement %</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <svg width="22" height="10" viewBox="0 0 22 10">
-                <line x1="0" y1="5" x2="22" y2="5" stroke="#B0B9C6" strokeWidth="1.5" strokeDasharray="4,3" />
-              </svg>
-              <span className="text-xs text-brand-subtext">{districtTarget}% target</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="inline-block w-3 h-3 rounded-sm bg-dessa-navy" />
-              <span className="text-xs text-brand-subtext">Selected week</span>
-            </div>
-          </div>
-        </div>
-        <div className="px-2 pb-2">
-          <TrendChart data={trendData} districtTarget={districtTarget} selectedWeek={selectedWeek} />
-        </div>
-      </motion.div>
-      */}
+          <EngagementTrendChart current={current} previous={previous} />
+        </motion.div>
 
-      {/* School table */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.24 }}
+          className="bg-white rounded-xl border border-brand-border p-5 flex flex-col"
+        >
+          <p className="text-lg font-semibold text-brand-text mb-1">Sites building momentum</p>
+          <p className="text-xs text-brand-subtext mb-4">{buildingMomentumSites.length} of {activeSchools.length} sites, up from their previous window</p>
+          {buildingMomentumSites.length === 0 ? (
+            <p className="text-sm text-brand-subtext">No sites are trending up this window yet.</p>
+          ) : (
+            <div className="flex flex-col gap-0.5 overflow-y-auto max-h-56 -mx-2">
+              {buildingMomentumSites.map(s => (
+                <div key={s.school.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-brand-bg transition-colors">
+                  <ArrowUpRight size={14} className="text-state-success shrink-0" />
+                  <span className="text-sm text-brand-text truncate">{s.school.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Sites */}
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.28 }}
         className="bg-white rounded-xl border border-brand-border"
       >
-        {/* Table toolbar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-brand-border bg-brand-bg/40 rounded-t-xl">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-brand-border bg-brand-bg/40 rounded-t-xl flex-wrap gap-3">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative shrink-0">
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
@@ -934,97 +779,79 @@ export default function Report2() {
                 </button>
               )}
             </div>
-            {schoolFilter !== 'All' && (
-              <span className="flex items-center gap-1 text-xs rounded-md px-2.5 py-0.5 font-medium border" style={{ backgroundColor: 'rgba(181,23,158,0.08)', color: '#B5179E', borderColor: 'rgba(181,23,158,0.2)' }}>
-                {schoolFilter}
-                <button onClick={() => setSchoolFilter('All')} className="transition-colors ml-0.5 opacity-70 hover:opacity-100"><X size={11} /></button>
-              </span>
-            )}
-            {(dateFrom || dateTo) && (
-              <span className="flex items-center gap-1.5 text-xs rounded-md px-2.5 py-0.5 font-medium border" style={{ backgroundColor: 'rgba(181,23,158,0.08)', color: '#B5179E', borderColor: 'rgba(181,23,158,0.2)' }}>
-                <Calendar size={11} />
-                {dateFrom && dateTo
-                  ? `${new Date(dateFrom + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(dateTo + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-                  : dateFrom ? `From ${new Date(dateFrom + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : `To ${new Date(dateTo + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-                }
-                <button onClick={() => { setDateFrom(''); setDateTo('') }} className="transition-colors ml-0.5 opacity-70 hover:opacity-100"><X size={11} /></button>
-              </span>
-            )}
-            {quickFilter && (
-              <span className="flex items-center gap-1 text-xs rounded-md px-2.5 py-0.5 font-medium border" style={{ backgroundColor: 'rgba(181,23,158,0.08)', color: '#B5179E', borderColor: 'rgba(181,23,158,0.2)' }}>
-                {{ 'meeting-goal': 'Meeting goal', 'needs-attention': 'Needs attention' }[quickFilter]}
-                <button onClick={() => setQuickFilter(null)} className="transition-colors ml-0.5 opacity-70 hover:opacity-100"><X size={11} /></button>
-              </span>
-            )}
+            <div className="flex items-center rounded-lg border border-brand-border overflow-hidden text-xs font-medium shrink-0">
+              {[
+                { key: 'all',      label: 'All' },
+                { key: 'starting', label: 'Getting started' },
+                { key: 'building', label: 'Building momentum' },
+                { key: 'thriving', label: 'Thriving' },
+              ].map(({ key, label }, i) => (
+                <button
+                  key={key}
+                  onClick={() => setTierFilter(key)}
+                  className={`px-3 py-1.5 transition-colors whitespace-nowrap ${i > 0 ? 'border-l border-brand-border' : ''} ${
+                    tierFilter === key ? 'bg-dessa-teal text-white' : 'bg-white text-brand-subtext hover:bg-brand-bg'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-          <span className="text-xs text-brand-subtext shrink-0">{filteredSchools.length} sites</span>
+          <span className="text-xs text-brand-subtext shrink-0">{filteredSites.length} sites</span>
         </div>
 
-        {/* School table */}
-        <div className="overflow-hidden rounded-b-xl">
-        <table className="w-full table-fixed">
-          <colgroup>
-            <col style={{ width: '45%' }} />
-            <col style={{ width: '15%' }} />
-            <col style={{ width: '20%' }} />
-            <col style={{ width: '20%' }} />
-          </colgroup>
-          <thead>
-            <tr className="border-b border-brand-border">
-              <th className="py-3 pl-4 text-left"><SortBtn col="name"       label="Site"       sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></th>
-              <th className="py-3 text-left">      <SortBtn col="teachers"   label="Total Users"      sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></th>
-              <th className="py-3 text-left">      <SortBtn col="reached"    label="Reached Goal" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></th>
-              <th className="py-3 pr-4"><div className="flex justify-end"><SortBtn col="engagement" label="Engagement" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} /></div></th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleSchools.map(({ school, totalTeachers, meetingGoal, pct }) => {
-              const { text: pctText, bg: pctBg } = pctColor(pct)
-              return (
-                <tr key={school.id} className="border-b border-brand-border last:border-b-0">
-                  <td className="py-4 pl-4">
-                    <span className="text-sm font-semibold text-brand-text">{school.name}</span>
-                  </td>
-                  <td className="py-4">
-                    <span className="text-sm text-brand-text">{totalTeachers}</span>
-                  </td>
-                  <td className="py-4">
-                    <span className="text-sm font-semibold text-brand-text">{meetingGoal}</span>
-                  </td>
-                  <td className="py-4 pr-4 text-right">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ color: pctText, background: pctBg }}>{pct}%</span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+        {/* Site card grid */}
+        <div className="p-4">
+          {visibleSites.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-sm text-brand-subtext">No sites match your search.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {visibleSites.map(s => {
+                const tier = TIER_META[s.tier]
+                return (
+                  <div key={s.school.id} className="rounded-xl border border-brand-border p-4 hover:border-dessa-teal/30 transition-colors">
+                    <p className="text-sm font-semibold text-brand-text truncate mb-2">{s.school.name}</p>
+                    <div className="flex items-center gap-2 flex-wrap mb-3">
+                      <p className="text-2xl font-bold text-brand-text">{s.currentAvg}%</p>
+                      {s.hasPrevious && <TrendPill delta={s.delta} />}
+                    </div>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${tier.bg} ${tier.text}`}>
+                      {tier.label}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Pagination footer */}
-        {totalTablePages > 1 && (
+        {totalSitePages > 1 && (
           <div className="px-5 py-4 border-t border-brand-border flex items-center justify-between">
             <p className="text-sm text-brand-subtext">
-              Showing {(tablePage - 1) * TABLE_PAGE_SIZE + 1}–{Math.min(tablePage * TABLE_PAGE_SIZE, filteredSchools.length)} of {filteredSchools.length} sites
+              Showing {(sitePage - 1) * SITE_PAGE_SIZE + 1}–{Math.min(sitePage * SITE_PAGE_SIZE, filteredSites.length)} of {filteredSites.length} sites
             </p>
             <div className="flex items-center gap-1">
               <button
                 className="px-3 py-1.5 rounded-md text-sm font-medium border border-brand-border text-brand-subtext bg-white hover:bg-brand-bg disabled:opacity-40 transition-colors"
-                onClick={() => setTablePage(p => p - 1)}
-                disabled={tablePage === 1}
+                onClick={() => setSitePage(p => p - 1)}
+                disabled={sitePage === 1}
               >Previous</button>
-              {Array.from({ length: totalTablePages }, (_, i) => i + 1).map(p => (
+              {Array.from({ length: totalSitePages }, (_, i) => i + 1).map(p => (
                 <button
                   key={p}
-                  className={`w-8 h-8 rounded-md text-sm font-medium transition-colors ${p === tablePage ? 'text-white' : 'text-brand-subtext hover:bg-brand-bg border border-brand-border'}`}
-                  style={p === tablePage ? { background: '#2A7F8F' } : {}}
-                  onClick={() => setTablePage(p)}
+                  className={`w-8 h-8 rounded-md text-sm font-medium transition-colors ${p === sitePage ? 'text-white' : 'text-brand-subtext hover:bg-brand-bg border border-brand-border'}`}
+                  style={p === sitePage ? { background: '#2A7F8F' } : {}}
+                  onClick={() => setSitePage(p)}
                 >{p}</button>
               ))}
               <button
                 className="px-3 py-1.5 rounded-md text-sm font-medium border border-brand-border text-brand-subtext bg-white hover:bg-brand-bg disabled:opacity-40 transition-colors"
-                onClick={() => setTablePage(p => p + 1)}
-                disabled={tablePage === totalTablePages}
+                onClick={() => setSitePage(p => p + 1)}
+                disabled={sitePage === totalSitePages}
               >Next</button>
             </div>
           </div>
