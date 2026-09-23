@@ -6,19 +6,19 @@ import { useResourcesConcept } from '../lib/resourcesConceptContext'
 import { useSiteEngagementConcept } from '../lib/siteEngagementConceptContext'
 import { RESOURCES_GRADE_GROUPS } from '../pages/ResourcesAltConcepts'
 
-// Site Engagement report-only stat-card concept switcher (2026-09-23) — a
-// dropdown rather than the pill-row switcher used elsewhere (Resources,
-// Concept D's Rows/Table), per explicit request. Only appears on that one
-// report route; unlike the Resources switcher it doesn't stay visible
-// (inertly) on unrelated pages, since it's a much narrower, single-card
-// concept comparison rather than a whole-page one. Lettered A/B/C (not
-// descriptive names) to match every other concept comparison in this app —
-// the descriptive name lives in `title` (hover tooltip) only, same
-// convention as Nav.jsx's RESOURCES_CONCEPTS before it.
+// Site Engagement report-only concept switcher (2026-09-23) — a dropdown
+// rather than the pill-row switcher used elsewhere (Resources, Concept D's
+// Rows/Table), per explicit request. Only appears on that one report route;
+// unlike the Resources switcher it doesn't stay visible (inertly) on
+// unrelated pages. Lettered A/B (not descriptive names) to match every
+// other concept comparison in this app — the descriptive name lives in
+// `title` (hover tooltip) only, same convention as Nav.jsx's
+// RESOURCES_CONCEPTS before it. A is what's live in prod today, kept as the
+// baseline so B has something real to be compared against, not a
+// replacement for it. More concepts land here as they're built.
 const SITE_ENGAGEMENT_CONCEPTS = [
-  { value: 'a', label: 'A', title: 'A — Coverage: sites that went quiet this window' },
-  { value: 'b', label: 'B', title: 'B — Consistency: steady vs. bursty weekly participation' },
-  { value: 'c', label: 'C', title: 'C — Lessons completed: raw count this window' },
+  { value: 'a', label: 'A', title: 'A — Original: single-week snapshot with filters and a sortable table' },
+  { value: 'b', label: 'B', title: 'B — Positive reframe: stat cards, engagement trend, and a site card grid' },
 ]
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
