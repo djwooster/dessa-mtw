@@ -36,7 +36,7 @@ export default function Nav() {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { resourcesConcept, resultsLayout, setResultsLayout } = useResourcesConcept()
+  const { resourcesConcept } = useResourcesConcept()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
@@ -259,9 +259,10 @@ export default function Nav() {
           )}
           {/* Concept D layout switcher (2026-09-18) — Rows vs. the new
               condensed Table, for comparing side by side in manager
-              review. Pure preference, same "visible everywhere except
-              Curriculum, doesn't navigate" convention the old B/C/D/E
-              concept switcher used before it was retired. */}
+              review. Commented out 2026-09-23 per team decision — Table
+              won, resultsLayout now hardcodes to 'table' in
+              resourcesConceptContext.jsx. Preserved (not deleted) in case
+              Rows is worth revisiting later.
           {!location.pathname.startsWith('/mtw') && (
             <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0 mr-1">
               {[{ value: 'rows', label: 'Rows' }, { value: 'table', label: 'Table' }].map(({ value, label }, i) => (
@@ -279,6 +280,7 @@ export default function Nav() {
               ))}
             </div>
           )}
+          */}
           <button className="text-brand-subtext hover:text-brand-text transition-colors p-1.5 rounded hover:bg-brand-bg">
             <HelpCircle size={16} />
           </button>

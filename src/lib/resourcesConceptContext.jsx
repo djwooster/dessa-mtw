@@ -24,10 +24,11 @@ export function ResourcesConceptProvider({ children }) {
   const [resultsView, setResultsView] = useState('list')
   // Rows vs. Table for Concept D's results (2026-09-18) — a manager-review
   // comparison of the existing row list against a denser table layout.
-  // Lives here (not local state in ResourcesAltConcepts.jsx) because the
-  // control for it sits in Nav.jsx, same pattern as the old B/C/D/E
-  // switcher before it.
-  const [resultsLayout, setResultsLayout] = useState('rows')
+  // Table won (2026-09-23, team decision) — the Nav switcher that used to
+  // set this is commented out, so this now just hardcodes the winner.
+  // Left as state (not a plain const) since the switcher/mechanism is
+  // preserved, not deleted, for future work.
+  const [resultsLayout, setResultsLayout] = useState('table')
   // Bumped on every switcher click (see Nav.jsx) — including re-clicking
   // the concept you're already on — so Resources.jsx can key the active
   // B/C/E concept component on it, forcing a fresh remount that clears all
