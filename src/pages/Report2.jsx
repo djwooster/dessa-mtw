@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { DatePicker } from '../components/ui/date-picker'
 import { DateRangePicker } from '../components/ui/date-range-picker'
 import { DayPicker } from 'react-day-picker'
+import { useSiteEngagementConcept } from '../lib/siteEngagementConceptContext'
 
 const SITE_LEADER_SCHOOL = schools[0]
 
@@ -462,6 +463,7 @@ function SettingsModal({ goal, districtTarget, onSave, onClose }) {
 // ─── Report2 ──────────────────────────────────────────────────────────────────
 
 export default function Report2() {
+  const { statConcept } = useSiteEngagementConcept()
   const [role, setRole]                     = useState('program_admin')
   const [goal, setGoal]                     = useState(3)
   const [districtTarget, setDistrictTarget] = useState(70)
@@ -513,10 +515,6 @@ export default function Report2() {
   const current  = useMemo(() => currentWindow(rawTrend, rangeMode, dateFrom, dateTo), [rawTrend, rangeMode, dateFrom, dateTo])
   const previous = useMemo(() => previousWindow(rawTrend, current), [rawTrend, current])
 
-  const currentAvg    = avgPct(current)
-  const previousAvg   = avgPct(previous)
-  const engagementDelta = currentAvg - previousAvg
-
   // Per-site current/previous window comparison — feeds both the site card
   // grid and the "Sites building momentum" stat/list, so it's computed once
   // here rather than twice.
@@ -536,8 +534,36 @@ export default function Report2() {
     }
   }), [activeSchools, goal, rangeMode, dateFrom, dateTo])
 
-  const sitesActive = siteStats.filter(s => s.currentAvg > 0).length
   const buildingMomentumSites = siteStats.filter(s => s.hasPrevious && s.delta > 0)
+
+  // Sites that "went quiet" this window — a low bar (≤10%) deliberately far
+  // below the 50% "Thriving" tier cutoff, so this only catches genuinely
+  // dark sites, not just ones in the "Getting started" tier.
+  const quietSites = siteStats.filter(s => s.currentAvg <= 10)
+
+  // Raw per-teacher weekly activity across the current window, feeding both
+  // the Consistency and Lessons completed concepts — computed once so
+  // neither concept re-walks getWeekData on its own.
+  const windowTeacherStats = useMemo(() => {
+    let lessonsCompleted = 0
+    const activeWeeksByTeacher = {}
+    current.forEach(w => {
+      activeSchools.forEach(school => {
+        const data = getWeekData(school.id, w.weekStart, goal)
+        data.teachers.forEach((t, ti) => {
+          const key = `${school.id}-${ti}`
+          if (!(key in activeWeeksByTeacher)) activeWeeksByTeacher[key] = 0
+          if (t.daysActive > 0) activeWeeksByTeacher[key] += 1
+          lessonsCompleted += t.daysActive
+        })
+      })
+    })
+    const teacherKeys = Object.keys(activeWeeksByTeacher)
+    const consistentThreshold = Math.max(1, Math.ceil(current.length * 0.75))
+    const consistentCount = teacherKeys.filter(k => activeWeeksByTeacher[k] >= consistentThreshold).length
+    const consistencyPct = teacherKeys.length ? Math.round((consistentCount / teacherKeys.length) * 100) : 0
+    return { lessonsCompleted, consistencyPct, consistentThreshold }
+  }, [activeSchools, current, goal])
 
   function openRangeMenu() {
     setPendingDateFrom(dateFrom)
@@ -578,11 +604,20 @@ export default function Report2() {
   const totalSitePages = Math.max(1, Math.ceil(filteredSites.length / SITE_PAGE_SIZE))
   const visibleSites = filteredSites.slice((sitePage - 1) * SITE_PAGE_SIZE, sitePage * SITE_PAGE_SIZE)
 
+  // Nav-hosted dropdown (2026-09-23) swaps this one card; "Building
+  // momentum" stays fixed alongside it either way — see
+  // siteEngagementConceptContext.jsx. Letters match Nav.jsx's
+  // SITE_ENGAGEMENT_CONCEPTS: a = Coverage, b = Consistency, c = Lessons
+  // completed.
+  const conceptCard = statConcept === 'a'
+    ? { label: 'Coverage', value: `${quietSites.length} of ${activeSchools.length}`, sub: 'sites went quiet this window' }
+    : statConcept === 'b'
+    ? { label: 'Consistency', value: `${windowTeacherStats.consistencyPct}%`, sub: `active ${windowTeacherStats.consistentThreshold} of ${current.length} weeks` }
+    : { label: 'Lessons completed', value: windowTeacherStats.lessonsCompleted.toLocaleString(), sub: 'across the district this window' }
+
   const statCards = [
-    { label: 'Sites active',       value: `${sitesActive} of ${activeSchools.length}` },
-    { label: 'Average engagement', value: `${currentAvg}%`, delta: engagementDelta },
-    { label: 'Building momentum',  value: `${buildingMomentumSites.length} of ${activeSchools.length}`, sub: 'sites vs. their prior window' },
-    { label: 'Weekly goal',        value: `${goal}×`, sub: 'per week' },
+    conceptCard,
+    { label: 'Building momentum', value: `${buildingMomentumSites.length} of ${activeSchools.length}`, sub: 'sites vs. their prior window' },
   ]
 
   return (
@@ -694,8 +729,11 @@ export default function Report2() {
         </div>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      {/* Stat cards — 2 now, not 4 (2026-09-23): the concept-switcher card
+          (left) plus the fixed "Building momentum" card (right). Narrower
+          max-width than a full 4-col row would give, so two cards don't
+          stretch edge to edge. */}
+      <div className="grid grid-cols-2 gap-4 mb-6 max-w-2xl">
         {statCards.map(({ label, value, sub, delta }, i) => (
           <motion.div
             key={label}

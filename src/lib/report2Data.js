@@ -71,10 +71,27 @@ function getRoster(schoolId) {
   })
 }
 
-function getBaseline(schoolId, ti) {
+// Recent-decline override (2026-09-23) — simulates 1-2 sites that were
+// normal historically but dropped off sharply in just the trailing weeks,
+// for the Coverage ("went quiet this window") stat concept on the Site
+// Engagement report. Keyed by schoolId; `sinceWeeksAgo` counts back from
+// the most recent week (inclusive) — everything before that still uses the
+// school's normal baseline, so its longer history reads as healthy right
+// up until the recent drop, not chronically dark.
+const RECENT_DECLINE = {
+  11: { sinceWeeksAgo: 4, factor: 0.05 }, // Sunset Middle — normally ~69%
+  14: { sinceWeeksAgo: 4, factor: 0.05 }, // Hillcrest Elementary — normally ~84%
+}
+
+function getBaseline(schoolId, ti, weekIdx) {
   const base  = SCHOOL_TENDENCY[schoolId]
   const noise = (det(schoolId * 7, ti, 42) / 97) * 0.36 - 0.18
-  return Math.max(0.15, Math.min(0.95, base + noise))
+  const normal = Math.max(0.15, Math.min(0.95, base + noise))
+  const decline = RECENT_DECLINE[schoolId]
+  if (decline && weekIdx != null && weekIdx >= schoolWeeks.length - decline.sinceWeeksAgo) {
+    return decline.factor
+  }
+  return normal
 }
 
 function formatDate(d) {
@@ -111,7 +128,7 @@ export function getWeekData(schoolId, weekStart, goal = 3) {
 
   const teacherData = teachers.map((name, ti) => {
     const h1 = det(schoolId, ti, weekIdx)
-    const metGoal = h1 < Math.round(getBaseline(schoolId, ti) * 97)
+    const metGoal = h1 < Math.round(getBaseline(schoolId, ti, weekIdx) * 97)
     const h2 = det(schoolId + 10, ti, weekIdx)
     const daysActive = metGoal ? goal + (h2 % (5 - goal + 1)) : h2 % goal
     return { name, daysActive, metGoal }

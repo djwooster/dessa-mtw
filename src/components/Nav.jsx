@@ -1,9 +1,25 @@
 import { useState } from 'react'
 import { NavLink, useLocation, useSearchParams, useNavigate } from 'react-router-dom'
-import { HelpCircle, Settings, Palette, MessageSquareText, GitCompare, ScrollText, ChevronDown } from 'lucide-react'
+import { HelpCircle, Settings, Palette, MessageSquareText, GitCompare, ScrollText, ChevronDown, Check } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { useResourcesConcept } from '../lib/resourcesConceptContext'
+import { useSiteEngagementConcept } from '../lib/siteEngagementConceptContext'
 import { RESOURCES_GRADE_GROUPS } from '../pages/ResourcesAltConcepts'
+
+// Site Engagement report-only stat-card concept switcher (2026-09-23) — a
+// dropdown rather than the pill-row switcher used elsewhere (Resources,
+// Concept D's Rows/Table), per explicit request. Only appears on that one
+// report route; unlike the Resources switcher it doesn't stay visible
+// (inertly) on unrelated pages, since it's a much narrower, single-card
+// concept comparison rather than a whole-page one. Lettered A/B/C (not
+// descriptive names) to match every other concept comparison in this app —
+// the descriptive name lives in `title` (hover tooltip) only, same
+// convention as Nav.jsx's RESOURCES_CONCEPTS before it.
+const SITE_ENGAGEMENT_CONCEPTS = [
+  { value: 'a', label: 'A', title: 'A — Coverage: sites that went quiet this window' },
+  { value: 'b', label: 'B', title: 'B — Consistency: steady vs. bursty weekly participation' },
+  { value: 'c', label: 'C', title: 'C — Lessons completed: raw count this window' },
+]
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 
@@ -37,6 +53,7 @@ export default function Nav() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { resourcesConcept } = useResourcesConcept()
+  const { statConcept, setStatConcept } = useSiteEngagementConcept()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
@@ -281,6 +298,40 @@ export default function Nav() {
             </div>
           )}
           */}
+          {location.pathname === '/reports/site-engagement' && (
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button
+                  title={SITE_ENGAGEMENT_CONCEPTS.find((c) => c.value === statConcept)?.title}
+                  className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-brand-border bg-white text-xs font-medium text-brand-text hover:bg-brand-bg transition-colors shrink-0 mr-1"
+                >
+                  {SITE_ENGAGEMENT_CONCEPTS.find((c) => c.value === statConcept)?.label}
+                  <ChevronDown size={12} className="text-brand-subtext" />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  align="end"
+                  sideOffset={6}
+                  className="z-50 w-48 bg-white border border-brand-border rounded-xl shadow-lg outline-none py-1.5"
+                >
+                  {SITE_ENGAGEMENT_CONCEPTS.map((c) => (
+                    <button
+                      key={c.value}
+                      title={c.title}
+                      onClick={() => setStatConcept(c.value)}
+                      className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left transition-colors ${
+                        statConcept === c.value ? 'text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
+                      }`}
+                    >
+                      {c.label}
+                      {statConcept === c.value && <Check size={13} className="text-dessa-teal" />}
+                    </button>
+                  ))}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+          )}
           <button className="text-brand-subtext hover:text-brand-text transition-colors p-1.5 rounded hover:bg-brand-bg">
             <HelpCircle size={16} />
           </button>

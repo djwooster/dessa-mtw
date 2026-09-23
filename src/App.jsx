@@ -22,6 +22,7 @@ import SettingsPlaceholder from './pages/settings/SettingsPlaceholder'
 import CurriculumSetup from './pages/settings/CurriculumSetup'
 import JoinPage from './pages/JoinPage'
 import { ResourcesConceptProvider } from './lib/resourcesConceptContext'
+import { SiteEngagementConceptProvider } from './lib/siteEngagementConceptContext'
 
 function Placeholder({ title }) {
   return (
@@ -48,7 +49,9 @@ export default function App() {
     <BrowserRouter>
       <Toaster position="top-center" richColors />
       <ResourcesConceptProvider>
-        <AppShell handleBookmark={handleBookmark} />
+        <SiteEngagementConceptProvider>
+          <AppShell handleBookmark={handleBookmark} />
+        </SiteEngagementConceptProvider>
       </ResourcesConceptProvider>
     </BrowserRouter>
   )
