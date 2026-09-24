@@ -94,6 +94,31 @@ function getBaseline(schoolId, ti, weekIdx) {
   return normal
 }
 
+// Peak-week override (2026-09-23) — for Concept C's strict "every educator
+// at the site met their weekly goal" bar. With real roster sizes (15-32
+// teachers) and independent per-teacher odds, the probability of a full
+// roster passing together is near zero — simulated, it never once happens
+// in the trailing 4 weeks across all 20 schools. Rather than water down the
+// all-or-nothing definition, a handful of specific school/weeks are forced
+// to a clean pass so the metric has real, varied weeks to point to: a
+// perfectly consistent site (Creekside, all 4 of the last 4 weeks), a
+// recently-turned-around site (Riverside, most recent 2 weeks), and a
+// just-hit-it-this-week site (Valley View, most recent week only). Keyed by
+// schoolId; weeksAgo counts back from the most recent week (0 = most
+// recent). This does shift what Concept A/B display for these specific
+// school/weeks, since getWeekData is shared across all three concepts —
+// accepted tradeoff, confirmed with the user.
+const PEAK_WEEKS = {
+  1:  [0, 1],       // Riverside Elementary
+  10: [0],          // Valley View Elementary
+  18: [0, 1, 2, 3], // Creekside Elementary
+}
+
+function isPeakWeek(schoolId, weekIdx) {
+  const offsets = PEAK_WEEKS[schoolId]
+  return !!offsets && offsets.includes(schoolWeeks.length - 1 - weekIdx)
+}
+
 function formatDate(d) {
   const y   = d.getFullYear()
   const m   = String(d.getMonth() + 1).padStart(2, '0')
@@ -126,9 +151,10 @@ export function getWeekData(schoolId, weekStart, goal = 3) {
   const teachers = getCachedRoster(schoolId)
   const count    = teachers.length
 
+  const peakWeek = isPeakWeek(schoolId, weekIdx)
   const teacherData = teachers.map((name, ti) => {
     const h1 = det(schoolId, ti, weekIdx)
-    const metGoal = h1 < Math.round(getBaseline(schoolId, ti, weekIdx) * 97)
+    const metGoal = peakWeek || h1 < Math.round(getBaseline(schoolId, ti, weekIdx) * 97)
     const h2 = det(schoolId + 10, ti, weekIdx)
     const daysActive = metGoal ? goal + (h2 % (5 - goal + 1)) : h2 % goal
     return { name, daysActive, metGoal }
