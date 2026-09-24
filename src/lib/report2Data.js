@@ -29,12 +29,23 @@ const TEACHER_COUNTS = {
   16: 18, 17: 29, 18: 15, 19: 24, 20: 22,
 }
 
-// School-level engagement tendency (0–1) — varied to tell different stories
+// School-level engagement tendency (0–1) — varied to tell different stories.
+// 4, 16, and 20 (2026-09-24) are durable "high achiever" schools — close to
+// the 0.95 clamp ceiling below, not just scripted for a few recent weeks
+// like PEAK_WEEKS — so the strict "every educator met goal" bar reads as
+// genuinely, believably cleared by them across the whole year. Note this
+// tendency bump alone mainly helps small rosters (the clamp means even a
+// perfect-tendency school's odds of an all-pass week are ~0.95^N, weak for
+// N>25) — the CHALLENGE_WEEKS override below is what gives the district
+// trend its real height for the broader district. This intentionally
+// changes what every concept (A/B/C/D/E) shows for these three schools
+// across their full history, not just a few cells — confirmed with the
+// user as the desired outcome, not an accepted side effect.
 const SCHOOL_TENDENCY = {
-   1: 0.76,  2: 0.67,  3: 0.33,  4: 0.79,  5: 0.68,
+   1: 0.76,  2: 0.67,  3: 0.33,  4: 0.92,  5: 0.68,
    6: 0.72,  7: 0.37,  8: 0.74,  9: 0.65, 10: 0.82,
   11: 0.69, 12: 0.30, 13: 0.71, 14: 0.84, 15: 0.40,
-  16: 0.77, 17: 0.60, 18: 0.87, 19: 0.70, 20: 0.73,
+  16: 0.95, 17: 0.60, 18: 0.87, 19: 0.70, 20: 0.95,
 }
 
 const TITLES   = ['Ms.', 'Mr.', 'Ms.', 'Mr.', 'Ms.', 'Mr.', 'Ms.', 'Mr.']
@@ -119,6 +130,30 @@ function isPeakWeek(schoolId, weekIdx) {
   return !!offsets && offsets.includes(schoolWeeks.length - 1 - weekIdx)
 }
 
+// District-wide story events (2026-09-24) — the trend still read as too
+// flat even after the high-achiever tendency bumps above, because with
+// real roster sizes, tendency alone can't reliably lift many schools over
+// the strict all-or-nothing bar at once (see the note above SCHOOL_TENDENCY).
+// These are deterministic weeks where a specific, named group of schools
+// clears the bar together, giving the district trend real height and an
+// explainable shape instead of just noise: a Fall Engagement Challenge in
+// early November (broad participation, then tapering to a core group), and
+// a smaller Spring Challenge in March. Schools not listed for a given week
+// fall back to their normal probabilistic behavior. Keyed by weekIdx.
+const CHALLENGE_WEEKS = {
+  9:  [1, 2, 4, 5, 6, 8, 10, 13, 16, 18, 19, 20], // Nov 3 — Fall Engagement Challenge kicks off
+  10: [1, 2, 4, 5, 6, 8, 10, 13, 16, 18, 19, 20], // Nov 10 — broad participation continues
+  11: [4, 6, 8, 16, 18, 20],                       // Nov 17 — tapering to the core group
+  26: [2, 5, 6, 8, 16, 19, 20],                    // Mar 2 — a smaller Spring Challenge
+  27: [2, 5, 6, 8, 16, 19, 20],                    // Mar 9 — spring challenge continues
+}
+
+// Winter break (2026-09-24) — engagement genuinely drops for every school
+// while school is out, not just the usual low performers. Forces every
+// teacher's week to a non-passing day count for these two weeks, overriding
+// the normal probabilistic model and any of the overrides above.
+const WINTER_BREAK_WEEKS = [16, 17] // Dec 22, Dec 29
+
 function formatDate(d) {
   const y   = d.getFullYear()
   const m   = String(d.getMonth() + 1).padStart(2, '0')
@@ -151,10 +186,14 @@ export function getWeekData(schoolId, weekStart, goal = 3) {
   const teachers = getCachedRoster(schoolId)
   const count    = teachers.length
 
+  const isWinterBreak  = WINTER_BREAK_WEEKS.includes(weekIdx)
+  const isChallengeWeek = CHALLENGE_WEEKS[weekIdx]?.includes(schoolId) ?? false
   const peakWeek = isPeakWeek(schoolId, weekIdx)
   const teacherData = teachers.map((name, ti) => {
     const h1 = det(schoolId, ti, weekIdx)
-    const metGoal = peakWeek || h1 < Math.round(getBaseline(schoolId, ti, weekIdx) * 97)
+    const metGoal = isWinterBreak
+      ? false
+      : peakWeek || isChallengeWeek || h1 < Math.round(getBaseline(schoolId, ti, weekIdx) * 97)
     const h2 = det(schoolId + 10, ti, weekIdx)
     const daysActive = metGoal ? goal + (h2 % (5 - goal + 1)) : h2 % goal
     return { name, daysActive, metGoal }
