@@ -21,6 +21,44 @@ export const STATUSES = {
 
 export const PROCESS_JOURNAL_ENTRIES = [
   {
+    id: 'site-engagement-mock-data-realism',
+    date: '2026-09-24',
+    status: 'shipped',
+    title: 'Giving the mock data an actual story to tell',
+    summary: 'A strict, honest "did every single educator hit their goal" rule is realistic, but with real class-sized rosters it almost never happens — the district-wide trend read as flat no matter how the chart was drawn.',
+    body: [
+      'Rather than water down the metric, a handful of schools were given a durable, believable "high achiever" profile, and two scripted district-wide events were layered into the underlying data: a Fall Engagement Challenge that lifts participation across many schools at once in November, and a universal dip to zero during winter break, when school is out. The result is a trend line with a real, explainable shape instead of noise dressed up as variety.',
+      'This was a deliberate, broad exception to keeping mock-data edits narrowly scoped to one concept — changing the shared dataset here intentionally changes what every version of the report shows for these schools, not just the newest one.',
+    ],
+    screenshots: [{ n: 1, alt: 'District-wide trend line showing the Fall Challenge peak and winter dip' }],
+  },
+  {
+    id: 'site-engagement-consistency-over-time',
+    date: '2026-09-24',
+    status: 'shipped',
+    title: 'Making "consistency over time" visible, not just countable',
+    summary: 'A single "3 of 4 weeks" number told you a site was inconsistent but not when or how — the next two concepts turned that into something you could actually see and drill into.',
+    body: [
+      'One redesign restructured the report into a two-column layout per a hand-sketched mockup: the results table on one side, a "consistency over time" trend card on the other. The table\'s two separate columns collapsed into one — a per-week dot strip plus the exact fraction — so it reads correctly no matter what date range is selected, instead of assuming a fixed 4-week window.',
+      'A further pass pushed into a stock-ticker-style layout: range-preset tabs (30/60/90 days, all time) above a full district-wide trend line, with a table of per-educator goal attainment below. Clicking into any site now opens a detail view — built as two interchangeable presentations (a slide-over panel and a centered dialog, switchable) showing that site\'s own trend, metrics, and roster, so a leader can go from "which sites need attention" to "which teachers at this site" without leaving the page.',
+    ],
+    screenshots: [{ n: 1, alt: 'Line chart with per-site detail panel open' }],
+  },
+  {
+    id: 'site-engagement-jtbd-rebuild',
+    date: '2026-09-23',
+    dateEnd: '2026-09-24',
+    status: 'shipped',
+    title: 'Rebuilding Site Engagement around what users actually asked for',
+    summary: 'A lettered stat-card switcher shipped without a real baseline to compare against, and real customer-facing feedback showed the report\'s core metrics were confusing on their own terms, not just poorly laid out.',
+    body: [
+      'The switcher was pulled back to restore the true production design as one fixed baseline and the prior "positive reframe" redesign as a second, both frozen going forward as concepts to design against instead of quietly overwriting.',
+      'A metric-definitions document from the DESSA renewals team surfaced the real root of user confusion: an inflated "Total Users" denominator, an opaque "Engagement %" hiding a compound completion rule, and date-filter labels that go stale the moment a custom range is picked. Direct user feedback then narrowed it further: people mostly want to know if a site is meeting its goal, and whether that\'s been consistent over time — nothing fancier.',
+      'The next redesign dropped "Engagement %" entirely in favor of one honest rule (a site "meets goal" only if every one of its educators hit their own weekly goal that week) and just two numbers built from it. Even the aggregate stat cards for those two numbers were cut once it was clear the results table already told the same story per site, more usefully.',
+    ],
+    screenshots: [{ n: 1, alt: 'Simplified two-metric Site Engagement table' }],
+  },
+  {
     id: 'resources-concept-switcher-unified',
     date: '2026-09-12',
     status: 'exploring',

@@ -17,14 +17,16 @@ import { PROCESS_JOURNAL_ENTRIES, STATUSES } from '../lib/processJournalData'
 // history, not generated from raw git log — commit messages aren't meant
 // for an outside audience.
 
-const reveal = (i = 0) => ({
+// Shared with ProcessJournalTodo.jsx — same masthead motion/label treatment
+// across both tabs of this editorial page pair.
+export const reveal = (i = 0) => ({
   initial: { opacity: 0, y: 8 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, margin: '-60px' },
   transition: { duration: 0.4, delay: Math.min(i, 4) * 0.05 },
 })
 
-function Kicker({ children }) {
+export function Kicker({ children }) {
   return (
     <p className="font-sans text-xs font-bold uppercase tracking-[0.2em] text-research-accent mb-3">
       {children}
@@ -131,46 +133,44 @@ export default function ProcessJournal() {
   const visibleEntries = PROCESS_JOURNAL_ENTRIES.slice(0, visibleCount)
 
   return (
-    <div className="bg-white min-h-[calc(100vh-3.5rem)]">
-      <div className="max-w-3xl mx-auto px-6 md:px-10 py-16">
-        {/* ── Masthead ── */}
-        <motion.div {...reveal(0)}>
-          <Kicker>Process Journal</Kicker>
-          <h1 className="font-sans text-[34px] font-semibold text-black leading-[1.2] max-w-2xl">
-            What we've built, iterated on, and shipped
-          </h1>
-          <p className="font-sans text-lg text-gray-500 mt-5 max-w-2xl">
-            A running record of this prototype's process, written up from the actual working
-            sessions rather than the commit log, so it's easy to walk through live instead of
-            describing it from memory.
-          </p>
-          <div className="flex items-center gap-3 mt-8 font-sans text-xs uppercase tracking-wider text-gray-400">
-            <span>DJ Wooster</span>
-            <span className="w-1 h-1 rounded-full bg-gray-400" />
-            <span>UX Design, Riverside Insights</span>
-            <span className="w-1 h-1 rounded-full bg-gray-400" />
-            <span>Updated as we go</span>
-          </div>
-        </motion.div>
-
-        {/* ── Timeline feed ── */}
-        <div className="relative mt-16 pl-8 border-l border-gray-200 space-y-16">
-          {visibleEntries.map((entry, i) => (
-            <JournalEntry key={entry.id} entry={entry} index={i} />
-          ))}
+    <div className="px-6 md:px-[88px] py-16">
+      {/* ── Masthead ── */}
+      <motion.div {...reveal(0)}>
+        <Kicker>Process Journal</Kicker>
+        <h1 className="font-sans text-[34px] font-semibold text-black leading-[1.2] max-w-2xl">
+          What we've built, iterated on, and shipped
+        </h1>
+        <p className="font-sans text-lg text-gray-500 mt-5 max-w-2xl">
+          A running record of this prototype's process, written up from the actual working
+          sessions rather than the commit log, so it's easy to walk through live instead of
+          describing it from memory.
+        </p>
+        <div className="flex items-center gap-3 mt-8 font-sans text-xs uppercase tracking-wider text-gray-400">
+          <span>DJ Wooster</span>
+          <span className="w-1 h-1 rounded-full bg-gray-400" />
+          <span>UX Design, Riverside Insights</span>
+          <span className="w-1 h-1 rounded-full bg-gray-400" />
+          <span>Updated as we go</span>
         </div>
+      </motion.div>
 
-        {hasMore && <div ref={sentinelRef} className="h-10" aria-hidden="true" />}
-
-        {/* ── Footer ── */}
-        <motion.div {...reveal(1)} className="flex items-start gap-3 mt-16">
-          <Quote size={16} className="text-research-accent shrink-0 mt-1" />
-          <p className="font-sans text-xs text-gray-500 leading-relaxed max-w-2xl">
-            New entries get added here as work happens — this isn't a one-time historical dump, it's
-            meant to stay current.
-          </p>
-        </motion.div>
+      {/* ── Timeline feed ── */}
+      <div className="relative mt-16 pl-8 border-l border-gray-200 space-y-16">
+        {visibleEntries.map((entry, i) => (
+          <JournalEntry key={entry.id} entry={entry} index={i} />
+        ))}
       </div>
+
+      {hasMore && <div ref={sentinelRef} className="h-10" aria-hidden="true" />}
+
+      {/* ── Footer ── */}
+      <motion.div {...reveal(1)} className="flex items-start gap-3 mt-16">
+        <Quote size={16} className="text-research-accent shrink-0 mt-1" />
+        <p className="font-sans text-xs text-gray-500 leading-relaxed max-w-2xl">
+          New entries get added here as work happens — this isn't a one-time historical dump, it's
+          meant to stay current.
+        </p>
+      </motion.div>
     </div>
   )
 }
