@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
-  Search, Video, FileText, Mic, ClipboardList, Link2, PlayCircle,
+  Search, Video, FileText, Mic, Link2, PlayCircle,
   ChevronDown, Check, X,
 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
@@ -37,11 +37,12 @@ const COMPETENCIES = ['Self-Awareness', 'Self-Management', 'Relationship Skills'
 // 'Webinar' removed 2026-09-28 — discovered to be out of scope. The two
 // resources that used to carry that type are reclassified as 'Link' below
 // (reusing the freed mtw-green slot) rather than deleted, since they're
-// still real family-facing content.
+// still real family-facing content. 'Worksheet' removed the same day, also
+// out of scope — its resources are reclassified as 'PDF' (see
+// REAL_FILE_TYPE below and FOUNDATIONAL_PRACTICES_RESOURCES), not deleted.
 const TYPE_META = {
   Video: { icon: Video, label: 'Video', color: 'text-dessa-magenta', bg: 'bg-dessa-magenta' },
   PDF: { icon: FileText, label: 'PDF', color: 'text-mtw-purple', bg: 'bg-mtw-purple' },
-  Worksheet: { icon: ClipboardList, label: 'Worksheet', color: 'text-mtw-coral', bg: 'bg-mtw-coral' },
   Audio: { icon: Mic, label: 'Audio', color: 'text-mtw-blue', bg: 'bg-mtw-blue' },
   Link: { icon: Link2, label: 'Link', color: 'text-mtw-green', bg: 'bg-mtw-green' },
   Lesson: { icon: PlayCircle, label: 'Lesson', color: 'text-mtw-amber', bg: 'bg-mtw-amber' },
@@ -107,13 +108,21 @@ const UNIT_BY_COMPETENCY = {
 // a believable course-type mix, not just a wall of Tier 1.
 const COURSE_TYPE_BY_FILE_TYPE = { Video: 'Tier 1', PDF: 'Tier 2', Worksheet: 'Tier 1', Audio: 'Family', Lesson: 'Tier 1' }
 
+// 'Worksheet' removed 2026-09-28 as a selectable file type (out of scope) —
+// the grid keeps its own "Worksheet" slot internally, for title/desc/
+// course-type variety, but every row generated from that slot is written
+// out as a real PDF, per explicit request ("reclassify as PDF"). Slots not
+// listed here pass through unchanged.
+const REAL_FILE_TYPE = { Worksheet: 'PDF' }
+
 const ALL_INDIVIDUAL_GRADES = [...ELEMENTARY_GROUP, ...MIDDLE_GROUP, ...HIGH_GROUP]
 
 function buildGradeResources(grade) {
   return COMPETENCIES.flatMap((competency) =>
-    Object.entries(CORE_TEMPLATE_GRID[competency]).map(([type, { title, desc }]) => ({
-      title, type, grade, competency, desc,
-      courseType: COURSE_TYPE_BY_FILE_TYPE[type],
+    Object.entries(CORE_TEMPLATE_GRID[competency]).map(([slotType, { title, desc }]) => ({
+      title, grade, competency, desc,
+      type: REAL_FILE_TYPE[slotType] || slotType,
+      courseType: COURSE_TYPE_BY_FILE_TYPE[slotType],
       unit: `Unit: ${UNIT_BY_COMPETENCY[competency]}`,
     }))
   )
@@ -152,9 +161,9 @@ const DESSA_STRATEGY_RESOURCES = [
 const FOUNDATIONAL_PRACTICES_RESOURCES = [
   { title: 'Morning Meeting Routine', type: 'PDF', grade: 'All Grades', competency: 'Relationship Skills', courseType: 'Foundational Practices', unit: 'Foundational Practices', desc: 'A repeatable opening routine for building classroom community at the start of the day.' },
   { title: 'Classroom Agreements Poster', type: 'PDF', grade: 'All Grades', competency: 'Responsible Decision-Making', courseType: 'Foundational Practices', unit: 'Foundational Practices', desc: 'A printable poster template for co-creating classroom norms with students.' },
-  { title: 'Daily Check-In Circle Guide', type: 'Worksheet', grade: 'All Grades', competency: 'Self-Awareness', courseType: 'Foundational Practices', unit: 'Foundational Practices', desc: 'A facilitation guide for a short daily circle where students name how they are doing.' },
+  { title: 'Daily Check-In Circle Guide', type: 'PDF', grade: 'All Grades', competency: 'Self-Awareness', courseType: 'Foundational Practices', unit: 'Foundational Practices', desc: 'A facilitation guide for a short daily circle where students name how they are doing.' },
   { title: 'Transition Signal Cues', type: 'Video', grade: 'All Grades', competency: 'Self-Management', courseType: 'Foundational Practices', unit: 'Foundational Practices', desc: 'A short video modeling consistent signals for moving smoothly between activities.' },
-  { title: 'Restorative Conversation Starters', type: 'Worksheet', grade: 'All Grades', competency: 'Relationship Skills', courseType: 'Foundational Practices', unit: 'Foundational Practices', desc: 'Prompt cards for guiding a student conversation after a classroom conflict.' },
+  { title: 'Restorative Conversation Starters', type: 'PDF', grade: 'All Grades', competency: 'Relationship Skills', courseType: 'Foundational Practices', unit: 'Foundational Practices', desc: 'Prompt cards for guiding a student conversation after a classroom conflict.' },
 ]
 
 const TABLE_PAGE_SIZE = 20
@@ -492,7 +501,12 @@ function ResourceLibraryView({ initialGrade }) {
   }
 
   let rows = CATALOG
-  if (selectedGrade !== 'All Grades') rows = rows.filter((r) => r.grade === selectedGrade)
+  // 'All Grades'-tagged resources (DESSA Strategy Library, Foundational
+  // Practices) aren't grade-locked by design, so they stay visible no
+  // matter which specific grade is selected — previously they vanished
+  // entirely once any single grade was picked, which made Course Type =
+  // DESSA look empty everywhere but the "All Grades" view.
+  if (selectedGrade !== 'All Grades') rows = rows.filter((r) => r.grade === selectedGrade || r.grade === 'All Grades')
   const q = query.trim().toLowerCase()
   if (q) rows = rows.filter((r) => r.title.toLowerCase().includes(q))
   if (courseTypes.length) rows = rows.filter((r) => courseTypes.includes(r.courseType))
