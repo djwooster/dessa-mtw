@@ -5,6 +5,8 @@ import Nav from './components/Nav'
 import Dashboard from './pages/Dashboard'
 import Curriculum from './pages/Curriculum'
 import Resources from './pages/Resources'
+import ResourceLibrary from './pages/ResourceLibrary'
+import ResourcePreview from './pages/ResourcePreview'
 import LessonView from './pages/LessonView'
 import Ratings from './pages/Ratings'
 import ClassRatingsLayout from './pages/ClassRatingsLayout'
@@ -71,6 +73,8 @@ function AppShell({ handleBookmark }) {
         <Route path="/mtw" element={<Curriculum />} />
         <Route path="/mtw/lesson" element={<LessonView onBookmark={handleBookmark} />} />
         <Route path="/resources" element={<Resources />} />
+        <Route path="/resource-library" element={<ResourceLibrary />} />
+        <Route path="/resource-library/preview" element={<ResourcePreview />} />
         <Route path="/ratings" element={<Ratings />} />
         <Route path="/class-ratings" element={<ClassRatingsLayout />}>
           <Route index element={<Navigate to="recommended" replace />} />

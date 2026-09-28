@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { NavLink, useLocation, useSearchParams, useNavigate } from 'react-router-dom'
 import { HelpCircle, Settings, Palette, MessageSquareText, GitCompare, ScrollText, ChevronDown, Check } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
-import { useResourcesConcept } from '../lib/resourcesConceptContext'
 import { useSiteEngagementConcept } from '../lib/siteEngagementConceptContext'
 import { RESOURCES_GRADE_GROUPS } from '../pages/ResourcesAltConcepts'
 
@@ -29,20 +28,26 @@ const SITE_ENGAGEMENT_CONCEPTS = [
 const navItems = [
   { label: 'Dashboard', to: '/' },
   { label: 'Curriculum', to: '/mtw' },
+  // Points at /resource-library, not /resources, as of 2026-09-28 — a
+  // self-contained clone of the results experience that used to live at
+  // /resources. Concept B (DESSA Strategy Library folded into the
+  // catalog) won the A/B comparison and is now the only version — see
+  // ResourceLibrary.jsx. The Strategies nav item below is commented out
+  // accordingly (its content now lives inside this catalog instead). The
+  // original /resources page is untouched but has no nav entry anymore;
+  // it's reachable only by typing the URL directly, same as /mtw2/mtw4.
+  { label: 'Resources', to: '/resource-library' },
   { label: 'Ratings', to: '/class-ratings' },
-  { label: 'Resources', to: '/resources' },
   { label: 'Reports', to: '/reports' },
-  { label: 'Strategies', to: '/strategies' },
+  // { label: 'Strategies', to: '/strategies' },
   { label: 'Training', to: '/training' },
 ]
 
-// Resources-only hover dropdown — the nav-level grade picker for Concept D
-// (see resourcesConceptContext.jsx + ResourcesAltConcepts.jsx's ConceptD,
-// which has no landing page of its own; hovering here and picking a grade
-// is the entire concept). Only appears when the A/B/C/D switcher below is
-// set to D — for A/B/C the "Resources" nav item is a plain link with no
-// chevron. Plain clicks on the nav item are always untouched and go to
-// /resources normally regardless of which concept is active.
+// Resources-only hover dropdown — the nav-level grade picker, restored
+// 2026-09-28 onto the single "Resources" nav item above (previously keyed
+// off /resources + Concept D; now unconditional since Concept B is the
+// only Resource Library version). Picking a grade seeds ResourceLibrary's
+// Grade Level filter via `?grade=`.
 const userMenuItems = [
   { label: 'Settings', to: '/settings', icon: Settings },
   { label: 'Brand Guide', to: '/brand', icon: Palette },
@@ -55,13 +60,12 @@ export default function Nav() {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { resourcesConcept } = useResourcesConcept()
   const { statConcept, setStatConcept } = useSiteEngagementConcept()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
     setGradeMenuOpen(false)
-    navigate(`/resources?grade=${encodeURIComponent(grade)}`)
+    navigate(`/resource-library?grade=${encodeURIComponent(grade)}`)
   }
 
   return (
@@ -76,7 +80,7 @@ export default function Nav() {
         {/* Nav items */}
         <div className="flex items-center gap-0.5 flex-1">
           {navItems.map((item) =>
-            item.to === '/resources' && resourcesConcept === 'd' ? (
+            item.to === '/resource-library' ? (
               <div
                 key={item.to}
                 className="relative"
@@ -134,6 +138,7 @@ export default function Nav() {
                 key={item.to}
                 to={item.to}
                 end={item.to === '/'}
+                title={item.title}
                 className={({ isActive }) =>
                   `px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                     isActive
@@ -277,6 +282,35 @@ export default function Nav() {
               ))}
             </div>
           )}
+          {/* Resource Library A/B switcher — retired 2026-09-28. Concept B
+              (DESSA Strategy Library folded into the catalog) was picked
+              as the final, only version — see ResourceLibrary.jsx, which
+              no longer reads `?libConcept=` at all. Kept commented rather
+              than deleted, same treatment as this file's other retired
+              switchers.
+          {location.pathname === '/resource-library' && (
+            <div className="flex items-center rounded-md border border-brand-border overflow-hidden text-xs font-medium shrink-0 mr-1">
+              {[{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }].map(({ value, label }, i) => (
+                <button
+                  key={value}
+                  onClick={() => {
+                    const next = new URLSearchParams(searchParams)
+                    next.set('libConcept', value)
+                    setSearchParams(next)
+                  }}
+                  aria-label={`Resource Library concept ${label}`}
+                  className={`px-2.5 py-1 transition-colors ${i > 0 ? 'border-l border-brand-border' : ''} ${
+                    (searchParams.get('libConcept') || 'a') === value
+                      ? 'bg-dessa-teal text-white'
+                      : 'text-brand-subtext hover:bg-brand-bg'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          */}
           {/* Concept D layout switcher (2026-09-18) — Rows vs. the new
               condensed Table, for comparing side by side in manager
               review. Commented out 2026-09-23 per team decision — Table
