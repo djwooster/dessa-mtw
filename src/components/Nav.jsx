@@ -3,6 +3,7 @@ import { NavLink, useLocation, useSearchParams, useNavigate } from 'react-router
 import { HelpCircle, Settings, Palette, MessageSquareText, GitCompare, ScrollText, ChevronDown, Check } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { useSiteEngagementConcept } from '../lib/siteEngagementConceptContext'
+import { useDceConcept } from '../lib/dceConceptContext'
 import { RESOURCES_GRADE_GROUPS } from '../pages/ResourcesAltConcepts'
 
 // Site Engagement report-only concept switcher (2026-09-23) — a dropdown
@@ -21,6 +22,15 @@ const SITE_ENGAGEMENT_CONCEPTS = [
   { value: 'c', label: 'C', title: 'C — Simplified: % of sites meeting goal, consistency, and a plain table' },
   { value: 'd', label: 'D', title: 'D — Two-column: the same table plus a consistency-over-time trend card' },
   { value: 'e', label: 'E', title: 'E — Trend-first: range-preset line chart plus a users-meeting-goal table' },
+]
+
+// Daily Curriculum Engagement concept switcher (2026-10-01), same dropdown
+// as Site Engagement's. A is the original page, kept as the baseline.
+const DCE_CONCEPTS = [
+  { value: 'a', label: 'A', title: 'A, Original: ranked teacher list with expandable calendars' },
+  { value: 'b', label: 'B', title: 'B, Today\'s roster: today and days since last lesson, no history' },
+  { value: 'c', label: 'C', title: 'C, Needs follow-up: teachers grouped by how long they have been quiet' },
+  { value: 'd', label: 'D', title: 'D, Today plus this week: day dots, with a calendar on demand' },
 ]
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
@@ -61,6 +71,7 @@ export default function Nav() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { statConcept, setStatConcept } = useSiteEngagementConcept()
+  const { dceConcept, setDceConcept } = useDceConcept()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
@@ -363,6 +374,40 @@ export default function Nav() {
                     >
                       {c.label}
                       {statConcept === c.value && <Check size={13} className="text-dessa-teal" />}
+                    </button>
+                  ))}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+          )}
+          {location.pathname === '/reports/dce' && (
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button
+                  title={DCE_CONCEPTS.find((c) => c.value === dceConcept)?.title}
+                  className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-brand-border bg-white text-xs font-medium text-brand-text hover:bg-brand-bg transition-colors shrink-0 mr-1"
+                >
+                  {DCE_CONCEPTS.find((c) => c.value === dceConcept)?.label}
+                  <ChevronDown size={12} className="text-brand-subtext" />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  align="end"
+                  sideOffset={6}
+                  className="z-50 w-48 bg-white border border-brand-border rounded-xl shadow-lg outline-none py-1.5"
+                >
+                  {DCE_CONCEPTS.map((c) => (
+                    <button
+                      key={c.value}
+                      title={c.title}
+                      onClick={() => setDceConcept(c.value)}
+                      className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left transition-colors ${
+                        dceConcept === c.value ? 'text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
+                      }`}
+                    >
+                      {c.label}
+                      {dceConcept === c.value && <Check size={13} className="text-dessa-teal" />}
                     </button>
                   ))}
                 </Popover.Content>

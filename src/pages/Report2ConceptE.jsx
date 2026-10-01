@@ -6,10 +6,10 @@
 // weekly, not daily, so the day-based presets (30/60/90) are converted to
 // the nearest whole week count — "30 days" renders as ~4 weekly points,
 // not 30 daily ones.
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, Fragment } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
-import { X, Check, ChevronDown } from 'lucide-react'
+import { X, MoreHorizontal, Download, Printer, ChevronRight } from 'lucide-react'
 import { schools, schoolWeeks, getWeekData, MOST_RECENT_WEEK } from '../lib/report2Data'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 
@@ -22,21 +22,29 @@ const RANGE_PRESETS = [
   { value: 'all', label: 'All time', weeks: schoolWeeks.length },
 ]
 
-// Per-site detail overlay (2026-09-24) — two interchangeable presentation
-// shells (a right-anchored slide-over vs. a centered dialog), switched via
-// a control in the page header, same "compare two ways of doing the same
-// thing" pattern as every other lettered concept in this app. Both shells
-// wrap the same SiteDetailContent — only the chrome differs.
-const OVERLAY_STYLES = [
-  { value: 'panel', label: 'Panel' },
-  { value: 'modal', label: 'Modal' },
-]
+// Per-site detail overlay (2026-09-24) — started as two interchangeable
+// shells (a right-anchored slide-over vs. a centered dialog) behind a
+// header switcher. The switcher was removed 2026-10-01 and the centered
+// modal won; SitePanel below is kept but unused, in case the slide-over
+// comes back. Both wrap the same SiteDetailContent.
 
 // Each point is one real calendar week's data — labeled with a single real
 // date (the week's start), not a range, so a point on the line never
 // implies it spans more than one moment. Used for both the axis and the
 // hover tooltip (2026-09-24 — a range read as if the point covered that
 // whole span, which misrepresented a single weekly value).
+// Full date range covered by a list of weeks, for the card header (2026-10-01):
+// people screenshot this chart, so the dates have to be readable without the
+// axis. A week runs Monday to Friday here, so the end is the last week's
+// Monday plus four days. The year is always shown.
+function rangeLabel(weeksList) {
+  const start = parseISO(weeksList[0])
+  const end = parseISO(weeksList[weeksList.length - 1])
+  end.setDate(end.getDate() + 4)
+  const sameYear = start.getFullYear() === end.getFullYear()
+  return `${format(start, sameYear ? 'MMM d' : 'MMM d, yyyy')} to ${format(end, 'MMM d, yyyy')}`
+}
+
 function weekLabel(weekStart) {
   return format(parseISO(weekStart), 'MMM d')
 }
@@ -69,12 +77,21 @@ function getRosterNames(schoolId) {
 // short recent window. Mirrors Report1C.jsx's Today/Nd badge convention,
 // scaled to this data's weekly grain (no daily records to be more precise
 // than that).
+// The data only knows "active this week", so the finer-grained label inside
+// that week is a deterministic stand-in (2026-10-01) — varied per educator
+// so the column reads like real recency instead of one repeated value.
+const RECENT_LABELS = ['12m ago', '30m ago', '45m ago', '1h ago', '2h ago', '3h ago', '4h ago', '6h ago', 'Yesterday', '2d ago', '3d ago']
+function recentLabel(schoolId, teacherIndex) {
+  const h = Math.abs(Math.sin(schoolId * 12.9898 + teacherIndex * 78.233) * 43758.5453) % 1
+  return RECENT_LABELS[Math.floor(h * RECENT_LABELS.length)]
+}
+
 function getLastActive(schoolId, teacherIndex) {
   for (let i = schoolWeeks.length - 1; i >= 0; i--) {
     const data = getWeekData(schoolId, schoolWeeks[i], GOAL)
     if (data.teachers[teacherIndex].daysActive > 0) {
       const weeksAgo = schoolWeeks.length - 1 - i
-      return weeksAgo === 0 ? 'This week' : `${weeksAgo}w ago`
+      return weeksAgo === 0 ? recentLabel(schoolId, teacherIndex) : `${weeksAgo}w ago`
     }
   }
   return 'Never'
@@ -199,7 +216,21 @@ function SiteWeeklyChart({ schoolId, weeks }) {
     return { weekStart: w, pct: data.pct }
   }), [schoolId, weeks])
 
-  const width = 520
+  // Fonts and height stay at the size the chart rendered at in the 672px
+  // modal (a 1.2x scale of this 520x200 design canvas); a wider modal just
+  // adds horizontal room to the plot (2026-10-01). The canvas width tracks
+  // the measured container, in design units, so everything scales uniformly.
+  const SCALE = 1.2
+  const wrapRef = useRef(null)
+  const [boxW, setBoxW] = useState(520 * SCALE)
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => setBoxW(entry.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const width = boxW / SCALE
   const height = 200
   const padding = { top: 16, right: 40, bottom: 24, left: 34 }
   const innerW = width - padding.left - padding.right
@@ -224,8 +255,8 @@ function SiteWeeklyChart({ schoolId, weeks }) {
   const slotW = innerW / trend.length
 
   return (
-    <div className="relative">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" role="img" aria-label="% of this site's educators meeting goal, by week">
+    <div className="relative" ref={wrapRef}>
+      <svg viewBox={`0 0 ${width} ${height}`} width={boxW} height={height * SCALE} role="img" aria-label="% of this site's educators meeting goal, by week">
         {Y_TICKS.map(v => {
           const y = padding.top + innerH - (v / 100) * innerH
           return (
@@ -290,6 +321,67 @@ function SiteWeeklyChart({ schoolId, weeks }) {
   )
 }
 
+// Per-educator activity grid (2026-10-01), modeled on a GitHub-style
+// contribution grid: weeks run left to right, Monday to Friday stack top to
+// bottom, one dot per school day. The columns spread evenly across the full
+// row at every range (fixed-size dots, wider gaps on short ranges). The data only records HOW MANY days an
+// educator was active in a week (daysActive, 0-5), not which ones, so the
+// active days are placed on weekdays with a stable per-educator-per-week
+// shuffle. Totals are exact; the specific weekdays are a mock-data stand-in.
+const WEEKDAYS = [0, 1, 2, 3, 4]
+
+function activeDayOrder(schoolId, teacherIndex, weekIdx) {
+  return WEEKDAYS
+    .map(d => ({ d, h: Math.abs(Math.sin((schoolId * 131 + teacherIndex * 17 + weekIdx * 7 + d) * 12.9898) * 43758.5453) % 1 }))
+    .sort((a, b) => a.h - b.h)
+    .map(x => x.d)
+}
+
+function EducatorActivityGrid({ schoolId, teacherIndex, weeks }) {
+  const months = monthTransitionLabels(weeks)
+  const columns = weeks.map((w, wi) => {
+    const weekIdx = schoolWeeks.indexOf(w)
+    const k = getWeekData(schoolId, w, GOAL).teachers[teacherIndex].daysActive
+    const active = new Set(activeDayOrder(schoolId, teacherIndex, weekIdx).slice(0, k))
+    const monday = parseISO(w)
+    return {
+      w,
+      label: months[wi],
+      days: WEEKDAYS.map(d => {
+        const date = new Date(monday)
+        date.setDate(monday.getDate() + d)
+        return { d, on: active.has(d), title: `${format(date, 'EEE, MMM d')}: ${active.has(d) ? 'active' : 'no activity'}` }
+      }),
+    }
+  })
+  const activeCount = columns.reduce((n, c) => n + c.days.filter(x => x.on).length, 0)
+  const total = columns.length * WEEKDAYS.length
+
+  return (
+    <div className="overflow-x-auto pr-2">
+      <div
+        role="img"
+        aria-label={`Active on ${activeCount} of ${total} school days`}
+        className="grid"
+        style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(14px, 1fr))` }}
+      >
+        {columns.map(c => (
+          <div key={c.w} className="relative flex flex-col items-center gap-1 pt-5">
+            {c.label && <span className="absolute top-0 left-1/2 -translate-x-1/2 text-xs text-brand-subtext whitespace-nowrap">{c.label}</span>}
+            {c.days.map(day => (
+              <span
+                key={day.d}
+                title={day.title}
+                className={`block w-2.5 h-2.5 rounded-full ${day.on ? 'bg-dessa-teal' : 'bg-brand-border'}`}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // Shared content for both overlay shells — a right-anchored panel and a
 // centered dialog both render this unchanged; only the chrome around it
 // differs. Own independent range selector (2026-09-24: confirmed the
@@ -301,6 +393,8 @@ function SiteDetailContent({ school, onClose }) {
   const weeks = useMemo(() => schoolWeeks.slice(-activePreset.weeks), [activePreset])
 
   const rosterNames = useMemo(() => getRosterNames(school.id), [school.id])
+  // Accordion: opening one educator closes any other.
+  const [openIdx, setOpenIdx] = useState(null)
 
   const current = useMemo(() => getWeekData(school.id, weeks[weeks.length - 1], GOAL), [school.id, weeks])
 
@@ -342,20 +436,26 @@ function SiteDetailContent({ school, onClose }) {
         </button>
       </div>
 
-      <div className="flex items-center gap-5 border-b border-brand-border mb-5">
-        {RANGE_PRESETS.map(p => (
-          <button
-            key={p.value}
-            onClick={() => setPreset(p.value)}
-            className={`pb-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              preset === p.value ? 'border-dessa-teal text-dessa-teal' : 'border-transparent text-brand-subtext hover:text-brand-text'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-5 border-b border-brand-border mb-5">
+        <div className="flex items-center gap-5">
+          {RANGE_PRESETS.map(p => (
+            <button
+              key={p.value}
+              onClick={() => setPreset(p.value)}
+              className={`pb-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                preset === p.value ? 'border-dessa-teal text-dessa-teal' : 'border-transparent text-brand-subtext hover:text-brand-text'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <p className="pb-2 text-sm font-medium text-brand-text">{rangeLabel(weeks)}</p>
       </div>
 
+      {/* Stat cards (commented out 2026-10-01, may come back). The `cards`
+          array above and the values behind it are kept so restoring is just
+          uncommenting this block.
       <div className="grid grid-cols-3 gap-3 mb-5">
         {cards.map(c => (
           <div key={c.label} className="bg-brand-bg rounded-lg px-3 py-2.5">
@@ -364,6 +464,7 @@ function SiteDetailContent({ school, onClose }) {
           </div>
         ))}
       </div>
+      */}
 
       <div className="mb-5">
         <SiteWeeklyChart schoolId={school.id} weeks={weeks} />
@@ -377,12 +478,29 @@ function SiteDetailContent({ school, onClose }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rosterNames.map((name, i) => (
-            <TableRow key={name}>
-              <TableCell className="font-medium">{name}</TableCell>
-              <TableCell className="text-brand-subtext text-right">{getLastActive(school.id, i)}</TableCell>
-            </TableRow>
-          ))}
+          {rosterNames.map((name, i) => {
+            const open = openIdx === i
+            return (
+              <Fragment key={name}>
+                <TableRow onClick={() => setOpenIdx(open ? null : i)} className="cursor-pointer">
+                  <TableCell className="font-medium">
+                    <button type="button" aria-expanded={open} className="flex items-center gap-2 text-left">
+                      <ChevronRight size={14} className={`shrink-0 text-brand-subtext transition-transform ${open ? 'rotate-90' : ''}`} />
+                      {name}
+                    </button>
+                  </TableCell>
+                  <TableCell className="text-brand-subtext text-right">{getLastActive(school.id, i)}</TableCell>
+                </TableRow>
+                {open && (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={2} className="pl-10 py-3 bg-brand-bg/50">
+                      <EducatorActivityGrid schoolId={school.id} teacherIndex={i} weeks={weeks} />
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
+            )
+          })}
         </TableBody>
       </Table>
     </div>
@@ -415,7 +533,7 @@ function SiteDetailModal({ school, onClose }) {
       />
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.2 }}
-        className="relative w-full max-w-2xl max-h-[85vh] bg-white rounded-xl shadow-lg overflow-y-auto p-6"
+        className="relative w-full max-w-[calc(42rem+15vw)] max-h-[85vh] bg-white rounded-xl shadow-lg overflow-y-auto p-6"
       >
         <SiteDetailContent school={school} onClose={onClose} />
       </motion.div>
@@ -428,24 +546,32 @@ export default function Report2ConceptE() {
   const activePreset = RANGE_PRESETS.find(p => p.value === preset)
   const weeks = useMemo(() => schoolWeeks.slice(-activePreset.weeks), [activePreset])
 
-  const [overlayStyle, setOverlayStyle] = useState('panel')
-  const [styleMenuOpen, setStyleMenuOpen] = useState(false)
-  const styleMenuRef = useRef(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
   const [selectedSite, setSelectedSite] = useState(null)
 
   useEffect(() => {
-    if (!styleMenuOpen) return
-    const handler = e => { if (styleMenuRef.current && !styleMenuRef.current.contains(e.target)) setStyleMenuOpen(false) }
+    if (!menuOpen) return
+    const handler = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [styleMenuOpen])
+  }, [menuOpen])
+
+  function exportCsv() {
+    const header = `Site,Users meeting goal,Total users\n`
+    const body = siteRows.map(r => `"${r.school.name}",${r.meetingGoal},${r.totalTeachers}`).join('\n')
+    const url = URL.createObjectURL(new Blob([header + body], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'site-engagement.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const siteRows = useMemo(() => schools.map(school => {
     const data = getWeekData(school.id, weeks[weeks.length - 1], GOAL)
     return { school, meetingGoal: data.meetingGoal, totalTeachers: data.totalTeachers }
   }).sort((a, b) => a.school.name.localeCompare(b.school.name)), [weeks])
-
-  const activeOverlayStyle = OVERLAY_STYLES.find(s => s.value === overlayStyle)
 
   return (
     <div className="px-6 pt-8 pb-8">
@@ -454,36 +580,31 @@ export default function Report2ConceptE() {
           <h2 className="text-2xl font-semibold text-brand-text">Site Engagement</h2>
           <p className="text-sm text-brand-subtext mt-1">This report shows Move This World lesson completion rates by site across your district.</p>
         </div>
-        <div className="relative shrink-0" ref={styleMenuRef}>
+        <div className="relative shrink-0" ref={menuRef}>
           <button
-            onClick={() => setStyleMenuOpen(o => !o)}
-            title="Which overlay style opens when you click a site"
-            className="flex items-center gap-2 px-3 h-9 rounded-lg border border-brand-border bg-white text-sm font-medium text-brand-text hover:bg-brand-bg transition-colors"
+            className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label="More options"
+            aria-expanded={menuOpen}
           >
-            {activeOverlayStyle.label}
-            <ChevronDown size={13} className={`text-brand-subtext transition-transform ${styleMenuOpen ? 'rotate-180' : ''}`} />
+            <MoreHorizontal size={13} />
           </button>
-          <AnimatePresence>
-            {styleMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}
-                className="absolute right-0 top-[calc(100%+6px)] w-44 bg-white rounded-xl border border-brand-border shadow-lg z-30 py-1.5"
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
+              <button
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors"
+                onClick={() => { exportCsv(); setMenuOpen(false) }}
               >
-                {OVERLAY_STYLES.map(s => (
-                  <button
-                    key={s.value}
-                    onClick={() => { setOverlayStyle(s.value); setStyleMenuOpen(false) }}
-                    className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left transition-colors ${
-                      overlayStyle === s.value ? 'text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
-                    }`}
-                  >
-                    {s.label}
-                    {overlayStyle === s.value && <Check size={13} className="text-dessa-teal" />}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <Download size={13} className="text-brand-subtext" /> Export CSV
+              </button>
+              <button
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors"
+                onClick={() => { window.print(); setMenuOpen(false) }}
+              >
+                <Printer size={13} className="text-brand-subtext" /> Print
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -493,6 +614,7 @@ export default function Report2ConceptE() {
       >
         <div className="flex items-center justify-between mb-1">
           <p className="text-lg font-semibold text-brand-text">% of sites meeting goal</p>
+          <p className="text-sm font-medium text-brand-text">{rangeLabel(weeks)}</p>
         </div>
         <div className="flex items-center gap-6 border-b border-brand-border mb-5">
           {RANGE_PRESETS.map(p => (
@@ -534,9 +656,7 @@ export default function Report2ConceptE() {
 
       <AnimatePresence>
         {selectedSite && (
-          overlayStyle === 'panel'
-            ? <SitePanel key="panel" school={selectedSite} onClose={() => setSelectedSite(null)} />
-            : <SiteDetailModal key="modal" school={selectedSite} onClose={() => setSelectedSite(null)} />
+          <SiteDetailModal key="modal" school={selectedSite} onClose={() => setSelectedSite(null)} />
         )}
       </AnimatePresence>
     </div>

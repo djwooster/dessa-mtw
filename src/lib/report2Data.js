@@ -48,7 +48,15 @@ const SCHOOL_TENDENCY = {
   16: 0.95, 17: 0.60, 18: 0.87, 19: 0.70, 20: 0.95,
 }
 
-const TITLES   = ['Ms.', 'Mr.', 'Ms.', 'Mr.', 'Ms.', 'Mr.', 'Ms.', 'Mr.']
+// Full names, no honorifics (2026-10-01). Picked per roster slot with the
+// same deterministic hash as everything else here, so a site's names stay
+// stable between renders.
+const FIRST_NAMES = [
+  'Maria',  'James',   'Priya',  'Daniel',  'Aisha',   'Michael', 'Sofia',   'David',
+  'Hannah', 'Carlos',  'Emily',  'Andre',   'Linh',    'Robert',  'Grace',   'Omar',
+  'Rachel', 'Kevin',   'Amara',  'Thomas',  'Elena',   'Marcus',  'Naomi',   'Samuel',
+  'Jessica','Anthony', 'Fatima', 'Brian',   'Megan',   'Luis',    'Kayla',   'Patrick',
+]
 const SURNAMES = [
   'Garcia',    'Thompson', 'Lee',       'Davis',    'Patel',    'Chen',
   'Nguyen',    'Rodriguez','Williams',  'Johnson',  'Brown',    'Taylor',
@@ -77,8 +85,8 @@ function getRoster(schoolId) {
     [pool[i], pool[j]] = [pool[j], pool[i]]
   }
   return pool.slice(0, count).map((surname, ti) => {
-    const title = TITLES[det(schoolId * 3, ti, 0) % TITLES.length]
-    return `${title} ${surname}`
+    const first = FIRST_NAMES[det(schoolId * 3, ti, 0) % FIRST_NAMES.length]
+    return `${first} ${surname}`
   })
 }
 

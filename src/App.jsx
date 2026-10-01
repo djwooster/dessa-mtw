@@ -18,7 +18,7 @@ import CompetitiveAnalysis from './pages/CompetitiveAnalysis'
 import ProcessJournal from './pages/ProcessJournal'
 import ProcessJournalLayout from './pages/ProcessJournalLayout'
 import ProcessJournalTodo from './pages/ProcessJournalTodo'
-import Report1C from './pages/Report1C'
+import ReportDce from './pages/ReportDce'
 import Report2 from './pages/Report2'
 import ReportsLayout from './pages/ReportsLayout'
 import SettingsLayout from './pages/settings/SettingsLayout'
@@ -27,6 +27,7 @@ import CurriculumSetup from './pages/settings/CurriculumSetup'
 import JoinPage from './pages/JoinPage'
 import { ResourcesConceptProvider } from './lib/resourcesConceptContext'
 import { SiteEngagementConceptProvider } from './lib/siteEngagementConceptContext'
+import { DceConceptProvider } from './lib/dceConceptContext'
 
 function Placeholder({ title }) {
   return (
@@ -54,7 +55,9 @@ export default function App() {
       <Toaster position="top-center" richColors />
       <ResourcesConceptProvider>
         <SiteEngagementConceptProvider>
-          <AppShell handleBookmark={handleBookmark} />
+          <DceConceptProvider>
+            <AppShell handleBookmark={handleBookmark} />
+          </DceConceptProvider>
         </SiteEngagementConceptProvider>
       </ResourcesConceptProvider>
     </BrowserRouter>
@@ -84,7 +87,7 @@ function AppShell({ handleBookmark }) {
         <Route path="/reports" element={<ReportsLayout />}>
           <Route index element={<Navigate to="site-engagement" replace />} />
           <Route path="site-engagement" element={<Report2 />} />
-          <Route path="dce" element={<Report1C />} />
+          <Route path="dce" element={<ReportDce />} />
         </Route>
         <Route path="/settings" element={<SettingsLayout />}>
           <Route index element={<Navigate to="curriculum-setup" replace />} />
