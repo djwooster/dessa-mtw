@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import tailwindConfig from '../../tailwind.config.js'
 import {
   ChevronRight, Play, Search, Bookmark, Flame, Target, GraduationCap, HelpCircle,
   ImagePlus, CheckCircle2, AlertCircle, Plus, Download, Share2, Video, FileText, Mic,
@@ -57,6 +58,35 @@ function Swatch({ name, token, hex, usage, light = false }) {
     </div>
   )
 }
+
+// ─── Org design system palette ────────────────────────────────────────────────
+// Rendered straight from tailwind.config.js (theme.extend.colors.org) so the
+// guide can't drift from the tokens. Source: the org's Storybook color tokens.
+const ORG = tailwindConfig.theme.extend.colors.org
+const orgShades = (family, label) =>
+  Object.entries(ORG[family]).map(([shade, hex]) => ({
+    name: shade === 'hover' ? `${label} Hover` : `${label} ${shade}`,
+    token: `org-${family}-${shade}`,
+    hex,
+  }))
+const ORG_FAMILIES = [
+  { label: 'Primary', shades: orgShades('primary', 'Primary') },
+  { label: 'Gray', shades: orgShades('gray', 'Gray') },
+  { label: 'Green', shades: orgShades('green', 'Green') },
+  { label: 'Red', shades: orgShades('red', 'Red') },
+  { label: 'Yellow', shades: orgShades('yellow', 'Yellow') },
+]
+const ORG_NAMED = [
+  { name: 'Aperture Brand', token: 'org-aperture', hex: ORG.aperture },
+  { name: 'Black', token: 'org-black', hex: ORG.black },
+  { name: 'White', token: '—', hex: '#ffffff' },
+  { name: 'Active Icon', token: 'org-green-400', hex: ORG.green[400], usage: 'Alias of Green 400' },
+  { name: 'Strength', token: 'org-green-400', hex: ORG.green[400], usage: 'Alias of Green 400' },
+  { name: 'Success', token: 'org-green-600', hex: ORG.green[600], usage: 'Alias of Green 600' },
+  { name: 'Typical', token: 'org-primary-400', hex: ORG.primary[400], usage: 'Alias of Primary 400' },
+  { name: 'Need', token: 'org-red-400', hex: ORG.red[400], usage: 'Alias of Red 400' },
+  { name: 'Danger', token: 'org-red-700', hex: ORG.red[700], usage: 'Alias of Red 700' },
+]
 
 // ─── Type specimen ────────────────────────────────────────────────────────────
 
@@ -648,6 +678,31 @@ export default function BrandGuide() {
           <Swatch name="Border" token="brand-border" hex="#E2E6EA" usage="Card / divider borders" />
           <Swatch name="White" token="—" hex="#FFFFFF" usage="Card surface" />
           <Swatch name="Interactive Blue" token="interactive-blue" hex="#0061FF" usage="Inline action links" />
+        </div>
+      </motion.div>
+
+      <Divider />
+
+      {/* ── Org Design System Palette ── */}
+      <motion.div {...stagger(2)} className="mb-10">
+        <SectionLabel>Color System</SectionLabel>
+        <SectionHeading>Org Design System Palette</SectionHeading>
+        <p className="text-sm text-brand-subtext mb-6 max-w-2xl">
+          The organization's actual brand colors, saved separately from the prototype palette above
+          under the <span className="font-mono">org-*</span> tokens.
+        </p>
+        {ORG_FAMILIES.map((family) => (
+          <div key={family.label} className="mb-7">
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-3">{family.label}</p>
+            <div className="grid grid-cols-6 gap-4">
+              {family.shades.map((c) => <Swatch key={c.token} {...c} />)}
+            </div>
+            {family.note && <p className="text-xs text-brand-subtext mt-3">{family.note}</p>}
+          </div>
+        ))}
+        <p className="text-xs font-semibold uppercase tracking-wider text-brand-subtext mb-3">Named colors</p>
+        <div className="grid grid-cols-6 gap-4">
+          {ORG_NAMED.map((c) => <Swatch key={c.name} {...c} />)}
         </div>
       </motion.div>
 

@@ -44,6 +44,38 @@ export default {
           border:  '#E2E6EA',
           focus:   '#2A7F8F',
         },
+        // Org design system palette (Storybook "DESSA UI / Tokens / Colors"),
+        // kept separate from every other color group on purpose. Teal 25-900
+        // is identical to primary, so it isn't duplicated here (white is #ffffff). Semantic
+        // aliases: Need = red 400, Strength = green 400, Typical = primary
+        // 400, Success = green 600.
+        org: {
+          primary: {
+            25: '#f9fdff', 50: '#ebf5fb', 100: '#c1e2f3', 200: '#98cee9',
+            300: '#6dbadd', 400: '#3da6ce', 500: '#0092bd', 600: '#007da8',
+            700: '#006990', 800: '#005476', 900: '#00405a', hover: '#228eb5',
+          },
+          green: {
+            100: '#cdffc7', 200: '#9bea93', 300: '#70d468', 400: '#4ab947',
+            500: '#27a02a', 600: '#108d1d', 700: '#027518', 800: '#005813', 900: '#003c0a',
+          },
+          red: {
+            100: '#ffccc2', 200: '#ffaa9c', 300: '#ff897b', 400: '#ff695d',
+            500: '#f53d36', 600: '#de1b1e', 700: '#ba1823', 800: '#990a19', 900: '#760a12',
+          },
+          gray: {
+            25: '#eff4f5', 50: '#e2e9eb', 100: '#cad6d9', 200: '#bbc6c9',
+            300: '#9fabae', 400: '#818e92', 500: '#6f7a7d', 600: '#555e61',
+            700: '#414a4d', 800: '#303739', 900: '#1b2021',
+          },
+          aperture: '#30afdc',
+          black: '#000000',
+          yellow: {
+            100: '#fffcea', 200: '#fff8d4', 300: '#fff5c2', 400: '#fff2ad',
+            500: '#ffea7a', 600: '#ffe352', 700: '#f8d000', 800: '#d4b200',
+            900: '#b79a00',
+          },
+        },
         // UI-state semantics (validation, toasts, alerts) — deliberately
         // separate from the dessa-green/blue/salmon data-viz palette above,
         // which means strength/typical/need on charts, not error/warning/

@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Search, Video, FileText, Mic, Link2, PlayCircle,
-  ChevronDown, Check, X,
+  ChevronDown, Check, X, Plus,
 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
@@ -41,12 +41,26 @@ const COMPETENCIES = ['Self-Awareness', 'Self-Management', 'Relationship Skills'
 // out of scope — its resources are reclassified as 'PDF' (see
 // REAL_FILE_TYPE below and FOUNDATIONAL_PRACTICES_RESOURCES), not deleted.
 const TYPE_META = {
-  Video: { icon: Video, label: 'Video', color: 'text-dessa-magenta', bg: 'bg-dessa-magenta' },
-  PDF: { icon: FileText, label: 'PDF', color: 'text-mtw-purple', bg: 'bg-mtw-purple' },
-  Audio: { icon: Mic, label: 'Audio', color: 'text-mtw-blue', bg: 'bg-mtw-blue' },
-  Link: { icon: Link2, label: 'Link', color: 'text-mtw-green', bg: 'bg-mtw-green' },
-  Lesson: { icon: PlayCircle, label: 'Lesson', color: 'text-mtw-amber', bg: 'bg-mtw-amber' },
+  Video: { icon: Video, label: 'Video', color: 'text-dessa-magenta', bg: 'bg-dessa-magenta', brand: 'bg-org-red-100/90 text-org-red-700' },
+  PDF: { icon: FileText, label: 'PDF', color: 'text-mtw-purple', bg: 'bg-mtw-purple', brand: 'bg-org-gray-50/90 text-org-gray-700' },
+  Audio: { icon: Mic, label: 'Audio', color: 'text-mtw-blue', bg: 'bg-mtw-blue', brand: 'bg-org-primary-50/90 text-org-primary-700' },
+  Link: { icon: Link2, label: 'Link', color: 'text-mtw-green', bg: 'bg-mtw-green', brand: 'bg-org-green-100/90 text-org-green-700' },
+  Lesson: { icon: PlayCircle, label: 'Lesson', color: 'text-mtw-amber', bg: 'bg-mtw-amber', brand: 'bg-org-yellow-200/90 text-org-gray-700' },
 }
+
+// Two switchable looks for the type pills. 'legacy' is
+// the prototype's original palette, kept so it can be brought back as a
+// future proposition; 'brand' is the org design system (org-* tokens).
+// Shift+B flips between them on this page only (see ResourceLibraryView).
+const PALETTE_KEY = 'resourceLibraryPalette'
+const PALETTE_LABELS = { legacy: 'Original', brand: 'Brand' }
+// Filter chips keep the original teal look in both palettes.
+const CHIP_STYLE = {
+  chip: 'border-dessa-teal/30 bg-dessa-tealLight text-dessa-teal',
+  xHover: 'hover:bg-dessa-teal/10 focus-visible:outline-dessa-teal',
+  plus: 'bg-dessa-teal hover:bg-dessa-teal/90',
+}
+const PaletteContext = createContext('brand')
 
 // Per-grade catalog (2026-09-28) — was 18 hand-written rows shared thinly
 // across 15 individual grades (some grades had just 1). Per explicit
@@ -202,6 +216,7 @@ function CondensedResultsTable({ rows }) {
   const [sortDir, setSortDir] = useState('asc')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(TABLE_PAGE_SIZE)
+  const palette = useContext(PaletteContext)
 
   const rowsKey = rows.map((r) => `${r.grade}|${r.title}`).join(',')
   const [prevRowsKey, setPrevRowsKey] = useState(rowsKey)
@@ -240,7 +255,7 @@ function CondensedResultsTable({ rows }) {
   return (
     <>
     <Table>
-      <TableHeader>
+      <TableHeader className="bg-brand-bg/50">
         <TableRow className="hover:bg-transparent">
           <SortableHead label="Type" sortKey="type" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
           <SortableHead label="Title" sortKey="title" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
@@ -252,6 +267,7 @@ function CondensedResultsTable({ rows }) {
       <TableBody>
         {pagedRows.map((r) => {
           const typeMeta = TYPE_META[r.type]
+          const typeClasses = palette === 'brand' ? typeMeta.brand : `${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`
           return (
             <TableRow
               key={`${r.grade}-${r.title}`}
@@ -259,7 +275,7 @@ function CondensedResultsTable({ rows }) {
               className="cursor-pointer"
             >
               <TableCell className="py-1.5">
-                <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] whitespace-nowrap ${typeMeta.bg} bg-opacity-10 ${typeMeta.color}`}>
+                <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-[5px] whitespace-nowrap ${typeClasses}`}>
                   <typeMeta.icon size={14} />
                   <span className="text-xs font-medium">{typeMeta.label}</span>
                 </span>
@@ -325,40 +341,68 @@ function CondensedResultsTable({ rows }) {
   )
 }
 
-function ResultsHeader({ chips }) {
-  return (
-    <div className="px-6 pt-6 pb-4 flex items-center justify-between gap-4">
-      <div className="flex flex-wrap items-center gap-2 flex-1">
-        {chips.map((c) => (
-          <span key={c} className="inline-flex items-center pl-3 pr-3 py-1.5 rounded-full bg-dessa-tealLight text-dessa-teal text-sm font-medium">
-            {c}
-          </span>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // maxHeightClass defaults to fitting ~5 rows (Competency, unaffected by
 // the 2026-09-28 scrolling feedback). Course Type/File Type pass a taller
 // value sized to their current 6 options with no scrollbar; Grade Level
 // passes a taller-still value that shows more of its 15 options at once
 // without trying to fit all of them (still scrolls for the rest).
 function FilterField({ label, options, selected, onToggle, single = false, open, onOpenChange, maxHeightClass = 'max-h-56' }) {
-  const summary = selected.length === 0 ? 'All' : selected.length === 1 ? selected[0] : `${selected.length} selected`
+  // Grade Level's "All Grades" is the empty state, not a chip.
+  const chipStyle = CHIP_STYLE
+  const values = single ? selected.filter((v) => v !== 'All Grades') : selected
+  const hasSelection = values.length > 0
+  const canAdd = hasSelection && !single
+  const remove = (v) => onToggle(single ? 'All Grades' : v)
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-sm font-semibold text-brand-text">{label}</p>
       <Popover.Root open={open} onOpenChange={onOpenChange}>
-        <Popover.Trigger asChild>
-          <button
-            type="button"
-            className="w-full flex items-center justify-between gap-2 h-10 px-3 text-sm border border-brand-border rounded-md bg-white text-brand-subtext hover:border-dessa-teal/50 transition-colors"
+        <Popover.Anchor asChild>
+          <div
+            onClick={(e) => { if (!e.target.closest('button')) onOpenChange(!open) }}
+            className="w-full flex items-center justify-between gap-2 h-10 pl-3 pr-1.5 text-sm border border-brand-border rounded-md bg-white text-brand-subtext hover:border-dessa-teal/50 transition-colors cursor-pointer"
           >
-            <span className="truncate text-left">{summary}</span>
-            <ChevronDown size={14} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-          </button>
-        </Popover.Trigger>
+            <div className="flex items-center gap-1.5 min-w-0">
+              {hasSelection ? (
+                <>
+                  <span className={`inline-flex items-center gap-1.5 min-w-0 max-w-36 px-2 py-1 rounded border text-sm ${chipStyle.chip}`}>
+                    <span className="truncate">{values[0]}</span>
+                    <button
+                      type="button"
+                      onClick={() => remove(values[0])}
+                      aria-label={`Remove ${values[0]}`}
+                      className={`shrink-0 rounded-sm focus-visible:outline focus-visible:outline-2 ${chipStyle.xHover}`}
+                    >
+                      <X size={12} strokeWidth={2.5} />
+                    </button>
+                  </span>
+                  {values.length > 1 && (
+                    <span className="shrink-0 px-2 py-1 rounded bg-brand-border text-brand-text text-xs font-semibold" title={values.slice(1).join(', ')}>
+                      +{values.length - 1}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="truncate text-left">All</span>
+              )}
+            </div>
+            <Popover.Trigger asChild>
+              {canAdd ? (
+                <button
+                  type="button"
+                  aria-label={`Add ${label}`}
+                  className={`shrink-0 w-7 h-7 flex items-center justify-center rounded text-white transition-colors ${chipStyle.plus}`}
+                >
+                  <Plus size={16} strokeWidth={2.5} />
+                </button>
+              ) : (
+                <button type="button" aria-label={`Open ${label} options`} className="shrink-0 w-7 h-7 flex items-center justify-center rounded">
+                  <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+                </button>
+              )}
+            </Popover.Trigger>
+          </div>
+        </Popover.Anchor>
         <Popover.Portal>
           <Popover.Content
             align="start"
@@ -401,7 +445,6 @@ function FilterField({ label, options, selected, onToggle, single = false, open,
 function FilterBar({ grades, courseTypes, competencies, types, onSelectGrade, onToggleCourseType, onToggleCompetency, onToggleType, onResetAll }) {
   const [expanded, setExpanded] = useState(true)
   const [openField, setOpenField] = useState(null)
-  const hasActiveFilters = (grades[0] && grades[0] !== 'All Grades') || courseTypes.length > 0 || competencies.length > 0 || types.length > 0
   return (
     <div className="mb-6 rounded-2xl border border-brand-border bg-white">
       <button
@@ -413,10 +456,7 @@ function FilterBar({ grades, courseTypes, competencies, types, onSelectGrade, on
         aria-expanded={expanded}
         className="w-full flex items-center gap-1.5 px-5 py-4 text-base font-semibold text-brand-text"
       >
-        <span className="relative">
-          Filters
-          {hasActiveFilters && <span aria-hidden="true" className="absolute top-1 left-12 w-1.5 h-1.5 rounded-full bg-dessa-teal" />}
-        </span>
+        Filters
         <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
       {expanded && (
@@ -489,6 +529,32 @@ function ResourceLibraryView({ initialGrade }) {
   const [competencies, setCompetencies] = useState([])
   const [types, setTypes] = useState([])
   const [query, setQuery] = useState('')
+  const [palette, setPalette] = useState(() => (localStorage.getItem(PALETTE_KEY) === 'legacy' ? 'legacy' : 'brand'))
+  const [toast, setToast] = useState(null)
+  const toastTimer = useRef(null)
+  const paletteRef = useRef(palette)
+
+  // Hidden Shift+B switch between the original and brand palettes. Bound
+  // only while this page is mounted, and ignored while typing in a field.
+  useEffect(() => {
+    function onKeyDown(e) {
+      if (e.key !== 'B' || !e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return
+      const t = e.target
+      if (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName)) return
+      const next = paletteRef.current === 'brand' ? 'legacy' : 'brand'
+      paletteRef.current = next
+      localStorage.setItem(PALETTE_KEY, next)
+      setPalette(next)
+      setToast(`Palette: ${PALETTE_LABELS[next]}`)
+      clearTimeout(toastTimer.current)
+      toastTimer.current = setTimeout(() => setToast(null), 1800)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      clearTimeout(toastTimer.current)
+    }
+  }, [])
 
   function toggle(setFn, current, value) {
     setFn(current.includes(value) ? current.filter((v) => v !== value) : [...current, value])
@@ -513,9 +579,8 @@ function ResourceLibraryView({ initialGrade }) {
   if (competencies.length) rows = rows.filter((r) => competencies.includes(r.competency))
   if (types.length) rows = rows.filter((r) => types.includes(r.type))
 
-  const chips = [...courseTypes, ...competencies, ...types.map((t) => TYPE_META[t].label)]
-
   return (
+    <PaletteContext.Provider value={palette}>
     <div className="px-6 pt-6 pb-16">
       <div className="rounded-2xl border border-brand-border bg-white p-5 mb-6">
         <div className="flex items-stretch gap-2.5">
@@ -556,9 +621,14 @@ function ResourceLibraryView({ initialGrade }) {
         onResetAll={resetAll}
       />
       <div className="flex-1 min-w-0 rounded-2xl border border-brand-border bg-white overflow-hidden">
-        <ResultsHeader chips={chips} />
         <CondensedResultsTable rows={rows} />
       </div>
+      <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+        {toast && (
+          <div className="px-4 py-2 rounded-md bg-brand-text text-white text-sm font-medium shadow-lg">{toast}</div>
+        )}
+      </div>
     </div>
+    </PaletteContext.Provider>
   )
 }
