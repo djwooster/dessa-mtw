@@ -19,8 +19,12 @@ const SiteEngagementConceptContext = createContext(null)
 
 export function SiteEngagementConceptProvider({ children }) {
   const [statConcept, setStatConcept] = useState('a')
+  // 'admin' sees every site in the district; 'leader' sees one site
+  // (2026-10-02). Only Concept E reads it; the switcher itself lives at the
+  // bottom of the Reports sidebar (ReportsLayout.jsx).
+  const [role, setRole] = useState('admin')
   return (
-    <SiteEngagementConceptContext.Provider value={{ statConcept, setStatConcept }}>
+    <SiteEngagementConceptContext.Provider value={{ statConcept, setStatConcept, role, setRole }}>
       {children}
     </SiteEngagementConceptContext.Provider>
   )

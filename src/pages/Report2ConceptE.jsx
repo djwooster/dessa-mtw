@@ -8,10 +8,12 @@
 // not 30 daily ones.
 import { useState, useMemo, useRef, useEffect, Fragment } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { format, parseISO } from 'date-fns'
-import { X, MoreHorizontal, Download, Printer, ChevronRight } from 'lucide-react'
+import { format, parseISO, addDays } from 'date-fns'
+import { X, MoreHorizontal, Download, Printer, ChevronRight, Calendar, Search, ArrowUp, ArrowDown, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
 import { schools, schoolWeeks, getWeekData, MOST_RECENT_WEEK } from '../lib/report2Data'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
+import { RangePicker } from '../components/ui/range-picker'
+import { useSiteEngagementConcept } from '../lib/siteEngagementConceptContext'
 
 const GOAL = 3 // weekly login/completion goal, ×/week — matches report2Data.js's district default
 
@@ -19,7 +21,7 @@ const RANGE_PRESETS = [
   { value: '30d', label: '30 days', weeks: Math.round(30 / 7) },
   { value: '60d', label: '60 days', weeks: Math.round(60 / 7) },
   { value: '90d', label: '90 days', weeks: Math.round(90 / 7) },
-  { value: 'all', label: 'All time', weeks: schoolWeeks.length },
+  { value: 'all', label: '2025-2026 School Year', weeks: schoolWeeks.length },
 ]
 
 // Per-site detail overlay (2026-09-24) — started as two interchangeable
@@ -43,6 +45,104 @@ function rangeLabel(weeksList) {
   end.setDate(end.getDate() + 4)
   const sameYear = start.getFullYear() === end.getFullYear()
   return `${format(start, sameYear ? 'MMM d' : 'MMM d, yyyy')} to ${format(end, 'MMM d, yyyy')}`
+}
+
+// Range helpers (2026-10-02). The data is weekly, so a custom date range
+// snaps to every Monday to Friday week it touches, and "previous period" is
+// the equal number of weeks right before the selected ones.
+const FIRST_DATE = parseISO(schoolWeeks[0])
+const LAST_DATE = addDays(parseISO(schoolWeeks[schoolWeeks.length - 1]), 4)
+
+function weeksForDates(from, to) {
+  return schoolWeeks.filter(w => {
+    const start = parseISO(w)
+    return addDays(start, 4) >= from && start <= to
+  })
+}
+
+function previousWeeks(weeks) {
+  const first = schoolWeeks.indexOf(weeks[0])
+  return first - weeks.length < 0 ? [] : schoolWeeks.slice(first - weeks.length, first)
+}
+
+// Last Active labels as minutes, so the column can sort by recency.
+function agoRank(label) {
+  if (label === 'Never') return Infinity
+  if (label === 'Yesterday') return 1440
+  const m = /^(\d+)(m|h|d|w) ago$/.exec(label)
+  return Number(m[1]) * { m: 1, h: 60, d: 1440, w: 10080 }[m[2]]
+}
+
+function SortButton({ label, col, sort, onSort, align = 'left' }) {
+  const active = sort.key === col
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(col)}
+      aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      className={`inline-flex items-center gap-1 font-medium text-brand-text hover:text-dessa-teal transition-colors ${align === 'right' ? 'flex-row-reverse' : ''}`}
+    >
+      {label}
+      {active && (sort.dir === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />)}
+    </button>
+  )
+}
+
+function nextSort(sort, key, firstDir = 'asc') {
+  return sort.key === key ? { key, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: firstDir }
+}
+
+function SearchField({ value, onChange, placeholder }) {
+  return (
+    <div className="relative max-w-xs">
+      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        className="w-full h-9 pl-9 pr-8 text-sm rounded-md border border-brand-border bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+      />
+      {value && (
+        <button type="button" onClick={() => onChange('')} aria-label="Clear search" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
+          <X size={13} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+// Change pill (2026-10-02): green for an increase, gray for everything else
+// (a decrease, no change). The arrow always carries direction too, so color
+// is never the only signal. Shows the size of the change without a sign.
+function ChangeCell({ change }) {
+  if (change == null) return <span className="text-brand-subtext" title="No earlier period to compare with">-</span>
+  const Icon = change > 0 ? ArrowUpRight : change < 0 ? ArrowDownRight : Minus
+  const direction = change > 0 ? 'up' : change < 0 ? 'down' : 'no change'
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+        change > 0 ? 'bg-org-green-100/85 text-org-green-800' : 'bg-brand-bg text-brand-text'
+      }`}
+      aria-label={`${direction} ${Math.abs(change)}%`}
+    >
+      <Icon size={12} aria-hidden="true" />
+      {Math.abs(change)}%
+    </span>
+  )
+}
+
+// Date range shown top right of each chart (2026-10-01). People screenshot
+// these charts, so the dates need to be easy to find, but quieter than the
+// title: 13px, subtext gray, calendar icon first.
+function DateRange({ weeks, className = '' }) {
+  return (
+    <p className={`flex items-center gap-1.5 text-[13px] text-brand-subtext ${className}`}>
+      <Calendar size={13} aria-hidden="true" />
+      {rangeLabel(weeks)}
+    </p>
+  )
 }
 
 function weekLabel(weekStart) {
@@ -80,7 +180,7 @@ function getRosterNames(schoolId) {
 // The data only knows "active this week", so the finer-grained label inside
 // that week is a deterministic stand-in (2026-10-01) — varied per educator
 // so the column reads like real recency instead of one repeated value.
-const RECENT_LABELS = ['12m ago', '30m ago', '45m ago', '1h ago', '2h ago', '3h ago', '4h ago', '6h ago', 'Yesterday', '2d ago', '3d ago']
+const RECENT_LABELS = ['12m ago', '30m ago', '45m ago', '1h ago', '2h ago', '3h ago', '4h ago', '6h ago', 'Yesterday', '2d ago', '3d ago', '4d ago', '5d ago', '8d ago', '10d ago', '12d ago']
 function recentLabel(schoolId, teacherIndex) {
   const h = Math.abs(Math.sin(schoolId * 12.9898 + teacherIndex * 78.233) * 43758.5453) % 1
   return RECENT_LABELS[Math.floor(h * RECENT_LABELS.length)]
@@ -382,20 +482,79 @@ function EducatorActivityGrid({ schoolId, teacherIndex, weeks }) {
   )
 }
 
-// Shared content for both overlay shells — a right-anchored panel and a
-// centered dialog both render this unchanged; only the chrome around it
-// differs. Own independent range selector (2026-09-24: confirmed the
-// overlay's range doesn't need to track whatever's selected on the page
-// behind it, since that selection isn't visible once the overlay is open).
-function SiteDetailContent({ school, onClose }) {
-  const [preset, setPreset] = useState('30d')
-  const activePreset = RANGE_PRESETS.find(p => p.value === preset)
-  const weeks = useMemo(() => schoolWeeks.slice(-activePreset.weeks), [activePreset])
-
+// Educator list shared by the site modal and the Leader view: expandable
+// rows (one open at a time) with the activity grid, sortable columns, and an
+// optional search field in a toolbar above the header row.
+function EducatorTable({ school, weeks, searchable = false }) {
   const rosterNames = useMemo(() => getRosterNames(school.id), [school.id])
-  // Accordion: opening one educator closes any other.
   const [openIdx, setOpenIdx] = useState(null)
+  const [query, setQuery] = useState('')
+  const [sort, setSort] = useState({ key: 'name', dir: 'asc' })
 
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return rosterNames
+      .map((name, i) => ({ name, i, last: getLastActive(school.id, i) }))
+      .filter(r => !q || r.name.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const dir = sort.dir === 'asc' ? 1 : -1
+        if (sort.key === 'last') return dir * (agoRank(a.last) - agoRank(b.last) || 0) || a.name.localeCompare(b.name)
+        return dir * a.name.localeCompare(b.name)
+      })
+  }, [rosterNames, school.id, query, sort])
+
+  return (
+    <div>
+      {searchable && (
+        <div className="px-4 py-3 border-b border-brand-border">
+          <SearchField value={query} onChange={setQuery} placeholder="Search educators" />
+        </div>
+      )}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="text-[13px] font-medium"><SortButton label="Educator" col="name" sort={sort} onSort={k => setSort(s => nextSort(s, k))} /></TableHead>
+            <TableHead className="text-[13px] font-medium text-right"><SortButton label="Last Active" col="last" sort={sort} onSort={k => setSort(s => nextSort(s, k))} align="right" /></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map(r => {
+            const open = openIdx === r.i
+            return (
+              <Fragment key={r.name}>
+                <TableRow onClick={() => setOpenIdx(open ? null : r.i)} className="cursor-pointer">
+                  <TableCell className="font-medium">
+                    <button type="button" aria-expanded={open} className="flex items-center gap-2 text-left">
+                      <ChevronRight size={14} className={`shrink-0 text-brand-subtext transition-transform ${open ? 'rotate-90' : ''}`} />
+                      {r.name}
+                    </button>
+                  </TableCell>
+                  <TableCell className="text-brand-subtext text-right">{r.last}</TableCell>
+                </TableRow>
+                {open && (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={2} className="pl-10 py-3 bg-brand-bg/50">
+                      <EducatorActivityGrid schoolId={school.id} teacherIndex={r.i} weeks={weeks} />
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
+            )
+          })}
+          {rows.length === 0 && (
+            <TableRow className="hover:bg-transparent">
+              <TableCell colSpan={2} className="text-center text-brand-subtext py-8">No educators match your search.</TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
+// Shared content for both overlay shells. The range comes from the page's
+// date range button (2026-10-02), so the modal has no tabs of its own.
+function SiteDetailContent({ school, weeks, onClose }) {
   const current = useMemo(() => getWeekData(school.id, weeks[weeks.length - 1], GOAL), [school.id, weeks])
 
   const weeksMet = useMemo(() => weeks.filter(w => {
@@ -431,26 +590,12 @@ function SiteDetailContent({ school, onClose }) {
           </div>
           <h3 className="text-lg font-semibold text-brand-text">{school.name}</h3>
         </div>
-        <button onClick={onClose} className="text-brand-subtext hover:text-brand-text p-1 rounded-lg hover:bg-brand-bg transition-colors shrink-0">
-          <X size={18} />
-        </button>
-      </div>
-
-      <div className="flex items-center justify-between gap-5 border-b border-brand-border mb-5">
-        <div className="flex items-center gap-5">
-          {RANGE_PRESETS.map(p => (
-            <button
-              key={p.value}
-              onClick={() => setPreset(p.value)}
-              className={`pb-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                preset === p.value ? 'border-dessa-teal text-dessa-teal' : 'border-transparent text-brand-subtext hover:text-brand-text'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-4">
+          <DateRange weeks={weeks} />
+          <button onClick={onClose} aria-label="Close" className="text-brand-subtext hover:text-brand-text p-1 rounded-lg hover:bg-brand-bg transition-colors shrink-0">
+            <X size={18} />
+          </button>
         </div>
-        <p className="pb-2 text-sm font-medium text-brand-text">{rangeLabel(weeks)}</p>
       </div>
 
       {/* Stat cards (commented out 2026-10-01, may come back). The `cards`
@@ -470,44 +615,12 @@ function SiteDetailContent({ school, onClose }) {
         <SiteWeeklyChart schoolId={school.id} weeks={weeks} />
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Educator</TableHead>
-            <TableHead className="text-right">Last Active</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rosterNames.map((name, i) => {
-            const open = openIdx === i
-            return (
-              <Fragment key={name}>
-                <TableRow onClick={() => setOpenIdx(open ? null : i)} className="cursor-pointer">
-                  <TableCell className="font-medium">
-                    <button type="button" aria-expanded={open} className="flex items-center gap-2 text-left">
-                      <ChevronRight size={14} className={`shrink-0 text-brand-subtext transition-transform ${open ? 'rotate-90' : ''}`} />
-                      {name}
-                    </button>
-                  </TableCell>
-                  <TableCell className="text-brand-subtext text-right">{getLastActive(school.id, i)}</TableCell>
-                </TableRow>
-                {open && (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={2} className="pl-10 py-3 bg-brand-bg/50">
-                      <EducatorActivityGrid schoolId={school.id} teacherIndex={i} weeks={weeks} />
-                    </TableCell>
-                  </TableRow>
-                )}
-              </Fragment>
-            )
-          })}
-        </TableBody>
-      </Table>
+      <EducatorTable school={school} weeks={weeks} />
     </div>
   )
 }
 
-function SitePanel({ school, onClose }) {
+function SitePanel({ school, weeks, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <motion.div
@@ -518,13 +631,13 @@ function SitePanel({ school, onClose }) {
         initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 40, opacity: 0 }} transition={{ duration: 0.2 }}
         className="relative w-full max-w-md h-full bg-white shadow-lg overflow-y-auto p-6"
       >
-        <SiteDetailContent school={school} onClose={onClose} />
+        <SiteDetailContent school={school} weeks={weeks} onClose={onClose} />
       </motion.div>
     </div>
   )
 }
 
-function SiteDetailModal({ school, onClose }) {
+function SiteDetailModal({ school, weeks, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <motion.div
@@ -535,20 +648,41 @@ function SiteDetailModal({ school, onClose }) {
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.2 }}
         className="relative w-full max-w-[calc(42rem+15vw)] max-h-[85vh] bg-white rounded-xl shadow-lg overflow-y-auto p-6"
       >
-        <SiteDetailContent school={school} onClose={onClose} />
+        <SiteDetailContent school={school} weeks={weeks} onClose={onClose} />
       </motion.div>
     </div>
   )
 }
 
+// Weekly goal card, modeled on a small bordered info box with one metric.
+function GoalBox() {
+  return (
+    <div className="rounded-xl border border-brand-border bg-white px-4 py-2.5">
+      <p className="text-[13px] text-brand-subtext">Weekly Goal</p>
+      <p className="flex items-baseline gap-1.5">
+        <span className="text-2xl font-semibold text-brand-text leading-tight">{GOAL}</span>
+        <span className="text-xs text-brand-subtext">lessons per week</span>
+      </p>
+    </div>
+  )
+}
+
 export default function Report2ConceptE() {
-  const [preset, setPreset] = useState('30d')
-  const activePreset = RANGE_PRESETS.find(p => p.value === preset)
-  const weeks = useMemo(() => schoolWeeks.slice(-activePreset.weeks), [activePreset])
+  const { role } = useSiteEngagementConcept()
+  const isLeader = role === 'leader'
+  const leaderSchool = schools[0]
+
+  // Range: a preset key, or 'custom' with the snapped list of weeks.
+  const [rangeKey, setRangeKey] = useState('30d')
+  const [customWeeks, setCustomWeeks] = useState(null)
+  const presetWeeks = RANGE_PRESETS.find(p => p.value === rangeKey)?.weeks
+  const weeks = useMemo(() => customWeeks ?? schoolWeeks.slice(-presetWeeks), [customWeeks, presetWeeks])
 
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const [selectedSite, setSelectedSite] = useState(null)
+  const [query, setQuery] = useState('')
+  const [sort, setSort] = useState({ key: 'name', dir: 'asc' })
 
   useEffect(() => {
     if (!menuOpen) return
@@ -557,9 +691,30 @@ export default function Report2ConceptE() {
     return () => document.removeEventListener('mousedown', handler)
   }, [menuOpen])
 
+  const siteRows = useMemo(() => {
+    const prev = previousWeeks(weeks)
+    const q = query.trim().toLowerCase()
+    return schools
+      .map(school => {
+        const data = getWeekData(school.id, weeks[weeks.length - 1], GOAL)
+        const prevPct = prev.length ? getWeekData(school.id, prev[prev.length - 1], GOAL).pct : null
+        return { school, meetingGoal: data.meetingGoal, totalTeachers: data.totalTeachers, pct: data.pct, change: prevPct == null ? null : data.pct - prevPct }
+      })
+      .filter(r => !q || r.school.name.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const dir = sort.dir === 'asc' ? 1 : -1
+        if (sort.key === 'name') return dir * a.school.name.localeCompare(b.school.name)
+        if (sort.key === 'change') {
+          if (a.change == null || b.change == null) return (a.change == null) - (b.change == null) // no comparison sorts last
+          return dir * (a.change - b.change) || a.school.name.localeCompare(b.school.name)
+        }
+        return dir * (a.pct - b.pct) || a.school.name.localeCompare(b.school.name)
+      })
+  }, [weeks, query, sort])
+
   function exportCsv() {
-    const header = `Site,Users meeting goal,Total users\n`
-    const body = siteRows.map(r => `"${r.school.name}",${r.meetingGoal},${r.totalTeachers}`).join('\n')
+    const header = `Site,Users meeting goal,Total users,Change vs previous period (pts)\n`
+    const body = siteRows.map(r => `"${r.school.name}",${r.meetingGoal},${r.totalTeachers},${r.change ?? ''}`).join('\n')
     const url = URL.createObjectURL(new Blob([header + body], { type: 'text/csv' }))
     const a = document.createElement('a')
     a.href = url
@@ -568,43 +723,45 @@ export default function Report2ConceptE() {
     URL.revokeObjectURL(url)
   }
 
-  const siteRows = useMemo(() => schools.map(school => {
-    const data = getWeekData(school.id, weeks[weeks.length - 1], GOAL)
-    return { school, meetingGoal: data.meetingGoal, totalTeachers: data.totalTeachers }
-  }).sort((a, b) => a.school.name.localeCompare(b.school.name)), [weeks])
-
   return (
     <div className="px-6 pt-8 pb-8">
-      <div className="flex items-start justify-between mb-6">
-        <div>
+      <div className="flex items-start justify-between gap-6 mb-6">
+        <div className="min-w-0">
           <h2 className="text-2xl font-semibold text-brand-text">Site Engagement</h2>
-          <p className="text-sm text-brand-subtext mt-1">This report shows Move This World lesson completion rates by site across your district.</p>
+          <p className="text-sm text-brand-subtext mt-1">
+            {isLeader
+              ? `This report shows Move This World lesson completion rates for ${leaderSchool.name}.`
+              : 'This report shows Move This World lesson completion rates by site across your district.'}
+          </p>
         </div>
-        <div className="relative shrink-0" ref={menuRef}>
-          <button
-            className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
-            onClick={() => setMenuOpen(o => !o)}
-            aria-label="More options"
-            aria-expanded={menuOpen}
-          >
-            <MoreHorizontal size={13} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
-              <button
-                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors"
-                onClick={() => { exportCsv(); setMenuOpen(false) }}
-              >
-                <Download size={13} className="text-brand-subtext" /> Export CSV
-              </button>
-              <button
-                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors"
-                onClick={() => { window.print(); setMenuOpen(false) }}
-              >
-                <Printer size={13} className="text-brand-subtext" /> Print
-              </button>
-            </div>
-          )}
+        <div className="flex items-center gap-3 shrink-0">
+          <GoalBox />
+          <div className="relative" ref={menuRef}>
+            <button
+              className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
+              onClick={() => setMenuOpen(o => !o)}
+              aria-label="More options"
+              aria-expanded={menuOpen}
+            >
+              <MoreHorizontal size={13} />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
+                <button
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors"
+                  onClick={() => { exportCsv(); setMenuOpen(false) }}
+                >
+                  <Download size={13} className="text-brand-subtext" /> Export CSV
+                </button>
+                <button
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors"
+                  onClick={() => { window.print(); setMenuOpen(false) }}
+                >
+                  <Printer size={13} className="text-brand-subtext" /> Print
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -612,51 +769,67 @@ export default function Report2ConceptE() {
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.08 }}
         className="bg-white rounded-xl border border-brand-border p-5 mb-6"
       >
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-lg font-semibold text-brand-text">% of sites meeting goal</p>
-          <p className="text-sm font-medium text-brand-text">{rangeLabel(weeks)}</p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-base font-semibold text-brand-text">{isLeader ? '% of educators meeting goal' : '% of sites meeting goal'}</p>
+          <RangePicker
+            presets={RANGE_PRESETS}
+            value={rangeKey}
+            label={rangeLabel(weeks)}
+            range={{ from: parseISO(weeks[0]), to: addDays(parseISO(weeks[weeks.length - 1]), 4) }}
+            month={parseISO(weeks[0])}
+            minDate={FIRST_DATE}
+            maxDate={LAST_DATE}
+            onPreset={k => { setRangeKey(k); setCustomWeeks(null) }}
+            onRange={({ from, to }) => {
+              const ws = weeksForDates(from, to)
+              if (ws.length) { setCustomWeeks(ws); setRangeKey('custom') }
+            }}
+          />
         </div>
-        <div className="flex items-center gap-6 border-b border-brand-border mb-5">
-          {RANGE_PRESETS.map(p => (
-            <button
-              key={p.value}
-              onClick={() => setPreset(p.value)}
-              className={`pb-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                preset === p.value ? 'border-dessa-teal text-dessa-teal' : 'border-transparent text-brand-subtext hover:text-brand-text'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-        <SiteGoalLineChart weeks={weeks} />
+        {isLeader ? <SiteWeeklyChart schoolId={leaderSchool.id} weeks={weeks} /> : <SiteGoalLineChart weeks={weeks} />}
       </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.14 }}
         className="bg-white rounded-xl border border-brand-border overflow-hidden"
       >
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Site</TableHead>
-              <TableHead className="text-right">Users meeting goal</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {siteRows.map(({ school, meetingGoal, totalTeachers }) => (
-              <TableRow key={school.id} onClick={() => setSelectedSite(school)} className="cursor-pointer">
-                <TableCell className="font-medium">{school.name}</TableCell>
-                <TableCell className="text-brand-text text-right">{meetingGoal} of {totalTeachers}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {isLeader ? (
+          <EducatorTable school={leaderSchool} weeks={weeks} searchable />
+        ) : (
+          <>
+            <div className="px-4 py-3 border-b border-brand-border">
+              <SearchField value={query} onChange={setQuery} placeholder="Search sites" />
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-[13px] font-medium"><SortButton label="Site" col="name" sort={sort} onSort={k => setSort(s => nextSort(s, k))} /></TableHead>
+                  <TableHead className="text-[13px] font-medium text-right"><SortButton label="Users meeting goal" col="goal" sort={sort} onSort={k => setSort(s => nextSort(s, k, 'desc'))} align="right" /></TableHead>
+                  <TableHead className="text-[13px] font-medium text-right"><SortButton label="Change vs previous period" col="change" sort={sort} onSort={k => setSort(s => nextSort(s, k, 'desc'))} align="right" /></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {siteRows.map(({ school, meetingGoal, totalTeachers, change }) => (
+                  <TableRow key={school.id} onClick={() => setSelectedSite(school)} className="cursor-pointer">
+                    <TableCell className="font-medium">{school.name}</TableCell>
+                    <TableCell className="text-brand-text text-right">{meetingGoal} of {totalTeachers}</TableCell>
+                    <TableCell className="text-right"><ChangeCell change={change} /></TableCell>
+                  </TableRow>
+                ))}
+                {siteRows.length === 0 && (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={3} className="text-center text-brand-subtext py-8">No sites match your search.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </>
+        )}
       </motion.div>
 
       <AnimatePresence>
-        {selectedSite && (
-          <SiteDetailModal key="modal" school={selectedSite} onClose={() => setSelectedSite(null)} />
+        {selectedSite && !isLeader && (
+          <SiteDetailModal key="modal" school={selectedSite} weeks={weeks} onClose={() => setSelectedSite(null)} />
         )}
       </AnimatePresence>
     </div>
