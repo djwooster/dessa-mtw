@@ -36,7 +36,7 @@ const CAL_CLASS_NAMES = {
 // Custom ranges are picked in two clicks (start, then end) and only take
 // effect when Apply is clicked (2026-10-02). `range` is the current range,
 // shown pre-selected when the popover opens.
-export function RangePicker({ presets, value, label, range, month, minDate, maxDate, onPreset, onRange, className }) {
+export function RangePicker({ presets, value, label, range, month, minDate, maxDate, onPreset, onRange, className, iconOnly = false }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(range)
 
@@ -55,13 +55,17 @@ export function RangePicker({ presets, value, label, range, month, minDate, maxD
       <Popover.Trigger asChild>
         <button
           type="button"
+          aria-label={iconOnly ? 'Pick a custom date range' : undefined}
           className={cn(
-            'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-brand-border bg-white text-xs font-medium text-brand-text hover:bg-brand-bg transition-colors',
+            iconOnly
+              ? 'inline-flex items-center justify-center h-8 w-8 rounded-md text-brand-subtext hover:bg-brand-bg transition-colors'
+              : 'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-brand-border bg-white text-xs font-medium text-brand-text hover:bg-brand-bg transition-colors',
+            iconOnly && value === 'custom' && 'bg-dessa-tealLight text-dessa-teal hover:bg-dessa-tealLight',
             className
           )}
         >
-          <CalendarIcon size={14} className="text-brand-subtext" aria-hidden="true" />
-          {label}
+          <CalendarIcon size={14} className={iconOnly ? undefined : 'text-brand-subtext'} aria-hidden="true" />
+          {!iconOnly && label}
         </button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -70,7 +74,7 @@ export function RangePicker({ presets, value, label, range, month, minDate, maxD
           sideOffset={6}
           className="z-50 flex bg-white border border-brand-border rounded-xl shadow-lg outline-none overflow-hidden"
         >
-          <div className="flex flex-col gap-0.5 p-2 border-r border-brand-border min-w-44">
+          {presets.length > 0 && <div className="flex flex-col gap-0.5 p-2 border-r border-brand-border min-w-44">
             {presets.map(p => (
               <button
                 key={p.value}
@@ -85,7 +89,7 @@ export function RangePicker({ presets, value, label, range, month, minDate, maxD
                 {value === p.value && <Check size={13} />}
               </button>
             ))}
-          </div>
+          </div>}
           <div className="flex flex-col">
             <div className="p-4">
               <DayPicker

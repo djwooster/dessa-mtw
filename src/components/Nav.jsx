@@ -17,11 +17,13 @@ import { RESOURCES_GRADE_GROUPS } from '../pages/ResourcesAltConcepts'
 // baseline so B has something real to be compared against, not a
 // replacement for it. More concepts land here as they're built.
 const SITE_ENGAGEMENT_CONCEPTS = [
-  { value: 'a', label: 'A', title: 'A — Original: single-week snapshot with filters and a sortable table' },
-  { value: 'b', label: 'B', title: 'B — Positive reframe: stat cards, engagement trend, and a site card grid' },
-  { value: 'c', label: 'C', title: 'C — Simplified: % of sites meeting goal, consistency, and a plain table' },
-  { value: 'd', label: 'D', title: 'D — Two-column: the same table plus a consistency-over-time trend card' },
+  // Concepts A-D commented out 2026-10-02 (components kept in Report2.jsx's imports list).
+  // { value: 'a', label: 'A', title: 'A — Original: single-week snapshot with filters and a sortable table' },
+  // { value: 'b', label: 'B', title: 'B — Positive reframe: stat cards, engagement trend, and a site card grid' },
+  // { value: 'c', label: 'C', title: 'C — Simplified: % of sites meeting goal, consistency, and a plain table' },
+  // { value: 'd', label: 'D', title: 'D — Two-column: the same table plus a consistency-over-time trend card' },
   { value: 'e', label: 'E', title: 'E — Trend-first: range-preset line chart plus a users-meeting-goal table' },
+  { value: 'f', label: 'F', title: 'F, Concept E with preset date pills and three summary cards beside the chart' },
 ]
 
 // Daily Curriculum Engagement concept switcher (2026-10-01), same dropdown

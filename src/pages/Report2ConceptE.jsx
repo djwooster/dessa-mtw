@@ -7,17 +7,19 @@
 // the nearest whole week count — "30 days" renders as ~4 weekly points,
 // not 30 daily ones.
 import { useState, useMemo, useRef, useEffect, Fragment } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, addDays } from 'date-fns'
 import { X, MoreHorizontal, Download, Printer, ChevronRight, Calendar, Search, ArrowUp, ArrowDown, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
 import { schools, schoolWeeks, getWeekData, MOST_RECENT_WEEK } from '../lib/report2Data'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { RangePicker } from '../components/ui/range-picker'
-import { useSiteEngagementConcept } from '../lib/siteEngagementConceptContext'
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '../components/ui/breadcrumb'
+import { useRole } from '../lib/roleContext'
 
-const GOAL = 3 // weekly login/completion goal, ×/week — matches report2Data.js's district default
+export const GOAL = 3 // weekly login/completion goal, ×/week — matches report2Data.js's district default
 
-const RANGE_PRESETS = [
+export const RANGE_PRESETS = [
   { value: '30d', label: '30 days', weeks: Math.round(30 / 7) },
   { value: '60d', label: '60 days', weeks: Math.round(60 / 7) },
   { value: '90d', label: '90 days', weeks: Math.round(90 / 7) },
@@ -39,7 +41,7 @@ const RANGE_PRESETS = [
 // people screenshot this chart, so the dates have to be readable without the
 // axis. A week runs Monday to Friday here, so the end is the last week's
 // Monday plus four days. The year is always shown.
-function rangeLabel(weeksList) {
+export function rangeLabel(weeksList) {
   const start = parseISO(weeksList[0])
   const end = parseISO(weeksList[weeksList.length - 1])
   end.setDate(end.getDate() + 4)
@@ -50,30 +52,30 @@ function rangeLabel(weeksList) {
 // Range helpers (2026-10-02). The data is weekly, so a custom date range
 // snaps to every Monday to Friday week it touches, and "previous period" is
 // the equal number of weeks right before the selected ones.
-const FIRST_DATE = parseISO(schoolWeeks[0])
-const LAST_DATE = addDays(parseISO(schoolWeeks[schoolWeeks.length - 1]), 4)
+export const FIRST_DATE = parseISO(schoolWeeks[0])
+export const LAST_DATE = addDays(parseISO(schoolWeeks[schoolWeeks.length - 1]), 4)
 
-function weeksForDates(from, to) {
+export function weeksForDates(from, to) {
   return schoolWeeks.filter(w => {
     const start = parseISO(w)
     return addDays(start, 4) >= from && start <= to
   })
 }
 
-function previousWeeks(weeks) {
+export function previousWeeks(weeks) {
   const first = schoolWeeks.indexOf(weeks[0])
   return first - weeks.length < 0 ? [] : schoolWeeks.slice(first - weeks.length, first)
 }
 
 // Last Active labels as minutes, so the column can sort by recency.
-function agoRank(label) {
+export function agoRank(label) {
   if (label === 'Never') return Infinity
   if (label === 'Yesterday') return 1440
   const m = /^(\d+)(m|h|d|w) ago$/.exec(label)
   return Number(m[1]) * { m: 1, h: 60, d: 1440, w: 10080 }[m[2]]
 }
 
-function SortButton({ label, col, sort, onSort, align = 'left' }) {
+export function SortButton({ label, col, sort, onSort, align = 'left' }) {
   const active = sort.key === col
   return (
     <button
@@ -88,11 +90,11 @@ function SortButton({ label, col, sort, onSort, align = 'left' }) {
   )
 }
 
-function nextSort(sort, key, firstDir = 'asc') {
+export function nextSort(sort, key, firstDir = 'asc') {
   return sort.key === key ? { key, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: firstDir }
 }
 
-function SearchField({ value, onChange, placeholder }) {
+export function SearchField({ value, onChange, placeholder }) {
   return (
     <div className="relative max-w-xs">
       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
@@ -116,7 +118,7 @@ function SearchField({ value, onChange, placeholder }) {
 // Change pill (2026-10-02): green for an increase, gray for everything else
 // (a decrease, no change). The arrow always carries direction too, so color
 // is never the only signal. Shows the size of the change without a sign.
-function ChangeCell({ change }) {
+export function ChangeCell({ change }) {
   if (change == null) return <span className="text-brand-subtext" title="No earlier period to compare with">-</span>
   const Icon = change > 0 ? ArrowUpRight : change < 0 ? ArrowDownRight : Minus
   const direction = change > 0 ? 'up' : change < 0 ? 'down' : 'no change'
@@ -136,7 +138,7 @@ function ChangeCell({ change }) {
 // Date range shown top right of each chart (2026-10-01). People screenshot
 // these charts, so the dates need to be easy to find, but quieter than the
 // title: 13px, subtext gray, calendar icon first.
-function DateRange({ weeks, className = '' }) {
+export function DateRange({ weeks, className = '' }) {
   return (
     <p className={`flex items-center gap-1.5 text-[13px] text-brand-subtext ${className}`}>
       <Calendar size={13} aria-hidden="true" />
@@ -167,7 +169,7 @@ const Y_TICKS = [0, 25, 50, 75, 100]
 // Roster order is stable across weeks (report2Data.js caches each site's
 // roster once), so a teacher's index can be used to look them up week to
 // week without re-matching by name.
-function getRosterNames(schoolId) {
+export function getRosterNames(schoolId) {
   return getWeekData(schoolId, MOST_RECENT_WEEK, GOAL).teachers.map(t => t.name)
 }
 
@@ -186,7 +188,7 @@ function recentLabel(schoolId, teacherIndex) {
   return RECENT_LABELS[Math.floor(h * RECENT_LABELS.length)]
 }
 
-function getLastActive(schoolId, teacherIndex) {
+export function getLastActive(schoolId, teacherIndex) {
   for (let i = schoolWeeks.length - 1; i >= 0; i--) {
     const data = getWeekData(schoolId, schoolWeeks[i], GOAL)
     if (data.teachers[teacherIndex].daysActive > 0) {
@@ -197,7 +199,7 @@ function getLastActive(schoolId, teacherIndex) {
   return 'Never'
 }
 
-function SiteGoalLineChart({ weeks }) {
+export function SiteGoalLineChart({ weeks }) {
   const [hoverIdx, setHoverIdx] = useState(null)
 
   const trend = useMemo(() => weeks.map(w => {
@@ -308,7 +310,7 @@ function SiteGoalLineChart({ weeks }) {
 // meeting goal per week (report2Data.js's existing `pct` field) instead of
 // the district-wide % of sites — a zoomed-in version of the page's chart,
 // sized for a narrower overlay.
-function SiteWeeklyChart({ schoolId, weeks }) {
+export function SiteWeeklyChart({ schoolId, weeks }) {
   const [hoverIdx, setHoverIdx] = useState(null)
 
   const trend = useMemo(() => weeks.map(w => {
@@ -428,16 +430,16 @@ function SiteWeeklyChart({ schoolId, weeks }) {
 // educator was active in a week (daysActive, 0-5), not which ones, so the
 // active days are placed on weekdays with a stable per-educator-per-week
 // shuffle. Totals are exact; the specific weekdays are a mock-data stand-in.
-const WEEKDAYS = [0, 1, 2, 3, 4]
+export const WEEKDAYS = [0, 1, 2, 3, 4]
 
-function activeDayOrder(schoolId, teacherIndex, weekIdx) {
+export function activeDayOrder(schoolId, teacherIndex, weekIdx) {
   return WEEKDAYS
     .map(d => ({ d, h: Math.abs(Math.sin((schoolId * 131 + teacherIndex * 17 + weekIdx * 7 + d) * 12.9898) * 43758.5453) % 1 }))
     .sort((a, b) => a.h - b.h)
     .map(x => x.d)
 }
 
-function EducatorActivityGrid({ schoolId, teacherIndex, weeks }) {
+export function EducatorActivityGrid({ schoolId, teacherIndex, weeks }) {
   const months = monthTransitionLabels(weeks)
   const columns = weeks.map((w, wi) => {
     const weekIdx = schoolWeeks.indexOf(w)
@@ -485,7 +487,7 @@ function EducatorActivityGrid({ schoolId, teacherIndex, weeks }) {
 // Educator list shared by the site modal and the Leader view: expandable
 // rows (one open at a time) with the activity grid, sortable columns, and an
 // optional search field in a toolbar above the header row.
-function EducatorTable({ school, weeks, searchable = false }) {
+export function EducatorTable({ school, weeks, searchable = false }) {
   const rosterNames = useMemo(() => getRosterNames(school.id), [school.id])
   const [openIdx, setOpenIdx] = useState(null)
   const [query, setQuery] = useState('')
@@ -637,7 +639,7 @@ function SitePanel({ school, weeks, onClose }) {
   )
 }
 
-function SiteDetailModal({ school, weeks, onClose }) {
+export function SiteDetailModal({ school, weeks, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <motion.div
@@ -654,22 +656,33 @@ function SiteDetailModal({ school, weeks, onClose }) {
   )
 }
 
-// Weekly goal card, modeled on a small bordered info box with one metric.
-function GoalBox() {
+// Breadcrumb above the page title (2026-10-02), shared with Concept F.
+export function SiteEngagementBreadcrumb() {
+  const navigate = useNavigate()
   return (
-    <div className="rounded-xl border border-brand-border bg-white px-4 py-2.5">
-      <p className="text-[13px] text-brand-subtext">Weekly Goal</p>
-      <p className="flex items-baseline gap-1.5">
-        <span className="text-2xl font-semibold text-brand-text leading-tight">{GOAL}</span>
-        <span className="text-xs text-brand-subtext">lessons per week</span>
-      </p>
-    </div>
+    <Breadcrumb className="mb-2">
+      <BreadcrumbList>
+        <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/reports')}>Reports</BreadcrumbLink></BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem><BreadcrumbPage>Site engagement</BreadcrumbPage></BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  )
+}
+
+// Weekly goal badge (2026-10-02): a neutral gray pill, same family as the
+// Change pill in the table, replacing the earlier bordered card.
+export function GoalBox() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-bg px-3 py-1.5 text-xs">
+      <span className="text-brand-subtext">Weekly goal</span>
+      <span className="font-medium text-brand-text">{GOAL} lessons per week</span>
+    </span>
   )
 }
 
 export default function Report2ConceptE() {
-  const { role } = useSiteEngagementConcept()
-  const isLeader = role === 'leader'
+  const { isSiteLeaderView: isLeader } = useRole()
   const leaderSchool = schools[0]
 
   // Range: a preset key, or 'custom' with the snapped list of weeks.
@@ -713,7 +726,7 @@ export default function Report2ConceptE() {
   }, [weeks, query, sort])
 
   function exportCsv() {
-    const header = `Site,Users meeting goal,Total users,Change vs previous period (pts)\n`
+    const header = `Site,Users meeting goal,Total users,Change vs last month (pts)\n`
     const body = siteRows.map(r => `"${r.school.name}",${r.meetingGoal},${r.totalTeachers},${r.change ?? ''}`).join('\n')
     const url = URL.createObjectURL(new Blob([header + body], { type: 'text/csv' }))
     const a = document.createElement('a')
@@ -727,6 +740,7 @@ export default function Report2ConceptE() {
     <div className="px-6 pt-8 pb-8">
       <div className="flex items-start justify-between gap-6 mb-6">
         <div className="min-w-0">
+          <SiteEngagementBreadcrumb />
           <h2 className="text-2xl font-semibold text-brand-text">Site Engagement</h2>
           <p className="text-sm text-brand-subtext mt-1">
             {isLeader
@@ -805,7 +819,7 @@ export default function Report2ConceptE() {
                 <TableRow>
                   <TableHead className="text-[13px] font-medium"><SortButton label="Site" col="name" sort={sort} onSort={k => setSort(s => nextSort(s, k))} /></TableHead>
                   <TableHead className="text-[13px] font-medium text-right"><SortButton label="Users meeting goal" col="goal" sort={sort} onSort={k => setSort(s => nextSort(s, k, 'desc'))} align="right" /></TableHead>
-                  <TableHead className="text-[13px] font-medium text-right"><SortButton label="Change vs previous period" col="change" sort={sort} onSort={k => setSort(s => nextSort(s, k, 'desc'))} align="right" /></TableHead>
+                  <TableHead className="text-[13px] font-medium text-right"><SortButton label="Change vs last month" col="change" sort={sort} onSort={k => setSort(s => nextSort(s, k, 'desc'))} align="right" /></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

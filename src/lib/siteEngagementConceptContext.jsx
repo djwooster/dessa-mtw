@@ -14,17 +14,13 @@ import { createContext, useContext, useState } from 'react'
 // the table). 'd' = two-column layout — the same table plus a
 // "Consistency over time" trend card. 'e' = trend-first — a stock-chart-
 // style range-preset line chart (30/60/90 days, All time) above a full-
-// width "Users meeting goal" table. Defaults to 'a', the baseline.
+// width "Users meeting goal" table. Defaults to 'e' (A-D are commented out as of 2026-10-02).
 const SiteEngagementConceptContext = createContext(null)
 
 export function SiteEngagementConceptProvider({ children }) {
-  const [statConcept, setStatConcept] = useState('a')
-  // 'admin' sees every site in the district; 'leader' sees one site
-  // (2026-10-02). Only Concept E reads it; the switcher itself lives at the
-  // bottom of the Reports sidebar (ReportsLayout.jsx).
-  const [role, setRole] = useState('admin')
+  const [statConcept, setStatConcept] = useState('e')
   return (
-    <SiteEngagementConceptContext.Provider value={{ statConcept, setStatConcept, role, setRole }}>
+    <SiteEngagementConceptContext.Provider value={{ statConcept, setStatConcept }}>
       {children}
     </SiteEngagementConceptContext.Provider>
   )

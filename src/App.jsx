@@ -19,6 +19,7 @@ import ProcessJournal from './pages/ProcessJournal'
 import ProcessJournalLayout from './pages/ProcessJournalLayout'
 import ProcessJournalTodo from './pages/ProcessJournalTodo'
 import ReportDce from './pages/ReportDce'
+import ReportEngagement from './pages/ReportEngagement'
 import Report2 from './pages/Report2'
 import ReportsLayout from './pages/ReportsLayout'
 import SettingsLayout from './pages/settings/SettingsLayout'
@@ -28,6 +29,7 @@ import JoinPage from './pages/JoinPage'
 import { ResourcesConceptProvider } from './lib/resourcesConceptContext'
 import { SiteEngagementConceptProvider } from './lib/siteEngagementConceptContext'
 import { DceConceptProvider } from './lib/dceConceptContext'
+import { RoleProvider } from './lib/roleContext'
 
 function Placeholder({ title }) {
   return (
@@ -56,7 +58,9 @@ export default function App() {
       <ResourcesConceptProvider>
         <SiteEngagementConceptProvider>
           <DceConceptProvider>
-            <AppShell handleBookmark={handleBookmark} />
+            <RoleProvider>
+              <AppShell handleBookmark={handleBookmark} />
+            </RoleProvider>
           </DceConceptProvider>
         </SiteEngagementConceptProvider>
       </ResourcesConceptProvider>
@@ -88,6 +92,7 @@ function AppShell({ handleBookmark }) {
           <Route index element={<Navigate to="site-engagement" replace />} />
           <Route path="site-engagement" element={<Report2 />} />
           <Route path="dce" element={<ReportDce />} />
+          <Route path="engagement" element={<ReportEngagement />} />
         </Route>
         <Route path="/settings" element={<SettingsLayout />}>
           <Route index element={<Navigate to="curriculum-setup" replace />} />

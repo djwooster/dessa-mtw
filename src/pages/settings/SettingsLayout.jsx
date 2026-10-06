@@ -1,8 +1,8 @@
-import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ChevronLeft } from 'lucide-react'
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import RoleSwitcher from '../../components/RoleSwitcher'
+import { useRole } from '../../lib/roleContext'
 
 const SETTINGS_NAV = [
   { label: 'Imports', to: 'imports' },
@@ -19,14 +19,11 @@ const SETTINGS_NAV = [
 
 export default function SettingsLayout() {
   const location = useLocation()
-  // Internal-only role switcher — not a real end-user control, just lets
-  // the team flip between the Program Admin and Site Leader views while
-  // reviewing design. Moved here (2026-09-03) from a Tabs control in
-  // Curriculum Setup's own page flow, since it's meant to read as shared
-  // settings chrome rather than that one page's content — passed down to
-  // routed children via <Outlet context>. Only Curriculum Setup honors it
-  // today; other settings pages simply don't read it.
-  const [isSiteLeaderView, setIsSiteLeaderView] = useState(false)
+  // Internal-only role switcher: the control and its state are shared with
+  // the Reports sidebar (components/RoleSwitcher.jsx, lib/roleContext.jsx).
+  // Passed down to routed children via <Outlet context>. Only Curriculum
+  // Setup honors it today; other settings pages simply don't read it.
+  const { isSiteLeaderView } = useRole()
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)]">
@@ -58,21 +55,7 @@ export default function SettingsLayout() {
           ))}
         </nav>
 
-        <div className="px-6 py-3 border-t border-brand-border">
-          <Tabs
-            value={isSiteLeaderView ? 'site_leader' : 'program_admin'}
-            onValueChange={(v) => setIsSiteLeaderView(v === 'site_leader')}
-          >
-            <TabsList className="w-full p-0.5">
-              <TabsTrigger value="program_admin" className="flex-1 text-xs px-2 py-1">
-                Prog Admin
-              </TabsTrigger>
-              <TabsTrigger value="site_leader" className="flex-1 text-xs px-2 py-1">
-                Site Leader
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        <RoleSwitcher />
       </aside>
 
       <motion.div

@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { useSiteEngagementConcept } from '../lib/siteEngagementConceptContext'
+import RoleSwitcher from '../components/RoleSwitcher'
 import { ChevronLeft } from 'lucide-react'
 
 // Sidebar mirrors the real DESSA Reports nav — grouped sections with many
@@ -12,6 +12,7 @@ const REPORT_GROUPS = [
     items: [
       { label: 'Site Engagement', to: 'site-engagement' },
       { label: 'Daily Curriculum Engagement', to: 'dce' },
+      { label: 'Engagement', to: 'engagement' },
     ],
   },
   {
@@ -39,42 +40,10 @@ const REPORT_GROUPS = [
   },
 ]
 
-const ROLES = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'leader', label: 'Leader' },
-]
-
-// Role switcher pinned to the bottom of the sidebar (2026-10-02). Only shown
-// on Site Engagement Concept E, the only thing that reacts to it.
-function RoleSwitcher() {
-  const { role, setRole } = useSiteEngagementConcept()
-  return (
-    <div className="shrink-0 border-t border-brand-border px-6 py-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-brand-subtext mb-2">View as</p>
-      <div role="radiogroup" aria-label="View as" className="flex rounded-md border border-brand-border overflow-hidden">
-        {ROLES.map((r, i) => (
-          <button
-            key={r.value}
-            type="button"
-            role="radio"
-            aria-checked={role === r.value}
-            onClick={() => setRole(r.value)}
-            className={`flex-1 h-9 text-sm font-medium transition-colors ${i > 0 ? 'border-l border-brand-border' : ''} ${
-              role === r.value ? 'bg-dessa-teal text-white' : 'text-brand-text hover:bg-brand-bg'
-            }`}
-          >
-            {r.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 export default function ReportsLayout() {
   const { pathname } = useLocation()
-  const { statConcept } = useSiteEngagementConcept()
-  const showRoleSwitcher = pathname.endsWith('/site-engagement') && statConcept === 'e'
+  // Only the reports that honor the role show the switcher.
+  const showRoleSwitcher = pathname.endsWith('/site-engagement') || pathname.endsWith('/engagement')
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)]">
       <aside className="w-72 flex-shrink-0 border-r border-brand-border bg-white flex flex-col sticky top-14 self-start h-[calc(100vh-3.5rem)]">
