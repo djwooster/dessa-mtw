@@ -94,7 +94,7 @@ export function nextSort(sort, key, firstDir = 'asc') {
   return sort.key === key ? { key, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: firstDir }
 }
 
-export function SearchField({ value, onChange, placeholder }) {
+export function SearchField({ value, onChange, placeholder, bg = 'bg-white' }) {
   return (
     <div className="relative max-w-xs">
       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
@@ -104,7 +104,7 @@ export function SearchField({ value, onChange, placeholder }) {
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="w-full h-9 pl-9 pr-8 text-sm rounded-md border border-brand-border bg-white text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+        className={`w-full h-9 pl-9 pr-8 text-sm rounded-md border border-brand-border ${bg} text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal`}
       />
       {value && (
         <button type="button" onClick={() => onChange('')} aria-label="Clear search" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
@@ -147,14 +147,14 @@ export function DateRange({ weeks, className = '' }) {
   )
 }
 
-function weekLabel(weekStart) {
+export function weekLabel(weekStart) {
   return format(parseISO(weekStart), 'MMM d')
 }
 
 // Same purpose as Concept D's version — one label per week, only shown on
 // the first week of a new calendar month, so a long "All time" range
 // doesn't try to cram 36 date labels under the chart.
-function monthTransitionLabels(weeksList) {
+export function monthTransitionLabels(weeksList) {
   let lastMonth = null
   return weeksList.map(w => {
     const m = format(parseISO(w), 'MMM')
@@ -164,7 +164,7 @@ function monthTransitionLabels(weeksList) {
   })
 }
 
-const Y_TICKS = [0, 25, 50, 75, 100]
+export const Y_TICKS = [0, 25, 50, 75, 100]
 
 // Roster order is stable across weeks (report2Data.js caches each site's
 // roster once), so a teacher's index can be used to look them up week to

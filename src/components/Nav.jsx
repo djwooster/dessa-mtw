@@ -4,6 +4,7 @@ import { HelpCircle, Settings, Palette, MessageSquareText, GitCompare, ScrollTex
 import * as Popover from '@radix-ui/react-popover'
 import { useSiteEngagementConcept } from '../lib/siteEngagementConceptContext'
 import { useDceConcept } from '../lib/dceConceptContext'
+import { useEngagementConcept } from '../lib/engagementConceptContext'
 import { RESOURCES_GRADE_GROUPS } from '../pages/ResourcesAltConcepts'
 
 // Site Engagement report-only concept switcher (2026-09-23) — a dropdown
@@ -23,7 +24,8 @@ const SITE_ENGAGEMENT_CONCEPTS = [
   // { value: 'c', label: 'C', title: 'C — Simplified: % of sites meeting goal, consistency, and a plain table' },
   // { value: 'd', label: 'D', title: 'D — Two-column: the same table plus a consistency-over-time trend card' },
   { value: 'e', label: 'E', title: 'E — Trend-first: range-preset line chart plus a users-meeting-goal table' },
-  { value: 'f', label: 'F', title: 'F, Concept E with preset date pills and three summary cards beside the chart' },
+  // F commented out 2026-10-07 (component kept in Report2.jsx's imports list).
+  // { value: 'f', label: 'F', title: 'F, Concept E with preset date pills and three summary cards beside the chart' },
 ]
 
 // Daily Curriculum Engagement concept switcher (2026-10-01), same dropdown
@@ -33,6 +35,16 @@ const DCE_CONCEPTS = [
   { value: 'b', label: 'B', title: 'B, Today\'s roster: today and days since last lesson, no history' },
   { value: 'c', label: 'C', title: 'C, Needs follow-up: teachers grouped by how long they have been quiet' },
   { value: 'd', label: 'D', title: 'D, Today plus this week: day dots, with a calendar on demand' },
+]
+
+// Combined Engagement report concept switcher (2026-10-06). A is the original
+// chart; B charts educators who met the goal, stacked with those making progress;
+// C is the analytics layout (stat strip plus a 2x2 grid of weekly charts).
+const ENGAGEMENT_CONCEPTS = [
+  { value: 'a', label: 'A', title: 'A, Original: sites where every educator met the goal (single line)' },
+  { value: 'b', label: 'B', title: 'B, Educators who met their weekly goal, stacked with those making progress' },
+  { value: 'c', label: 'C', title: 'C, Analytics layout: stat strip and four weekly charts in a grid' },
+  { value: 'd', label: 'D', title: 'D, Insights layout: stat cards and a ladder of how often users are engaged' },
 ]
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
@@ -74,6 +86,7 @@ export default function Nav() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { statConcept, setStatConcept } = useSiteEngagementConcept()
   const { dceConcept, setDceConcept } = useDceConcept()
+  const { engagementConcept, setEngagementConcept } = useEngagementConcept()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
@@ -410,6 +423,40 @@ export default function Nav() {
                     >
                       {c.label}
                       {dceConcept === c.value && <Check size={13} className="text-dessa-teal" />}
+                    </button>
+                  ))}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+          )}
+          {location.pathname === '/reports/engagement' && (
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button
+                  title={ENGAGEMENT_CONCEPTS.find((c) => c.value === engagementConcept)?.title}
+                  className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-brand-border bg-white text-xs font-medium text-brand-text hover:bg-brand-bg transition-colors shrink-0 mr-1"
+                >
+                  {ENGAGEMENT_CONCEPTS.find((c) => c.value === engagementConcept)?.label}
+                  <ChevronDown size={12} className="text-brand-subtext" />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  align="end"
+                  sideOffset={6}
+                  className="z-50 w-48 bg-white border border-brand-border rounded-xl shadow-lg outline-none py-1.5"
+                >
+                  {ENGAGEMENT_CONCEPTS.map((c) => (
+                    <button
+                      key={c.value}
+                      title={c.title}
+                      onClick={() => setEngagementConcept(c.value)}
+                      className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left transition-colors ${
+                        engagementConcept === c.value ? 'text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
+                      }`}
+                    >
+                      {c.label}
+                      {engagementConcept === c.value && <Check size={13} className="text-dessa-teal" />}
                     </button>
                   ))}
                 </Popover.Content>

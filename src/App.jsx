@@ -29,6 +29,7 @@ import JoinPage from './pages/JoinPage'
 import { ResourcesConceptProvider } from './lib/resourcesConceptContext'
 import { SiteEngagementConceptProvider } from './lib/siteEngagementConceptContext'
 import { DceConceptProvider } from './lib/dceConceptContext'
+import { EngagementConceptProvider } from './lib/engagementConceptContext'
 import { RoleProvider } from './lib/roleContext'
 
 function Placeholder({ title }) {
@@ -58,9 +59,11 @@ export default function App() {
       <ResourcesConceptProvider>
         <SiteEngagementConceptProvider>
           <DceConceptProvider>
+            <EngagementConceptProvider>
             <RoleProvider>
               <AppShell handleBookmark={handleBookmark} />
             </RoleProvider>
+            </EngagementConceptProvider>
           </DceConceptProvider>
         </SiteEngagementConceptProvider>
       </ResourcesConceptProvider>
