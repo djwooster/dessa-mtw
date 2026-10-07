@@ -320,8 +320,8 @@ export default function ReportEngagement() {
   // Concept A (2026-10-07): the weekly goal is a quiet info badge, not a link, and the subtext is gone.
   const isA = engagementConcept === 'a' && !selectedSite
   // Concept B (2026-10-07) gets the same goal badge and no subtext.
-  // Concept C's site page gets it too (2026-10-07).
-  const goalBadge = ((engagementConcept === 'a' || engagementConcept === 'b') && !selectedSite) || (engagementConcept === 'c' && !!selectedSite)
+  // Concept C gets it on both its district view and its site page (2026-10-07).
+  const goalBadge = ((engagementConcept === 'a' || engagementConcept === 'b') && !selectedSite) || engagementConcept === 'c'
   const latestRow = analytics[analytics.length - 1]
   const lessonsInRange = analytics.reduce((sum, r) => sum + r.lessons, 0)
 
