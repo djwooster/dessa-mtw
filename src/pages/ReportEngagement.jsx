@@ -2,8 +2,9 @@ import { useState, useMemo, useRef, useEffect, Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { parseISO, addDays, format } from 'date-fns'
-import { MoreHorizontal, Download, Printer, ChevronRight, ChevronLeft, ChevronDown, Check } from 'lucide-react'
+import { MoreHorizontal, Download, Printer, ChevronRight, ChevronLeft, ChevronDown, Check, Info } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
+import * as Tooltip from '@radix-ui/react-tooltip'
 import { schools, schoolWeeks, getWeekData } from '../lib/report2Data'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { RangePicker } from '../components/ui/range-picker'
@@ -16,8 +17,8 @@ import WeeklyBarChart from '../components/engagement/WeeklyBarChart'
 import MonthBarChart, { MONTHS, DEFAULT_MONTH_IDX, weekRangeLabel } from '../components/engagement/MonthBarChart'
 import {
   GOAL, RANGE_PRESETS, FIRST_DATE, LAST_DATE, rangeLabel, weeksForDates,
-  SortButton, nextSort, SearchField, ChangeCell, SiteGoalLineChart, SiteWeeklyChart,
-  getRosterNames, getLastActive, agoRank, activeDayOrder, WEEKDAYS, EducatorActivityGrid,
+  SortButton, nextSort, SearchField, SiteGoalLineChart, SiteWeeklyChart,
+  getRosterNames, getLastActive, agoRank, activeDayOrder, WEEKDAYS, EducatorActivityGrid, SiteDetailModal,
 } from './Report2ConceptE'
 import { PILL_LABELS, CONSISTENCY_THRESHOLD, districtWeek, SummaryCard } from './Report2ConceptF'
 
@@ -29,33 +30,47 @@ import { PILL_LABELS, CONSISTENCY_THRESHOLD, districtWeek, SummaryCard } from '.
 // cards and in the table: the latest week compared with four weeks earlier.
 const MONTH_BACK = 4
 
-// Educator list for one site (the drill-down level): this week's day dots,
-// days this week, and last active, sortable and searchable. Opening a row
-// shows that educator's activity grid for the selected range, one at a time.
+// Educator list: this week's day dots, days this week, and last active,
+// sortable and searchable. Opening a row shows that educator's activity grid
+// for the selected range, one at a time. `school` null lists every educator
+// in the district (with a Site column and paging); otherwise one site's.
+const PAGE_SIZE = 25
+
 function SiteEducators({ school, weeks }) {
-  const names = useMemo(() => getRosterNames(school.id), [school.id])
   const latest = weeks[weeks.length - 1]
   const weekIdx = schoolWeeks.indexOf(latest)
-  const [openIdx, setOpenIdx] = useState(null)
+  const [openKey, setOpenKey] = useState(null)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState({ key: 'name', dir: 'asc' })
+  const [page, setPage] = useState(0)
+  const allSites = !school
+
+  const base = useMemo(() => (school ? [school] : schools).flatMap(sc => {
+    const names = getRosterNames(sc.id)
+    const data = getWeekData(sc.id, latest, GOAL).teachers
+    return names.map((name, i) => {
+      const days = data[i].daysActive
+      return { key: `${sc.id}-${i}`, sc, name, i, days, active: new Set(activeDayOrder(sc.id, i, weekIdx).slice(0, days)), last: getLastActive(sc.id, i) }
+    })
+  }), [school, latest, weekIdx])
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const data = getWeekData(school.id, latest, GOAL).teachers
-    return names
-      .map((name, i) => {
-        const days = data[i].daysActive
-        return { name, i, days, active: new Set(activeDayOrder(school.id, i, weekIdx).slice(0, days)), last: getLastActive(school.id, i) }
-      })
-      .filter(r => !q || r.name.toLowerCase().includes(q))
+    return base
+      .filter(r => !q || r.name.toLowerCase().includes(q) || r.sc.name.toLowerCase().includes(q))
       .sort((a, b) => {
         const dir = sort.dir === 'asc' ? 1 : -1
         if (sort.key === 'days') return dir * (a.days - b.days) || a.name.localeCompare(b.name)
         if (sort.key === 'last') return dir * (agoRank(a.last) - agoRank(b.last) || 0) || a.name.localeCompare(b.name)
+        if (sort.key === 'site') return dir * a.sc.name.localeCompare(b.sc.name) || a.name.localeCompare(b.name)
         return dir * a.name.localeCompare(b.name)
       })
-  }, [names, school.id, latest, weekIdx, query, sort])
+  }, [base, query, sort])
+
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount - 1)
+  const shown = allSites ? rows.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE) : rows
+  const cols = allSites ? 5 : 4
 
   const weekStart = parseISO(latest)
   const dayLetters = ['M', 'T', 'W', 'T', 'F']
@@ -63,34 +78,36 @@ function SiteEducators({ school, weeks }) {
   return (
     <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
       <div className="px-4 py-3 border-b border-brand-border">
-        <SearchField value={query} onChange={setQuery} placeholder="Search educators" bg="bg-brand-bg/60" />
+        <SearchField value={query} onChange={v => { setQuery(v); setPage(0) }} placeholder="Search educators" bg="bg-brand-bg/60" />
       </div>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="text-[13px] font-medium"><SortButton label="Educator" col="name" sort={sort} onSort={k => setSort(s => nextSort(s, k))} /></TableHead>
+            <TableHead className="text-[13px] font-medium"><SortButton label="Educator" col="name" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} /></TableHead>
+            {allSites && <TableHead className="text-[13px] font-medium"><SortButton label="Site" col="site" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} /></TableHead>}
             <TableHead className="text-[13px] font-medium">
               <span className="sr-only">This week</span>
               <span className="flex items-center gap-3" aria-hidden="true">
                 {dayLetters.map((d, i) => <span key={i} className="w-3.5 text-center text-xs text-brand-subtext">{d}</span>)}
               </span>
             </TableHead>
-            <TableHead className="text-[13px] font-medium"><SortButton label="Days this week" col="days" sort={sort} onSort={k => setSort(s => nextSort(s, k, 'desc'))} /></TableHead>
-            <TableHead className="text-[13px] font-medium text-right"><SortButton label="Last Active" col="last" sort={sort} onSort={k => setSort(s => nextSort(s, k))} align="right" /></TableHead>
+            <TableHead className="text-[13px] font-medium"><SortButton label="Days this week" col="days" sort={sort} onSort={k => { setSort(s => nextSort(s, k, 'desc')); setPage(0) }} /></TableHead>
+            <TableHead className="text-[13px] font-medium text-right"><SortButton label="Last Active" col="last" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} align="right" /></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map(r => {
-            const open = openIdx === r.i
+          {shown.map(r => {
+            const open = openKey === r.key
             return (
-              <Fragment key={r.name}>
-                <TableRow onClick={() => setOpenIdx(open ? null : r.i)} className="cursor-pointer">
+              <Fragment key={r.key}>
+                <TableRow onClick={() => setOpenKey(open ? null : r.key)} className="cursor-pointer">
                   <TableCell className="font-medium">
                     <button type="button" aria-expanded={open} className="flex items-center gap-2 text-left">
                       <ChevronRight size={14} className={`shrink-0 text-brand-subtext transition-transform ${open ? 'rotate-90' : ''}`} />
                       {r.name}
                     </button>
                   </TableCell>
+                  {allSites && <TableCell className="text-brand-subtext">{r.sc.name}</TableCell>}
                   <TableCell>
                     <span className="flex items-center gap-3">
                       {WEEKDAYS.map(d => {
@@ -112,8 +129,8 @@ function SiteEducators({ school, weeks }) {
                 </TableRow>
                 {open && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={4} className="pl-10 py-3 bg-brand-bg/50">
-                      <EducatorActivityGrid schoolId={school.id} teacherIndex={r.i} weeks={weeks} />
+                    <TableCell colSpan={cols} className="pl-10 py-3 bg-brand-bg/50">
+                      <EducatorActivityGrid schoolId={r.sc.id} teacherIndex={r.i} weeks={weeks} />
                     </TableCell>
                   </TableRow>
                 )}
@@ -122,11 +139,20 @@ function SiteEducators({ school, weeks }) {
           })}
           {rows.length === 0 && (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={4} className="text-center text-brand-subtext py-8">No educators match your search.</TableCell>
+              <TableCell colSpan={cols} className="text-center text-brand-subtext py-8">No educators match your search.</TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
+      {allSites && rows.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-brand-border text-[13px] text-brand-subtext">
+          <span className="tabular-nums">{safePage * PAGE_SIZE + 1} to {Math.min(rows.length, (safePage + 1) * PAGE_SIZE)} of {rows.length} educators</span>
+          <div className="flex items-center gap-2">
+            <button type="button" disabled={safePage === 0} onClick={() => setPage(safePage - 1)} className="h-8 px-3 rounded-md border border-brand-border bg-white font-medium text-brand-text hover:bg-brand-bg transition-colors disabled:opacity-40 disabled:hover:bg-white">Previous</button>
+            <button type="button" disabled={safePage >= pageCount - 1} onClick={() => setPage(safePage + 1)} className="h-8 px-3 rounded-md border border-brand-border bg-white font-medium text-brand-text hover:bg-brand-bg transition-colors disabled:opacity-40 disabled:hover:bg-white">Next</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -151,6 +177,9 @@ export default function ReportEngagement() {
   // already shows; B is the month view (nested month control, one bar per
   // week), whose month only drives that chart.
   const [graph, setGraph] = useState('a')
+  // Site clicks (2026-10-07): A and B open the shared site modal, C keeps its site page, D selects the site in its panel.
+  const [modalSite, setModalSite] = useState(null)
+  const [dSiteId, setDSiteId] = useState(null)
   const [monthIdx, setMonthIdx] = useState(DEFAULT_MONTH_IDX)
   const month = MONTHS[monthIdx]
   const selectedSite = isSiteLeaderView ? schools[0] : pickedSite
@@ -162,12 +191,21 @@ export default function ReportEngagement() {
     return () => document.removeEventListener('mousedown', handler)
   }, [menuOpen])
 
+  useEffect(() => {
+    if (!modalSite) return
+    const onKey = e => { if (e.key === 'Escape') setModalSite(null) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [modalSite])
+
   function resetAll() {
     setRangeKey('30d')
     setCustomWeeks(null)
     setQuery('')
     setSort({ key: 'name', dir: 'asc' })
     setSelectedSite(null)
+    setModalSite(null)
+    setDSiteId(null)
     setMonthIdx(DEFAULT_MONTH_IDX)
   }
 
@@ -187,25 +225,29 @@ export default function ReportEngagement() {
 
   const siteRows = useMemo(() => {
     const latest = weeks[weeks.length - 1]
-    const idx = schoolWeeks.indexOf(latest)
     const q = query.trim().toLowerCase()
     return schools
       .map(school => {
         const data = getWeekData(school.id, latest, GOAL)
-        const before = idx - MONTH_BACK >= 0 ? getWeekData(school.id, schoolWeeks[idx - MONTH_BACK], GOAL).pct : null
-        return { school, meetingGoal: data.meetingGoal, totalTeachers: data.totalTeachers, pct: data.pct, change: before == null ? null : data.pct - before }
+        // A site's Last Active is its most recent educator (district-level view of DCE's "who is engaged right now").
+        const last = getRosterNames(school.id)
+          .map((_, i) => getLastActive(school.id, i))
+          .reduce((best, l) => (agoRank(l) < agoRank(best) ? l : best), 'Never')
+        return { school, meetingGoal: data.meetingGoal, totalTeachers: data.totalTeachers, pct: data.pct, last }
       })
       .filter(r => !q || r.school.name.toLowerCase().includes(q))
       .sort((a, b) => {
         const dir = sort.dir === 'asc' ? 1 : -1
         if (sort.key === 'name') return dir * a.school.name.localeCompare(b.school.name)
-        if (sort.key === 'change') {
-          if (a.change == null || b.change == null) return (a.change == null) - (b.change == null)
-          return dir * (a.change - b.change) || a.school.name.localeCompare(b.school.name)
-        }
+        if (sort.key === 'last') return dir * (agoRank(a.last) - agoRank(b.last) || 0) || a.school.name.localeCompare(b.school.name)
         return dir * (a.pct - b.pct) || a.school.name.localeCompare(b.school.name)
       })
   }, [weeks, query, sort])
+
+  function openSite(school) {
+    if (engagementConcept === 'c') setSelectedSite(school)
+    else setModalSite(school)
+  }
 
   function exportCsv() {
     if (selectedSite) {
@@ -219,8 +261,8 @@ export default function ReportEngagement() {
       URL.revokeObjectURL(url)
       return
     }
-    const header = `Site,Users meeting goal,Total users,Change vs last month (pts)\n`
-    const body = siteRows.map(r => `"${r.school.name}",${r.meetingGoal},${r.totalTeachers},${r.change ?? ''}`).join('\n')
+    const header = `Site,Educators meeting goal,Total educators,Last active\n`
+    const body = siteRows.map(r => `"${r.school.name}",${r.meetingGoal},${r.totalTeachers},"${r.last}"`).join('\n')
     const url = URL.createObjectURL(new Blob([header + body], { type: 'text/csv' }))
     const a = document.createElement('a')
     a.href = url
@@ -275,6 +317,10 @@ export default function ReportEngagement() {
   const isC = engagementConcept === 'c' && !selectedSite
   const isD = engagementConcept === 'd' && !selectedSite
   const rangeHeader = isC || isD
+  // Concept A (2026-10-07): the weekly goal is a quiet info badge, not a link, and the subtext is gone.
+  const isA = engagementConcept === 'a' && !selectedSite
+  // Concept B (2026-10-07) gets the same goal badge and no subtext.
+  const goalBadge = (engagementConcept === 'a' || engagementConcept === 'b') && !selectedSite
   const latestRow = analytics[analytics.length - 1]
   const lessonsInRange = analytics.reduce((sum, r) => sum + r.lessons, 0)
 
@@ -285,7 +331,7 @@ export default function ReportEngagement() {
         onClick={() => setMonthIdx(i => i - 1)}
         disabled={monthIdx === 0}
         aria-label="Previous month"
-        className="inline-flex items-center justify-center h-8 w-8 rounded-md text-brand-subtext hover:bg-brand-bg transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+        className="inline-flex items-center justify-center h-8 w-8 rounded-md text-dessa-teal hover:bg-dessa-tealLight transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
       >
         <ChevronLeft size={16} />
       </button>
@@ -295,7 +341,7 @@ export default function ReportEngagement() {
         onClick={() => setMonthIdx(i => i + 1)}
         disabled={monthIdx === MONTHS.length - 1}
         aria-label="Next month"
-        className="inline-flex items-center justify-center h-8 w-8 rounded-md text-brand-subtext hover:bg-brand-bg transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+        className="inline-flex items-center justify-center h-8 w-8 rounded-md text-dessa-teal hover:bg-dessa-tealLight transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
       >
         <ChevronRight size={16} />
       </button>
@@ -314,13 +360,31 @@ export default function ReportEngagement() {
           )}
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <h2 className="text-2xl font-semibold text-brand-text">{selectedSite ? selectedSite.name : 'Engagement'}</h2>
-            {!rangeHeader && (
+            {goalBadge && (
+              <Tooltip.Provider delayDuration={150}>
+                <Tooltip.Root>
+                  <Tooltip.Trigger asChild>
+                    <button type="button" className="inline-flex items-center gap-1.5 rounded-full bg-brand-border/60 px-3 py-1.5 text-xs">
+                      <Info size={12} className="text-brand-subtext" aria-hidden="true" />
+                      <span className="text-brand-subtext">Weekly goal</span>
+                      <span className="font-medium text-brand-text">{GOAL} lessons per week</span>
+                    </button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Portal>
+                    <Tooltip.Content side="bottom" sideOffset={6} className="z-50 px-2.5 py-1.5 rounded-md bg-brand-text text-white text-xs shadow-lg">
+                      Set in Settings
+                    </Tooltip.Content>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
+              </Tooltip.Provider>
+            )}
+            {!rangeHeader && !goalBadge && (
               <Link to="/settings" className="text-sm text-interactive-blue hover:underline">
                 Weekly goal: {GOAL} lessons per week
               </Link>
             )}
           </div>
-          {!rangeHeader && (
+          {!rangeHeader && !goalBadge && (
             <p className="text-sm text-brand-subtext mt-1">
               {selectedSite ? `Educators at ${selectedSite.name}. Open an educator to see their activity.` : 'This report shows Move This World lesson completion across your district, by site.'}
             </p>
@@ -352,7 +416,36 @@ export default function ReportEngagement() {
           </button>
         </div>
       ) : (
-      <div className="flex flex-col items-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={resetAll}
+          className="h-8 px-3 rounded-md border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors"
+        >
+          Reset all
+        </button>
+        <div className="relative shrink-0" ref={menuRef}>
+          <button
+            className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label="More options"
+            aria-expanded={menuOpen}
+          >
+            <MoreHorizontal size={13} />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
+              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
+                <Download size={13} className="text-brand-subtext" /> Export CSV
+              </button>
+              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { window.print(); setMenuOpen(false) }}>
+                <Printer size={13} className="text-brand-subtext" /> Print
+              </button>
+            </div>
+          )}
+        </div>
+        </div>
         <Popover.Root>
           <Popover.Trigger asChild>
             <button
@@ -384,36 +477,7 @@ export default function ReportEngagement() {
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={resetAll}
-          className="h-8 px-3 rounded-md border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors"
-        >
-          Reset all
-        </button>
-        <div className="relative shrink-0" ref={menuRef}>
-          <button
-            className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
-            onClick={() => setMenuOpen(o => !o)}
-            aria-label="More options"
-            aria-expanded={menuOpen}
-          >
-            <MoreHorizontal size={13} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
-              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
-                <Download size={13} className="text-brand-subtext" /> Export CSV
-              </button>
-              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { window.print(); setMenuOpen(false) }}>
-                <Printer size={13} className="text-brand-subtext" /> Print
-              </button>
-            </div>
-          )}
         </div>
-        </div>
-      </div>
       )}
       </div>
 
@@ -442,7 +506,7 @@ export default function ReportEngagement() {
         </div>
       */}
       {isD ? (
-        <EngagementOverviewD weeks={weeks} />
+        <EngagementOverviewD weeks={weeks} selectedId={dSiteId} onSelect={setDSiteId} />
       ) : isC ? (
         <>
           <div className="grid gap-8 mb-12 pb-8 border-b border-brand-border grid-cols-4">
@@ -494,39 +558,47 @@ export default function ReportEngagement() {
       </div>
       )}
 
-      <motion.div
-        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.14 }}
-        className="bg-white rounded-xl border border-brand-border overflow-hidden"
-      >
-        <div className="px-4 py-3 border-b border-brand-border">
-          <SearchField value={query} onChange={setQuery} placeholder="Search sites" bg="bg-brand-bg/60" />
-        </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-[13px] font-medium"><SortButton label="Site" col="name" sort={sort} onSort={k => setSort(s => nextSort(s, k))} /></TableHead>
-              <TableHead className="text-[13px] font-medium text-right"><SortButton label="Change vs last month" col="change" sort={sort} onSort={k => setSort(s => nextSort(s, k, 'desc'))} align="right" /></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {siteRows.map(({ school, change }) => (
-              <TableRow key={school.id} onClick={() => setSelectedSite(school)} className="cursor-pointer">
-                <TableCell className="font-medium">
-                  <button type="button" onClick={e => { e.stopPropagation(); setSelectedSite(school) }} className="text-left hover:text-dessa-teal transition-colors">{school.name}</button>
-                </TableCell>
-                <TableCell className="text-right"><ChangeCell change={change} /></TableCell>
+      {isD ? (
+        <SiteEducators school={schools.find(sc => sc.id === dSiteId) ?? null} weeks={weeks} />
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.14 }}
+          className="bg-white rounded-xl border border-brand-border overflow-hidden"
+        >
+          <div className="px-4 py-3 border-b border-brand-border">
+            <SearchField value={query} onChange={setQuery} placeholder="Search sites" bg="bg-brand-bg/60" />
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-[13px] font-medium"><SortButton label="Site" col="name" sort={sort} onSort={k => setSort(s => nextSort(s, k))} /></TableHead>
+                <TableHead className="text-[13px] font-medium text-right"><SortButton label="Educators meeting goal" col="goal" sort={sort} onSort={k => setSort(s => nextSort(s, k, 'desc'))} align="right" /></TableHead>
+                <TableHead className="text-[13px] font-medium text-right"><SortButton label="Last active" col="last" sort={sort} onSort={k => setSort(s => nextSort(s, k))} align="right" /></TableHead>
               </TableRow>
-            ))}
-            {siteRows.length === 0 && (
-              <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={2} className="text-center text-brand-subtext py-8">No sites match your search.</TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </motion.div>
+            </TableHeader>
+            <TableBody>
+              {siteRows.map(({ school, meetingGoal, totalTeachers, last }) => (
+                <TableRow key={school.id} onClick={() => openSite(school)} className="cursor-pointer">
+                  <TableCell className="font-medium">
+                    <button type="button" onClick={e => { e.stopPropagation(); openSite(school) }} className="text-left hover:text-dessa-teal transition-colors">{school.name}</button>
+                  </TableCell>
+                  <TableCell className="text-brand-text text-right tabular-nums">{meetingGoal} of {totalTeachers}</TableCell>
+                  <TableCell className="text-brand-subtext text-right">{last}</TableCell>
+                </TableRow>
+              ))}
+              {siteRows.length === 0 && (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={3} className="text-center text-brand-subtext py-8">No sites match your search.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </motion.div>
+      )}
         </>
       )}
+
+      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} />}
     </div>
   )
 }

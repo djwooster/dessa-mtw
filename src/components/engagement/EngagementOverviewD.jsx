@@ -55,31 +55,29 @@ function StatCard({ label, value, count, change }) {
   )
 }
 
-export default function EngagementOverviewD({ weeks }) {
+export default function EngagementOverviewD({ weeks, selectedId, onSelect }) {
   const { now, before } = useMemo(() => {
     const now = periodStats(weeks)
     const prevWeeks = previousWeeks(weeks)
     return { now, before: prevWeeks.length ? periodStats(prevWeeks) : null }
   }, [weeks])
 
-  const [selectedId, setSelectedId] = useState(null)
   const [query, setQuery] = useState('')
   const latestWeek = weeks[weeks.length - 1]
   const siteRows = useMemo(() => schools.map(sc => {
     const b = weekBands(sc.id, latestWeek)
-    return { school: sc, pct: pctOf(b.met + b.progress, b.total) }
+    return { school: sc, pct: pctOf(b.met, b.total) }
   }), [latestWeek])
-  const allSitesPct = useMemo(() => { const b = weekBands(null, latestWeek); return pctOf(b.met + b.progress, b.total) }, [latestWeek])
+  const allSitesPct = useMemo(() => { const b = weekBands(null, latestWeek); return pctOf(b.met, b.total) }, [latestWeek])
   const visibleSites = siteRows.filter(r => r.school.name.toLowerCase().includes(query.trim().toLowerCase()))
   const selectedSchool = schools.find(sc => sc.id === selectedId) ?? null
   const scope = useMemo(() => {
     const points = weeks.map(w => {
       const b = weekBands(selectedId, w)
-      const engaged = b.met + b.progress
-      return { week: w, value: pctOf(engaged, b.total), detail: `${engaged} of ${b.total} users` }
+      return { week: w, value: pctOf(b.met, b.total), detail: `${b.met} of ${b.total} users` }
     })
     const last = weekBands(selectedId, latestWeek)
-    return { points, engaged: last.met + last.progress, total: last.total }
+    return { points, met: last.met, total: last.total }
   }, [selectedId, weeks, latestWeek])
 
   const total = now.users
@@ -121,7 +119,7 @@ export default function EngagementOverviewD({ weeks }) {
                     key={r.id ?? 'all'}
                     type="button"
                     aria-pressed={selectedId === r.id}
-                    onClick={() => setSelectedId(r.id)}
+                    onClick={() => onSelect(r.id)}
                     className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-sm text-left transition-colors ${
                       selectedId === r.id ? 'bg-dessa-tealLight text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
                     }`}
@@ -138,9 +136,9 @@ export default function EngagementOverviewD({ weeks }) {
           <div className="min-w-0 rounded-lg border border-brand-border p-5">
             <p className="text-lg font-semibold text-brand-text">{selectedSchool ? selectedSchool.name : 'All sites'}</p>
             <p className="text-sm text-brand-subtext mt-1 mb-6">
-              {scope.engaged} of {scope.total} users ({pctOf(scope.engaged, scope.total)}%) completed a lesson in the latest week.
+              {scope.met} of {scope.total} users ({pctOf(scope.met, scope.total)}%) met the weekly goal in the latest week.
             </p>
-            <WeeklyBarChart label="Users engaged each week" kind="line" percent points={scope.points} />
+            <WeeklyBarChart label="Users who met the goal each week" kind="line" percent points={scope.points} />
           </div>
         </div>
       </motion.div>
