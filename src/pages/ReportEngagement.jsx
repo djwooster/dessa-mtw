@@ -36,7 +36,7 @@ const MONTH_BACK = 4
 // in the district (with a Site column and paging); otherwise one site's.
 const PAGE_SIZE = 25
 
-function SiteEducators({ school, weeks }) {
+function SiteEducators({ school, weeks, showDots = true }) {
   const latest = weeks[weeks.length - 1]
   const weekIdx = schoolWeeks.indexOf(latest)
   const [openKey, setOpenKey] = useState(null)
@@ -70,7 +70,7 @@ function SiteEducators({ school, weeks }) {
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
   const safePage = Math.min(page, pageCount - 1)
   const shown = allSites ? rows.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE) : rows
-  const cols = allSites ? 5 : 4
+  const cols = (allSites ? 5 : 4) - (showDots ? 0 : 1)
 
   const weekStart = parseISO(latest)
   const dayLetters = ['M', 'T', 'W', 'T', 'F']
@@ -85,14 +85,14 @@ function SiteEducators({ school, weeks }) {
           <TableRow>
             <TableHead className="text-[13px] font-medium"><SortButton label="Educator" col="name" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} /></TableHead>
             {allSites && <TableHead className="text-[13px] font-medium"><SortButton label="Site" col="site" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} /></TableHead>}
-            <TableHead className="text-[13px] font-medium">
+            {showDots && <TableHead className="text-[13px] font-medium">
               <span className="sr-only">This week</span>
               <span className="flex items-center gap-3" aria-hidden="true">
                 {dayLetters.map((d, i) => <span key={i} className="w-3.5 text-center text-xs text-brand-subtext">{d}</span>)}
               </span>
-            </TableHead>
-            <TableHead className="text-[13px] font-medium"><SortButton label="Days this week" col="days" sort={sort} onSort={k => { setSort(s => nextSort(s, k, 'desc')); setPage(0) }} /></TableHead>
-            <TableHead className="text-[13px] font-medium text-right"><SortButton label="Last Active" col="last" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} align="right" /></TableHead>
+            </TableHead>}
+            <TableHead className={`text-[13px] font-medium ${showDots ? '' : 'w-40 text-right'}`}><SortButton label="Days this week" col="days" sort={sort} onSort={k => { setSort(s => nextSort(s, k, 'desc')); setPage(0) }} align={showDots ? undefined : 'right'} /></TableHead>
+            <TableHead className={`text-[13px] font-medium text-right ${showDots ? '' : 'w-40'}`}><SortButton label="Last Active" col="last" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} align="right" /></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -108,7 +108,7 @@ function SiteEducators({ school, weeks }) {
                     </button>
                   </TableCell>
                   {allSites && <TableCell className="text-brand-subtext">{r.sc.name}</TableCell>}
-                  <TableCell>
+                  {showDots && <TableCell>
                     <span className="flex items-center gap-3">
                       {WEEKDAYS.map(d => {
                         const date = addDays(weekStart, d)
@@ -123,8 +123,8 @@ function SiteEducators({ school, weeks }) {
                         )
                       })}
                     </span>
-                  </TableCell>
-                  <TableCell className="tabular-nums">{r.days} of {WEEKDAYS.length}</TableCell>
+                  </TableCell>}
+                  <TableCell className={`tabular-nums ${showDots ? '' : 'text-right'}`}>{r.days} of {WEEKDAYS.length}</TableCell>
                   <TableCell className="text-brand-subtext text-right">{r.last}</TableCell>
                 </TableRow>
                 {open && (
@@ -320,7 +320,8 @@ export default function ReportEngagement() {
   // Concept A (2026-10-07): the weekly goal is a quiet info badge, not a link, and the subtext is gone.
   const isA = engagementConcept === 'a' && !selectedSite
   // Concept B (2026-10-07) gets the same goal badge and no subtext.
-  const goalBadge = (engagementConcept === 'a' || engagementConcept === 'b') && !selectedSite
+  // Concept C's site page gets it too (2026-10-07).
+  const goalBadge = ((engagementConcept === 'a' || engagementConcept === 'b') && !selectedSite) || (engagementConcept === 'c' && !!selectedSite)
   const latestRow = analytics[analytics.length - 1]
   const lessonsInRange = analytics.reduce((sum, r) => sum + r.lessons, 0)
 
@@ -493,7 +494,7 @@ export default function ReportEngagement() {
             </div>
             {graph === 'b' ? <MonthBarChart schoolId={selectedSite.id} weeks={month.weeks} /> : stacked ? <StackedGoalChart schoolId={selectedSite.id} weeks={weeks} /> : <SiteWeeklyChart schoolId={selectedSite.id} weeks={weeks} />}
           </motion.div>
-          <SiteEducators school={selectedSite} weeks={weeks} />
+          <SiteEducators school={selectedSite} weeks={weeks} showDots={engagementConcept !== 'c'} />
         </>
       ) : (
         <>
@@ -559,7 +560,7 @@ export default function ReportEngagement() {
       )}
 
       {isD ? (
-        <SiteEducators school={schools.find(sc => sc.id === dSiteId) ?? null} weeks={weeks} />
+        <SiteEducators school={schools.find(sc => sc.id === dSiteId) ?? null} weeks={weeks} showDots={false} />
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.14 }}
@@ -598,7 +599,7 @@ export default function ReportEngagement() {
         </>
       )}
 
-      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} />}
+      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Educators meeting goal" />}
     </div>
   )
 }

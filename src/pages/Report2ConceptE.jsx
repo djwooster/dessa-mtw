@@ -487,7 +487,9 @@ export function EducatorActivityGrid({ schoolId, teacherIndex, weeks }) {
 // Educator list shared by the site modal and the Leader view: expandable
 // rows (one open at a time) with the activity grid, sortable columns, and an
 // optional search field in a toolbar above the header row.
-export function EducatorTable({ school, weeks, searchable = false }) {
+// `drilldown` false (2026-10-07) turns rows into plain name and Last Active lines,
+// with no expandable activity grid.
+export function EducatorTable({ school, weeks, searchable = false, drilldown = true }) {
   const rosterNames = useMemo(() => getRosterNames(school.id), [school.id])
   const [openIdx, setOpenIdx] = useState(null)
   const [query, setQuery] = useState('')
@@ -524,16 +526,18 @@ export function EducatorTable({ school, weeks, searchable = false }) {
             const open = openIdx === r.i
             return (
               <Fragment key={r.name}>
-                <TableRow onClick={() => setOpenIdx(open ? null : r.i)} className="cursor-pointer">
+                <TableRow onClick={drilldown ? () => setOpenIdx(open ? null : r.i) : undefined} className={drilldown ? 'cursor-pointer' : 'hover:bg-transparent'}>
                   <TableCell className="font-medium">
-                    <button type="button" aria-expanded={open} className="flex items-center gap-2 text-left">
-                      <ChevronRight size={14} className={`shrink-0 text-brand-subtext transition-transform ${open ? 'rotate-90' : ''}`} />
-                      {r.name}
-                    </button>
+                    {drilldown ? (
+                      <button type="button" aria-expanded={open} className="flex items-center gap-2 text-left">
+                        <ChevronRight size={14} className={`shrink-0 text-brand-subtext transition-transform ${open ? 'rotate-90' : ''}`} />
+                        {r.name}
+                      </button>
+                    ) : r.name}
                   </TableCell>
                   <TableCell className="text-brand-subtext text-right">{r.last}</TableCell>
                 </TableRow>
-                {open && (
+                {drilldown && open && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={2} className="pl-10 py-3 bg-brand-bg/50">
                       <EducatorActivityGrid schoolId={school.id} teacherIndex={r.i} weeks={weeks} />
@@ -556,7 +560,7 @@ export function EducatorTable({ school, weeks, searchable = false }) {
 
 // Shared content for both overlay shells. The range comes from the page's
 // date range button (2026-10-02), so the modal has no tabs of its own.
-function SiteDetailContent({ school, weeks, onClose }) {
+function SiteDetailContent({ school, weeks, onClose, drilldown = true, title }) {
   const current = useMemo(() => getWeekData(school.id, weeks[weeks.length - 1], GOAL), [school.id, weeks])
 
   const weeksMet = useMemo(() => weeks.filter(w => {
@@ -614,10 +618,11 @@ function SiteDetailContent({ school, weeks, onClose }) {
       */}
 
       <div className="mb-5">
+        {title && <p className="text-base font-semibold text-brand-text mb-3">{title}</p>}
         <SiteWeeklyChart schoolId={school.id} weeks={weeks} />
       </div>
 
-      <EducatorTable school={school} weeks={weeks} />
+      <EducatorTable school={school} weeks={weeks} drilldown={drilldown} />
     </div>
   )
 }
@@ -639,7 +644,7 @@ function SitePanel({ school, weeks, onClose }) {
   )
 }
 
-export function SiteDetailModal({ school, weeks, onClose }) {
+export function SiteDetailModal({ school, weeks, onClose, drilldown = true, title }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <motion.div
@@ -650,7 +655,7 @@ export function SiteDetailModal({ school, weeks, onClose }) {
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.2 }}
         className="relative w-full max-w-[calc(42rem+15vw)] max-h-[85vh] bg-white rounded-xl shadow-lg overflow-y-auto p-6"
       >
-        <SiteDetailContent school={school} weeks={weeks} onClose={onClose} />
+        <SiteDetailContent school={school} weeks={weeks} onClose={onClose} drilldown={drilldown} title={title} />
       </motion.div>
     </div>
   )

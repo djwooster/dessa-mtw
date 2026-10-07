@@ -66,9 +66,9 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect }) {
   const latestWeek = weeks[weeks.length - 1]
   const siteRows = useMemo(() => schools.map(sc => {
     const b = weekBands(sc.id, latestWeek)
-    return { school: sc, pct: pctOf(b.met, b.total) }
+    return { school: sc, label: `${b.met} of ${b.total}` }
   }), [latestWeek])
-  const allSitesPct = useMemo(() => { const b = weekBands(null, latestWeek); return pctOf(b.met, b.total) }, [latestWeek])
+  const allSitesLabel = useMemo(() => { const b = weekBands(null, latestWeek); return `${b.met} of ${b.total}` }, [latestWeek])
   const visibleSites = siteRows.filter(r => r.school.name.toLowerCase().includes(query.trim().toLowerCase()))
   const selectedSchool = schools.find(sc => sc.id === selectedId) ?? null
   const scope = useMemo(() => {
@@ -114,7 +114,7 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect }) {
                 <SearchField value={query} onChange={setQuery} placeholder="Search sites" bg="bg-brand-bg/60" />
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto p-2">
-                {[{ id: null, name: 'All sites', pct: allSitesPct }, ...visibleSites.map(r => ({ id: r.school.id, name: r.school.name, pct: r.pct }))].map(r => (
+                {[{ id: null, name: 'All sites', label: allSitesLabel }, ...visibleSites.map(r => ({ id: r.school.id, name: r.school.name, label: r.label }))].map(r => (
                   <button
                     key={r.id ?? 'all'}
                     type="button"
@@ -125,7 +125,7 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect }) {
                     }`}
                   >
                     <span className="min-w-0 truncate">{r.name}</span>
-                    <span className="tabular-nums">{r.pct}%</span>
+                    <span className="tabular-nums">{r.label}</span>
                   </button>
                 ))}
                 {visibleSites.length === 0 && <p className="px-3 py-4 text-sm text-brand-subtext">No sites match your search.</p>}
