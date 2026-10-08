@@ -48,7 +48,7 @@ function StatCard({ label, value }) {
   )
 }
 
-export default function EngagementOverviewD({ weeks, selectedId, onSelect }) {
+export default function EngagementOverviewD({ weeks, selectedId, onSelect, showCards = true }) {
   const now = useMemo(() => periodStats(weeks), [weeks])
 
   const [query, setQuery] = useState('')
@@ -75,7 +75,7 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect }) {
   return (
     <>
       {/* Active users and Lessons completed cards removed 2026-10-08 (not meaningful enough yet). */}
-      <div className="grid gap-4 mb-6 grid-cols-2">
+      {showCards && <div className="grid gap-4 mb-6 grid-cols-2">
         <StatCard
           label="Met the goal, weekly average" value={`${goalPct}%`}
         />
@@ -83,7 +83,7 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect }) {
         <StatCard
           label="Users met goal in last 7 days" value={`${pctOf(scope.met, scope.total)}%`}
         />
-      </div>
+      </div>}
 
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.08 }}
@@ -104,6 +104,8 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect }) {
                     aria-pressed={selectedId === r.id}
                     onClick={() => onSelect(r.id)}
                     className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-sm text-left transition-colors ${
+                      r.id === null ? 'mb-4 relative after:absolute after:left-0 after:right-0 after:-bottom-3 after:h-px after:bg-brand-border' : ''
+                    } ${
                       selectedId === r.id ? 'bg-dessa-tealLight text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
                     }`}
                   >

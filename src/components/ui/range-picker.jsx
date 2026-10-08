@@ -24,7 +24,7 @@ const CAL_CLASS_NAMES = {
   weekdays:        'flex',
   weekday:         'w-9 h-9 flex items-center justify-center text-xs font-medium text-brand-subtext',
   week:            'flex w-full mt-0.5',
-  day:             'relative p-0 text-center',
+  day:             'relative w-9 h-9 p-0 text-center',
   day_button:      'h-9 w-9 mx-auto flex items-center justify-center rounded-md text-sm text-brand-text hover:bg-brand-bg transition-colors',
   today:           '[&>button]:font-bold',
   outside:         '[&>button]:text-brand-subtext/30',
@@ -89,7 +89,11 @@ export function RangePicker({ presets, value, label, range, month, minDate, maxD
   }
   const complete = draft?.from && draft?.to
   const pointers = weekly && complete && draft.from.getTime() !== draft.to.getTime()
-  const calClassNames = pointers
+  // A lone start date (no end yet) only gets DayPicker's `selected` flag, so style
+  // that as a filled teal day; once the range is complete the range_* classes take over.
+  const calClassNames = draft?.from && !draft.to
+    ? { ...CAL_CLASS_NAMES, selected: '[&>button]:!bg-dessa-teal [&>button]:!text-white' }
+    : pointers
     ? { ...CAL_CLASS_NAMES, range_start: `${CAL_CLASS_NAMES.range_start} ${POINTER_START}`, range_end: `${CAL_CLASS_NAMES.range_end} ${POINTER_END}` }
     : CAL_CLASS_NAMES
 
@@ -165,6 +169,10 @@ export function RangePicker({ presets, value, label, range, month, minDate, maxD
                 disabled={{ before: minDate, after: maxDate }}
                 selected={draft}
                 onDayClick={handleDayClick}
+                // Without an onSelect, DayPicker keeps its own internal range and ignores
+                // `selected` after mount, so the old range lingered. A no-op makes `selected`
+                // fully controlled and handleDayClick the only thing that edits the draft.
+                onSelect={() => {}}
                 classNames={calClassNames}
                 components={{
                   Chevron: ({ orientation }) =>

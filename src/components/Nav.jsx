@@ -46,6 +46,7 @@ const ENGAGEMENT_CONCEPTS = [
   // C commented out 2026-10-08 (layout kept in ReportEngagement.jsx behind isC): its date picker moved to A.
   // { value: 'c', label: 'C', title: 'C, Analytics layout: stat strip and four weekly charts in a grid' },
   { value: 'd', label: 'D', title: 'D, Insights layout: stat cards and a ladder of how often users are engaged' },
+  { value: 'e', label: 'E', title: 'E, Usability-testing merge: starts from D without the stat cards' },
 ]
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { parseISO, addDays, format } from 'date-fns'
-import { MoreHorizontal, Download, Printer, ChevronRight, ChevronLeft, ChevronDown, Check, Info } from 'lucide-react'
+import { MoreHorizontal, Download, Printer, ChevronRight, ChevronLeft, ChevronDown, Check, Info, Calendar } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import { schools, schoolWeeks, getWeekData } from '../lib/report2Data'
@@ -36,7 +36,7 @@ const MONTH_BACK = 4
 // in the district (with a Site column and paging); otherwise one site's.
 const PAGE_SIZE = 25
 
-function SiteEducators({ school, weeks, showDots = true, showDays = true, drilldown = true }) {
+function SiteEducators({ school, weeks, showDots = true, showDays = true, drilldown = true, rangeBadge = null }) {
   const latest = weeks[weeks.length - 1]
   const weekIdx = schoolWeeks.indexOf(latest)
   const [openKey, setOpenKey] = useState(null)
@@ -77,14 +77,22 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
 
   return (
     <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
-      <div className="px-4 py-3 border-b border-brand-border">
-        <SearchField value={query} onChange={v => { setQuery(v); setPage(0) }} placeholder="Search educators" bg="bg-brand-bg/60" />
+      <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-brand-border">
+        <div className="flex-1 min-w-0">
+          <SearchField value={query} onChange={v => { setQuery(v); setPage(0) }} placeholder="Search educators" bg="bg-brand-bg/60" />
+        </div>
+        {/* Concept E: always on, since a date range is applied even in the default state. */}
+        {rangeBadge && (
+          <span className="inline-flex items-center gap-1.5 shrink-0 text-[13px] font-medium text-brand-subtext tabular-nums">
+            <Calendar size={12} aria-hidden="true" /> {rangeBadge}
+          </span>
+        )}
       </div>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="text-[13px] font-medium"><SortButton label="Educator" col="name" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} /></TableHead>
-            {allSites && <TableHead className="text-[13px] font-medium"><SortButton label="Site" col="site" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} /></TableHead>}
+            {allSites && <TableHead className={`text-[13px] font-medium ${showDots ? '' : 'w-56'}`}><SortButton label="Site" col="site" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} /></TableHead>}
             {showDots && <TableHead className="text-[13px] font-medium">
               <span className="sr-only">This week</span>
               <span className="flex items-center gap-3" aria-hidden="true">
@@ -330,13 +338,16 @@ export default function ReportEngagement() {
     return { week: w, met, total, progress, sitesMet, lessons, pct: Math.round((met / total) * 100) }
   }), [weeks])
   const isC = engagementConcept === 'c' && !selectedSite
-  const isD = engagementConcept === 'd' && !selectedSite
+  // E (2026-10-08) starts as a copy of D (same layout, minus the two stat cards) and diverges from there.
+  const isE = engagementConcept === 'e' && !selectedSite
+  const isD = (engagementConcept === 'd' || engagementConcept === 'e') && !selectedSite
   const rangeHeader = isC || isD
   // Concept A (2026-10-07): the weekly goal is a quiet info badge, not a link, and the subtext is gone.
   const isA = engagementConcept === 'a' && !selectedSite
   // Concept B (2026-10-07) gets the same goal badge and no subtext.
   // Concept C gets it on both its district view and its site page (2026-10-07).
-  const goalBadge = ((engagementConcept === 'a' || engagementConcept === 'b') && !selectedSite) || engagementConcept === 'c'
+  // A's pill removed 2026-10-08: its graph title now states the goal instead.
+  const goalBadge = (engagementConcept === 'b' && !selectedSite) || engagementConcept === 'c'
   const latestRow = analytics[analytics.length - 1]
   const lessonsInRange = analytics.reduce((sum, r) => sum + r.lessons, 0)
 
@@ -375,7 +386,7 @@ export default function ReportEngagement() {
             </button>
           )}
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <h2 className="text-2xl font-semibold text-brand-text">{selectedSite ? selectedSite.name : 'Engagement'}</h2>
+            <h2 className="text-2xl font-semibold text-brand-text">{selectedSite ? selectedSite.name : 'Weekly goal'}</h2>
             {goalBadge && (
               <Tooltip.Provider delayDuration={150}>
                 <Tooltip.Root>
@@ -394,13 +405,13 @@ export default function ReportEngagement() {
                 </Tooltip.Root>
               </Tooltip.Provider>
             )}
-            {!rangeHeader && !goalBadge && (
+            {!rangeHeader && !goalBadge && !isA && (
               <Link to="/settings" className="text-sm text-interactive-blue hover:underline">
                 Weekly goal: {GOAL} lessons per week
               </Link>
             )}
           </div>
-          {!rangeHeader && !goalBadge && (
+          {!rangeHeader && !goalBadge && !isA && (
             <p className="text-sm text-brand-subtext mt-1">
               {selectedSite ? `Educators at ${selectedSite.name}. Open an educator to see their activity.` : 'This report shows Move This World lesson completion across your district, by site.'}
             </p>
@@ -419,6 +430,7 @@ export default function ReportEngagement() {
             month={parseISO(weeks[0])}
             minDate={FIRST_DATE}
             maxDate={LAST_DATE}
+            className={isE ? 'text-[#134fb2] [&>svg]:text-[#134fb2]' : undefined}
             onPreset={k => { setRangeKey(k); setCustomWeeks(null) }}
             onRange={({ from, to }) => {
               const ws = weeksForDates(from, to)
@@ -516,7 +528,7 @@ export default function ReportEngagement() {
         </div>
       */}
       {isD ? (
-        <EngagementOverviewD weeks={weeks} selectedId={dSiteId} onSelect={setDSiteId} />
+        <EngagementOverviewD weeks={weeks} selectedId={dSiteId} onSelect={setDSiteId} showCards={!isE} />
       ) : isC ? (
         <>
           <div className="grid gap-8 mb-12 pb-8 border-b border-brand-border grid-cols-4">
@@ -560,7 +572,7 @@ export default function ReportEngagement() {
           className="min-w-0 bg-white rounded-xl border border-brand-border p-5"
         >
           <div className="flex items-center justify-between gap-4 mb-4">
-            <p className="text-base font-semibold text-brand-text">Educators who met their weekly goal</p>
+            <p className={`${isA ? 'text-[15px]' : 'text-base'} font-semibold text-brand-text`}>{isA ? 'Educators completing 3 lessons a week' : 'Educators who met their weekly goal'}</p>
             {graph === 'b' ? monthControls : rangeControls}
           </div>
           {graph === 'b' ? <MonthBarChart weeks={month.weeks} /> : stacked ? <StackedGoalChart weeks={weeks} /> : <SiteGoalLineChart weeks={weeks} metric="educators" />}
@@ -569,7 +581,7 @@ export default function ReportEngagement() {
       )}
 
       {isD ? (
-        <SiteEducators school={schools.find(sc => sc.id === dSiteId) ?? null} weeks={weeks} showDots={false} showDays={false} drilldown={false} />
+        <SiteEducators school={schools.find(sc => sc.id === dSiteId) ?? null} weeks={weeks} showDots={false} showDays={false} drilldown={false} rangeBadge={isE ? rangeLabel(weeks) : null} />
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.14 }}
