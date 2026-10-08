@@ -10,8 +10,9 @@ const REPORT_GROUPS = [
   {
     label: 'Curriculum',
     items: [
-      { label: 'Site Engagement', to: 'site-engagement' },
-      { label: 'Daily Curriculum Engagement', to: 'dce' },
+      // Site Engagement and Daily Curriculum Engagement commented out 2026-10-08; Engagement is the only report.
+      // { label: 'Site Engagement', to: 'site-engagement' },
+      // { label: 'Daily Curriculum Engagement', to: 'dce' },
       { label: 'Engagement', to: 'engagement' },
     ],
   },

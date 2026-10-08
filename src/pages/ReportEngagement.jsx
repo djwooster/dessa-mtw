@@ -435,35 +435,7 @@ export default function ReportEngagement() {
         </div>
       ) : (
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <div className="flex flex-wrap items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={resetAll}
-          className="h-8 px-3 rounded-md border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors"
-        >
-          Reset all
-        </button>
-        <div className="relative shrink-0" ref={menuRef}>
-          <button
-            className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
-            onClick={() => setMenuOpen(o => !o)}
-            aria-label="More options"
-            aria-expanded={menuOpen}
-          >
-            <MoreHorizontal size={13} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
-              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
-                <Download size={13} className="text-brand-subtext" /> Export CSV
-              </button>
-              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { window.print(); setMenuOpen(false) }}>
-                <Printer size={13} className="text-brand-subtext" /> Print
-              </button>
-            </div>
-          )}
-        </div>
-        </div>
+        {/* Reset all removed 2026-10-08; the 3-dot menu now sits to the right of the Graph switcher. */}
         <Popover.Root>
           <Popover.Trigger asChild>
             <button
@@ -495,6 +467,26 @@ export default function ReportEngagement() {
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>
+        <div className="relative shrink-0" ref={menuRef}>
+          <button
+            className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label="More options"
+            aria-expanded={menuOpen}
+          >
+            <MoreHorizontal size={13} />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
+              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
+                <Download size={13} className="text-brand-subtext" /> Export CSV
+              </button>
+              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { window.print(); setMenuOpen(false) }}>
+                <Printer size={13} className="text-brand-subtext" /> Print
+              </button>
+            </div>
+          )}
+        </div>
         </div>
       )}
       </div>

@@ -18,9 +18,9 @@ import CompetitiveAnalysis from './pages/CompetitiveAnalysis'
 import ProcessJournal from './pages/ProcessJournal'
 import ProcessJournalLayout from './pages/ProcessJournalLayout'
 import ProcessJournalTodo from './pages/ProcessJournalTodo'
-import ReportDce from './pages/ReportDce'
+// import ReportDce from './pages/ReportDce' // commented out 2026-10-08, Engagement is the only report
 import ReportEngagement from './pages/ReportEngagement'
-import Report2 from './pages/Report2'
+// import Report2 from './pages/Report2' // commented out 2026-10-08, Engagement is the only report
 import ReportsLayout from './pages/ReportsLayout'
 import SettingsLayout from './pages/settings/SettingsLayout'
 import SettingsPlaceholder from './pages/settings/SettingsPlaceholder'
@@ -92,10 +92,14 @@ function AppShell({ handleBookmark }) {
           <Route path="summary" element={<RatingSummary />} />
         </Route>
         <Route path="/reports" element={<ReportsLayout />}>
-          <Route index element={<Navigate to="site-engagement" replace />} />
+          <Route index element={<Navigate to="engagement" replace />} />
+          {/* Site Engagement and Daily Curriculum Engagement commented out 2026-10-08 (files kept).
           <Route path="site-engagement" element={<Report2 />} />
           <Route path="dce" element={<ReportDce />} />
+          */}
           <Route path="engagement" element={<ReportEngagement />} />
+          {/* Old links to the retired reports land here. */}
+          <Route path="*" element={<Navigate to="engagement" replace />} />
         </Route>
         <Route path="/settings" element={<SettingsLayout />}>
           <Route index element={<Navigate to="curriculum-setup" replace />} />
