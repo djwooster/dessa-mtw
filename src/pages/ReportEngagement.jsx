@@ -36,7 +36,7 @@ const MONTH_BACK = 4
 // in the district (with a Site column and paging); otherwise one site's.
 const PAGE_SIZE = 25
 
-function SiteEducators({ school, weeks, showDots = true }) {
+function SiteEducators({ school, weeks, showDots = true, showDays = true, drilldown = true }) {
   const latest = weeks[weeks.length - 1]
   const weekIdx = schoolWeeks.indexOf(latest)
   const [openKey, setOpenKey] = useState(null)
@@ -70,7 +70,7 @@ function SiteEducators({ school, weeks, showDots = true }) {
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
   const safePage = Math.min(page, pageCount - 1)
   const shown = allSites ? rows.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE) : rows
-  const cols = (allSites ? 5 : 4) - (showDots ? 0 : 1)
+  const cols = (allSites ? 5 : 4) - (showDots ? 0 : 1) - (showDays ? 0 : 1)
 
   const weekStart = parseISO(latest)
   const dayLetters = ['M', 'T', 'W', 'T', 'F']
@@ -91,7 +91,7 @@ function SiteEducators({ school, weeks, showDots = true }) {
                 {dayLetters.map((d, i) => <span key={i} className="w-3.5 text-center text-xs text-brand-subtext">{d}</span>)}
               </span>
             </TableHead>}
-            <TableHead className={`text-[13px] font-medium ${showDots ? '' : 'w-40 text-right'}`}><SortButton label="Days this week" col="days" sort={sort} onSort={k => { setSort(s => nextSort(s, k, 'desc')); setPage(0) }} align={showDots ? undefined : 'right'} /></TableHead>
+            {showDays && <TableHead className={`text-[13px] font-medium ${showDots ? '' : 'w-40 text-right'}`}><SortButton label="Days this week" col="days" sort={sort} onSort={k => { setSort(s => nextSort(s, k, 'desc')); setPage(0) }} align={showDots ? undefined : 'right'} /></TableHead>}
             <TableHead className={`text-[13px] font-medium text-right ${showDots ? '' : 'w-40'}`}><SortButton label="Last Active" col="last" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} align="right" /></TableHead>
           </TableRow>
         </TableHeader>
@@ -100,12 +100,14 @@ function SiteEducators({ school, weeks, showDots = true }) {
             const open = openKey === r.key
             return (
               <Fragment key={r.key}>
-                <TableRow onClick={() => setOpenKey(open ? null : r.key)} className="cursor-pointer">
+                <TableRow onClick={drilldown ? () => setOpenKey(open ? null : r.key) : undefined} className={drilldown ? 'cursor-pointer' : 'hover:bg-transparent'}>
                   <TableCell className="font-medium">
-                    <button type="button" aria-expanded={open} className="flex items-center gap-2 text-left">
-                      <ChevronRight size={14} className={`shrink-0 text-brand-subtext transition-transform ${open ? 'rotate-90' : ''}`} />
-                      {r.name}
-                    </button>
+                    {drilldown ? (
+                      <button type="button" aria-expanded={open} className="flex items-center gap-2 text-left">
+                        <ChevronRight size={14} className={`shrink-0 text-brand-subtext transition-transform ${open ? 'rotate-90' : ''}`} />
+                        {r.name}
+                      </button>
+                    ) : r.name}
                   </TableCell>
                   {allSites && <TableCell className="text-brand-subtext">{r.sc.name}</TableCell>}
                   {showDots && <TableCell>
@@ -124,10 +126,10 @@ function SiteEducators({ school, weeks, showDots = true }) {
                       })}
                     </span>
                   </TableCell>}
-                  <TableCell className={`tabular-nums ${showDots ? '' : 'text-right'}`}>{r.days} of {WEEKDAYS.length}</TableCell>
+                  {showDays && <TableCell className={`tabular-nums ${showDots ? '' : 'text-right'}`}>{r.days} of {WEEKDAYS.length}</TableCell>}
                   <TableCell className="text-brand-subtext text-right">{r.last}</TableCell>
                 </TableRow>
-                {open && (
+                {drilldown && open && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={cols} className="pl-10 py-3 bg-brand-bg/50">
                       <EducatorActivityGrid schoolId={r.sc.id} teacherIndex={r.i} weeks={weeks} />
@@ -229,17 +231,12 @@ export default function ReportEngagement() {
     return schools
       .map(school => {
         const data = getWeekData(school.id, latest, GOAL)
-        // A site's Last Active is its most recent educator (district-level view of DCE's "who is engaged right now").
-        const last = getRosterNames(school.id)
-          .map((_, i) => getLastActive(school.id, i))
-          .reduce((best, l) => (agoRank(l) < agoRank(best) ? l : best), 'Never')
-        return { school, meetingGoal: data.meetingGoal, totalTeachers: data.totalTeachers, pct: data.pct, last }
+        return { school, meetingGoal: data.meetingGoal, totalTeachers: data.totalTeachers, pct: data.pct }
       })
       .filter(r => !q || r.school.name.toLowerCase().includes(q))
       .sort((a, b) => {
         const dir = sort.dir === 'asc' ? 1 : -1
         if (sort.key === 'name') return dir * a.school.name.localeCompare(b.school.name)
-        if (sort.key === 'last') return dir * (agoRank(a.last) - agoRank(b.last) || 0) || a.school.name.localeCompare(b.school.name)
         return dir * (a.pct - b.pct) || a.school.name.localeCompare(b.school.name)
       })
   }, [weeks, query, sort])
@@ -261,8 +258,8 @@ export default function ReportEngagement() {
       URL.revokeObjectURL(url)
       return
     }
-    const header = `Site,Educators meeting goal,Total educators,Last active\n`
-    const body = siteRows.map(r => `"${r.school.name}",${r.meetingGoal},${r.totalTeachers},"${r.last}"`).join('\n')
+    const header = `Site,Educators meeting goal,Total educators\n`
+    const body = siteRows.map(r => `"${r.school.name}",${r.meetingGoal},${r.totalTeachers}`).join('\n')
     const url = URL.createObjectURL(new Blob([header + body], { type: 'text/csv' }))
     const a = document.createElement('a')
     a.href = url
@@ -560,7 +557,7 @@ export default function ReportEngagement() {
       )}
 
       {isD ? (
-        <SiteEducators school={schools.find(sc => sc.id === dSiteId) ?? null} weeks={weeks} showDots={false} />
+        <SiteEducators school={schools.find(sc => sc.id === dSiteId) ?? null} weeks={weeks} showDots={false} showDays={false} drilldown={false} />
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.14 }}
@@ -574,22 +571,20 @@ export default function ReportEngagement() {
               <TableRow>
                 <TableHead className="text-[13px] font-medium"><SortButton label="Site" col="name" sort={sort} onSort={k => setSort(s => nextSort(s, k))} /></TableHead>
                 <TableHead className="text-[13px] font-medium text-right"><SortButton label="Educators meeting goal" col="goal" sort={sort} onSort={k => setSort(s => nextSort(s, k, 'desc'))} align="right" /></TableHead>
-                <TableHead className="text-[13px] font-medium text-right"><SortButton label="Last active" col="last" sort={sort} onSort={k => setSort(s => nextSort(s, k))} align="right" /></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {siteRows.map(({ school, meetingGoal, totalTeachers, last }) => (
+              {siteRows.map(({ school, meetingGoal, totalTeachers }) => (
                 <TableRow key={school.id} onClick={() => openSite(school)} className="cursor-pointer">
                   <TableCell className="font-medium">
-                    <button type="button" onClick={e => { e.stopPropagation(); openSite(school) }} className="text-left hover:text-dessa-teal transition-colors">{school.name}</button>
+                    <button type="button" onClick={e => { e.stopPropagation(); openSite(school) }} className="text-left text-[13px] text-[#134fb2] hover:underline transition-colors">{school.name}</button>
                   </TableCell>
                   <TableCell className="text-brand-text text-right tabular-nums">{meetingGoal} of {totalTeachers}</TableCell>
-                  <TableCell className="text-brand-subtext text-right">{last}</TableCell>
                 </TableRow>
               ))}
               {siteRows.length === 0 && (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={3} className="text-center text-brand-subtext py-8">No sites match your search.</TableCell>
+                  <TableCell colSpan={2} className="text-center text-brand-subtext py-8">No sites match your search.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -599,7 +594,8 @@ export default function ReportEngagement() {
         </>
       )}
 
-      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Educators meeting goal" />}
+      {/* Educator drill-down (activity grid) switched off 2026-10-08: the modal shows Last Active only for now. Remove drilldown={false} to bring it back. */}
+      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Educators meeting goal" drilldown={false} />}
     </div>
   )
 }
