@@ -491,7 +491,7 @@ export default function ReportEngagement() {
             </div>
             {graph === 'b' ? <MonthBarChart schoolId={selectedSite.id} weeks={month.weeks} /> : stacked ? <StackedGoalChart schoolId={selectedSite.id} weeks={weeks} /> : <SiteWeeklyChart schoolId={selectedSite.id} weeks={weeks} />}
           </motion.div>
-          <SiteEducators school={selectedSite} weeks={weeks} showDots={engagementConcept !== 'c'} />
+          <SiteEducators school={selectedSite} weeks={weeks} showDots={engagementConcept !== 'c' && !isSiteLeaderView} showDays={!isSiteLeaderView} drilldown={!isSiteLeaderView} />
         </>
       ) : (
         <>
@@ -548,7 +548,7 @@ export default function ReportEngagement() {
           className="min-w-0 bg-white rounded-xl border border-brand-border p-5"
         >
           <div className="flex items-center justify-between gap-4 mb-4">
-            <p className="text-base font-semibold text-brand-text">{stacked || graph === 'b' ? 'Educators who met their weekly goal' : 'Sites where every educator met the weekly goal'}</p>
+            <p className="text-base font-semibold text-brand-text">Educators who met their weekly goal</p>
             {graph === 'b' ? monthControls : rangeControls}
           </div>
           {graph === 'b' ? <MonthBarChart weeks={month.weeks} /> : stacked ? <StackedGoalChart weeks={weeks} /> : <SiteGoalLineChart weeks={weeks} />}
