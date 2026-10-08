@@ -22,3 +22,30 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* Slim, inset scrollbar for scrolling panels such as modals (2026-10-08): a
+   rounded thumb on a transparent track, held away from the corners so the
+   panel's rounded edge still reads as complete. */
+.thin-scroll::-webkit-scrollbar {
+  width: 14px;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 16px 0;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: rgb(107 122 141 / 0.35);
+  background-clip: padding-box;
+  border: 4px solid transparent;
+  border-radius: 9999px;
+}
+.thin-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(107 122 141 / 0.55);
+  background-clip: padding-box;
+}
+@supports not selector(::-webkit-scrollbar) {
+  .thin-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(107 122 141 / 0.35) transparent;
+  }
+}

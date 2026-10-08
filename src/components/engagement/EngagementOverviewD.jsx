@@ -13,7 +13,7 @@ import WeeklyBarChart from './WeeklyBarChart'
 // means completed at least one lesson that week (the same rule as Active
 // users elsewhere in this report).
 function periodStats(weeksList) {
-  let users = 0, lessons = 0, dayWeeks = 0, goalWeeks = 0
+  let users = 0, lessons = 0, goalWeeks = 0
   const weeksEngaged = []
   schools.forEach(s => {
     const per = {}
@@ -21,7 +21,6 @@ function periodStats(weeksList) {
       getWeekData(s.id, w, GOAL).teachers.forEach((t, ti) => {
         per[ti] = per[ti] || 0
         lessons += t.daysActive
-        dayWeeks += t.daysActive
         if (t.daysActive > 0) per[ti] += 1
         if (t.metGoal) goalWeeks += 1
       })
@@ -35,20 +34,16 @@ function periodStats(weeksList) {
     lessons,
     active: weeksEngaged.filter(x => x >= 1).length,
     goalAvg: goalWeeks / n,
-    daysAvg: dayWeeks / (users * n),
   }
 }
 
 const pctOf = (a, b) => Math.round((a / b) * 100)
 
-function StatCard({ label, value, count }) {
+function StatCard({ label, value }) {
   return (
     <div className="rounded-xl border border-brand-border bg-white p-4">
       <p className="text-sm text-brand-subtext">{label}</p>
       <p className="text-2xl font-semibold text-brand-text leading-tight mt-1">{value}</p>
-      <div className="mt-3 h-6 flex items-center">
-        <span className="min-w-0 truncate text-xs font-medium text-brand-subtext tabular-nums">{count}</span>
-      </div>
     </div>
   )
 }
@@ -75,21 +70,18 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect }) {
   }, [selectedId, weeks, latestWeek])
 
   const total = now.users
-  const activePct = pctOf(now.active, total)
   const goalPct = pctOf(Math.round(now.goalAvg), total)
 
   return (
     <>
-      <div className="grid gap-4 mb-6 grid-cols-2 lg:grid-cols-4">
+      {/* Active users and Lessons completed cards removed 2026-10-08 (not meaningful enough yet). */}
+      <div className="grid gap-4 mb-6 grid-cols-2">
         <StatCard
-          label="Active users" value={`${activePct}%`} count={`${now.active.toLocaleString()} of ${total.toLocaleString()}`}
+          label="Met the goal, weekly average" value={`${goalPct}%`}
         />
+        {/* Follows the site selected below (All sites by default). */}
         <StatCard
-          label="Met the goal, weekly average" value={`${goalPct}%`} count={`${Math.round(now.goalAvg).toLocaleString()} of ${total.toLocaleString()}`}
-        />
-        <StatCard label="Lessons completed" value={now.lessons.toLocaleString()} />
-        <StatCard
-          label="Days engaged per week" value={now.daysAvg.toFixed(1)}
+          label="Users met goal in last 7 days" value={`${pctOf(scope.met, scope.total)}%`}
         />
       </div>
 
@@ -127,7 +119,7 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect }) {
           <div className="min-w-0 rounded-lg border border-brand-border p-5">
             <p className="text-lg font-semibold text-brand-text">{selectedSchool ? selectedSchool.name : 'All sites'}</p>
             <p className="text-sm text-brand-subtext mt-1 mb-6">
-              {scope.met} of {scope.total} users ({pctOf(scope.met, scope.total)}%) met the weekly goal in the latest week.
+              {scope.met} of {scope.total} users met the weekly goal in the latest week.
             </p>
             <WeeklyBarChart label="Users who met the goal each week" kind="line" percent points={scope.points} />
           </div>

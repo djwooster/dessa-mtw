@@ -94,7 +94,7 @@ export function nextSort(sort, key, firstDir = 'asc') {
   return sort.key === key ? { key, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: firstDir }
 }
 
-export function SearchField({ value, onChange, placeholder, bg = 'bg-white' }) {
+export function SearchField({ value, onChange, placeholder, bg = 'bg-white', height = 'h-9' }) {
   return (
     <div className="relative max-w-xs">
       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" />
@@ -104,7 +104,7 @@ export function SearchField({ value, onChange, placeholder, bg = 'bg-white' }) {
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className={`w-full h-9 pl-9 pr-8 text-sm rounded-md border border-brand-border ${bg} text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal`}
+        className={`w-full ${height} pl-9 pr-8 text-sm rounded-md border border-brand-border ${bg} text-brand-text placeholder:text-brand-subtext focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal`}
       />
       {value && (
         <button type="button" onClick={() => onChange('')} aria-label="Clear search" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext hover:text-brand-text">
@@ -145,6 +145,13 @@ export function DateRange({ weeks, className = '' }) {
       {rangeLabel(weeks)}
     </p>
   )
+}
+
+// Short Monday to Friday range for a week start, e.g. "Apr 27 to May 1".
+export function weekRangeLabelShort(weekStart) {
+  const start = parseISO(weekStart)
+  const end = addDays(start, 4)
+  return start.getMonth() === end.getMonth() ? `${format(start, 'MMM d')} to ${format(end, 'd')}` : `${format(start, 'MMM d')} to ${format(end, 'MMM d')}`
 }
 
 export function weekLabel(weekStart) {
@@ -199,16 +206,29 @@ export function getLastActive(schoolId, teacherIndex) {
   return 'Never'
 }
 
-export function SiteGoalLineChart({ weeks }) {
+// `metric` (2026-10-08): 'sites' (default) plots the % of sites where every
+// educator met the goal; 'educators' plots the % of all educators who met it,
+// with the tooltip to match.
+export function SiteGoalLineChart({ weeks, metric = 'sites' }) {
   const [hoverIdx, setHoverIdx] = useState(null)
+  const byEducators = metric === 'educators'
 
   const trend = useMemo(() => weeks.map(w => {
+    if (byEducators) {
+      let met = 0, total = 0
+      schools.forEach(s => {
+        const data = getWeekData(s.id, w, GOAL)
+        met += data.meetingGoal
+        total += data.totalTeachers
+      })
+      return { weekStart: w, count: met, total, pct: Math.round((met / total) * 100) }
+    }
     const count = schools.filter(s => {
       const data = getWeekData(s.id, w, GOAL)
       return data.meetingGoal === data.totalTeachers
     }).length
-    return { weekStart: w, count, pct: Math.round((count / schools.length) * 100) }
-  }), [weeks])
+    return { weekStart: w, count, total: schools.length, pct: Math.round((count / schools.length) * 100) }
+  }), [weeks, byEducators])
 
   const width = 960
   const height = 280
@@ -239,7 +259,7 @@ export function SiteGoalLineChart({ weeks }) {
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" role="img" aria-label="% of sites meeting goal, by week">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" role="img" aria-label={byEducators ? '% of educators meeting goal, by week' : '% of sites meeting goal, by week'}>
         {Y_TICKS.map(v => {
           const y = padding.top + innerH - (v / 100) * innerH
           return (
@@ -299,7 +319,7 @@ export function SiteGoalLineChart({ weeks }) {
             transform: 'translate(-50%, -130%)',
           }}
         >
-          {hovered.count} of {schools.length} sites · {weekLabel(hovered.weekStart)}
+          {hovered.count} of {hovered.total} {byEducators ? 'educators' : 'sites'} · {weekLabel(hovered.weekStart)}
         </div>
       )}
     </div>
@@ -489,23 +509,31 @@ export function EducatorActivityGrid({ schoolId, teacherIndex, weeks }) {
 // optional search field in a toolbar above the header row.
 // `drilldown` false (2026-10-07) turns rows into plain name and Last Active lines,
 // with no expandable activity grid.
-export function EducatorTable({ school, weeks, searchable = false, drilldown = true }) {
+// `goalColumn` (2026-10-08) adds a Weekly goal column with a Goal met / Not yet
+// pill. A pill is a one-week fact, so it always describes the last week in the
+// range (named in the header's hover text). Weekly goal and Last Active share
+// one right-aligned column, 44px apart.
+export function EducatorTable({ school, weeks, searchable = false, drilldown = true, goalColumn = false }) {
+  const statusWeek = weeks[weeks.length - 1]
   const rosterNames = useMemo(() => getRosterNames(school.id), [school.id])
   const [openIdx, setOpenIdx] = useState(null)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState({ key: 'name', dir: 'asc' })
 
+  const goalData = useMemo(() => getWeekData(school.id, statusWeek, GOAL).teachers, [school.id, statusWeek])
+
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return rosterNames
-      .map((name, i) => ({ name, i, last: getLastActive(school.id, i) }))
+      .map((name, i) => ({ name, i, last: getLastActive(school.id, i), met: goalData[i].metGoal }))
       .filter(r => !q || r.name.toLowerCase().includes(q))
       .sort((a, b) => {
         const dir = sort.dir === 'asc' ? 1 : -1
+        if (sort.key === 'goal') return dir * (Number(a.met) - Number(b.met)) || a.name.localeCompare(b.name)
         if (sort.key === 'last') return dir * (agoRank(a.last) - agoRank(b.last) || 0) || a.name.localeCompare(b.name)
         return dir * a.name.localeCompare(b.name)
       })
-  }, [rosterNames, school.id, query, sort])
+  }, [rosterNames, school.id, query, sort, goalData])
 
   return (
     <div>
@@ -518,7 +546,18 @@ export function EducatorTable({ school, weeks, searchable = false, drilldown = t
         <TableHeader>
           <TableRow>
             <TableHead className="text-[13px] font-medium"><SortButton label="Educator" col="name" sort={sort} onSort={k => setSort(s => nextSort(s, k))} /></TableHead>
-            <TableHead className="text-[13px] font-medium text-right"><SortButton label="Last Active" col="last" sort={sort} onSort={k => setSort(s => nextSort(s, k))} align="right" /></TableHead>
+            {goalColumn ? (
+              <TableHead className="text-[13px] font-medium">
+                <span className="flex items-center justify-end gap-11">
+                  <span className="w-24 flex justify-end" title={`Latest week in range: ${weekRangeLabelShort(statusWeek)}`}>
+                    <SortButton label="Weekly goal" col="goal" sort={sort} onSort={k => setSort(s => nextSort(s, k, 'desc'))} align="right" />
+                  </span>
+                  <span className="w-20 flex justify-end"><SortButton label="Last Active" col="last" sort={sort} onSort={k => setSort(s => nextSort(s, k))} align="right" /></span>
+                </span>
+              </TableHead>
+            ) : (
+              <TableHead className="text-[13px] font-medium text-right"><SortButton label="Last Active" col="last" sort={sort} onSort={k => setSort(s => nextSort(s, k))} align="right" /></TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -535,7 +574,20 @@ export function EducatorTable({ school, weeks, searchable = false, drilldown = t
                       </button>
                     ) : r.name}
                   </TableCell>
-                  <TableCell className="text-brand-subtext text-right">{r.last}</TableCell>
+                  {goalColumn ? (
+                    <TableCell>
+                      <span className="flex items-center justify-end gap-11">
+                        <span className="w-24 flex justify-end">
+                          <span className={`inline-flex items-center rounded-[5px] px-2 py-0.5 text-xs font-medium ${r.met ? 'bg-org-green-100/85 text-org-green-800' : 'bg-brand-bg text-brand-text'}`}>
+                            {r.met ? 'Goal met' : 'Not yet'}
+                          </span>
+                        </span>
+                        <span className="w-20 text-right text-brand-subtext">{r.last}</span>
+                      </span>
+                    </TableCell>
+                  ) : (
+                    <TableCell className="text-brand-subtext text-right">{r.last}</TableCell>
+                  )}
                 </TableRow>
                 {drilldown && open && (
                   <TableRow className="hover:bg-transparent">
@@ -560,7 +612,7 @@ export function EducatorTable({ school, weeks, searchable = false, drilldown = t
 
 // Shared content for both overlay shells. The range comes from the page's
 // date range button (2026-10-02), so the modal has no tabs of its own.
-function SiteDetailContent({ school, weeks, onClose, drilldown = true, title }) {
+function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false }) {
   const current = useMemo(() => getWeekData(school.id, weeks[weeks.length - 1], GOAL), [school.id, weeks])
 
   const weeksMet = useMemo(() => weeks.filter(w => {
@@ -617,12 +669,14 @@ function SiteDetailContent({ school, weeks, onClose, drilldown = true, title }) 
       </div>
       */}
 
-      <div className="mb-5">
+      <div className={bordered ? 'mb-5 rounded-xl border border-brand-border bg-white p-5' : 'mb-5'}>
         {title && <p className="text-base font-semibold text-brand-text mb-3">{title}</p>}
         <SiteWeeklyChart schoolId={school.id} weeks={weeks} />
       </div>
 
-      <EducatorTable school={school} weeks={weeks} drilldown={drilldown} />
+      <div className={bordered ? 'rounded-xl border border-brand-border bg-white overflow-hidden' : ''}>
+        <EducatorTable school={school} weeks={weeks} drilldown={drilldown} goalColumn={goalColumn} />
+      </div>
     </div>
   )
 }
@@ -644,7 +698,7 @@ function SitePanel({ school, weeks, onClose }) {
   )
 }
 
-export function SiteDetailModal({ school, weeks, onClose, drilldown = true, title }) {
+export function SiteDetailModal({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <motion.div
@@ -653,9 +707,12 @@ export function SiteDetailModal({ school, weeks, onClose, drilldown = true, titl
       />
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.2 }}
-        className="relative w-full max-w-[calc(42rem+15vw)] max-h-[85vh] bg-white rounded-xl shadow-lg overflow-y-auto p-6"
+        className={`relative w-full max-w-[calc(42rem+15vw)] ${bordered ? 'bg-brand-bg' : 'bg-white'} rounded-xl shadow-lg overflow-hidden`}
       >
-        <SiteDetailContent school={school} weeks={weeks} onClose={onClose} drilldown={drilldown} title={title} />
+        {/* The scroll area sits inside the rounded, clipped shell so the scrollbar can't square off the right corners. */}
+        <div className="thin-scroll max-h-[85vh] overflow-y-auto p-6">
+          <SiteDetailContent school={school} weeks={weeks} onClose={onClose} drilldown={drilldown} title={title} goalColumn={goalColumn} bordered={bordered} />
+        </div>
       </motion.div>
     </div>
   )

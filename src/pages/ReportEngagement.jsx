@@ -270,7 +270,25 @@ export default function ReportEngagement() {
 
   // Range controls live in the chart card header (2026-10-06): segmented
   // presets (the shared Tabs control) plus the custom-range calendar button.
-  const rangeControls = (
+  // Concept A uses the full weekly date picker (2026-10-08) in place of the tabs and calendar icon.
+  const rangeControls = engagementConcept === 'a' ? (
+    <RangePicker
+      weekly
+      weekStarts={schoolWeeks}
+      presets={RANGE_PRESETS}
+      value={rangeKey}
+      label={rangeLabel(weeks)}
+      range={{ from: parseISO(weeks[0]), to: addDays(parseISO(weeks[weeks.length - 1]), 4) }}
+      month={parseISO(weeks[0])}
+      minDate={FIRST_DATE}
+      maxDate={LAST_DATE}
+      onPreset={k => { setRangeKey(k); setCustomWeeks(null) }}
+      onRange={({ from, to }) => {
+        const ws = weeksForDates(from, to)
+        if (ws.length) { setCustomWeeks(ws); setRangeKey('custom') }
+      }}
+    />
+  ) : (
     <div className="flex items-center gap-1 shrink-0">
       <Tabs value={rangeKey} onValueChange={k => { setRangeKey(k); setCustomWeeks(null) }}>
         <TabsList className="p-0.5">
@@ -392,6 +410,8 @@ export default function ReportEngagement() {
       {rangeHeader ? (
         <div className="flex items-center gap-2">
           <RangePicker
+            weekly
+            weekStarts={schoolWeeks}
             presets={RANGE_PRESETS}
             value={rangeKey}
             label={rangeLabel(weeks)}
@@ -551,7 +571,7 @@ export default function ReportEngagement() {
             <p className="text-base font-semibold text-brand-text">Educators who met their weekly goal</p>
             {graph === 'b' ? monthControls : rangeControls}
           </div>
-          {graph === 'b' ? <MonthBarChart weeks={month.weeks} /> : stacked ? <StackedGoalChart weeks={weeks} /> : <SiteGoalLineChart weeks={weeks} />}
+          {graph === 'b' ? <MonthBarChart weeks={month.weeks} /> : stacked ? <StackedGoalChart weeks={weeks} /> : <SiteGoalLineChart weeks={weeks} metric="educators" />}
         </motion.div>
       </div>
       )}
@@ -564,7 +584,7 @@ export default function ReportEngagement() {
           className="bg-white rounded-xl border border-brand-border overflow-hidden"
         >
           <div className="px-4 py-3 border-b border-brand-border">
-            <SearchField value={query} onChange={setQuery} placeholder="Search sites" bg="bg-brand-bg/60" />
+            <SearchField value={query} onChange={setQuery} placeholder="Search sites" bg="bg-brand-bg/60" height="h-8" />
           </div>
           <Table>
             <TableHeader>
@@ -595,7 +615,7 @@ export default function ReportEngagement() {
       )}
 
       {/* Educator drill-down (activity grid) switched off 2026-10-08: the modal shows Last Active only for now. Remove drilldown={false} to bring it back. */}
-      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Educators meeting goal" drilldown={false} />}
+      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Educators meeting goal" drilldown={false} goalColumn bordered />}
     </div>
   )
 }
