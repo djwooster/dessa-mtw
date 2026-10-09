@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, addDays } from 'date-fns'
 import { X, MoreHorizontal, Download, Printer, ChevronRight, Calendar, Search, ArrowUp, ArrowDown, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
 import { schools, schoolWeeks, getWeekData, MOST_RECENT_WEEK } from '../lib/report2Data'
+import EducatorCalendar from '../components/engagement/EducatorCalendar'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { RangePicker } from '../components/ui/range-picker'
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '../components/ui/breadcrumb'
@@ -459,6 +460,18 @@ export function activeDayOrder(schoolId, teacherIndex, weekIdx) {
     .map(x => x.d)
 }
 
+// Every active day this educator has across the whole school year, for the calendar
+// drill-down. Built from the weekly counts, so which weekdays are on is the same
+// mock stand-in as the dot grid; the totals are exact.
+export function educatorDayMap(schoolId, teacherIndex) {
+  const map = {}
+  schoolWeeks.forEach((w, weekIdx) => {
+    const k = getWeekData(schoolId, w, GOAL).teachers[teacherIndex].daysActive
+    activeDayOrder(schoolId, teacherIndex, weekIdx).slice(0, k).forEach(d => { map[format(addDays(parseISO(w), d), 'yyyy-MM-dd')] = true })
+  })
+  return map
+}
+
 export function EducatorActivityGrid({ schoolId, teacherIndex, weeks }) {
   const months = monthTransitionLabels(weeks)
   const columns = weeks.map((w, wi) => {
@@ -513,7 +526,8 @@ export function EducatorActivityGrid({ schoolId, teacherIndex, weeks }) {
 // pill. A pill is a one-week fact, so it always describes the last week in the
 // range (named in the header's hover text). Weekly goal and Last Active share
 // one right-aligned column, 44px apart.
-export function EducatorTable({ school, weeks, searchable = false, drilldown = true, goalColumn = false }) {
+// `drilldownView` 'calendar' (2026-10-09) swaps the dot grid for the six-month calendar.
+export function EducatorTable({ school, weeks, searchable = false, drilldown = true, goalColumn = false, drilldownView = 'grid' }) {
   const statusWeek = weeks[weeks.length - 1]
   const rosterNames = useMemo(() => getRosterNames(school.id), [school.id])
   const [openIdx, setOpenIdx] = useState(null)
@@ -592,7 +606,9 @@ export function EducatorTable({ school, weeks, searchable = false, drilldown = t
                 {drilldown && open && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={2} className="pl-10 py-3 bg-brand-bg/50">
-                      <EducatorActivityGrid schoolId={school.id} teacherIndex={r.i} weeks={weeks} />
+                      {drilldownView === 'calendar'
+                        ? <EducatorCalendar dayMap={educatorDayMap(school.id, r.i)} />
+                        : <EducatorActivityGrid schoolId={school.id} teacherIndex={r.i} weeks={weeks} />}
                     </TableCell>
                   </TableRow>
                 )}
@@ -612,7 +628,7 @@ export function EducatorTable({ school, weeks, searchable = false, drilldown = t
 
 // Shared content for both overlay shells. The range comes from the page's
 // date range button (2026-10-02), so the modal has no tabs of its own.
-function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false }) {
+function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid' }) {
   const current = useMemo(() => getWeekData(school.id, weeks[weeks.length - 1], GOAL), [school.id, weeks])
 
   const weeksMet = useMemo(() => weeks.filter(w => {
@@ -675,7 +691,7 @@ function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, go
       </div>
 
       <div className={bordered ? 'rounded-xl border border-brand-border bg-white overflow-hidden' : ''}>
-        <EducatorTable school={school} weeks={weeks} drilldown={drilldown} goalColumn={goalColumn} />
+        <EducatorTable school={school} weeks={weeks} drilldown={drilldown} goalColumn={goalColumn} drilldownView={drilldownView} />
       </div>
     </div>
   )
@@ -698,7 +714,7 @@ function SitePanel({ school, weeks, onClose }) {
   )
 }
 
-export function SiteDetailModal({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false }) {
+export function SiteDetailModal({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid' }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <motion.div
@@ -711,7 +727,7 @@ export function SiteDetailModal({ school, weeks, onClose, drilldown = true, titl
       >
         {/* The scroll area sits inside the rounded, clipped shell so the scrollbar can't square off the right corners. */}
         <div className="thin-scroll max-h-[85vh] overflow-y-auto p-6">
-          <SiteDetailContent school={school} weeks={weeks} onClose={onClose} drilldown={drilldown} title={title} goalColumn={goalColumn} bordered={bordered} />
+          <SiteDetailContent school={school} weeks={weeks} onClose={onClose} drilldown={drilldown} title={title} goalColumn={goalColumn} bordered={bordered} drilldownView={drilldownView} />
         </div>
       </motion.div>
     </div>

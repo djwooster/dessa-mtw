@@ -13,6 +13,7 @@ import { useRole } from '../lib/roleContext'
 import { useEngagementConcept } from '../lib/engagementConceptContext'
 import StackedGoalChart from '../components/engagement/StackedGoalChart'
 import EngagementOverviewD from '../components/engagement/EngagementOverviewD'
+import PrintReport from '../components/engagement/PrintReport'
 import WeeklyBarChart from '../components/engagement/WeeklyBarChart'
 import MonthBarChart, { MONTHS, DEFAULT_MONTH_IDX, weekRangeLabel } from '../components/engagement/MonthBarChart'
 import {
@@ -36,7 +37,7 @@ const MONTH_BACK = 4
 // in the district (with a Site column and paging); otherwise one site's.
 const PAGE_SIZE = 25
 
-function SiteEducators({ school, weeks, showDots = true, showDays = true, drilldown = true, rangeBadge = null }) {
+function SiteEducators({ school, weeks, showDots = true, showDays = true, drilldown = true, rangeBadge = null, goalColumn = false }) {
   const latest = weeks[weeks.length - 1]
   const weekIdx = schoolWeeks.indexOf(latest)
   const [openKey, setOpenKey] = useState(null)
@@ -50,7 +51,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
     const data = getWeekData(sc.id, latest, GOAL).teachers
     return names.map((name, i) => {
       const days = data[i].daysActive
-      return { key: `${sc.id}-${i}`, sc, name, i, days, active: new Set(activeDayOrder(sc.id, i, weekIdx).slice(0, days)), last: getLastActive(sc.id, i) }
+      return { key: `${sc.id}-${i}`, sc, name, i, days, met: data[i].metGoal, active: new Set(activeDayOrder(sc.id, i, weekIdx).slice(0, days)), last: getLastActive(sc.id, i) }
     })
   }), [school, latest, weekIdx])
 
@@ -60,6 +61,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
       .filter(r => !q || r.name.toLowerCase().includes(q) || r.sc.name.toLowerCase().includes(q))
       .sort((a, b) => {
         const dir = sort.dir === 'asc' ? 1 : -1
+        if (sort.key === 'goal') return dir * (Number(a.met) - Number(b.met)) || a.name.localeCompare(b.name)
         if (sort.key === 'days') return dir * (a.days - b.days) || a.name.localeCompare(b.name)
         if (sort.key === 'last') return dir * (agoRank(a.last) - agoRank(b.last) || 0) || a.name.localeCompare(b.name)
         if (sort.key === 'site') return dir * a.sc.name.localeCompare(b.sc.name) || a.name.localeCompare(b.name)
@@ -70,7 +72,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
   const safePage = Math.min(page, pageCount - 1)
   const shown = allSites ? rows.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE) : rows
-  const cols = (allSites ? 5 : 4) - (showDots ? 0 : 1) - (showDays ? 0 : 1)
+  const cols = (allSites ? 5 : 4) - (showDots ? 0 : 1) - (showDays ? 0 : 1) + (goalColumn ? 1 : 0)
 
   const weekStart = parseISO(latest)
   const dayLetters = ['M', 'T', 'W', 'T', 'F']
@@ -100,6 +102,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
               </span>
             </TableHead>}
             {showDays && <TableHead className={`text-[13px] font-medium ${showDots ? '' : 'w-40 text-right'}`}><SortButton label="Days this week" col="days" sort={sort} onSort={k => { setSort(s => nextSort(s, k, 'desc')); setPage(0) }} align={showDots ? undefined : 'right'} /></TableHead>}
+            {goalColumn && <TableHead className="text-[13px] font-medium w-40 text-right"><SortButton label="Weekly goal" col="goal" sort={sort} onSort={k => { setSort(s => nextSort(s, k, 'desc')); setPage(0) }} align="right" /></TableHead>}
             <TableHead className={`text-[13px] font-medium text-right ${showDots ? '' : 'w-40'}`}><SortButton label="Last Active" col="last" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} align="right" /></TableHead>
           </TableRow>
         </TableHeader>
@@ -135,6 +138,13 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
                     </span>
                   </TableCell>}
                   {showDays && <TableCell className={`tabular-nums ${showDots ? '' : 'text-right'}`}>{r.days} of {WEEKDAYS.length}</TableCell>}
+                  {goalColumn && (
+                    <TableCell className="text-right">
+                      <span className={`inline-flex items-center rounded-[5px] px-2 py-0.5 text-xs font-medium ${r.met ? 'bg-org-green-100/85 text-org-green-800' : 'bg-brand-bg text-brand-text'}`}>
+                        {r.met ? 'Goal met' : 'Not yet'}
+                      </span>
+                    </TableCell>
+                  )}
                   <TableCell className="text-brand-subtext text-right">{r.last}</TableCell>
                 </TableRow>
                 {drilldown && open && (
@@ -344,12 +354,23 @@ export default function ReportEngagement() {
   const rangeHeader = isC || isD
   // Concept A (2026-10-07): the weekly goal is a quiet info badge, not a link, and the subtext is gone.
   const isA = engagementConcept === 'a' && !selectedSite
+  // A Site Leader in Concept A (2026-10-09) gets the same quiet header: no goal link, no subtext.
+  const isAHeader = engagementConcept === 'a' && (isA || isSiteLeaderView)
   // Concept B (2026-10-07) gets the same goal badge and no subtext.
   // Concept C gets it on both its district view and its site page (2026-10-07).
   // A's pill removed 2026-10-08: its graph title now states the goal instead.
   const goalBadge = (engagementConcept === 'b' && !selectedSite) || engagementConcept === 'c'
   const latestRow = analytics[analytics.length - 1]
   const lessonsInRange = analytics.reduce((sum, r) => sum + r.lessons, 0)
+
+  // Print (2026-10-08, Concept A): the page prints through PrintReport. The PDF's file name comes from document.title.
+  const printTitle = `Weekly goal, ${rangeLabel(weeks)}`
+  function printReport(then) {
+    const prevTitle = document.title
+    document.title = printTitle
+    window.addEventListener('afterprint', () => { document.title = prevTitle; then?.() }, { once: true })
+    window.print()
+  }
 
   const monthControls = (
     <div className="flex items-center gap-1 shrink-0">
@@ -405,13 +426,13 @@ export default function ReportEngagement() {
                 </Tooltip.Root>
               </Tooltip.Provider>
             )}
-            {!rangeHeader && !goalBadge && !isA && (
+            {!rangeHeader && !goalBadge && !isAHeader && (
               <Link to="/settings" className="text-sm text-interactive-blue hover:underline">
                 Weekly goal: {GOAL} lessons per week
               </Link>
             )}
           </div>
-          {!rangeHeader && !goalBadge && !isA && (
+          {!rangeHeader && !goalBadge && !isAHeader && (
             <p className="text-sm text-brand-subtext mt-1">
               {selectedSite ? `Educators at ${selectedSite.name}. Open an educator to see their activity.` : 'This report shows Move This World lesson completion across your district, by site.'}
             </p>
@@ -493,7 +514,7 @@ export default function ReportEngagement() {
               <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
                 <Download size={13} className="text-brand-subtext" /> Export CSV
               </button>
-              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { window.print(); setMenuOpen(false) }}>
+              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { printReport(); setMenuOpen(false) }}>
                 <Printer size={13} className="text-brand-subtext" /> Print
               </button>
             </div>
@@ -510,12 +531,12 @@ export default function ReportEngagement() {
             className="bg-white rounded-xl border border-brand-border p-5 mb-6"
           >
             <div className="flex items-center justify-between gap-4 mb-4">
-              <p className="text-base font-semibold text-brand-text">{stacked || graph === 'b' ? 'Educators who met their weekly goal' : '% of educators meeting goal'}</p>
+              <p className="text-base font-semibold text-brand-text">{stacked || graph === 'b' ? 'Educators who met their weekly goal' : engagementConcept === 'a' ? 'Educators completing 3 lessons a week' : '% of educators meeting goal'}</p>
               {graph === 'b' ? monthControls : rangeControls}
             </div>
             {graph === 'b' ? <MonthBarChart schoolId={selectedSite.id} weeks={month.weeks} /> : stacked ? <StackedGoalChart schoolId={selectedSite.id} weeks={weeks} /> : <SiteWeeklyChart schoolId={selectedSite.id} weeks={weeks} />}
           </motion.div>
-          <SiteEducators school={selectedSite} weeks={weeks} showDots={engagementConcept !== 'c' && !isSiteLeaderView} showDays={!isSiteLeaderView} drilldown={!isSiteLeaderView} />
+          <SiteEducators school={selectedSite} weeks={weeks} showDots={engagementConcept !== 'c' && !isSiteLeaderView} showDays={!isSiteLeaderView} drilldown={!isSiteLeaderView} goalColumn={isSiteLeaderView && engagementConcept === 'a'} />
         </>
       ) : (
         <>
@@ -587,8 +608,14 @@ export default function ReportEngagement() {
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.14 }}
           className="bg-white rounded-xl border border-brand-border overflow-hidden"
         >
-          <div className="px-4 py-3 border-b border-brand-border">
-            <SearchField value={query} onChange={setQuery} placeholder="Search sites" bg="bg-brand-bg/60" height="h-8" />
+          <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-brand-border">
+            <div className="flex-1 min-w-0">
+              <SearchField value={query} onChange={setQuery} placeholder="Search sites" bg="bg-brand-bg/60" height="h-8" />
+            </div>
+            {/* Range chip (2026-10-09). The counts are for the latest week in the range. */}
+            <span className="inline-flex items-center gap-1.5 shrink-0 text-[13px] font-medium text-brand-subtext tabular-nums">
+              <Calendar size={12} aria-hidden="true" /> {rangeLabel(weeks)}
+            </span>
           </div>
           <Table>
             <TableHeader>
@@ -618,8 +645,26 @@ export default function ReportEngagement() {
         </>
       )}
 
-      {/* Educator drill-down (activity grid) switched off 2026-10-08: the modal shows Last Active only for now. Remove drilldown={false} to bring it back. */}
-      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Educators meeting goal" drilldown={false} goalColumn bordered />}
+      {/* Educator drill-down: Concept A's modal opens a six-month calendar per educator (2026-10-09); other concepts stay off since 2026-10-08. */}
+      {isA && (
+        <PrintReport
+          title="Weekly goal"
+          rangeText={rangeLabel(weeks)}
+          goalText={`Goal: ${GOAL} lessons per week`}
+          generated={format(new Date(), 'MMM d, yyyy')}
+          stats={[
+            { label: 'Educators on goal', value: `${latestRow.met} of ${latestRow.total}`, note: `Latest week, ${weekRangeLabel(latestRow.week)}` },
+            { label: 'Share on goal', value: `${latestRow.pct}%`, note: 'Latest week' },
+            { label: 'Sites', value: schools.length, note: 'In your district' },
+          ]}
+          chartTitle={graph === 'b' ? 'Educators who met their weekly goal' : 'Educators completing 3 lessons a week'}
+          chart={graph === 'b' ? <MonthBarChart weeks={month.weeks} /> : <SiteGoalLineChart weeks={weeks} metric="educators" />}
+          columns={['Site', 'Educators meeting goal']}
+          rows={siteRows.map(r => ({ name: r.school.name, value: `${r.meetingGoal} of ${r.totalTeachers}` }))}
+        />
+      )}
+
+      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Educators meeting goal" drilldown={engagementConcept === 'a'} drilldownView="calendar" goalColumn bordered />}
     </div>
   )
 }
