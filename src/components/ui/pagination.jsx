@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, MoreHorizontal } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
 const Pagination = ({ className, ...props }) => (
@@ -69,4 +69,62 @@ const PaginationEllipsis = ({ className, ...props }) => (
   </span>
 )
 
-export { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis }
+// Which page numbers to show: first, last, and the current page with one on each side,
+// with 'ellipsis' where numbers are skipped. Moved here from ResourceLibrary (2026-10-12)
+// so every table uses the same logic.
+export function pageWindow(current, total) {
+  const shown = new Set([1, total, current - 1, current, current + 1])
+  const pages = [...shown].filter(p => p >= 1 && p <= total).sort((a, b) => a - b)
+  const withGaps = []
+  pages.forEach((p, i) => {
+    if (i > 0 && p - pages[i - 1] > 1) withGaps.push('ellipsis')
+    withGaps.push(p)
+  })
+  return withGaps
+}
+
+export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
+
+// The Resources page footer as one component (2026-10-12): the page numbers at the left, a rows-per-page
+// select at the right. The whole footer hides when everything fits on one page at the smallest size, so
+// a table with a handful of rows stays clean. Pass `className` to match the table's own padding.
+function PaginationBar({ page, pageSize, total, onPage, onPageSize, className }) {
+  if (total <= PAGE_SIZE_OPTIONS[0]) return null
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  return (
+    <div className={cn('flex items-center justify-between', className)}>
+      <Pagination>
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious aria-label="Previous page" onClick={() => onPage(Math.max(1, page - 1))} disabled={page === 1} />
+          </PaginationItem>
+          {pageWindow(page, totalPages).map((p, i) =>
+            p === 'ellipsis' ? (
+              <PaginationItem key={`ellipsis-${i}`}><PaginationEllipsis /></PaginationItem>
+            ) : (
+              <PaginationItem key={p}>
+                <PaginationLink isActive={p === page} aria-label={`Page ${p}`} onClick={() => onPage(p)}>{p}</PaginationLink>
+              </PaginationItem>
+            )
+          )}
+          <PaginationItem>
+            <PaginationNext aria-label="Next page" onClick={() => onPage(Math.min(totalPages, page + 1))} disabled={page === totalPages} />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+      <div className="relative">
+        <select
+          value={pageSize}
+          onChange={e => onPageSize(Number(e.target.value))}
+          aria-label="Rows per page"
+          className="appearance-none pl-3 pr-8 h-9 text-sm border border-brand-border rounded-md bg-white text-brand-text focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+        >
+          {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+        </select>
+        <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" aria-hidden="true" />
+      </div>
+    </div>
+  )
+}
+
+export { PaginationBar, Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis }

@@ -13,6 +13,7 @@ import { useRole } from '../lib/roleContext'
 import { useEngagementConcept } from '../lib/engagementConceptContext'
 import StackedGoalChart, { weekBands } from '../components/engagement/StackedGoalChart'
 import EngagementOverviewD from '../components/engagement/EngagementOverviewD'
+import { PaginationBar } from '../components/ui/pagination'
 import FiltersPanel from '../components/engagement/FiltersPanel'
 import PrintReport from '../components/engagement/PrintReport'
 import WeeklyBarChart from '../components/engagement/WeeklyBarChart'
@@ -284,6 +285,12 @@ export default function ReportEngagement() {
         return dir * (a.pct - b.pct) || a.school.name.localeCompare(b.school.name)
       })
   }, [weeks, query, sort, siteFilter, roleFilter])
+
+  // Sites table paging (2026-10-12): 10 per page, back to page 1 whenever the list changes.
+  const [sitePage, setSitePage] = useState(1)
+  const [sitePageSize, setSitePageSize] = useState(10)
+  useEffect(() => { setSitePage(1) }, [query, sort, siteFilter, roleFilter, weeks, sitePageSize])
+  const pagedSiteRows = siteRows.slice((sitePage - 1) * sitePageSize, sitePage * sitePageSize)
 
   function openSite(school) {
     if (engagementConcept === 'c') setSelectedSite(school)
@@ -620,7 +627,7 @@ export default function ReportEngagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {siteRows.map(({ school, meetingGoal, totalTeachers, pct }) => (
+              {pagedSiteRows.map(({ school, meetingGoal, totalTeachers, pct }) => (
                 <TableRow key={school.id} onClick={() => openSite(school)} className="cursor-pointer">
                   <TableCell className="font-medium">
                     <button type="button" onClick={e => { e.stopPropagation(); openSite(school) }} className="text-left text-[13px] text-[#134fb2] hover:underline transition-colors">{school.name}</button>
@@ -640,6 +647,7 @@ export default function ReportEngagement() {
               )}
             </TableBody>
           </Table>
+          <PaginationBar page={sitePage} pageSize={sitePageSize} total={siteRows.length} onPage={setSitePage} onPageSize={setSitePageSize} className="px-4 py-3 border-t border-brand-border" />
         </motion.div>
       )}
         </>
@@ -664,7 +672,7 @@ export default function ReportEngagement() {
         />
       )}
 
-      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Users meeting goal" drilldown={engagementConcept === 'a'} drilldownView="calendar" role={roleFilter} dateFilter={engagementConcept === 'a' ? { start: appliedFilters.start, end: appliedFilters.end, min: FILTER_MIN, max: FILTER_MAX, onChange: setReportDates } : null} showMenu={engagementConcept === 'a'} searchable={engagementConcept === 'a'} goalColumn bordered />}
+      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Users meeting goal" drilldown={engagementConcept === 'a'} drilldownView="calendar" role={roleFilter} dateFilter={engagementConcept === 'a' ? { start: appliedFilters.start, end: appliedFilters.end, min: FILTER_MIN, max: FILTER_MAX, onChange: setReportDates } : null} showMenu={engagementConcept === 'a'} searchable={engagementConcept === 'a'} paginate={engagementConcept === 'a'} goalColumn bordered />}
     </div>
   )
 }

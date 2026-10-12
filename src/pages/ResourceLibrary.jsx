@@ -7,7 +7,7 @@ import {
 import * as Popover from '@radix-ui/react-popover'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import {
-  Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis,
+  Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis, pageWindow,
 } from '../components/ui/pagination'
 
 // ─── Resource Library ───────────────────────────────────────────────────────
@@ -181,17 +181,6 @@ const FOUNDATIONAL_PRACTICES_RESOURCES = [
 ]
 
 const TABLE_PAGE_SIZE = 20
-
-function pageWindow(current, total) {
-  const shown = new Set([1, total, current - 1, current, current + 1])
-  const pages = [...shown].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b)
-  const withGaps = []
-  pages.forEach((p, i) => {
-    if (i > 0 && p - pages[i - 1] > 1) withGaps.push('ellipsis')
-    withGaps.push(p)
-  })
-  return withGaps
-}
 
 function SortableHead({ label, sortKey, activeKey, dir, onSort }) {
   const active = activeKey === sortKey

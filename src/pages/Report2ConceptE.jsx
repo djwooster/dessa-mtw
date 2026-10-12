@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, addDays } from 'date-fns'
 import { X, MoreHorizontal, Download, Printer, ChevronRight, Calendar, Search, ArrowUp, ArrowDown, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
 import { schools, schoolWeeks, getWeekData, MOST_RECENT_WEEK } from '../lib/report2Data'
+import { PaginationBar } from '../components/ui/pagination'
 import { DatePicker } from '../components/ui/date-picker'
 import EducatorCalendar from '../components/engagement/EducatorCalendar'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
@@ -533,12 +534,14 @@ export function EducatorActivityGrid({ schoolId, teacherIndex, weeks }) {
 // range (named in the header's hover text). Weekly goal and Last Active share
 // one right-aligned column, 44px apart.
 // `drilldownView` 'calendar' (2026-10-09) swaps the dot grid for the six-month calendar.
-export function EducatorTable({ school, weeks, searchable = false, drilldown = true, goalColumn = false, drilldownView = 'grid', role = 'all' }) {
+export function EducatorTable({ school, weeks, searchable = false, drilldown = true, goalColumn = false, drilldownView = 'grid', role = 'all', paginate = false }) {
   const statusWeek = weeks[weeks.length - 1]
   const rosterNames = useMemo(() => getRosterNames(school.id), [school.id])
   const [openIdx, setOpenIdx] = useState(null)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState({ key: 'name', dir: 'asc' })
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const goalData = useMemo(() => getWeekData(school.id, statusWeek, GOAL).teachers, [school.id, statusWeek])
 
@@ -555,6 +558,10 @@ export function EducatorTable({ school, weeks, searchable = false, drilldown = t
         return dir * a.name.localeCompare(b.name)
       })
   }, [rosterNames, school.id, query, sort, goalData, role])
+
+  // Back to page 1 whenever the list itself changes, and never past the last page.
+  useEffect(() => { setPage(1) }, [query, sort, role, school.id, pageSize])
+  const pagedRows = paginate ? rows.slice((page - 1) * pageSize, page * pageSize) : rows
 
   return (
     <div>
@@ -582,7 +589,7 @@ export function EducatorTable({ school, weeks, searchable = false, drilldown = t
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map(r => {
+          {pagedRows.map(r => {
             const open = openIdx === r.i
             return (
               <Fragment key={r.name}>
@@ -629,6 +636,7 @@ export function EducatorTable({ school, weeks, searchable = false, drilldown = t
           )}
         </TableBody>
       </Table>
+      {paginate && <PaginationBar page={page} pageSize={pageSize} total={rows.length} onPage={setPage} onPageSize={setPageSize} className="px-4 py-3 border-t border-brand-border" />}
     </div>
   )
 }
@@ -673,7 +681,7 @@ function SiteMenu({ school, weeks, role }) {
   )
 }
 
-function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid', role = 'all', dateFilter = null, showMenu = false, searchable = false }) {
+function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid', role = 'all', dateFilter = null, showMenu = false, searchable = false, paginate = false }) {
   const current = useMemo(() => getWeekData(school.id, weeks[weeks.length - 1], GOAL), [school.id, weeks])
 
   const weeksMet = useMemo(() => weeks.filter(w => {
@@ -752,7 +760,7 @@ function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, go
       </div>
 
       <div className={bordered ? 'rounded-xl border border-brand-border bg-white overflow-hidden' : ''}>
-        <EducatorTable school={school} weeks={weeks} drilldown={drilldown} goalColumn={goalColumn} drilldownView={drilldownView} role={role} searchable={searchable} />
+        <EducatorTable school={school} weeks={weeks} drilldown={drilldown} goalColumn={goalColumn} drilldownView={drilldownView} role={role} searchable={searchable} paginate={paginate} />
       </div>
     </div>
   )
@@ -775,7 +783,7 @@ function SitePanel({ school, weeks, onClose }) {
   )
 }
 
-export function SiteDetailModal({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid', role = 'all', dateFilter = null, showMenu = false, searchable = false }) {
+export function SiteDetailModal({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid', role = 'all', dateFilter = null, showMenu = false, searchable = false, paginate = false }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <motion.div
@@ -788,7 +796,7 @@ export function SiteDetailModal({ school, weeks, onClose, drilldown = true, titl
       >
         {/* The scroll area sits inside the rounded, clipped shell so the scrollbar can't square off the right corners. */}
         <div className="thin-scroll max-h-[85vh] overflow-y-auto p-6">
-          <SiteDetailContent school={school} weeks={weeks} onClose={onClose} drilldown={drilldown} title={title} goalColumn={goalColumn} bordered={bordered} drilldownView={drilldownView} role={role} dateFilter={dateFilter} showMenu={showMenu} searchable={searchable} />
+          <SiteDetailContent school={school} weeks={weeks} onClose={onClose} drilldown={drilldown} title={title} goalColumn={goalColumn} bordered={bordered} drilldownView={drilldownView} role={role} dateFilter={dateFilter} showMenu={showMenu} searchable={searchable} paginate={paginate} />
         </div>
       </motion.div>
     </div>
