@@ -83,7 +83,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
   const dayLetters = ['M', 'T', 'W', 'T', 'F']
 
   return (
-    <div className="bg-white rounded-xl border border-brand-border overflow-hidden">
+    <div className={`bg-white rounded-xl border border-brand-border overflow-hidden ${fStyle ? '[&_td]:text-[13px]' : ''}`}>
       <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-brand-border">
         <div className="flex-1 min-w-0">
           <SearchField value={query} onChange={v => { setQuery(v); setPage(0) }} placeholder="Search users" bg="bg-brand-bg/60" />
@@ -159,7 +159,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={cols} className="pl-10 py-3 bg-brand-bg/50">
                       {fStyle
-                        ? <ContributionGraph name={r.name} role={r.role} daysActive={r.days} dayMap={educatorDayMap(r.sc.id, r.i)} />
+                        ? <ContributionGraph dayMap={educatorDayMap(r.sc.id, r.i)} />
                         : <EducatorActivityGrid schoolId={r.sc.id} teacherIndex={r.i} weeks={weeks} />}
                     </TableCell>
                   </TableRow>
@@ -332,7 +332,7 @@ export default function ReportEngagement() {
   // presets (the shared Tabs control) plus the custom-range calendar button.
   // Concept A uses the full weekly date picker (2026-10-08) in place of the tabs and calendar icon.
   // Concept A has no range button now: its dates live in the Filters panel.
-  const rangeControls = engagementConcept === 'a' ? null : (
+  const rangeControls = isAFilters ? null : (
     <div className="flex items-center gap-1 shrink-0">
       <Tabs value={rangeKey} onValueChange={k => { setRangeKey(k); setCustomWeeks(null) }}>
         <TabsList className="p-0.5">
@@ -547,7 +547,7 @@ export default function ReportEngagement() {
             className="bg-white rounded-xl border border-brand-border p-5 mb-6"
           >
             <div className="flex items-center justify-between gap-4 mb-4">
-              <p className="text-base font-semibold text-brand-text">{stacked || graph === 'b' ? 'Users who met their weekly goal' : engagementConcept === 'a' ? 'Users completing 3 lessons a week' : '% of users meeting goal'}</p>
+              <p className="text-base font-semibold text-brand-text">{stacked || graph === 'b' ? 'Users who met their weekly goal' : isAFilters ? 'Users completing 3 lessons a week' : '% of users meeting goal'}</p>
               {graph === 'b' ? monthControls : rangeControls}
             </div>
             {graph === 'b' ? <MonthBarChart schoolId={selectedSite.id} weeks={month.weeks} role={roleFilter} /> : stacked ? <StackedGoalChart schoolId={selectedSite.id} weeks={weeks} /> : <SiteWeeklyChart schoolId={selectedSite.id} weeks={weeks} role={roleFilter} />}

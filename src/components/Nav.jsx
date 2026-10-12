@@ -433,6 +433,7 @@ export default function Nav() {
               </Popover.Portal>
             </Popover.Root>
           )}
+          {/* Engagement concept switcher removed 2026-10-12: Concept F is the decided design (context default 'f').
           {location.pathname === '/reports/engagement' && (
             <Popover.Root>
               <Popover.Trigger asChild>
@@ -467,6 +468,7 @@ export default function Nav() {
               </Popover.Portal>
             </Popover.Root>
           )}
+          */}
           <button className="text-brand-subtext hover:text-brand-text transition-colors p-1.5 rounded hover:bg-brand-bg">
             <HelpCircle size={16} />
           </button>
