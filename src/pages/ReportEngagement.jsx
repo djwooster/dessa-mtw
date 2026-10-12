@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { parseISO, addDays, format } from 'date-fns'
-import { MoreHorizontal, Download, Printer, Target, ChevronRight, ChevronLeft, ChevronDown, Check, Info, Calendar } from 'lucide-react'
+import { MoreHorizontal, Download, Printer, ExternalLink, ChevronRight, ChevronLeft, ChevronDown, Check, Info, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import { schools, schoolWeeks, getWeekData, USER_ROLES } from '../lib/report2Data'
@@ -453,17 +453,17 @@ export default function ReportEngagement() {
                 </Tooltip.Root>
               </Tooltip.Provider>
             )}
-            {isF && (
-              <Link to="/settings" className="inline-flex items-center gap-1.5 text-[13px] text-brand-subtext hover:text-brand-text hover:underline transition-colors">
-                <Target size={13} aria-hidden="true" /> Weekly goal: {GOAL} lessons per week
-              </Link>
-            )}
             {!rangeHeader && !goalBadge && !isAHeader && (
               <Link to="/settings" className="text-sm text-interactive-blue hover:underline">
                 Weekly goal: {GOAL} lessons per week
               </Link>
             )}
           </div>
+          {isF && (
+            <Link to="/settings" className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-brand-subtext hover:text-brand-text hover:underline transition-colors">
+              Weekly goal: {GOAL} lessons per week <ExternalLink size={12} aria-hidden="true" />
+            </Link>
+          )}
           {!rangeHeader && !goalBadge && !isAHeader && (
             <p className="text-sm text-brand-subtext mt-1">
               {selectedSite ? `Users at ${selectedSite.name}. Open a user to see their activity.` : 'This report shows Move This World lesson completion across your district, by site.'}
