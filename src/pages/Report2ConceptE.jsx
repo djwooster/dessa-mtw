@@ -560,7 +560,7 @@ export function EducatorTable({ school, weeks, searchable = false, drilldown = t
     <div>
       {searchable && (
         <div className="px-4 py-3 border-b border-brand-border">
-          <SearchField value={query} onChange={setQuery} placeholder="Search users" />
+          <SearchField value={query} onChange={setQuery} placeholder="Search users" bg="bg-brand-bg/60" />
         </div>
       )}
       <Table>
@@ -658,8 +658,8 @@ function SiteMenu({ school, weeks, role }) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <button aria-label="More options" className="flex items-center justify-center w-8 h-8 rounded-md text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors">
-          <MoreHorizontal size={16} />
+        <button aria-label="More options" className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all">
+          <MoreHorizontal size={13} />
         </button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -673,7 +673,7 @@ function SiteMenu({ school, weeks, role }) {
   )
 }
 
-function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid', role = 'all', dateFilter = null, showMenu = false }) {
+function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid', role = 'all', dateFilter = null, showMenu = false, searchable = false }) {
   const current = useMemo(() => getWeekData(school.id, weeks[weeks.length - 1], GOAL), [school.id, weeks])
 
   const weeksMet = useMemo(() => weeks.filter(w => {
@@ -709,12 +709,15 @@ function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, go
           </div>
           <h3 className="text-lg font-semibold text-brand-text">{school.name}</h3>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-4">
           {!dateFilter && <DateRange weeks={weeks} />}
-          {showMenu && <SiteMenu school={school} weeks={weeks} role={role} />}
-          <button onClick={onClose} aria-label="Close" className="text-brand-subtext hover:text-brand-text p-1 rounded-lg hover:bg-brand-bg transition-colors shrink-0">
-            <X size={18} />
-          </button>
+          {/* The three-dot menu sits under the close button (2026-10-12). */}
+          <div className="flex flex-col items-center gap-1.5 shrink-0">
+            <button onClick={onClose} aria-label="Close" className="text-brand-subtext hover:text-brand-text p-1 rounded-lg hover:bg-brand-bg transition-colors">
+              <X size={18} />
+            </button>
+            {showMenu && <SiteMenu school={school} weeks={weeks} role={role} />}
+          </div>
         </div>
       </div>
 
@@ -749,7 +752,7 @@ function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, go
       </div>
 
       <div className={bordered ? 'rounded-xl border border-brand-border bg-white overflow-hidden' : ''}>
-        <EducatorTable school={school} weeks={weeks} drilldown={drilldown} goalColumn={goalColumn} drilldownView={drilldownView} role={role} />
+        <EducatorTable school={school} weeks={weeks} drilldown={drilldown} goalColumn={goalColumn} drilldownView={drilldownView} role={role} searchable={searchable} />
       </div>
     </div>
   )
@@ -772,7 +775,7 @@ function SitePanel({ school, weeks, onClose }) {
   )
 }
 
-export function SiteDetailModal({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid', role = 'all', dateFilter = null, showMenu = false }) {
+export function SiteDetailModal({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid', role = 'all', dateFilter = null, showMenu = false, searchable = false }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <motion.div
@@ -785,7 +788,7 @@ export function SiteDetailModal({ school, weeks, onClose, drilldown = true, titl
       >
         {/* The scroll area sits inside the rounded, clipped shell so the scrollbar can't square off the right corners. */}
         <div className="thin-scroll max-h-[85vh] overflow-y-auto p-6">
-          <SiteDetailContent school={school} weeks={weeks} onClose={onClose} drilldown={drilldown} title={title} goalColumn={goalColumn} bordered={bordered} drilldownView={drilldownView} role={role} dateFilter={dateFilter} showMenu={showMenu} />
+          <SiteDetailContent school={school} weeks={weeks} onClose={onClose} drilldown={drilldown} title={title} goalColumn={goalColumn} bordered={bordered} drilldownView={drilldownView} role={role} dateFilter={dateFilter} showMenu={showMenu} searchable={searchable} />
         </div>
       </motion.div>
     </div>

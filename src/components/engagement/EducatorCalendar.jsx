@@ -60,37 +60,37 @@ export default function EducatorCalendar({ dayMap }) {
   const last = months[WINDOW - 1]
 
   return (
-    <div className="pr-2">
-      <div className="flex items-center justify-between mb-3">
-        <button
-          type="button"
-          onClick={() => setStart(s => s - 1)}
-          disabled={start === 0}
-          aria-label="Earlier months"
-          className="p-1 rounded border border-brand-border hover:bg-brand-border/60 disabled:opacity-25 disabled:hover:bg-transparent transition-colors"
-        >
-          <ChevronLeft size={14} className="text-brand-subtext" />
-        </button>
-        <span className="text-xs font-medium text-brand-subtext" aria-live="polite">
+    <div className="flex items-center gap-3 pr-2">
+      <button
+        type="button"
+        onClick={() => setStart(s => s - 1)}
+        disabled={start === 0}
+        aria-label="Earlier months"
+        className="shrink-0 p-1 rounded border border-brand-border hover:bg-brand-border/60 disabled:opacity-25 disabled:hover:bg-transparent transition-colors"
+      >
+        <ChevronLeft size={14} className="text-brand-subtext" />
+      </button>
+      <div className="flex-1 min-w-0">
+        <span className="sr-only" aria-live="polite">
           {monthName(first, { month: 'short' })} to {monthName(last, { month: 'short', year: 'numeric' })}
         </span>
-        <button
-          type="button"
-          onClick={() => setStart(s => s + 1)}
-          disabled={start === maxStart}
-          aria-label="Later months"
-          className="p-1 rounded border border-brand-border hover:bg-brand-border/60 disabled:opacity-25 disabled:hover:bg-transparent transition-colors"
-        >
-          <ChevronRight size={14} className="text-brand-subtext" />
-        </button>
+        <div className="grid grid-cols-3 gap-x-6">
+          {months.map(m => <MonthGrid key={m.toISOString()} date={m} dayMap={dayMap} />)}
+        </div>
+        <div className="flex justify-end items-center gap-x-5 mt-3 text-xs text-brand-subtext">
+          <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-dessa-teal" /> Lesson completed</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-brand-border" /> No lesson</span>
+        </div>
       </div>
-      <div className="grid grid-cols-3 gap-x-6">
-        {months.map(m => <MonthGrid key={m.toISOString()} date={m} dayMap={dayMap} />)}
-      </div>
-      <div className="flex justify-end items-center gap-x-5 mt-3 text-xs text-brand-subtext">
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-dessa-teal" /> Lesson completed</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-brand-border" /> No lesson</span>
-      </div>
+      <button
+        type="button"
+        onClick={() => setStart(s => s + 1)}
+        disabled={start === maxStart}
+        aria-label="Later months"
+        className="shrink-0 p-1 rounded border border-brand-border hover:bg-brand-border/60 disabled:opacity-25 disabled:hover:bg-transparent transition-colors"
+      >
+        <ChevronRight size={14} className="text-brand-subtext" />
+      </button>
     </div>
   )
 }

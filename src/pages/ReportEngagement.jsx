@@ -664,7 +664,7 @@ export default function ReportEngagement() {
         />
       )}
 
-      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Users meeting goal" drilldown={engagementConcept === 'a'} drilldownView="calendar" role={roleFilter} dateFilter={engagementConcept === 'a' ? { start: appliedFilters.start, end: appliedFilters.end, min: FILTER_MIN, max: FILTER_MAX, onChange: setReportDates } : null} showMenu={engagementConcept === 'a'} goalColumn bordered />}
+      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Users meeting goal" drilldown={engagementConcept === 'a'} drilldownView="calendar" role={roleFilter} dateFilter={engagementConcept === 'a' ? { start: appliedFilters.start, end: appliedFilters.end, min: FILTER_MIN, max: FILTER_MAX, onChange: setReportDates } : null} showMenu={engagementConcept === 'a'} searchable={engagementConcept === 'a'} goalColumn bordered />}
     </div>
   )
 }
