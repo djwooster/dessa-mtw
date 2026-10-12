@@ -32,9 +32,9 @@ export function weekRangeLabel(week) {
     : `${format(start, 'MMM d')} to ${format(end, 'MMM d')}`
 }
 
-export default function MonthBarChart({ schoolId = null, weeks }) {
+export default function MonthBarChart({ schoolId = null, weeks, role = 'all' }) {
   const [hoverIdx, setHoverIdx] = useState(null)
-  const data = useMemo(() => weeks.map(w => weekBands(schoolId, w)), [schoolId, weeks])
+  const data = useMemo(() => weeks.map(w => weekBands(schoolId, w, role)), [schoolId, weeks, role])
 
   const width = 960
   const height = 300
@@ -50,7 +50,7 @@ export default function MonthBarChart({ schoolId = null, weeks }) {
       viewBox={`0 0 ${width} ${height}`}
       className="w-full h-auto"
       role="img"
-      aria-label={`Educators who met the weekly goal, by week: ${data.map(d => `${weekRangeLabel(d.week)}, ${d.pct}%`).join('; ')}`}
+      aria-label={`Users who met the weekly goal, by week: ${data.map(d => `${weekRangeLabel(d.week)}, ${d.pct}%`).join('; ')}`}
     >
       {Y_TICKS.map(v => (
         <g key={v}>

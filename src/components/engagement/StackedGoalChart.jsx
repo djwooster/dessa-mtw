@@ -15,18 +15,19 @@ const BANDS = [
   { key: 'none', label: 'Not yet active', fill: '#E2E6EA', opacity: 0.6, swatch: 'bg-brand-border/60' },
 ]
 
-export function weekBands(schoolId, week) {
+export function weekBands(schoolId, week, role = 'all') {
   const ids = schoolId == null ? schools.map(s => s.id) : [schoolId]
   const counts = { met: 0, progress: 0, none: 0 }
   ids.forEach(id => {
     getWeekData(id, week, GOAL).teachers.forEach(t => {
+      if (role !== 'all' && t.role !== role) return
       if (t.metGoal) counts.met += 1
       else if (t.daysActive > 0) counts.progress += 1
       else counts.none += 1
     })
   })
   const total = counts.met + counts.progress + counts.none
-  return { week, total, ...counts, pct: Math.round((counts.met / total) * 100) }
+  return { week, total, ...counts, pct: total ? Math.round((counts.met / total) * 100) : 0 }
 }
 
 export default function StackedGoalChart({ schoolId = null, weeks }) {
@@ -53,7 +54,7 @@ export default function StackedGoalChart({ schoolId = null, weeks }) {
         viewBox={`0 0 ${width} ${height}`}
         className="w-full h-auto"
         role="img"
-        aria-label={`Educators by weekly goal status. Latest week: ${latest.met} of ${latest.total} met the goal, ${latest.progress} making progress, ${latest.none} not yet active.`}
+        aria-label={`Users by weekly goal status. Latest week: ${latest.met} of ${latest.total} met the goal, ${latest.progress} making progress, ${latest.none} not yet active.`}
       >
         {Y_TICKS.map(v => (
           <g key={v}>
@@ -102,7 +103,7 @@ export default function StackedGoalChart({ schoolId = null, weeks }) {
 
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 mt-3 pt-3 border-t border-brand-border" aria-live="polite">
         <p className="text-sm text-brand-text">
-          <span className="font-semibold">{shown.met} of {shown.total} educators</span> met the goal
+          <span className="font-semibold">{shown.met} of {shown.total} users</span> met the goal
           <span className="text-brand-subtext"> ({shown.pct}%) · {hoverIdx == null ? 'latest week, ' : 'week of '}{weekLabel(shown.week)}</span>
         </p>
         <ul className="flex items-center gap-4">

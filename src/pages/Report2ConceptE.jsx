@@ -7,11 +7,13 @@
 // the nearest whole week count — "30 days" renders as ~4 weekly points,
 // not 30 daily ones.
 import { useState, useMemo, useRef, useEffect, Fragment } from 'react'
+import * as Popover from '@radix-ui/react-popover'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, addDays } from 'date-fns'
 import { X, MoreHorizontal, Download, Printer, ChevronRight, Calendar, Search, ArrowUp, ArrowDown, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
 import { schools, schoolWeeks, getWeekData, MOST_RECENT_WEEK } from '../lib/report2Data'
+import { DatePicker } from '../components/ui/date-picker'
 import EducatorCalendar from '../components/engagement/EducatorCalendar'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { RangePicker } from '../components/ui/range-picker'
@@ -210,26 +212,28 @@ export function getLastActive(schoolId, teacherIndex) {
 // `metric` (2026-10-08): 'sites' (default) plots the % of sites where every
 // educator met the goal; 'educators' plots the % of all educators who met it,
 // with the tooltip to match.
-export function SiteGoalLineChart({ weeks, metric = 'sites' }) {
+export function SiteGoalLineChart({ weeks, metric = 'sites', siteId = null, role = 'all' }) {
   const [hoverIdx, setHoverIdx] = useState(null)
   const byEducators = metric === 'educators'
 
   const trend = useMemo(() => weeks.map(w => {
     if (byEducators) {
       let met = 0, total = 0
-      schools.forEach(s => {
-        const data = getWeekData(s.id, w, GOAL)
-        met += data.meetingGoal
-        total += data.totalTeachers
+      schools.filter(s => siteId == null || s.id === siteId).forEach(s => {
+        getWeekData(s.id, w, GOAL).teachers.forEach(t => {
+          if (role !== 'all' && t.role !== role) return
+          total += 1
+          if (t.metGoal) met += 1
+        })
       })
-      return { weekStart: w, count: met, total, pct: Math.round((met / total) * 100) }
+      return { weekStart: w, count: met, total, pct: total ? Math.round((met / total) * 100) : 0 }
     }
     const count = schools.filter(s => {
       const data = getWeekData(s.id, w, GOAL)
       return data.meetingGoal === data.totalTeachers
     }).length
     return { weekStart: w, count, total: schools.length, pct: Math.round((count / schools.length) * 100) }
-  }), [weeks, byEducators])
+  }), [weeks, byEducators, siteId, role])
 
   const width = 960
   const height = 280
@@ -260,7 +264,7 @@ export function SiteGoalLineChart({ weeks, metric = 'sites' }) {
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" role="img" aria-label={byEducators ? '% of educators meeting goal, by week' : '% of sites meeting goal, by week'}>
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" role="img" aria-label={byEducators ? '% of users meeting goal, by week' : '% of sites meeting goal, by week'}>
         {Y_TICKS.map(v => {
           const y = padding.top + innerH - (v / 100) * innerH
           return (
@@ -320,7 +324,7 @@ export function SiteGoalLineChart({ weeks, metric = 'sites' }) {
             transform: 'translate(-50%, -130%)',
           }}
         >
-          {hovered.count} of {hovered.total} {byEducators ? 'educators' : 'sites'} · {weekLabel(hovered.weekStart)}
+          {hovered.count} of {hovered.total} {byEducators ? 'users' : 'sites'} · {weekLabel(hovered.weekStart)}
         </div>
       )}
     </div>
@@ -331,13 +335,15 @@ export function SiteGoalLineChart({ weeks, metric = 'sites' }) {
 // meeting goal per week (report2Data.js's existing `pct` field) instead of
 // the district-wide % of sites — a zoomed-in version of the page's chart,
 // sized for a narrower overlay.
-export function SiteWeeklyChart({ schoolId, weeks }) {
+export function SiteWeeklyChart({ schoolId, weeks, role = 'all' }) {
   const [hoverIdx, setHoverIdx] = useState(null)
 
   const trend = useMemo(() => weeks.map(w => {
     const data = getWeekData(schoolId, w, GOAL)
-    return { weekStart: w, pct: data.pct }
-  }), [schoolId, weeks])
+    if (role === 'all') return { weekStart: w, pct: data.pct }
+    const group = data.teachers.filter(t => t.role === role)
+    return { weekStart: w, pct: group.length ? Math.round((group.filter(t => t.metGoal).length / group.length) * 100) : 0 }
+  }), [schoolId, weeks, role])
 
   // Fonts and height stay at the size the chart rendered at in the 672px
   // modal (a 1.2x scale of this 520x200 design canvas); a wider modal just
@@ -379,7 +385,7 @@ export function SiteWeeklyChart({ schoolId, weeks }) {
 
   return (
     <div className="relative" ref={wrapRef}>
-      <svg viewBox={`0 0 ${width} ${height}`} width={boxW} height={height * SCALE} role="img" aria-label="% of this site's educators meeting goal, by week">
+      <svg viewBox={`0 0 ${width} ${height}`} width={boxW} height={height * SCALE} role="img" aria-label="% of this site's users meeting goal, by week">
         {Y_TICKS.map(v => {
           const y = padding.top + innerH - (v / 100) * innerH
           return (
@@ -527,7 +533,7 @@ export function EducatorActivityGrid({ schoolId, teacherIndex, weeks }) {
 // range (named in the header's hover text). Weekly goal and Last Active share
 // one right-aligned column, 44px apart.
 // `drilldownView` 'calendar' (2026-10-09) swaps the dot grid for the six-month calendar.
-export function EducatorTable({ school, weeks, searchable = false, drilldown = true, goalColumn = false, drilldownView = 'grid' }) {
+export function EducatorTable({ school, weeks, searchable = false, drilldown = true, goalColumn = false, drilldownView = 'grid', role = 'all' }) {
   const statusWeek = weeks[weeks.length - 1]
   const rosterNames = useMemo(() => getRosterNames(school.id), [school.id])
   const [openIdx, setOpenIdx] = useState(null)
@@ -539,7 +545,8 @@ export function EducatorTable({ school, weeks, searchable = false, drilldown = t
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return rosterNames
-      .map((name, i) => ({ name, i, last: getLastActive(school.id, i), met: goalData[i].metGoal }))
+      .map((name, i) => ({ name, i, last: getLastActive(school.id, i), met: goalData[i].metGoal, role: goalData[i].role }))
+      .filter(r => role === 'all' || r.role === role)
       .filter(r => !q || r.name.toLowerCase().includes(q))
       .sort((a, b) => {
         const dir = sort.dir === 'asc' ? 1 : -1
@@ -547,19 +554,19 @@ export function EducatorTable({ school, weeks, searchable = false, drilldown = t
         if (sort.key === 'last') return dir * (agoRank(a.last) - agoRank(b.last) || 0) || a.name.localeCompare(b.name)
         return dir * a.name.localeCompare(b.name)
       })
-  }, [rosterNames, school.id, query, sort, goalData])
+  }, [rosterNames, school.id, query, sort, goalData, role])
 
   return (
     <div>
       {searchable && (
         <div className="px-4 py-3 border-b border-brand-border">
-          <SearchField value={query} onChange={setQuery} placeholder="Search educators" />
+          <SearchField value={query} onChange={setQuery} placeholder="Search users" />
         </div>
       )}
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="text-[13px] font-medium"><SortButton label="Educator" col="name" sort={sort} onSort={k => setSort(s => nextSort(s, k))} /></TableHead>
+            <TableHead className="text-[13px] font-medium"><SortButton label="User" col="name" sort={sort} onSort={k => setSort(s => nextSort(s, k))} /></TableHead>
             {goalColumn ? (
               <TableHead className="text-[13px] font-medium">
                 <span className="flex items-center justify-end gap-11">
@@ -617,7 +624,7 @@ export function EducatorTable({ school, weeks, searchable = false, drilldown = t
           })}
           {rows.length === 0 && (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={2} className="text-center text-brand-subtext py-8">No educators match your search.</TableCell>
+              <TableCell colSpan={2} className="text-center text-brand-subtext py-8">No users match your search.</TableCell>
             </TableRow>
           )}
         </TableBody>
@@ -628,7 +635,45 @@ export function EducatorTable({ school, weeks, searchable = false, drilldown = t
 
 // Shared content for both overlay shells. The range comes from the page's
 // date range button (2026-10-02), so the modal has no tabs of its own.
-function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid' }) {
+// Three-dot menu in the site modal header (2026-10-09). One item for now: Export CSV of this site's
+// users (the User role filter applies; goal status is for the last week in the range).
+function SiteMenu({ school, weeks, role }) {
+  const [open, setOpen] = useState(false)
+  function exportCsv() {
+    const week = weeks[weeks.length - 1]
+    const data = getWeekData(school.id, week, GOAL).teachers
+    const body = getRosterNames(school.id)
+      .map((name, i) => ({ name, i }))
+      .filter(({ i }) => role === 'all' || data[i].role === role)
+      .map(({ name, i }) => `"${name}","${data[i].metGoal ? 'Goal met' : 'Not yet'}","${getLastActive(school.id, i)}"`)
+      .join('\n')
+    const url = URL.createObjectURL(new Blob([`User,Weekly goal,Last Active\n${body}`], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${school.name.toLowerCase().replace(/\s+/g, '-')}-users.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    setOpen(false)
+  }
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button aria-label="More options" className="flex items-center justify-center w-8 h-8 rounded-md text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors">
+          <MoreHorizontal size={16} />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content align="end" sideOffset={6} className="z-[60] w-44 bg-white border border-brand-border rounded-lg shadow-lg outline-none py-1">
+          <button onClick={exportCsv} className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-brand-text hover:bg-brand-bg transition-colors">
+            <Download size={13} className="text-brand-subtext" /> Export CSV
+          </button>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}
+
+function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid', role = 'all', dateFilter = null, showMenu = false }) {
   const current = useMemo(() => getWeekData(school.id, weeks[weeks.length - 1], GOAL), [school.id, weeks])
 
   const weeksMet = useMemo(() => weeks.filter(w => {
@@ -664,8 +709,9 @@ function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, go
           </div>
           <h3 className="text-lg font-semibold text-brand-text">{school.name}</h3>
         </div>
-        <div className="flex items-center gap-4">
-          <DateRange weeks={weeks} />
+        <div className="flex items-center gap-2">
+          {!dateFilter && <DateRange weeks={weeks} />}
+          {showMenu && <SiteMenu school={school} weeks={weeks} role={role} />}
           <button onClick={onClose} aria-label="Close" className="text-brand-subtext hover:text-brand-text p-1 rounded-lg hover:bg-brand-bg transition-colors shrink-0">
             <X size={18} />
           </button>
@@ -686,12 +732,24 @@ function SiteDetailContent({ school, weeks, onClose, drilldown = true, title, go
       */}
 
       <div className={bordered ? 'mb-5 rounded-xl border border-brand-border bg-white p-5' : 'mb-5'}>
-        {title && <p className="text-base font-semibold text-brand-text mb-3">{title}</p>}
-        <SiteWeeklyChart schoolId={school.id} weeks={weeks} />
+        {(title || dateFilter) && (
+          <div className="flex items-center justify-between gap-4 mb-3">
+            {title && <p className="text-base font-semibold text-brand-text">{title}</p>}
+            {dateFilter && (
+              // Concept A (2026-10-09): the modal edits the report's own date range, so changing a date here changes it everywhere.
+              <div className="flex items-center gap-2 ml-auto">
+                <DatePicker value={dateFilter.start} onChange={v => v && dateFilter.onChange({ start: v })} min={dateFilter.min} max={dateFilter.end || dateFilter.max} clearable={false} placeholder="Start date" className="h-8 w-40 py-0 text-[13px] rounded-md" />
+                <span className="text-[13px] text-brand-subtext">to</span>
+                <DatePicker value={dateFilter.end} onChange={v => v && dateFilter.onChange({ end: v })} min={dateFilter.start || dateFilter.min} max={dateFilter.max} clearable={false} placeholder="End date" className="h-8 w-40 py-0 text-[13px] rounded-md" />
+              </div>
+            )}
+          </div>
+        )}
+        <SiteWeeklyChart schoolId={school.id} weeks={weeks} role={role} />
       </div>
 
       <div className={bordered ? 'rounded-xl border border-brand-border bg-white overflow-hidden' : ''}>
-        <EducatorTable school={school} weeks={weeks} drilldown={drilldown} goalColumn={goalColumn} drilldownView={drilldownView} />
+        <EducatorTable school={school} weeks={weeks} drilldown={drilldown} goalColumn={goalColumn} drilldownView={drilldownView} role={role} />
       </div>
     </div>
   )
@@ -714,7 +772,7 @@ function SitePanel({ school, weeks, onClose }) {
   )
 }
 
-export function SiteDetailModal({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid' }) {
+export function SiteDetailModal({ school, weeks, onClose, drilldown = true, title, goalColumn = false, bordered = false, drilldownView = 'grid', role = 'all', dateFilter = null, showMenu = false }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <motion.div
@@ -727,7 +785,7 @@ export function SiteDetailModal({ school, weeks, onClose, drilldown = true, titl
       >
         {/* The scroll area sits inside the rounded, clipped shell so the scrollbar can't square off the right corners. */}
         <div className="thin-scroll max-h-[85vh] overflow-y-auto p-6">
-          <SiteDetailContent school={school} weeks={weeks} onClose={onClose} drilldown={drilldown} title={title} goalColumn={goalColumn} bordered={bordered} drilldownView={drilldownView} />
+          <SiteDetailContent school={school} weeks={weeks} onClose={onClose} drilldown={drilldown} title={title} goalColumn={goalColumn} bordered={bordered} drilldownView={drilldownView} role={role} dateFilter={dateFilter} showMenu={showMenu} />
         </div>
       </motion.div>
     </div>
@@ -862,7 +920,7 @@ export default function Report2ConceptE() {
         className="bg-white rounded-xl border border-brand-border p-5 mb-6"
       >
         <div className="flex items-center justify-between mb-4">
-          <p className="text-base font-semibold text-brand-text">{isLeader ? '% of educators meeting goal' : '% of sites meeting goal'}</p>
+          <p className="text-base font-semibold text-brand-text">{isLeader ? '% of users meeting goal' : '% of sites meeting goal'}</p>
           <RangePicker
             presets={RANGE_PRESETS}
             value={rangeKey}

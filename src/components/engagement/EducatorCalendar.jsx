@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
-// Educator drill-down calendar (2026-10-09), brought back from the old Report1C
-// concept ("Ranked List + Calendar Detail"): six months at a time, a day filled
-// in teal when the educator completed a lesson, weekends muted. Six across was
-// too wide for the site modal, so the months wrap into two rows of three.
+// User drill-down calendar (2026-10-09), brought back from the old Report1C
+// concept ("Ranked List + Calendar Detail"): a day filled in teal when the user
+// completed a lesson, weekends muted. Three months in a single row (two rows
+// took too much scrolling in the modal); the arrows page one month at a time.
 // `dayMap` is { 'yyyy-MM-dd': true } for active days (see educatorDayMap).
 const FIRST_MONTH = new Date(2025, 8, 1) // Sep 2025, the start of the data
 const MONTH_COUNT = 9 // Sep 2025 to May 2026
-const WINDOW = 6
+const WINDOW = 3
 const WEEKDAY_HEADS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
 const pad = n => String(n).padStart(2, '0')
@@ -54,7 +54,7 @@ function MonthGrid({ date, dayMap }) {
 
 export default function EducatorCalendar({ dayMap }) {
   const maxStart = MONTH_COUNT - WINDOW
-  const [start, setStart] = useState(maxStart) // open on the most recent six months
+  const [start, setStart] = useState(maxStart) // open on the most recent three months
   const months = Array.from({ length: WINDOW }, (_, i) => monthAt(start + i))
   const first = months[0]
   const last = months[WINDOW - 1]
@@ -84,7 +84,7 @@ export default function EducatorCalendar({ dayMap }) {
           <ChevronRight size={14} className="text-brand-subtext" />
         </button>
       </div>
-      <div className="grid grid-cols-3 gap-x-6 gap-y-5">
+      <div className="grid grid-cols-3 gap-x-6">
         {months.map(m => <MonthGrid key={m.toISOString()} date={m} dayMap={dayMap} />)}
       </div>
       <div className="flex justify-end items-center gap-x-5 mt-3 text-xs text-brand-subtext">

@@ -5,7 +5,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { Calendar } from './calendar'
 import { cn } from '../../lib/utils'
 
-export function DatePicker({ value, onChange, placeholder = 'Pick a date', min, max, className, disabled }) {
+export function DatePicker({ value, onChange, placeholder = 'Pick a date', min, max, className, disabled, clearable = true }) {
   const [open, setOpen] = useState(false)
 
   const selected = value ? parseISO(value) : undefined
@@ -40,6 +40,11 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', min, 
           <Calendar
             mode="single"
             selected={selected}
+            // Open on the picked date (or the earliest allowed one), not on today, and stop
+            // paging at the allowed range so every month shown has days you can pick.
+            defaultMonth={selected ?? minDate}
+            startMonth={minDate}
+            endMonth={maxDate}
             onSelect={d => { onChange(d ? format(d, 'yyyy-MM-dd') : ''); setOpen(false) }}
             disabled={d =>
               (minDate && d < minDate) ||
@@ -47,7 +52,7 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', min, 
             }
             initialFocus
           />
-          {value && (
+          {value && clearable && (
             <div className="px-3 pb-3">
               <button
                 onClick={() => { onChange(''); setOpen(false) }}

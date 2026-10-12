@@ -244,15 +244,15 @@ export default function Report2ConceptF() {
         {!isLeader && (
           <div className="flex flex-col gap-4">
             <SummaryCard label="Sites meeting goal" {...cards.sites} />
-            <SummaryCard label="Educators meeting goal" {...cards.educators} />
-            <SummaryCard label="Consistency" {...cards.consistency} note={`Weeks with ${CONSISTENCY_THRESHOLD}%+ of educators on goal`} />
+            <SummaryCard label="Users meeting goal" {...cards.educators} />
+            <SummaryCard label="Consistency" {...cards.consistency} note={`Weeks with ${CONSISTENCY_THRESHOLD}%+ of users on goal`} />
           </div>
         )}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.08 }}
           className="min-w-0 bg-white rounded-xl border border-brand-border p-5"
         >
-          <p className="text-base font-semibold text-brand-text mb-4">{isLeader ? '% of educators meeting goal' : '% of sites meeting goal'}</p>
+          <p className="text-base font-semibold text-brand-text mb-4">{isLeader ? '% of users meeting goal' : '% of sites meeting goal'}</p>
           {isLeader ? <SiteWeeklyChart schoolId={leaderSchool.id} weeks={weeks} /> : <SiteGoalLineChart weeks={weeks} />}
         </motion.div>
       </div>

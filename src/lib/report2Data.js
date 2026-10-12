@@ -77,6 +77,14 @@ function det(a, b, c) {
   return h % 97
 }
 
+// User roles (2026-10-09), a mock field so the report's User Role filter has something to filter on.
+// Stable per educator: mostly teachers, some counselors, a few administrators.
+export const USER_ROLES = ['Teacher', 'Counselor', 'Administrator']
+export function getRole(schoolId, teacherIndex) {
+  const h = det(schoolId + 30, teacherIndex, 0)
+  return h < 70 ? 'Teacher' : h < 88 ? 'Counselor' : 'Administrator'
+}
+
 function getRoster(schoolId) {
   const count = TEACHER_COUNTS[schoolId]
   const pool = [...SURNAMES]
@@ -204,7 +212,7 @@ export function getWeekData(schoolId, weekStart, goal = 3) {
       : peakWeek || isChallengeWeek || h1 < Math.round(getBaseline(schoolId, ti, weekIdx) * 97)
     const h2 = det(schoolId + 10, ti, weekIdx)
     const daysActive = metGoal ? goal + (h2 % (5 - goal + 1)) : h2 % goal
-    return { name, daysActive, metGoal }
+    return { name, daysActive, metGoal, role: getRole(schoolId, ti) }
   })
 
   const meetingGoal = teacherData.filter(t => t.metGoal).length
