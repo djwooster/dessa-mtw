@@ -78,11 +78,11 @@ function det(a, b, c) {
 }
 
 // User roles (2026-10-09), a mock field so the report's User Role filter has something to filter on.
-// Stable per educator: mostly teachers, some counselors, a few administrators.
-export const USER_ROLES = ['Teacher', 'Counselor', 'Administrator']
+// Stable per user: mostly educators, a few site leaders.
+export const USER_ROLES = ['Educator', 'Site Leader']
 export function getRole(schoolId, teacherIndex) {
   const h = det(schoolId + 30, teacherIndex, 0)
-  return h < 70 ? 'Teacher' : h < 88 ? 'Counselor' : 'Administrator'
+  return h < 88 ? 'Educator' : 'Site Leader'
 }
 
 function getRoster(schoolId) {

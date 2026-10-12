@@ -48,26 +48,26 @@ function StatCard({ label, value }) {
   )
 }
 
-export default function EngagementOverviewD({ weeks, selectedId, onSelect, showCards = true }) {
+export default function EngagementOverviewD({ weeks, selectedId, onSelect, showCards = true, role = 'all' }) {
   const now = useMemo(() => periodStats(weeks), [weeks])
 
   const [query, setQuery] = useState('')
   const latestWeek = weeks[weeks.length - 1]
   const siteRows = useMemo(() => schools.map(sc => {
-    const b = weekBands(sc.id, latestWeek)
+    const b = weekBands(sc.id, latestWeek, role)
     return { school: sc, label: `${b.met} of ${b.total}` }
-  }), [latestWeek])
-  const allSitesLabel = useMemo(() => { const b = weekBands(null, latestWeek); return `${b.met} of ${b.total}` }, [latestWeek])
+  }), [latestWeek, role])
+  const allSitesLabel = useMemo(() => { const b = weekBands(null, latestWeek, role); return `${b.met} of ${b.total}` }, [latestWeek, role])
   const visibleSites = siteRows.filter(r => r.school.name.toLowerCase().includes(query.trim().toLowerCase()))
   const selectedSchool = schools.find(sc => sc.id === selectedId) ?? null
   const scope = useMemo(() => {
     const points = weeks.map(w => {
-      const b = weekBands(selectedId, w)
+      const b = weekBands(selectedId, w, role)
       return { week: w, value: pctOf(b.met, b.total), detail: `${b.met} of ${b.total} users` }
     })
-    const last = weekBands(selectedId, latestWeek)
+    const last = weekBands(selectedId, latestWeek, role)
     return { points, met: last.met, total: last.total }
-  }, [selectedId, weeks, latestWeek])
+  }, [selectedId, weeks, latestWeek, role])
 
   const total = now.users
   const goalPct = pctOf(Math.round(now.goalAvg), total)

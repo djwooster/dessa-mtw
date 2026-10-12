@@ -41,12 +41,14 @@ const DCE_CONCEPTS = [
 // chart; B charts educators who met the goal, stacked with those making progress;
 // C is the analytics layout (stat strip plus a 2x2 grid of weekly charts).
 const ENGAGEMENT_CONCEPTS = [
-  { value: 'a', label: 'A', title: 'A, Original: sites where every educator met the goal (single line)' },
-  { value: 'b', label: 'B', title: 'B, Educators who met their weekly goal, stacked with those making progress' },
+  // A, B, D and E commented out 2026-10-12 (kept in ReportEngagement.jsx); F is the report shown in prod.
+  // { value: 'a', label: 'A', title: 'A, Original: sites where every educator met the goal (single line)' },
+  // { value: 'b', label: 'B', title: 'B, Educators who met their weekly goal, stacked with those making progress' },
   // C commented out 2026-10-08 (layout kept in ReportEngagement.jsx behind isC): its date picker moved to A.
   // { value: 'c', label: 'C', title: 'C, Analytics layout: stat strip and four weekly charts in a grid' },
-  { value: 'd', label: 'D', title: 'D, Insights layout: stat cards and a ladder of how often users are engaged' },
-  { value: 'e', label: 'E', title: 'E, Usability-testing merge: starts from D without the stat cards' },
+  // { value: 'd', label: 'D', title: 'D, Insights layout: stat cards and a ladder of how often users are engaged' },
+  // { value: 'e', label: 'E', title: 'E, Usability-testing merge: starts from D without the stat cards' },
+  { value: 'f', label: 'F', title: 'F, Concept E with the Filters panel under the title and a Role column' },
 ]
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
