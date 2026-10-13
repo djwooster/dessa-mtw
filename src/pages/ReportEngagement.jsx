@@ -16,7 +16,7 @@ import EngagementOverviewD from '../components/engagement/EngagementOverviewD'
 import { PaginationBar } from '../components/ui/pagination'
 import FiltersPanel from '../components/engagement/FiltersPanel'
 import GoalStatusBadge from '../components/engagement/GoalStatusBadge'
-import ContributionGraph from '../components/engagement/ContributionGraph'
+import EducatorCalendar from '../components/engagement/EducatorCalendar'
 import PrintReport from '../components/engagement/PrintReport'
 import WeeklyBarChart from '../components/engagement/WeeklyBarChart'
 import MonthBarChart, { MONTHS, DEFAULT_MONTH_IDX, weekRangeLabel } from '../components/engagement/MonthBarChart'
@@ -161,9 +161,9 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
                 {drilldown && open && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={cols} className="pl-10 py-3 bg-brand-bg/50">
-                      {/* F uses the GitHub-style ContributionGraph again (2026-10-13); the standard EducatorCalendar is the fallback if the production calendar ticket wins. */}
+                      {/* F uses the standard EducatorCalendar (2026-10-13, manager's call). The GitHub-style version is saved in components/engagement/ContributionGraph.jsx; swap it back in here. */}
                       {fStyle
-                        ? <ContributionGraph dayMap={educatorDayMap(r.sc.id, r.i)} />
+                        ? <EducatorCalendar dayMap={educatorDayMap(r.sc.id, r.i)} />
                         : <EducatorActivityGrid schoolId={r.sc.id} teacherIndex={r.i} weeks={weeks} />}
                     </TableCell>
                   </TableRow>
@@ -433,6 +433,19 @@ export default function ReportEngagement() {
 
   return (
     <div className="px-6 pt-8 pb-8">
+      {/* Weekly goal callout (2026-10-13): a full-bleed banner across the top of the content, pinned under the nav so the goal stays on screen in screenshots. */}
+      {isF && (
+        <div role="note" className="sticky top-14 z-30 -mx-6 -mt-8 mb-8 flex items-center gap-2 border-b border-state-info/30 bg-state-infoLight px-6 py-2.5 text-[13px] text-[#134fb2]">
+          <Info size={14} className="shrink-0" aria-hidden="true" />
+          <p className="min-w-0">
+            <span className="font-medium">Weekly goal: {GOAL} lessons per week.</span>
+          </p>
+          <Link to="/settings" className="ml-auto shrink-0 inline-flex items-center gap-1 font-medium hover:underline">
+            Change in Settings <ExternalLink size={12} aria-hidden="true" />
+          </Link>
+        </div>
+      )}
+
       <div className={`flex flex-wrap items-end justify-between gap-x-6 gap-y-4 ${isC ? 'mb-[72px]' : 'mb-6'}`}>
         <div className="min-w-0">
           {/* No breadcrumbs (2026-10-06): inside a site, a plain link is the way back. */}
@@ -467,11 +480,6 @@ export default function ReportEngagement() {
               </Link>
             )}
           </div>
-          {isF && (
-            <Link to="/settings" className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-brand-subtext hover:text-brand-text hover:underline transition-colors">
-              Weekly goal: {GOAL} lessons per week <ExternalLink size={12} aria-hidden="true" />
-            </Link>
-          )}
           {!rangeHeader && !goalBadge && !isAHeader && (
             <p className="text-sm text-brand-subtext mt-1">
               {selectedSite ? `Users at ${selectedSite.name}. Open a user to see their activity.` : 'This report shows Move This World lesson completion across your district, by site.'}
@@ -546,19 +554,6 @@ export default function ReportEngagement() {
           minDate={FILTER_MIN}
           maxDate={FILTER_MAX}
         />
-      )}
-
-      {/* Weekly goal callout (2026-10-13): one clear line so the goal is on screen with the chart and table, screenshots included. */}
-      {isF && (
-        <div role="note" className="flex items-center gap-2 rounded-xl border border-state-info/30 bg-state-infoLight px-4 py-2.5 mb-6 text-[13px] text-brand-text">
-          <Info size={14} className="shrink-0 text-state-info" aria-hidden="true" />
-          <p className="min-w-0">
-            <span className="font-semibold">Weekly goal: {GOAL} lessons per week.</span>
-          </p>
-          <Link to="/settings" className="ml-auto shrink-0 inline-flex items-center gap-1 font-medium text-state-info hover:underline">
-            Change in Settings <ExternalLink size={12} aria-hidden="true" />
-          </Link>
-        </div>
       )}
 
       {selectedSite ? (

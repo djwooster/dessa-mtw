@@ -120,9 +120,7 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect, showC
 
           <div className="min-w-0 rounded-lg border border-brand-border p-5">
             <p className="text-lg font-semibold text-brand-text">{selectedSchool ? selectedSchool.name : 'All sites'}</p>
-            <p className="text-sm text-brand-subtext mt-1 mb-6">
-              {scope.met} of {scope.total} users met the weekly goal in the latest week.
-            </p>
+            <p className="text-[15px] font-semibold text-brand-text mt-3 mb-4">Users completing 3 lessons a week</p>
             <WeeklyBarChart label="Users who met the goal each week" kind="line" percent points={scope.points} />
           </div>
         </div>
