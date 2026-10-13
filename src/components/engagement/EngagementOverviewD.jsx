@@ -63,7 +63,7 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect, showC
   const scope = useMemo(() => {
     const points = weeks.map(w => {
       const b = weekBands(selectedId, w, role)
-      return { week: w, value: pctOf(b.met, b.total), detail: `${b.met} of ${b.total} users` }
+      return { week: w, value: pctOf(b.met, b.total), detail: `${pctOf(b.met, b.total)}% (${b.met} of ${b.total} users)` }
     })
     const last = weekBands(selectedId, latestWeek, role)
     return { points, met: last.met, total: last.total }

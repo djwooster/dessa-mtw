@@ -16,7 +16,7 @@ import EngagementOverviewD from '../components/engagement/EngagementOverviewD'
 import { PaginationBar } from '../components/ui/pagination'
 import FiltersPanel from '../components/engagement/FiltersPanel'
 import GoalStatusBadge from '../components/engagement/GoalStatusBadge'
-import ContributionGraph from '../components/engagement/ContributionGraph'
+import EducatorCalendar from '../components/engagement/EducatorCalendar'
 import PrintReport from '../components/engagement/PrintReport'
 import WeeklyBarChart from '../components/engagement/WeeklyBarChart'
 import MonthBarChart, { MONTHS, DEFAULT_MONTH_IDX, weekRangeLabel } from '../components/engagement/MonthBarChart'
@@ -161,8 +161,9 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
                 {drilldown && open && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={cols} className="pl-10 py-3 bg-brand-bg/50">
+                      {/* F's GitHub-style ContributionGraph is kept in components/engagement for later; F uses the standard calendar. */}
                       {fStyle
-                        ? <ContributionGraph dayMap={educatorDayMap(r.sc.id, r.i)} />
+                        ? <EducatorCalendar dayMap={educatorDayMap(r.sc.id, r.i)} />
                         : <EducatorActivityGrid schoolId={r.sc.id} teacherIndex={r.i} weeks={weeks} />}
                     </TableCell>
                   </TableRow>

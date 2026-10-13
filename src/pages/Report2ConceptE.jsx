@@ -341,9 +341,10 @@ export function SiteWeeklyChart({ schoolId, weeks, role = 'all' }) {
 
   const trend = useMemo(() => weeks.map(w => {
     const data = getWeekData(schoolId, w, GOAL)
-    if (role === 'all') return { weekStart: w, pct: data.pct }
-    const group = data.teachers.filter(t => t.role === role)
-    return { weekStart: w, pct: group.length ? Math.round((group.filter(t => t.metGoal).length / group.length) * 100) : 0 }
+    const group = role === 'all' ? data.teachers : data.teachers.filter(t => t.role === role)
+    const met = group.filter(t => t.metGoal).length
+    if (role === 'all') return { weekStart: w, pct: data.pct, met, total: group.length }
+    return { weekStart: w, pct: group.length ? Math.round((met / group.length) * 100) : 0, met, total: group.length }
   }), [schoolId, weeks, role])
 
   // Fonts and height stay at the size the chart rendered at in the 672px
@@ -444,7 +445,7 @@ export function SiteWeeklyChart({ schoolId, weeks, role = 'all' }) {
             transform: 'translate(-50%, -130%)',
           }}
         >
-          {hovered.pct}% · {weekLabel(hovered.weekStart)}
+          {hovered.pct}% ({hovered.met} of {hovered.total} users) · {weekLabel(hovered.weekStart)}
         </div>
       )}
     </div>
