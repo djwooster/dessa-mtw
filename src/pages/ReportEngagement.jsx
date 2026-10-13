@@ -16,7 +16,7 @@ import EngagementOverviewD from '../components/engagement/EngagementOverviewD'
 import { PaginationBar } from '../components/ui/pagination'
 import FiltersPanel from '../components/engagement/FiltersPanel'
 import GoalStatusBadge from '../components/engagement/GoalStatusBadge'
-import EducatorCalendar from '../components/engagement/EducatorCalendar'
+import ContributionGraph from '../components/engagement/ContributionGraph'
 import PrintReport from '../components/engagement/PrintReport'
 import WeeklyBarChart from '../components/engagement/WeeklyBarChart'
 import MonthBarChart, { MONTHS, DEFAULT_MONTH_IDX, weekRangeLabel } from '../components/engagement/MonthBarChart'
@@ -161,9 +161,9 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
                 {drilldown && open && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={cols} className="pl-10 py-3 bg-brand-bg/50">
-                      {/* F's GitHub-style ContributionGraph is kept in components/engagement for later; F uses the standard calendar. */}
+                      {/* F uses the GitHub-style ContributionGraph again (2026-10-13); the standard EducatorCalendar is the fallback if the production calendar ticket wins. */}
                       {fStyle
-                        ? <EducatorCalendar dayMap={educatorDayMap(r.sc.id, r.i)} />
+                        ? <ContributionGraph dayMap={educatorDayMap(r.sc.id, r.i)} />
                         : <EducatorActivityGrid schoolId={r.sc.id} teacherIndex={r.i} weeks={weeks} />}
                     </TableCell>
                   </TableRow>
@@ -546,6 +546,19 @@ export default function ReportEngagement() {
           minDate={FILTER_MIN}
           maxDate={FILTER_MAX}
         />
+      )}
+
+      {/* Weekly goal callout (2026-10-13): one clear line so the goal is on screen with the chart and table, screenshots included. */}
+      {isF && (
+        <div role="note" className="flex items-center gap-2 rounded-xl border border-state-info/30 bg-state-infoLight px-4 py-2.5 mb-6 text-[13px] text-brand-text">
+          <Info size={14} className="shrink-0 text-state-info" aria-hidden="true" />
+          <p className="min-w-0">
+            <span className="font-semibold">Weekly goal: {GOAL} lessons per week.</span>
+          </p>
+          <Link to="/settings" className="ml-auto shrink-0 inline-flex items-center gap-1 font-medium text-state-info hover:underline">
+            Change in Settings <ExternalLink size={12} aria-hidden="true" />
+          </Link>
+        </div>
       )}
 
       {selectedSite ? (
