@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 // User drill-down calendar (2026-10-09), brought back from the old Report1C
@@ -8,7 +8,9 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 // `dayMap` is { 'yyyy-MM-dd': true } for active days (see educatorDayMap).
 const FIRST_MONTH = new Date(2025, 8, 1) // Sep 2025, the start of the data
 const MONTH_COUNT = 9 // Sep 2025 to May 2026
-const WINDOW = 3
+const MIN_WINDOW = 3 // never fewer than three months
+const MONTH_W = 174 // one month grid: 7 cells of 24px plus gaps
+const MONTH_GAP = 24
 const WEEKDAY_HEADS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
 const pad = n => String(n).padStart(2, '0')
@@ -53,28 +55,41 @@ function MonthGrid({ date, dayMap }) {
 }
 
 export default function EducatorCalendar({ dayMap }) {
-  const maxStart = MONTH_COUNT - WINDOW
-  const [start, setStart] = useState(maxStart) // open on the most recent three months
-  const months = Array.from({ length: WINDOW }, (_, i) => monthAt(start + i))
+  // As many months as fit the width (2026-10-13), at least three, so a wide table
+  // is not left with empty space; the modal stays at three.
+  const bodyRef = useRef(null)
+  const [fit, setFit] = useState(MIN_WINDOW)
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => setFit(Math.floor((e.contentRect.width + MONTH_GAP) / (MONTH_W + MONTH_GAP))))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const count = Math.min(MONTH_COUNT, Math.max(MIN_WINDOW, fit))
+  const maxStart = MONTH_COUNT - count
+  const [rawStart, setStart] = useState(MONTH_COUNT) // opens on the most recent months
+  const start = Math.min(rawStart, maxStart)
+  const months = Array.from({ length: count }, (_, i) => monthAt(start + i))
   const first = months[0]
-  const last = months[WINDOW - 1]
+  const last = months[count - 1]
 
   return (
     <div className="flex items-center gap-3 pr-2">
       <button
         type="button"
-        onClick={() => setStart(s => s - 1)}
+        onClick={() => setStart(start - 1)}
         disabled={start === 0}
         aria-label="Earlier months"
         className="shrink-0 p-1 rounded border border-brand-border hover:bg-brand-border/60 disabled:opacity-25 disabled:hover:bg-transparent transition-colors"
       >
         <ChevronLeft size={14} className="text-brand-subtext" />
       </button>
-      <div className="flex-1 min-w-0">
+      <div ref={bodyRef} className="flex-1 min-w-0">
         <span className="sr-only" aria-live="polite">
           {monthName(first, { month: 'short' })} to {monthName(last, { month: 'short', year: 'numeric' })}
         </span>
-        <div className="grid grid-cols-3 gap-x-6">
+        <div className="flex justify-between gap-x-6">
           {months.map(m => <MonthGrid key={m.toISOString()} date={m} dayMap={dayMap} />)}
         </div>
         <div className="flex justify-end items-center gap-x-5 mt-3 text-xs text-brand-subtext">
@@ -84,7 +99,7 @@ export default function EducatorCalendar({ dayMap }) {
       </div>
       <button
         type="button"
-        onClick={() => setStart(s => s + 1)}
+        onClick={() => setStart(start + 1)}
         disabled={start === maxStart}
         aria-label="Later months"
         className="shrink-0 p-1 rounded border border-brand-border hover:bg-brand-border/60 disabled:opacity-25 disabled:hover:bg-transparent transition-colors"
