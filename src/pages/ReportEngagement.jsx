@@ -54,11 +54,13 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
   const base = useMemo(() => (school ? [school] : schools).flatMap(sc => {
     const names = getRosterNames(sc.id)
     const data = getWeekData(sc.id, latest, GOAL).teachers
+    // Share of the weeks in the selected range that each user met the weekly goal (Concept F's pill next to Last Active).
+    const rangeData = fStyle ? weeks.map(w => getWeekData(sc.id, w, GOAL).teachers) : null
     return names.map((name, i) => ({ name, i })).filter(({ i }) => role === 'all' || data[i].role === role).map(({ name, i }) => {
       const days = data[i].daysActive
-      return { key: `${sc.id}-${i}`, sc, name, i, role: data[i].role, days, met: data[i].metGoal, active: new Set(activeDayOrder(sc.id, i, weekIdx).slice(0, days)), last: getLastActive(sc.id, i) }
+      return { key: `${sc.id}-${i}`, sc, name, i, role: data[i].role, days, met: data[i].metGoal, active: new Set(activeDayOrder(sc.id, i, weekIdx).slice(0, days)), last: getLastActive(sc.id, i), pct: rangeData ? Math.round((rangeData.filter(t => t[i].metGoal).length / weeks.length) * 100) : null }
     })
-  }), [school, latest, weekIdx, role])
+  }), [school, latest, weekIdx, role, weeks, fStyle])
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -156,7 +158,14 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
                       </span>)}
                     </TableCell>
                   )}
-                  <TableCell className="text-brand-subtext text-right">{r.last}</TableCell>
+                  <TableCell className="text-brand-subtext text-right">
+                    {fStyle ? (
+                      <span className="inline-flex items-center justify-end gap-2">
+                        {r.last}
+                        <span className="inline-flex items-center rounded-[5px] bg-brand-bg px-2 py-0.5 text-xs font-medium text-brand-text tabular-nums">{r.pct}%</span>
+                      </span>
+                    ) : r.last}
+                  </TableCell>
                 </TableRow>
                 {drilldown && open && (
                   <TableRow className="hover:bg-transparent">
@@ -433,19 +442,6 @@ export default function ReportEngagement() {
 
   return (
     <div className="px-6 pt-8 pb-8">
-      {/* Weekly goal callout (2026-10-13): a full-bleed banner across the top of the content, pinned under the nav so the goal stays on screen in screenshots. */}
-      {isF && (
-        <div role="note" className="sticky top-14 z-30 -mx-6 -mt-8 mb-8 flex items-center gap-2 border-b border-state-info/30 bg-state-infoLight px-6 py-2.5 text-[13px] text-[#134fb2]">
-          <Info size={14} className="shrink-0" aria-hidden="true" />
-          <p className="min-w-0">
-            <span className="font-medium">Weekly goal: {GOAL} lessons per week.</span>
-          </p>
-          <Link to="/settings" className="ml-auto shrink-0 inline-flex items-center gap-1 font-medium hover:underline">
-            Change in Settings <ExternalLink size={12} aria-hidden="true" />
-          </Link>
-        </div>
-      )}
-
       <div className={`flex flex-wrap items-end justify-between gap-x-6 gap-y-4 ${isC ? 'mb-[72px]' : 'mb-6'}`}>
         <div className="min-w-0">
           {/* No breadcrumbs (2026-10-06): inside a site, a plain link is the way back. */}
@@ -541,6 +537,19 @@ export default function ReportEngagement() {
         </div>
       )}
       </div>
+
+      {/* Weekly goal callout (2026-10-13): a rounded callout under the page title so the goal is on screen in screenshots. */}
+      {isF && (
+        <div role="note" className="flex items-center gap-2 rounded-lg border border-state-info/30 bg-state-infoLight px-4 py-2.5 mb-6 text-[13px] text-[#134fb2]">
+          <Info size={14} className="shrink-0" aria-hidden="true" />
+          <p className="min-w-0">
+            <span className="font-medium">Weekly goal: {GOAL} lessons per week.</span>
+          </p>
+          <Link to="/settings" className="ml-auto shrink-0 inline-flex items-center gap-1 font-medium hover:underline">
+            Change in Settings <ExternalLink size={12} aria-hidden="true" />
+          </Link>
+        </div>
+      )}
 
       {isAFilters && (
         <FiltersPanel
