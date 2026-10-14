@@ -54,13 +54,11 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
   const base = useMemo(() => (school ? [school] : schools).flatMap(sc => {
     const names = getRosterNames(sc.id)
     const data = getWeekData(sc.id, latest, GOAL).teachers
-    // Share of the weeks in the selected range that each user met the weekly goal (Concept F's pill next to Last Active).
-    const rangeData = fStyle ? weeks.map(w => getWeekData(sc.id, w, GOAL).teachers) : null
     return names.map((name, i) => ({ name, i })).filter(({ i }) => role === 'all' || data[i].role === role).map(({ name, i }) => {
       const days = data[i].daysActive
-      return { key: `${sc.id}-${i}`, sc, name, i, role: data[i].role, days, met: data[i].metGoal, active: new Set(activeDayOrder(sc.id, i, weekIdx).slice(0, days)), last: getLastActive(sc.id, i), pct: rangeData ? Math.round((rangeData.filter(t => t[i].metGoal).length / weeks.length) * 100) : null }
+      return { key: `${sc.id}-${i}`, sc, name, i, role: data[i].role, days, met: data[i].metGoal, active: new Set(activeDayOrder(sc.id, i, weekIdx).slice(0, days)), last: getLastActive(sc.id, i)}
     })
-  }), [school, latest, weekIdx, role, weeks, fStyle])
+  }), [school, latest, weekIdx, role])
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -159,12 +157,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
                     </TableCell>
                   )}
                   <TableCell className="text-brand-subtext text-right">
-                    {fStyle ? (
-                      <span className="inline-flex items-center justify-end gap-2">
-                        {r.last}
-                        <span className="inline-flex items-center rounded-[5px] bg-brand-bg px-2 py-0.5 text-xs font-medium text-brand-text tabular-nums">{r.pct}%</span>
-                      </span>
-                    ) : r.last}
+                    {r.last}
                   </TableCell>
                 </TableRow>
                 {drilldown && open && (
