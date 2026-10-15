@@ -1,23 +1,24 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { parseISO, addDays, format } from 'date-fns'
 import { MoreHorizontal, Download, Printer, ExternalLink, ChartLine, Table2, ChevronRight, ChevronLeft, ChevronDown, Check, Info, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { schools, schoolWeeks, getWeekData, USER_ROLES, NO_SCHOOL_WEEKS } from '../lib/report2Data'
+import { schools, schoolWeeks, getWeekData, USER_ROLES, NO_SCHOOL_WEEKS, matchesSite } from '../lib/report2Data'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { RangePicker } from '../components/ui/range-picker'
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { useRole } from '../lib/roleContext'
 import { useEngagementConcept } from '../lib/engagementConceptContext'
 import { useEngagementVersion } from '../lib/engagementVersionContext'
+import { usePersistedState } from '../lib/usePersistedState'
 import StackedGoalChart, { weekBands } from '../components/engagement/StackedGoalChart'
 import EngagementOverviewD from '../components/engagement/EngagementOverviewD'
 import { PaginationBar } from '../components/ui/pagination'
 import FiltersPanel from '../components/engagement/FiltersPanel'
 import WeeklyGoalTable, { weeklyGoalRows } from '../components/engagement/WeeklyGoalTable'
-import { siteGoalRows } from '../components/engagement/SitesGoalTable'
+import SitesGoalTable, { siteGoalRows } from '../components/engagement/SitesGoalTable'
 import GoalStatusBadge from '../components/engagement/GoalStatusBadge'
 import EducatorCalendar from '../components/engagement/EducatorCalendar'
 import PrintReport from '../components/engagement/PrintReport'
@@ -44,24 +45,27 @@ const MONTH_BACK = 4
 // in the district (with a Site column and paging); otherwise one site's.
 const PAGE_SIZE = 25
 
-function SiteEducators({ school, weeks, showDots = true, showDays = true, drilldown = true, rangeBadge = null, goalColumn = false, roleColumn = false, fStyle = false, role = 'all' }) {
+function SiteEducators({ school, weeks, showDots = true, showDays = true, drilldown = true, rangeBadge = null, goalColumn = false, roleColumn = false, fStyle = false, role = 'all', siteList = null, stateKey = null }) {
   const latest = weeks[weeks.length - 1]
   const weekIdx = schoolWeeks.indexOf(latest)
   const [openKey, setOpenKey] = useState(null)
-  const [query, setQuery] = useState('')
-  const [sort, setSort] = useState({ key: 'name', dir: 'asc' })
-  const [page, setPage] = useState(0)
-  const [pageSize, setPageSize] = useState(10)
-  const allSites = !school
+  // stateKey keeps the search, sort and page when the user comes back from a site page.
+  const [query, setQuery] = usePersistedState(stateKey && `${stateKey}.query`, '')
+  const [sort, setSort] = usePersistedState(stateKey && `${stateKey}.sort`, { key: 'name', dir: 'asc' })
+  const [page, setPage] = usePersistedState(stateKey && `${stateKey}.page`, 0)
+  const [pageSize, setPageSize] = usePersistedState(stateKey && `${stateKey}.pageSize`, 10)
+  // siteList (Concept F and B pick several sites) wins over the single `school`; no site means every site.
+  const list = siteList && siteList.length ? siteList : school ? [school] : schools
+  const allSites = list.length > 1
 
-  const base = useMemo(() => (school ? [school] : schools).flatMap(sc => {
+  const base = useMemo(() => list.flatMap(sc => {
     const names = getRosterNames(sc.id)
     const data = getWeekData(sc.id, latest, GOAL).teachers
     return names.map((name, i) => ({ name, i })).filter(({ i }) => role === 'all' || data[i].role === role).map(({ name, i }) => {
       const days = data[i].daysActive
       return { key: `${sc.id}-${i}`, sc, name, i, role: data[i].role, days, met: data[i].metGoal, active: new Set(activeDayOrder(sc.id, i, weekIdx).slice(0, days)), last: getLastActive(sc.id, i)}
     })
-  }), [school, latest, weekIdx, role])
+  }), [list, latest, weekIdx, role])
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -200,7 +204,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
 const toKey = d => format(d, 'yyyy-MM-dd')
 const FILTER_MIN = toKey(FIRST_DATE)
 const FILTER_MAX = toKey(LAST_DATE)
-const DEFAULT_FILTERS = { site: 'all', role: 'all', start: schoolWeeks[schoolWeeks.length - 4], end: FILTER_MAX }
+const DEFAULT_FILTERS = { site: [], role: 'all', start: schoolWeeks[schoolWeeks.length - 4], end: FILTER_MAX }
 
 function ReportEngagementA() {
   const [rangeKey, setRangeKey] = useState('30d')
@@ -234,7 +238,7 @@ function ReportEngagementA() {
     const ws = weeksForDates(parseISO(next.start), parseISO(next.end))
     toast.success('Dates updated for the whole report', ws.length ? { description: rangeLabel(ws) } : undefined)
   }
-  const siteFilter = isAFilters && appliedFilters.site !== 'all' ? Number(appliedFilters.site) : null
+  const siteFilter = isAFilters && appliedFilters.site.length ? appliedFilters.site.map(Number) : null
   const roleFilter = isAFilters ? appliedFilters.role : 'all'
   const stacked = engagementConcept === 'b'
   // In-page graph switcher (2026-10-06): A is the chart each Nav concept
@@ -243,12 +247,32 @@ function ReportEngagementA() {
   const [graph, setGraph] = useState('a')
   // Site clicks (2026-10-07): A and B open the shared site modal, C keeps its site page, D selects the site in its panel.
   const [modalSite, setModalSite] = useState(null)
-  const [dSiteId, setDSiteId] = useState(null)
+  const [dSiteIds, setDSiteIds] = useState([])
   // Chart | Table switch on the weekly goal graph (2026-10-14, Concept F).
   const [graphView, setGraphView] = useState('chart')
   const [monthIdx, setMonthIdx] = useState(DEFAULT_MONTH_IDX)
   const month = MONTHS[monthIdx]
-  const selectedSite = isSiteLeaderView ? schools[0] : pickedSite
+  // A site page (2026-10-15): clicking a site in the table opens engagement/site/:id, which looks like the
+  // Site Leader view with a breadcrumb back to the high-level report.
+  const navigate = useNavigate()
+  const routeSiteId = Number((useParams()['*'] ?? '').match(/^site\/(\d+)/)?.[1])
+  const routeSite = schools.find(sc => sc.id === routeSiteId) ?? null
+  const selectedSite = isSiteLeaderView ? schools[0] : routeSite ?? pickedSite
+  // Opening a site remembers where the report was scrolled; coming back (the breadcrumb or the browser
+  // back button) puts the page there, and the tables keep their sort, page and search (usePersistedState).
+  const overviewScroll = useRef(0)
+  const lastRouteId = useRef(routeSite?.id ?? null)
+  function openSitePage(id) {
+    overviewScroll.current = window.scrollY
+    navigate(`/reports/engagement/site/${id}`)
+  }
+  useEffect(() => {
+    const id = routeSite?.id ?? null
+    if (id === lastRouteId.current) return
+    lastRouteId.current = id
+    const y = id ? 0 : overviewScroll.current
+    requestAnimationFrame(() => window.scrollTo(0, y))
+  }, [routeSite])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -271,7 +295,7 @@ function ReportEngagementA() {
     setSort({ key: 'name', dir: 'asc' })
     setSelectedSite(null)
     setModalSite(null)
-    setDSiteId(null)
+    setDSiteIds([])
     setMonthIdx(DEFAULT_MONTH_IDX)
   }
 
@@ -293,7 +317,7 @@ function ReportEngagementA() {
     const latest = weeks[weeks.length - 1]
     const q = query.trim().toLowerCase()
     return schools
-      .filter(school => siteFilter == null || school.id === siteFilter)
+      .filter(school => matchesSite(siteFilter, school.id))
       .map(school => {
         const b = weekBands(school.id, latest, roleFilter)
         return { school, meetingGoal: b.met, totalTeachers: b.total, pct: b.pct }
@@ -320,23 +344,12 @@ function ReportEngagementA() {
 
   function exportCsv() {
     if (isF && graphView === 'table') {
-      if (!isSiteLeaderView) {
-        const { all, sites } = siteGoalRows(dSiteId, weeks, roleFilter)
-        const body = [all, ...sites].map(r => `"${r.name}",${r.users},${r.met},${r.pct}%`).join('\n')
-        const url = URL.createObjectURL(new Blob([`Site,Users,Met goal,% met\n${body}`], { type: 'text/csv' }))
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'engagement-by-site.csv'
-        a.click()
-        URL.revokeObjectURL(url)
-        return
-      }
-      const id = schools[0].id
-      const body = weeklyGoalRows(id, weeks, roleFilter).map(r => `"${r.label}",${r.total},${r.met},${r.pct}%`).join('\n')
-      const url = URL.createObjectURL(new Blob([`Week,Users,Met goal,% met\n${body}`], { type: 'text/csv' }))
+      const { sites } = siteGoalRows(selectedSite ? [selectedSite.id] : dSiteIds, weeks, roleFilter)
+      const body = sites.map(r => `"${r.name}",${r.users},${r.met},${r.pct}%`).join('\n')
+      const url = URL.createObjectURL(new Blob([`Site,Users,Met goal,% met\n${body}`], { type: 'text/csv' }))
       const a = document.createElement('a')
       a.href = url
-      a.download = 'weekly-goal.csv'
+      a.download = 'engagement-by-site.csv'
       a.click()
       URL.revokeObjectURL(url)
       return
@@ -433,8 +446,8 @@ function ReportEngagementA() {
 
   // Print (2026-10-08, Concept A): the page prints through PrintReport. The PDF's file name comes from document.title.
   // F prints the site shown on screen: the one picked in the sites panel, or a Site Leader's own site.
-  const printSiteId = isF ? (isSiteLeaderView ? schools[0].id : dSiteId ?? siteFilter) : siteFilter
-  const printRows = printSiteId == null ? siteRows : siteRows.filter(r => r.school.id === printSiteId)
+  const printSiteId = isF ? (isSiteLeaderView ? schools[0].id : dSiteIds.length ? dSiteIds : null) : siteFilter
+  const printRows = printSiteId == null ? siteRows : siteRows.filter(r => matchesSite(printSiteId, r.school.id))
   const printLatest = weekBands(printSiteId, weeks[weeks.length - 1], roleFilter)
   const printTitle = `Engagement, ${rangeLabel(weeks)}`
   function printReport(then) {
@@ -469,11 +482,20 @@ function ReportEngagementA() {
   )
 
   return (
-    <div className="px-6 pt-8 pb-8">
+    <div className={`px-6 pb-8 ${isF && routeSite && !isSiteLeaderView ? 'pt-10' : 'pt-8'}`}>
+      {isF && routeSite && !isSiteLeaderView && (
+        <nav aria-label="Breadcrumb" className="mb-10">
+          <ol className="flex items-center gap-1.5 text-[13px] text-brand-subtext">
+            <li><Link to="/reports/engagement" className="hover:text-brand-text hover:underline transition-colors">Engagement</Link></li>
+            <li aria-hidden="true"><ChevronRight size={12} /></li>
+            <li aria-current="page" className="text-brand-text">{routeSite.name}</li>
+          </ol>
+        </nav>
+      )}
       <div className={`flex flex-wrap items-end justify-between gap-x-6 gap-y-4 ${isC ? 'mb-[72px]' : 'mb-6'}`}>
         <div className="min-w-0">
-          {/* No breadcrumbs (2026-10-06): inside a site, a plain link is the way back. */}
-          {selectedSite && !isSiteLeaderView && (
+          {/* The breadcrumb above replaces the plain back link in Concept F (2026-10-15). */}
+          {selectedSite && !isSiteLeaderView && !isF && (
             <button type="button" onClick={() => setSelectedSite(null)} className="inline-flex items-center gap-1 text-sm text-brand-subtext hover:text-brand-text transition-colors mb-3">
               <ChevronLeft size={14} aria-hidden="true" /> All sites
             </button>
@@ -583,11 +605,11 @@ function ReportEngagementA() {
         <FiltersPanel
           draft={draftFilters}
           onChange={setDraftFilters}
-          onApply={() => { setAppliedFilters(draftFilters); if (isF) setDSiteId(draftFilters.site === 'all' ? null : Number(draftFilters.site)) }}
-          onReset={() => { setDraftFilters(DEFAULT_FILTERS); setAppliedFilters(DEFAULT_FILTERS); if (isF) setDSiteId(null) }}
+          onApply={() => { setAppliedFilters(draftFilters); if (isF) setDSiteIds(draftFilters.site.map(Number)) }}
+          onReset={() => { setDraftFilters(DEFAULT_FILTERS); setAppliedFilters(DEFAULT_FILTERS); if (isF) setDSiteIds([]) }}
           sites={schools}
           roles={USER_ROLES}
-          showSite={!isSiteLeaderView}
+          showSite={!isSiteLeaderView && !selectedSite}
           minDate={FILTER_MIN}
           maxDate={FILTER_MAX}
         />
@@ -603,9 +625,9 @@ function ReportEngagementA() {
               <p className="text-base font-semibold text-brand-text">{stacked || graph === 'b' ? 'Users who met their weekly goal' : isAFilters ? 'Users completing 3 lessons a week' : '% of users meeting goal'}</p>
               {graph === 'b' ? monthControls : rangeControls}
             </div>
-            {isF && graphView === 'table' ? <WeeklyGoalTable schoolId={selectedSite.id} weeks={weeks} role={roleFilter} rangeText={rangeLabel(weeks)} /> : graph === 'b' ? <MonthBarChart schoolId={selectedSite.id} weeks={month.weeks} role={roleFilter} /> : stacked ? <StackedGoalChart schoolId={selectedSite.id} weeks={weeks} /> : <SiteWeeklyChart schoolId={selectedSite.id} weeks={weeks} role={roleFilter} />}
+            {isF && graphView === 'table' ? <SitesGoalTable siteIds={[selectedSite.id]} weeks={weeks} role={roleFilter} /> : graph === 'b' ? <MonthBarChart schoolId={selectedSite.id} weeks={month.weeks} role={roleFilter} /> : stacked ? <StackedGoalChart schoolId={selectedSite.id} weeks={weeks} /> : <SiteWeeklyChart schoolId={selectedSite.id} weeks={weeks} role={roleFilter} />}
           </motion.div>
-          <SiteEducators school={selectedSite} weeks={weeks} role={roleFilter} showDots={engagementConcept !== 'c' && !isSiteLeaderView} showDays={!isSiteLeaderView && !isF} drilldown={!isSiteLeaderView || isF} goalColumn={isSiteLeaderView && engagementConcept === 'a'} fStyle={isF} roleColumn={isF} />
+          <SiteEducators school={selectedSite} weeks={weeks} role={roleFilter} showDots={engagementConcept !== 'c' && !isSiteLeaderView && !isF} showDays={!isSiteLeaderView && !isF} drilldown={!isSiteLeaderView || isF} goalColumn={isSiteLeaderView && engagementConcept === 'a'} fStyle={isF} roleColumn={isF} />
         </>
       ) : (
         <>
@@ -618,7 +640,7 @@ function ReportEngagementA() {
         </div>
       */}
       {isD ? (
-        <EngagementOverviewD weeks={weeks} selectedId={dSiteId} onSelect={setDSiteId} showCards={!isE} role={roleFilter} viewSwitch={isF ? viewSwitch : null} view={graphView} rangeText={rangeLabel(weeks)} showSiteList={!isF} />
+        <EngagementOverviewD weeks={weeks} selectedId={dSiteIds.length === 1 ? dSiteIds[0] : null} selectedIds={isF ? dSiteIds : null} onSelect={id => setDSiteIds(id == null ? [] : [id])} showCards={!isE} role={roleFilter} viewSwitch={isF ? viewSwitch : null} view={graphView} rangeText={rangeLabel(weeks)} showSiteList={!isF} onOpenSite={openSitePage} />
       ) : isC ? (
         <>
           <div className="grid gap-8 mb-12 pb-8 border-b border-brand-border grid-cols-4">
@@ -671,7 +693,7 @@ function ReportEngagementA() {
       )}
 
       {isD ? (
-        <SiteEducators school={schools.find(sc => sc.id === dSiteId) ?? null} weeks={weeks} showDots={false} showDays={false} drilldown={isF} goalColumn={false} fStyle={isF} rangeBadge={isE ? rangeLabel(weeks) : null} role={roleFilter} roleColumn={isF} />
+        <SiteEducators siteList={isF && dSiteIds.length ? schools.filter(sc => dSiteIds.includes(sc.id)) : null} school={!isF ? schools.find(sc => dSiteIds.length === 1 && sc.id === dSiteIds[0]) ?? null : null} weeks={weeks} showDots={false} showDays={false} drilldown={isF} goalColumn={false} fStyle={isF} rangeBadge={isE ? rangeLabel(weeks) : null} role={roleFilter} roleColumn={isF} stateKey={isF ? 'overviewUsers' : null} />
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.14 }}
@@ -730,7 +752,7 @@ function ReportEngagementA() {
           stats={[
             { label: 'Users on goal', value: `${printLatest.met} of ${printLatest.total}`, note: `Latest week, ${weekRangeLabel(printLatest.week)}` },
             { label: 'Share on goal', value: `${printLatest.pct}%`, note: 'Latest week' },
-            { label: 'Sites', value: printSiteId == null ? schools.length : 1, note: printSiteId == null ? 'In your district' : 'Filtered' },
+            { label: 'Sites', value: printSiteId == null ? schools.length : Array.isArray(printSiteId) ? printSiteId.length : 1, note: printSiteId == null ? 'In your district' : 'Filtered' },
           ]}
           chartTitle={graph === 'b' ? 'Users who met their weekly goal' : 'Users completing 3 lessons a week'}
           chart={graph === 'b' ? <MonthBarChart schoolId={siteFilter} weeks={month.weeks} role={roleFilter} /> : <SiteGoalLineChart weeks={weeks} metric="educators" siteId={printSiteId} role={roleFilter} />}
@@ -755,7 +777,7 @@ function rangeStats(siteId, role, weekList) {
   let met = 0, total = 0, lessons = 0
   const active = new Set()
   const everyone = new Set()
-  schools.filter(sc => siteId == null || sc.id === siteId).forEach(sc => {
+  schools.filter(sc => matchesSite(siteId, sc.id)).forEach(sc => {
     weekList.forEach(w => {
       getWeekData(sc.id, w, GOAL).teachers.forEach((t, i) => {
         if (role !== 'all' && t.role !== role) return
@@ -785,7 +807,7 @@ function SitesOverviewTable({ weeks, role, siteId, onOpenSite }) {
   }
   const allRow = useMemo(() => rowFor(siteId), [siteId, weeks, role])
   const rows = useMemo(() => schools
-    .filter(sc => siteId == null || sc.id === siteId)
+    .filter(sc => matchesSite(siteId, sc.id))
     .map(sc => ({ sc, ...rowFor(sc.id) }))
     .filter(r => r.total > 0)
     .sort((a, b) => {
@@ -815,14 +837,14 @@ function SitesOverviewTable({ weeks, role, siteId, onOpenSite }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow className="hover:bg-transparent bg-brand-bg/50">
-            <TableCell className="font-semibold">{siteId == null ? 'All sites' : schools.find(sc => sc.id === siteId)?.name}</TableCell>
+          {!(siteId && siteId.length === 1) && <TableRow className="hover:bg-transparent bg-brand-bg/50">
+            <TableCell className="font-semibold">{!siteId || !siteId.length ? 'All sites' : `${siteId.length} selected sites`}</TableCell>
             <TableCell className={`${right} font-semibold`}>{allRow.total}</TableCell>
             <TableCell className={`${right} font-semibold`}>{allRow.pct}%</TableCell>
             <TableCell className={`${right} font-semibold`}>{allRow.avg}%</TableCell>
             <TableCell className={`${right} font-semibold text-brand-subtext`}>{deltaText(allRow.delta)}</TableCell>
-          </TableRow>
-          {siteId == null && shown.map(r => (
+          </TableRow>}
+          {shown.map(r => (
             <TableRow key={r.sc.id} onClick={() => onOpenSite(r.sc.id)} className="cursor-pointer">
               <TableCell className="font-medium">
                 <button type="button" onClick={e => { e.stopPropagation(); onOpenSite(r.sc.id) }} className="text-left text-[13px] text-[#134fb2] hover:underline">{r.sc.name}</button>
@@ -835,7 +857,7 @@ function SitesOverviewTable({ weeks, role, siteId, onOpenSite }) {
           ))}
         </TableBody>
       </Table>
-      {siteId == null && <PaginationBar page={page} pageSize={pageSize} total={rows.length} onPage={setPage} onPageSize={n => { setPageSize(n); setPage(1) }} className="px-4 py-3 border-t border-brand-border" />}
+      <PaginationBar page={page} pageSize={pageSize} total={rows.length} onPage={setPage} onPageSize={n => { setPageSize(n); setPage(1) }} className="px-4 py-3 border-t border-brand-border" />
     </div>
   )
 }
@@ -860,9 +882,10 @@ function ReportEngagementB() {
     const ws = weeksForDates(parseISO(applied.start), parseISO(applied.end)).filter(w => !NO_SCHOOL_WEEKS.includes(w))
     return ws.length ? ws : B_WEEKS.slice(-4)
   }, [applied])
-  const siteId = isSiteLeaderView ? schools[0].id : applied.site === 'all' ? null : Number(applied.site)
+  const siteId = isSiteLeaderView ? [schools[0].id] : applied.site.length ? applied.site.map(Number) : null
   const role = applied.role
-  const site = schools.find(sc => sc.id === siteId) ?? null
+  const siteList = siteId ? schools.filter(sc => siteId.includes(sc.id)) : null
+  const site = siteList && siteList.length === 1 ? siteList[0] : null
 
   const points = useMemo(() => weeks.map(w => {
     const b = weekBands(siteId, w, role)
@@ -870,8 +893,8 @@ function ReportEngagementB() {
   }), [weeks, siteId, role])
 
   function openSite(id) {
-    setApplied(a => ({ ...a, site: String(id) }))
-    setDraft(d => ({ ...d, site: String(id) }))
+    setApplied(a => ({ ...a, site: [String(id)] }))
+    setDraft(d => ({ ...d, site: [String(id)] }))
     setTab('users')
   }
   function download(name, text) {
@@ -883,7 +906,7 @@ function ReportEngagementB() {
   function exportCsv() {
     const latest = weeks[weeks.length - 1]
     if (tab === 'users') {
-      const lines = (site ? [site] : schools).flatMap(sc => {
+      const lines = (siteList ?? schools).flatMap(sc => {
         const data = getWeekData(sc.id, latest, GOAL).teachers
         return getRosterNames(sc.id).map((n, i) => ({ n, i })).filter(({ i }) => role === 'all' || data[i].role === role)
           .map(({ n, i }) => `"${n}","${sc.name}","${data[i].role}","${getLastActive(sc.id, i)}"`)
@@ -892,7 +915,7 @@ function ReportEngagementB() {
       return
     }
     const prevWeek = B_WEEKS[B_WEEKS.indexOf(latest) - 1] ?? null
-    const lines = schools.filter(sc => siteId == null || sc.id === siteId).map(sc => {
+    const lines = schools.filter(sc => matchesSite(siteId, sc.id)).map(sc => {
       const cur = weekBands(sc.id, latest, role)
       const prev = prevWeek ? weekBands(sc.id, prevWeek, role) : null
       return `"${sc.name}",${cur.total},${cur.met},${cur.pct}%,${rangeStats(sc.id, role, weeks).pct}%,${prev && prev.total ? cur.pct - prev.pct : ''}`
@@ -960,20 +983,20 @@ function ReportEngagementB() {
       {tab === 'sites' ? (
         <div className="rounded-xl border border-brand-border bg-white p-5">
           <div className="flex items-center justify-between gap-4 mb-4">
-            <h3 className="text-lg font-semibold text-brand-text">{site ? site.name : 'All sites'}</h3>
+            <h3 className="text-lg font-semibold text-brand-text">{site ? site.name : siteList ? `${siteList.length} sites` : 'All sites'}</h3>
             {viewSwitch}
           </div>
           <p className="text-[15px] font-semibold text-brand-text mb-4">Users completing 3 lessons a week</p>
           {view === 'chart' ? (
             <WeeklyBarChart label="Users who met the goal each week" kind="line" percent points={points} />
           ) : isSiteLeaderView ? (
-            <WeeklyGoalTable schoolId={siteId} weeks={weeks} role={role} rangeText={rangeLabel(weeks)} />
+            <WeeklyGoalTable schoolId={siteId && siteId[0]} weeks={weeks} role={role} rangeText={rangeLabel(weeks)} />
           ) : (
             <SitesOverviewTable weeks={weeks} role={role} siteId={siteId} onOpenSite={openSite} />
           )}
         </div>
       ) : (
-        <SiteEducators school={site} weeks={weeks} role={role} showDots={false} showDays={false} drilldown goalColumn={false} fStyle roleColumn />
+        <SiteEducators siteList={siteList} weeks={weeks} role={role} showDots={false} showDays={false} drilldown goalColumn={false} fStyle roleColumn />
       )}
     </div>
   )

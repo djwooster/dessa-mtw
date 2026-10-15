@@ -52,7 +52,7 @@ function StatCard({ label, value }) {
   )
 }
 
-export default function EngagementOverviewD({ weeks, selectedId, onSelect, showCards = true, role = 'all', viewSwitch = null, view = 'chart', rangeText = '', showSiteList = true }) {
+export default function EngagementOverviewD({ weeks, selectedId, selectedIds = null, onSelect, showCards = true, role = 'all', viewSwitch = null, view = 'chart', rangeText = '', showSiteList = true, onOpenSite = null }) {
   const now = useMemo(() => periodStats(weeks), [weeks])
 
   const [query, setQuery] = useState('')
@@ -63,15 +63,18 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect, showC
   }), [latestWeek, role])
   const allSitesLabel = useMemo(() => { const b = weekBands(null, latestWeek, role); return `${b.met} of ${b.total}` }, [latestWeek, role])
   const visibleSites = siteRows.filter(r => r.school.name.toLowerCase().includes(query.trim().toLowerCase()))
-  const selectedSchool = schools.find(sc => sc.id === selectedId) ?? null
+  // F picks several sites in Filters (selectedIds); the retired sites list picks one (selectedId).
+  const scopeIds = selectedIds ?? (selectedId == null ? [] : [selectedId])
+  const selectedSchool = scopeIds.length === 1 ? schools.find(sc => sc.id === scopeIds[0]) ?? null : null
+  const scopeTitle = scopeIds.length === 0 ? 'All sites' : scopeIds.length === 1 ? selectedSchool?.name : `${scopeIds.length} sites`
   const scope = useMemo(() => {
     const points = weeks.map(w => {
-      const b = weekBands(selectedId, w, role)
+      const b = weekBands(scopeIds, w, role)
       return { week: w, value: pctOf(b.met, b.total), detail: `${pctOf(b.met, b.total)}% (${b.met} of ${b.total} users)` }
     })
-    const last = weekBands(selectedId, latestWeek, role)
+    const last = weekBands(scopeIds, latestWeek, role)
     return { points, met: last.met, total: last.total }
-  }, [selectedId, weeks, latestWeek, role])
+  }, [selectedIds, selectedId, weeks, latestWeek, role])
 
   // The panel's height follows its content and eases between sizes (Chart to Table and back); in
   // Table view it is never shorter than the chart view plus TABLE_EXTRA.
@@ -115,7 +118,7 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect, showC
         className="rounded-xl border border-brand-border bg-white p-5 mb-6"
       >
         <div className="flex items-center justify-between gap-4 mb-4">
-          <h3 className="text-lg font-semibold text-brand-text">{showSiteList ? 'Engagement by site' : selectedSchool ? selectedSchool.name : 'All sites'}</h3>
+          <h3 className="text-lg font-semibold text-brand-text">{showSiteList ? 'Engagement by site' : scopeTitle}</h3>
           {viewSwitch}
         </div>
         {/* Concept F hides the sites list (2026-10-14): the site is chosen in the Filters panel, so the graph and table keep the full width. */}
@@ -160,7 +163,7 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect, showC
               {showSiteList && selectedSchool && <span className="font-normal text-brand-subtext"> · {selectedSchool.name}</span>}
             </p>
             {viewSwitch && view === 'table'
-              ? <SitesGoalTable siteId={selectedId} weeks={weeks} role={role} />
+              ? <SitesGoalTable siteIds={scopeIds} weeks={weeks} role={role} onOpenSite={onOpenSite} />
               : <WeeklyBarChart label="Users who met the goal each week" kind="line" percent points={scope.points} />}
           </div>
           </motion.div>

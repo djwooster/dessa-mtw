@@ -26,7 +26,7 @@ export default function WeeklyGoalTable({ schoolId, weeks, role = 'all', rangeTe
     return total ? Math.round((met / total) * 100) : 0
   }, [rows])
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(10)
   useEffect(() => { setPage(1) }, [schoolId, weeks, role])
   const shown = rows.slice((page - 1) * pageSize, page * pageSize)
 

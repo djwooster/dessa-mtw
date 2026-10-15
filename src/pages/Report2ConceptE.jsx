@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, addDays } from 'date-fns'
 import { X, MoreHorizontal, Download, Printer, ChevronRight, Calendar, Search, ArrowUp, ArrowDown, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
-import { schools, schoolWeeks, getWeekData, MOST_RECENT_WEEK } from '../lib/report2Data'
+import { schools, schoolWeeks, getWeekData, MOST_RECENT_WEEK, matchesSite } from '../lib/report2Data'
 import { PaginationBar } from '../components/ui/pagination'
 import { DatePicker } from '../components/ui/date-picker'
 import EducatorCalendar from '../components/engagement/EducatorCalendar'
@@ -220,7 +220,7 @@ export function SiteGoalLineChart({ weeks, metric = 'sites', siteId = null, role
   const trend = useMemo(() => weeks.map(w => {
     if (byEducators) {
       let met = 0, total = 0
-      schools.filter(s => siteId == null || s.id === siteId).forEach(s => {
+      schools.filter(s => matchesSite(siteId, s.id)).forEach(s => {
         getWeekData(s.id, w, GOAL).teachers.forEach(t => {
           if (role !== 'all' && t.role !== role) return
           total += 1

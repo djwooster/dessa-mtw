@@ -443,7 +443,7 @@ export default function Nav() {
               </Popover.Portal>
             </Popover.Root>
           )}
-          {location.pathname === '/reports/engagement' && (
+          {location.pathname.startsWith('/reports/engagement') && (
             <Popover.Root>
               <Popover.Trigger asChild>
                 <button
@@ -474,7 +474,7 @@ export default function Nav() {
             </Popover.Root>
           )}
           {/* Engagement concept switcher removed 2026-10-12: Concept F is the decided design (context default 'f').
-          {location.pathname === '/reports/engagement' && (
+          {location.pathname.startsWith('/reports/engagement') && (
             <Popover.Root>
               <Popover.Trigger asChild>
                 <button

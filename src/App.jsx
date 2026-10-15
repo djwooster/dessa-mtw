@@ -100,7 +100,8 @@ function AppShell({ handleBookmark }) {
           <Route path="site-engagement" element={<Report2 />} />
           <Route path="dce" element={<ReportDce />} />
           */}
-          <Route path="engagement" element={<ReportEngagement />} />
+          {/* engagement/* keeps one page mounted for the report and a site page (engagement/site/:id), so filters survive the trip. */}
+          <Route path="engagement/*" element={<ReportEngagement />} />
           {/* Old links to the retired reports land here. */}
           <Route path="*" element={<Navigate to="engagement" replace />} />
         </Route>

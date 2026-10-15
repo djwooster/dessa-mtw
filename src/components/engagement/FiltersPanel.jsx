@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import * as Popover from '@radix-ui/react-popover'
 import { DatePicker } from '../ui/date-picker'
+import { Checkbox } from '../ui/checkbox'
 
 // Filters panel for the Engagement report (2026-10-09), matching the production
 // Daily Curriculum Engagement paradigm: a collapsible panel above the report with
@@ -24,6 +26,46 @@ function Select({ label, value, onChange, children, className = '' }) {
         <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" aria-hidden="true" />
       </span>
     </label>
+  )
+}
+
+// Multi-select with a checkbox per option (2026-10-15). An empty list means all; the trigger
+// shows "All", the one name, or a count.
+function MultiSelect({ label, value, onChange, options, allLabel = 'All', noun = 'selected', className = '' }) {
+  const summary = value.length === 0 ? allLabel : value.length === 1 ? options.find(o => o.value === value[0])?.label : `${value.length} ${noun}`
+  const toggle = v => onChange(value.includes(v) ? value.filter(x => x !== v) : [...value, v])
+  return (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+      <span className={LABEL}>{label}</span>
+      <Popover.Root>
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className="relative w-full h-8 pl-2.5 pr-8 text-left text-[13px] rounded-md border border-brand-border bg-white text-brand-text hover:border-dessa-teal/50 focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal truncate"
+          >
+            {summary}
+            <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext" aria-hidden="true" />
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            align="start" sideOffset={4}
+            className="z-50 w-[var(--radix-popover-trigger-width)] min-w-56 max-h-72 overflow-y-auto bg-white border border-brand-border rounded-lg shadow-lg outline-none p-1"
+          >
+            <label className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] text-brand-text hover:bg-brand-bg cursor-pointer border-b border-brand-border rounded-b-none mb-1">
+              <Checkbox checked={value.length === 0} onChange={() => onChange([])} />
+              {allLabel}
+            </label>
+            {options.map(o => (
+              <label key={o.value} className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] text-brand-text hover:bg-brand-bg cursor-pointer">
+                <Checkbox checked={value.includes(o.value)} onChange={() => toggle(o.value)} />
+                <span className="min-w-0 truncate">{o.label}</span>
+              </label>
+            ))}
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    </div>
   )
 }
 
@@ -51,10 +93,10 @@ export default function FiltersPanel({ draft, onChange, onApply, onReset, sites,
           onSubmit={e => { e.preventDefault(); if (valid) onApply() }}
         >
           {showSite && (
-            <Select label="Site" value={draft.site} onChange={v => set({ site: v })} className="flex-1 min-w-36">
-              <option value="all">All</option>
-              {sites.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
-            </Select>
+            <MultiSelect
+              label="Site" value={draft.site} onChange={v => set({ site: v })} noun="sites" className="flex-1 min-w-36"
+              options={sites.map(s => ({ value: String(s.id), label: s.name }))}
+            />
           )}
           <Select label="User role" value={draft.role} onChange={v => set({ role: v })} className="flex-1 min-w-36">
             <option value="all">All</option>

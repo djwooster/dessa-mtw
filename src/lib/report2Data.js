@@ -188,6 +188,11 @@ function generateSchoolWeeks() {
   return weeks
 }
 
+// A site scope is null (every site), one site id, or a list of ids (empty means every site). The
+// Engagement filters pick several sites (2026-10-15), so everything that filters by site goes through this.
+export const matchesSite = (scope, id) =>
+  scope == null || (Array.isArray(scope) ? scope.length === 0 || scope.includes(id) : scope === id)
+
 export const schoolWeeks = generateSchoolWeeks()
 // Weeks with no school (winter break), so week-by-week views can skip them.
 export const NO_SCHOOL_WEEKS = WINTER_BREAK_WEEKS.map(i => schoolWeeks[i])

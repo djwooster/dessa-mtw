@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { schools, getWeekData } from '../../lib/report2Data'
+import { schools, getWeekData, matchesSite } from '../../lib/report2Data'
 import { GOAL, weekLabel, monthTransitionLabels, Y_TICKS } from '../../pages/Report2ConceptE'
 
 // Engagement Concept B chart (2026-10-06): every week is one bar of 100% of
@@ -16,7 +16,7 @@ const BANDS = [
 ]
 
 export function weekBands(schoolId, week, role = 'all') {
-  const ids = schoolId == null ? schools.map(s => s.id) : [schoolId]
+  const ids = schools.filter(s => matchesSite(schoolId, s.id)).map(s => s.id)
   const counts = { met: 0, progress: 0, none: 0 }
   ids.forEach(id => {
     getWeekData(id, week, GOAL).teachers.forEach(t => {
