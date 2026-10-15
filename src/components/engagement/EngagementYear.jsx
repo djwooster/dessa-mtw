@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, useAnimationControls, useInView, useReducedMotion } from 'framer-motion'
 import { parseISO, format } from 'date-fns'
 import { ChevronRight, Maximize2, Minimize2, School } from 'lucide-react'
 import { schools, schoolWeeks, NO_SCHOOL_WEEKS, matchesSite } from '../../lib/report2Data'
@@ -46,35 +46,78 @@ const NO_SCHOOL = 'bg-[repeating-linear-gradient(135deg,theme(colors.brand.borde
 const FALL = schoolWeeks.filter(w => w < '2026-01-01')
 const SPRING = schoolWeeks.filter(w => w >= '2026-01-01')
 
-// Term illustrations for (4) (2026-10-15): small flat vector drawings in the MTW palette, a two-tone
-// maple leaf for Fall and a flower for Spring, shown at 28px. Decorative only.
+// Term illustrations for (4) (2026-10-15): small flat vector drawings in the MTW palette, drawn from
+// the user's references: a three-lobed leaf for Fall and a six-petal flower for Spring, at 32px so they read at a glance.
+// Decorative only.
+// Three-lobed leaf after the user's simpler reference: a large top lobe, a left lobe and a lower right lobe
+// in burnt orange (coral laid over amber), with darker veins that fan from one point into the stem.
+function LeafLobes() {
+  return (
+    <>
+      <ellipse cx="14.6" cy="8.4" rx="4.3" ry="6.6" transform="rotate(38 14.6 8.4)" />
+      <ellipse cx="7.4" cy="10.6" rx="3.2" ry="5.1" transform="rotate(-12 7.4 10.6)" />
+      <ellipse cx="14" cy="15.8" rx="3" ry="5.4" transform="rotate(78 14 15.8)" />
+      <circle cx="10.2" cy="13.6" r="3.4" />
+    </>
+  )
+}
+const LEAF_VEINS = 'M5.4 21.4 L8.8 16.2 C10.8 13 14 8.6 17.2 4.6 M8.8 16.2 C8 13.8 7.1 11 6.6 8.2 M8.8 16.2 C11 16.4 13.6 16.2 16.6 15.4 M11.4 12.4 C11.4 10.8 11.6 9.4 12 8.2 M12.6 10.8 C14.2 10.6 15.4 10.2 16.6 9.6'
+
 function FallLeaf({ className = '' }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <path d="M12 15.5 C12.2 18 12.6 20.4 13.4 22.5" className="stroke-mtw-coral" strokeWidth="1.6" strokeLinecap="round" fill="none" />
-      <g strokeWidth="1.2" strokeLinejoin="round">
-        <path d="M12 2 L13.7 5.8 L16.4 4.6 L15.9 8.9 L20.6 7.4 L19.2 10.6 L21.6 11.8 L17.2 14.4 L18 16.4 L12.9 15.6 L12 16.6 L11.1 15.6 L6 16.4 L6.8 14.4 L2.4 11.8 L4.8 10.6 L3.4 7.4 L8.1 8.9 L7.6 4.6 L10.3 5.8 Z" className="fill-mtw-amber stroke-mtw-amber" />
-        <path d="M12 2 L13.7 5.8 L16.4 4.6 L15.9 8.9 L20.6 7.4 L19.2 10.6 L21.6 11.8 L17.2 14.4 L18 16.4 L12.9 15.6 L12 16.6 Z" className="fill-mtw-coral stroke-mtw-coral" />
+      <g className="fill-mtw-amber"><LeafLobes /></g>
+      <g className="fill-mtw-coral" opacity="0.7"><LeafLobes /></g>
+      <g strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" fill="none">
+        <path d={LEAF_VEINS} className="stroke-mtw-coral" />
+        <path d={LEAF_VEINS} className="stroke-brand-text" opacity="0.2" />
       </g>
-      <path d="M12 15 L12 5 M12 13 L18.3 8.6 M12 13 L5.7 8.6 M12 14.4 L16.4 14.6 M12 14.4 L7.6 14.6" className="stroke-white" strokeWidth="0.75" strokeLinecap="round" fill="none" opacity="0.55" />
     </svg>
   )
 }
 
+// Six rounded petals pinched at the base (slight size and angle variation so it feels hand drawn), a lighter
+// inner layer, and a dark star of stamens with white dots, after the user's yellow flower reference.
+const PETAL = 'M12 12 C11 10.9 8.4 8 8.6 5 C8.8 2.7 10.5 1.4 12 1.4 C13.5 1.4 15.2 2.7 15.4 5 C15.6 8 13 10.9 12 12 Z'
+const PETALS = [[12, 1], [70, 0.95], [133, 1], [194, 0.97], [251, 1], [312, 0.94]]
+const petalAt = (a, k) => `rotate(${a} 12 12) translate(12 12) scale(${k}) translate(-12 -12)`
+
 function SpringFlower({ className = '' }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <path d="M12 12 C12 16 12 19 12 22.5" className="stroke-mtw-green" strokeWidth="1.6" strokeLinecap="round" fill="none" />
-      <path d="M12 19 C9 19 7.4 17.4 7 15.2 C9.6 15.2 11.5 16.6 12 19 Z" className="fill-mtw-green" />
-      {[0, 72, 144, 216, 288].map(a => (
-        <ellipse key={a} cx="12" cy="5.8" rx="2.7" ry="3.4" transform={`rotate(${a} 12 9.5)`} className="fill-dessa-salmon" />
+      {PETALS.map(([a, k]) => <path key={a} d={PETAL} transform={petalAt(a, k)} className="fill-mtw-amber" />)}
+      <g className="fill-white" opacity="0.4">
+        {PETALS.map(([a]) => <path key={a} d={PETAL} transform={petalAt(a, 0.56)} />)}
+      </g>
+      {[0, 40, 80, 120, 160, 200, 240, 280, 320].map(a => (
+        <ellipse key={a} cx="12" cy="10.2" rx="0.55" ry="1.4" transform={`rotate(${a} 12 12)`} className="fill-brand-text" />
       ))}
-      {[0, 72, 144, 216, 288].map(a => (
-        <ellipse key={a} cx="12" cy="6.8" rx="1.1" ry="1.9" transform={`rotate(${a} 12 9.5)`} className="fill-mtw-coral" opacity="0.35" />
-      ))}
-      <circle cx="12" cy="9.5" r="2.4" className="fill-mtw-amber" />
-      <circle cx="11.2" cy="8.7" r="0.7" className="fill-white" opacity="0.7" />
+      <circle cx="12" cy="12" r="1.05" className="fill-brand-text" />
+      {[[11.6, 11.7], [12.45, 11.85], [11.9, 12.45]].map(([x, y]) => <circle key={x} cx={x} cy={y} r="0.27" className="fill-white" />)}
     </svg>
+  )
+}
+
+// Term heading for (4) (2026-10-15): the illustration gives a quick wave the first time it scrolls into view,
+// and again whenever the heading is hovered. It sways from its base like a leaf on a breeze. Skipped when
+// the viewer prefers reduced motion.
+function TermTitle({ title, Icon, className }) {
+  const ref = useRef(null)
+  const inView = useInView(ref, { once: true, amount: 0.8 })
+  const controls = useAnimationControls()
+  const reduce = useReducedMotion()
+  const wave = () => {
+    if (reduce) return
+    controls.start({ rotate: [0, -14, 10, -6, 3, 0], transition: { duration: 0.9, ease: 'easeInOut' } })
+  }
+  useEffect(() => { if (inView) wave() }, [inView])
+  return (
+    <motion.p onHoverStart={wave} className={className}>
+      <motion.span ref={ref} animate={controls} style={{ originX: 0.5, originY: 0.85 }} className="inline-flex shrink-0">
+        <Icon className="h-8 w-8" />
+      </motion.span>
+      {title}
+    </motion.p>
   )
 }
 
@@ -235,14 +278,14 @@ export default function EngagementYear({ siteIds = [], role = 'all', layout = 'g
 
   return (
     <div className="px-6 pt-4 pb-8">
-      <nav aria-label="Breadcrumb" className="mb-8">
+      <nav aria-label="Breadcrumb" className="mb-5">
         <ol className="flex items-center gap-1.5 text-[13px] text-brand-subtext">
           <li><Link to="/reports/engagement" className="hover:text-brand-text hover:underline transition-colors">Engagement</Link></li>
           <li aria-hidden="true"><ChevronRight size={12} /></li>
           <li aria-current="page" className="text-brand-text">Week by week</li>
         </ol>
       </nav>
-      <h2 className="text-2xl font-semibold text-brand-text mb-6">Week by week</h2>
+      <h2 className="text-2xl font-semibold text-brand-text mb-3">Week by week</h2>
 
       <motion.section
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
@@ -256,11 +299,10 @@ export default function EngagementYear({ siteIds = [], role = 'all', layout = 'g
           <button
             type="button"
             onClick={toggleFullscreen}
-            aria-label={fullscreen ? 'Exit fullscreen' : 'View fullscreen'}
-            title={fullscreen ? 'Exit fullscreen' : 'View fullscreen'}
-            className="inline-flex items-center justify-center w-8 h-8 shrink-0 rounded-md text-brand-subtext hover:bg-brand-bg hover:text-brand-text transition-colors"
+            className="inline-flex items-center gap-1.5 h-8 px-3 shrink-0 rounded-md border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors"
           >
-            {fullscreen ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
+            {fullscreen ? <Minimize2 size={14} className="text-brand-subtext" aria-hidden="true" /> : <Maximize2 size={14} className="text-brand-subtext" aria-hidden="true" />}
+            {fullscreen ? 'Exit fullscreen' : 'View fullscreen'}
           </button>
         </header>
 
@@ -268,11 +310,12 @@ export default function EngagementYear({ siteIds = [], role = 'all', layout = 'g
           <div className="flex flex-col gap-8">
             {[{ title: 'Fall 2025', weeks: FALL, Icon: FallLeaf }, { title: 'Spring 2026', weeks: SPRING, Icon: SpringFlower }].map(h => (
               <div key={h.title}>
-                <p className={`${TABLE_STEPS[layout] ? 'text-base font-bold' : 'text-xs font-semibold uppercase tracking-wide'} flex items-center gap-1 text-brand-text mb-3`}>
-                  {/* (4) marks each term with an icon (2026-10-15): a leaf for Fall, a flower for Spring. */}
-                  {layout === 'halves4' && <h.Icon className="h-7 w-7 shrink-0" />}
-                  {h.title}
-                </p>
+                {/* (4) marks each term with an illustration (2026-10-15): a leaf for Fall, a flower for Spring. */}
+                {layout === 'halves4' ? (
+                  <TermTitle title={h.title} Icon={h.Icon} className="flex items-center gap-1 w-fit text-sm font-medium text-brand-text mb-3" />
+                ) : (
+                  <p className={`${TABLE_STEPS[layout] ? 'text-sm font-medium' : 'text-xs font-semibold uppercase tracking-wide'} text-brand-text mb-3`}>{h.title}</p>
+                )}
                 {TABLE_STEPS[layout]
                   ? <YearTable weeks={h.weeks} rows={pick(h.weeks)} steps={TABLE_STEPS[layout]} refined={layout === 'halves4'} />
                   : <YearGrid weeks={h.weeks} rows={pick(h.weeks)} variant="halves" />}
