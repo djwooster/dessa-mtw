@@ -20,6 +20,16 @@ export const TODO_SECTIONS = [
     ],
   },
   {
+    title: 'Engagement report (Concept F)',
+    note: 'Concept F is the decided design and lives on main for the dev handoff. The usability-test branch stays as the process record.',
+    items: [
+      { id: 'eng-f-weekly-goal-apparent', text: 'Make the weekly goal more apparent for Program Admin', note: 'Manager wants it visible in several places for screenshots. Deferred, to refine later.' },
+      { id: 'eng-f-school-year-data', text: 'Make the mock data accurate for the 2025-26 school year', note: 'Pretend today is Feb 15, 2026. Still need the school start date and whether to add holiday dips.' },
+      { id: 'eng-f-refresh-full-branch', text: 'Refresh the engagement-prototype-full branch', note: 'It predates the Filters and Concept F work. Also decide whether to bring back the GitHub-style user graph (saved in ContributionGraph.jsx).' },
+      { id: 'eng-f-sticky-filters-future', text: 'Future idea: sticky filters, consistent across every report', note: 'Does not match the current system, so it waits for a board-wide change.' },
+    ],
+  },
+  {
     title: 'Other open threads',
     items: [
       { id: 'curriculum-setup-winner', text: 'Curriculum Setup (AP-4933): pick a winner between Concepts A/B/C', note: 'For both the admin table and the Site Leader card.' },

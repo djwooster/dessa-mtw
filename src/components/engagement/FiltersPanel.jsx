@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { DatePicker } from '../ui/date-picker'
 
 // Filters panel for the Engagement report (2026-10-09), matching the production
@@ -27,10 +27,11 @@ function Select({ label, value, onChange, children, className = '' }) {
   )
 }
 
-export default function FiltersPanel({ draft, onChange, onApply, onReset, sites, roles, showSite = true, minDate, maxDate }) {
+export default function FiltersPanel({ draft, onChange, onApply, onReset, sites, roles, showSite = true, minDate, maxDate, weekMode = null }) {
   const [open, setOpen] = useState(true)
   const set = patch => onChange({ ...draft, ...patch })
-  const valid = !!draft.start && !!draft.end && draft.start <= draft.end
+  // weekMode (2026-10-15, Engagement B) swaps Start and End date for a week cycler: { label, canPrev, canNext, onPrev, onNext, isLatest, onLatest }.
+  const valid = weekMode ? true : !!draft.start && !!draft.end && draft.start <= draft.end
 
   return (
     <section aria-label="Filters" className="rounded-xl border border-brand-border bg-white p-4 mb-6">
@@ -59,6 +60,18 @@ export default function FiltersPanel({ draft, onChange, onApply, onReset, sites,
             <option value="all">All</option>
             {roles.map(r => <option key={r} value={r}>{r}</option>)}
           </Select>
+          {weekMode && (
+            <div className="flex flex-col gap-1.5 flex-[2] min-w-56">
+              <span className={LABEL}>Week</span>
+              <div className="flex items-center h-8 rounded-md border border-brand-border bg-white text-[13px] text-brand-text">
+                <button type="button" onClick={weekMode.onPrev} disabled={!weekMode.canPrev} aria-label="Previous week" className="h-full px-2.5 rounded-l-md text-brand-subtext hover:bg-brand-bg hover:text-brand-text transition-colors disabled:opacity-30 disabled:hover:bg-transparent"><ChevronLeft size={14} /></button>
+                <span className="flex-1 text-center font-medium tabular-nums" aria-live="polite">{weekMode.label}</span>
+                {!weekMode.isLatest && <button type="button" onClick={weekMode.onLatest} className="px-2 text-xs font-medium text-dessa-teal hover:underline">Latest</button>}
+                <button type="button" onClick={weekMode.onNext} disabled={!weekMode.canNext} aria-label="Next week" className="h-full px-2.5 rounded-r-md text-brand-subtext hover:bg-brand-bg hover:text-brand-text transition-colors disabled:opacity-30 disabled:hover:bg-transparent"><ChevronRight size={14} /></button>
+              </div>
+            </div>
+          )}
+          {!weekMode && <>
           <div className="flex flex-col gap-1.5 flex-1 min-w-36">
             <span className={LABEL}>Start date</span>
             <DatePicker value={draft.start} onChange={v => set({ start: v })} placeholder="Start date" min={minDate} max={draft.end || maxDate} className="h-8 py-0 text-[13px] rounded-md" />
@@ -67,6 +80,7 @@ export default function FiltersPanel({ draft, onChange, onApply, onReset, sites,
             <span className={LABEL}>End date</span>
             <DatePicker value={draft.end} onChange={v => set({ end: v })} placeholder="End date" min={draft.start || minDate} max={maxDate} className="h-8 py-0 text-[13px] rounded-md" />
           </div>
+          </>}
           <div className="flex items-center gap-2 shrink-0 ml-auto">
             <button
               type="submit"

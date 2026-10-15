@@ -189,6 +189,8 @@ function generateSchoolWeeks() {
 }
 
 export const schoolWeeks = generateSchoolWeeks()
+// Weeks with no school (winter break), so week-by-week views can skip them.
+export const NO_SCHOOL_WEEKS = WINTER_BREAK_WEEKS.map(i => schoolWeeks[i])
 
 const rosterCache = {}
 function getCachedRoster(schoolId) {

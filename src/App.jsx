@@ -30,6 +30,7 @@ import { ResourcesConceptProvider } from './lib/resourcesConceptContext'
 import { SiteEngagementConceptProvider } from './lib/siteEngagementConceptContext'
 import { DceConceptProvider } from './lib/dceConceptContext'
 import { EngagementConceptProvider } from './lib/engagementConceptContext'
+import { EngagementVersionProvider } from './lib/engagementVersionContext'
 import { RoleProvider } from './lib/roleContext'
 
 function Placeholder({ title }) {
@@ -60,9 +61,11 @@ export default function App() {
         <SiteEngagementConceptProvider>
           <DceConceptProvider>
             <EngagementConceptProvider>
+            <EngagementVersionProvider>
             <RoleProvider>
               <AppShell handleBookmark={handleBookmark} />
             </RoleProvider>
+            </EngagementVersionProvider>
             </EngagementConceptProvider>
           </DceConceptProvider>
         </SiteEngagementConceptProvider>

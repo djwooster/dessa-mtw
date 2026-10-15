@@ -21,7 +21,8 @@ function niceScale(max) {
   return { top, ticks }
 }
 
-export default function WeeklyBarChart({ points, percent = false, label, kind = 'bar' }) {
+// `selectedWeek` and `onSelectWeek` (2026-10-15, Engagement B) mark one week and make each week clickable.
+export default function WeeklyBarChart({ points, percent = false, label, kind = 'bar', selectedWeek = null, onSelectWeek = null }) {
   const [hoverIdx, setHoverIdx] = useState(null)
   // Draw at the real pixel width (fixed height) so labels stay 10px on wide
   // screens instead of scaling up with a stretched viewBox.
@@ -81,11 +82,13 @@ export default function WeeklyBarChart({ points, percent = false, label, kind = 
             <g key={p.week} opacity={kind === 'bar' && hoverIdx != null && hoverIdx !== i ? 0.55 : 1} className="transition-opacity">
               {kind === 'bar'
                 ? <rect x={cx - barW / 2} y={yFor(p.value)} width={barW} height={barH} rx={1.5} fill="#2A7F8F" />
-                : <circle cx={cx} cy={yFor(p.value)} r={hoverIdx === i ? 4.5 : 3} fill="#2A7F8F" stroke="white" strokeWidth={1.5} />}
+                : <circle cx={cx} cy={yFor(p.value)} r={hoverIdx === i || p.week === selectedWeek ? 5 : 3} fill="#2A7F8F" stroke={p.week === selectedWeek ? '#1B2B4B' : 'white'} strokeWidth={p.week === selectedWeek ? 2 : 1.5} />}
               {text && <text x={cx} y={height - 10} textAnchor="middle" fontSize={11} fill="#6B7A8D">{text}</text>}
               <rect
                 x={padding.left + i * slotW} y={padding.top} width={slotW} height={innerH}
                 fill="transparent"
+                onClick={onSelectWeek ? () => onSelectWeek(p.week) : undefined}
+                className={onSelectWeek ? 'cursor-pointer' : undefined}
                 onMouseEnter={() => setHoverIdx(i)}
                 onMouseLeave={() => setHoverIdx(null)}
               />
