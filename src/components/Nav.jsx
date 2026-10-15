@@ -45,7 +45,8 @@ const DCE_CONCEPTS = [
 // locks the report to one week at a time.
 const ENGAGEMENT_VERSIONS = [
   { value: 'a', label: 'A', title: 'A, Engagement report as it stands: chart with a weekly table view' },
-  { value: 'b', label: 'B', title: 'B, Locked to one week: week cycler, Sites and Users tabs, site table with change vs last week' },
+  { value: 'b', label: 'B', title: 'B, Date range filters, Sites and Users tabs, site table with latest week and range average' },
+  { value: 'c', label: 'C', title: 'C, School comparison: no Site filter, one table of every site by week' },
 ]
 
 const ENGAGEMENT_CONCEPTS = [

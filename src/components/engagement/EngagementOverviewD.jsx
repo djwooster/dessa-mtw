@@ -4,7 +4,7 @@ import { schools, getWeekData } from '../../lib/report2Data'
 import { GOAL, SearchField } from '../../pages/Report2ConceptE'
 import { weekBands } from './StackedGoalChart'
 import WeeklyBarChart from './WeeklyBarChart'
-import WeeklyGoalTable from './WeeklyGoalTable'
+import SitesGoalTable from './SitesGoalTable'
 
 // Engagement Concept D (2026-10-06), modeled on two pages the user liked: an
 // Insights page (a row of stat cards with change pills) and an Apollo home
@@ -160,7 +160,7 @@ export default function EngagementOverviewD({ weeks, selectedId, onSelect, showC
               {showSiteList && selectedSchool && <span className="font-normal text-brand-subtext"> · {selectedSchool.name}</span>}
             </p>
             {viewSwitch && view === 'table'
-              ? <WeeklyGoalTable schoolId={selectedId} weeks={weeks} role={role} rangeText={rangeText} />
+              ? <SitesGoalTable siteId={selectedId} weeks={weeks} role={role} />
               : <WeeklyBarChart label="Users who met the goal each week" kind="line" percent points={scope.points} />}
           </div>
           </motion.div>

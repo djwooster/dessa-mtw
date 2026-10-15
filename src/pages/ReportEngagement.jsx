@@ -17,6 +17,7 @@ import EngagementOverviewD from '../components/engagement/EngagementOverviewD'
 import { PaginationBar } from '../components/ui/pagination'
 import FiltersPanel from '../components/engagement/FiltersPanel'
 import WeeklyGoalTable, { weeklyGoalRows } from '../components/engagement/WeeklyGoalTable'
+import { siteGoalRows } from '../components/engagement/SitesGoalTable'
 import GoalStatusBadge from '../components/engagement/GoalStatusBadge'
 import EducatorCalendar from '../components/engagement/EducatorCalendar'
 import PrintReport from '../components/engagement/PrintReport'
@@ -319,7 +320,18 @@ function ReportEngagementA() {
 
   function exportCsv() {
     if (isF && graphView === 'table') {
-      const id = isSiteLeaderView ? schools[0].id : dSiteId
+      if (!isSiteLeaderView) {
+        const { all, sites } = siteGoalRows(dSiteId, weeks, roleFilter)
+        const body = [all, ...sites].map(r => `"${r.name}",${r.users},${r.met},${r.pct}%`).join('\n')
+        const url = URL.createObjectURL(new Blob([`Site,Users,Met goal,% met\n${body}`], { type: 'text/csv' }))
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'engagement-by-site.csv'
+        a.click()
+        URL.revokeObjectURL(url)
+        return
+      }
+      const id = schools[0].id
       const body = weeklyGoalRows(id, weeks, roleFilter).map(r => `"${r.label}",${r.total},${r.met},${r.pct}%`).join('\n')
       const url = URL.createObjectURL(new Blob([`Week,Users,Met goal,% met\n${body}`], { type: 'text/csv' }))
       const a = document.createElement('a')
@@ -733,41 +745,62 @@ function ReportEngagementA() {
 }
 
 // ─── Version B (2026-10-15) ──────────────────────────────────────────────────
-// Time is locked to one school week at a time: a week cycler replaces the date range, so every
-// number is exact (a user met the goal that week or did not). Two tabs under the Filters panel:
-// Sites (a trailing 8-week chart or a one-row-per-site table, with the change vs the week before)
-// and Users (the users table, with the goal status badge). Clicking a site opens the Users tab
-// filtered to that site. Winter break weeks are skipped.
+// A normal date range, like A (Site, User role, Start and End date, Apply) and two tabs (the stat
+// strip tried here was removed 2026-10-15). Tabs: Sites (the chart for the
+// range, or a one-row-per-site table) and Users (the users table). Clicking a site opens the Users
+// tab filtered to that site. Winter break weeks are left out of the range.
 const B_WEEKS = schoolWeeks.filter(w => !NO_SCHOOL_WEEKS.includes(w))
-const B_DEFAULTS = { site: 'all', role: 'all' }
-const B_TRAIL = 8
 
-function SitesOverviewTable({ week, prevWeek, role, siteId, onOpenSite }) {
+function rangeStats(siteId, role, weekList) {
+  let met = 0, total = 0, lessons = 0
+  const active = new Set()
+  const everyone = new Set()
+  schools.filter(sc => siteId == null || sc.id === siteId).forEach(sc => {
+    weekList.forEach(w => {
+      getWeekData(sc.id, w, GOAL).teachers.forEach((t, i) => {
+        if (role !== 'all' && t.role !== role) return
+        everyone.add(`${sc.id}-${i}`)
+        total += 1
+        if (t.metGoal) met += 1
+        lessons += t.daysActive
+        if (t.daysActive > 0) active.add(`${sc.id}-${i}`)
+      })
+    })
+  })
+  return { pct: total ? Math.round((met / total) * 100) : 0, lessons, active: active.size, users: everyone.size }
+}
+
+const sign = n => (n > 0 ? '+' : n < 0 ? '−' : '')
+function SitesOverviewTable({ weeks, role, siteId, onOpenSite }) {
   const [sort, setSort] = useState({ key: 'pct', dir: 'asc' })
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const allRow = useMemo(() => weekBands(siteId, week, role), [siteId, week, role])
+  const latest = weeks[weeks.length - 1]
+  const prevWeek = B_WEEKS[B_WEEKS.indexOf(latest) - 1] ?? null
+  const rowFor = id => {
+    const cur = weekBands(id, latest, role)
+    const prev = prevWeek ? weekBands(id, prevWeek, role) : null
+    const avg = rangeStats(id, role, weeks).pct
+    return { ...cur, avg, delta: prev && prev.total ? cur.pct - prev.pct : null }
+  }
+  const allRow = useMemo(() => rowFor(siteId), [siteId, weeks, role])
   const rows = useMemo(() => schools
     .filter(sc => siteId == null || sc.id === siteId)
-    .map(sc => {
-      const cur = weekBands(sc.id, week, role)
-      const prev = prevWeek ? weekBands(sc.id, prevWeek, role) : null
-      return { sc, ...cur, delta: prev && prev.total ? cur.pct - prev.pct : null }
-    })
+    .map(sc => ({ sc, ...rowFor(sc.id) }))
     .filter(r => r.total > 0)
     .sort((a, b) => {
       const dir = sort.dir === 'asc' ? 1 : -1
       if (sort.key === 'name') return dir * a.sc.name.localeCompare(b.sc.name)
       if (sort.key === 'users') return dir * (a.total - b.total) || a.sc.name.localeCompare(b.sc.name)
+      if (sort.key === 'avg') return dir * (a.avg - b.avg) || a.sc.name.localeCompare(b.sc.name)
       if (sort.key === 'delta') return dir * ((a.delta ?? -999) - (b.delta ?? -999)) || a.sc.name.localeCompare(b.sc.name)
       return dir * (a.pct - b.pct) || a.sc.name.localeCompare(b.sc.name)
-    }), [siteId, week, prevWeek, role, sort])
-  useEffect(() => { setPage(1) }, [week, siteId, role])
+    }), [siteId, weeks, role, sort])
+  useEffect(() => { setPage(1) }, [weeks, siteId, role])
   const shown = rows.slice((page - 1) * pageSize, page * pageSize)
-  const prevAll = prevWeek ? weekBands(siteId, prevWeek, role) : null
-  const allDelta = prevAll && prevAll.total ? allRow.pct - prevAll.pct : null
-  const deltaText = d => d == null ? '–' : `${d > 0 ? '+' : d < 0 ? '−' : ''}${Math.abs(d)} pts`
+  const deltaText = d => d == null ? '–' : `${sign(d)}${Math.abs(d)} pts`
   const resort = (k, first) => { setSort(s => nextSort(s, k, first)); setPage(1) }
+  const right = 'text-right tabular-nums'
 
   return (
     <div className="rounded-lg border border-brand-border overflow-hidden [&_td]:text-[13px]">
@@ -776,28 +809,28 @@ function SitesOverviewTable({ week, prevWeek, role, siteId, onOpenSite }) {
           <TableRow>
             <TableHead className="text-[13px] font-medium"><SortButton label="Site" col="name" sort={sort} onSort={k => resort(k)} /></TableHead>
             <TableHead className="text-[13px] font-medium text-right"><SortButton label="Users" col="users" sort={sort} onSort={k => resort(k, 'desc')} align="right" /></TableHead>
-            <TableHead className="text-[13px] font-medium text-right">Met goal</TableHead>
-            <TableHead className="text-[13px] font-medium text-right"><SortButton label="% met" col="pct" sort={sort} onSort={k => resort(k)} align="right" /></TableHead>
+            <TableHead className="text-[13px] font-medium text-right"><SortButton label="Latest week" col="pct" sort={sort} onSort={k => resort(k)} align="right" /></TableHead>
+            <TableHead className="text-[13px] font-medium text-right"><SortButton label="Range average" col="avg" sort={sort} onSort={k => resort(k)} align="right" /></TableHead>
             <TableHead className="text-[13px] font-medium text-right"><SortButton label="vs last week" col="delta" sort={sort} onSort={k => resort(k, 'desc')} align="right" /></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <TableRow className="hover:bg-transparent bg-brand-bg/50">
             <TableCell className="font-semibold">{siteId == null ? 'All sites' : schools.find(sc => sc.id === siteId)?.name}</TableCell>
-            <TableCell className="text-right tabular-nums font-semibold">{allRow.total}</TableCell>
-            <TableCell className="text-right tabular-nums font-semibold">{allRow.met}</TableCell>
-            <TableCell className="text-right tabular-nums font-semibold">{allRow.pct}%</TableCell>
-            <TableCell className="text-right tabular-nums font-semibold text-brand-subtext">{deltaText(allDelta)}</TableCell>
+            <TableCell className={`${right} font-semibold`}>{allRow.total}</TableCell>
+            <TableCell className={`${right} font-semibold`}>{allRow.pct}%</TableCell>
+            <TableCell className={`${right} font-semibold`}>{allRow.avg}%</TableCell>
+            <TableCell className={`${right} font-semibold text-brand-subtext`}>{deltaText(allRow.delta)}</TableCell>
           </TableRow>
           {siteId == null && shown.map(r => (
             <TableRow key={r.sc.id} onClick={() => onOpenSite(r.sc.id)} className="cursor-pointer">
               <TableCell className="font-medium">
                 <button type="button" onClick={e => { e.stopPropagation(); onOpenSite(r.sc.id) }} className="text-left text-[13px] text-[#134fb2] hover:underline">{r.sc.name}</button>
               </TableCell>
-              <TableCell className="text-right tabular-nums text-brand-subtext">{r.total}</TableCell>
-              <TableCell className="text-right tabular-nums text-brand-subtext">{r.met}</TableCell>
-              <TableCell className="text-right tabular-nums">{r.pct}%</TableCell>
-              <TableCell className="text-right tabular-nums text-brand-subtext">{deltaText(r.delta)}</TableCell>
+              <TableCell className={`${right} text-brand-subtext`}>{r.total}</TableCell>
+              <TableCell className={right} title={`${r.met} of ${r.total} users`}>{r.pct}%</TableCell>
+              <TableCell className={right}>{r.avg}%</TableCell>
+              <TableCell className={`${right} text-brand-subtext`}>{deltaText(r.delta)}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -811,9 +844,8 @@ function ReportEngagementB() {
   const { isSiteLeaderView } = useRole()
   const [tab, setTab] = useState('sites')
   const [view, setView] = useState('chart')
-  const [draft, setDraft] = useState(B_DEFAULTS)
-  const [applied, setApplied] = useState(B_DEFAULTS)
-  const [weekIdx, setWeekIdx] = useState(B_WEEKS.length - 1)
+  const [draft, setDraft] = useState(DEFAULT_FILTERS)
+  const [applied, setApplied] = useState(DEFAULT_FILTERS)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
 
@@ -824,19 +856,18 @@ function ReportEngagementB() {
     return () => document.removeEventListener('mousedown', h)
   }, [menuOpen])
 
-  const week = B_WEEKS[weekIdx]
-  const prevWeek = B_WEEKS[weekIdx - 1] ?? null
+  const weeks = useMemo(() => {
+    const ws = weeksForDates(parseISO(applied.start), parseISO(applied.end)).filter(w => !NO_SCHOOL_WEEKS.includes(w))
+    return ws.length ? ws : B_WEEKS.slice(-4)
+  }, [applied])
   const siteId = isSiteLeaderView ? schools[0].id : applied.site === 'all' ? null : Number(applied.site)
   const role = applied.role
   const site = schools.find(sc => sc.id === siteId) ?? null
-  const trail = B_WEEKS.slice(Math.max(0, weekIdx - (B_TRAIL - 1)), weekIdx + 1)
-  const weekText = weekRangeLabel(week)
-  const trailText = `${weekRangeLabel(trail[0]).split(' to ')[0]} to ${format(addDays(parseISO(week), 4), 'MMM d')}`
 
-  const points = useMemo(() => trail.map(w => {
+  const points = useMemo(() => weeks.map(w => {
     const b = weekBands(siteId, w, role)
     return { week: w, value: b.pct, detail: `${b.pct}% (${b.met} of ${b.total} users)` }
-  }), [trail, siteId, role])
+  }), [weeks, siteId, role])
 
   function openSite(id) {
     setApplied(a => ({ ...a, site: String(id) }))
@@ -850,21 +881,23 @@ function ReportEngagementB() {
     URL.revokeObjectURL(url)
   }
   function exportCsv() {
+    const latest = weeks[weeks.length - 1]
     if (tab === 'users') {
       const lines = (site ? [site] : schools).flatMap(sc => {
-        const data = getWeekData(sc.id, week, GOAL).teachers
-        return getRosterNames(sc.id).map((n, i) => ({ n, i, sc })).filter(({ i }) => role === 'all' || data[i].role === role)
-          .map(({ n, i }) => `"${n}","${sc.name}","${data[i].role}","${data[i].daysActive >= GOAL ? 'Goal met' : data[i].daysActive > 0 ? 'In progress' : 'Not started'}","${getLastActive(sc.id, i)}"`)
+        const data = getWeekData(sc.id, latest, GOAL).teachers
+        return getRosterNames(sc.id).map((n, i) => ({ n, i })).filter(({ i }) => role === 'all' || data[i].role === role)
+          .map(({ n, i }) => `"${n}","${sc.name}","${data[i].role}","${getLastActive(sc.id, i)}"`)
       })
-      download('engagement-users.csv', `User,Site,Role,Weekly goal,Last Active\n${lines.join('\n')}`)
+      download('engagement-users.csv', `User,Site,Role,Last Active\n${lines.join('\n')}`)
       return
     }
+    const prevWeek = B_WEEKS[B_WEEKS.indexOf(latest) - 1] ?? null
     const lines = schools.filter(sc => siteId == null || sc.id === siteId).map(sc => {
-      const cur = weekBands(sc.id, week, role)
+      const cur = weekBands(sc.id, latest, role)
       const prev = prevWeek ? weekBands(sc.id, prevWeek, role) : null
-      return `"${sc.name}",${cur.total},${cur.met},${cur.pct}%,${prev && prev.total ? cur.pct - prev.pct : ''}`
+      return `"${sc.name}",${cur.total},${cur.met},${cur.pct}%,${rangeStats(sc.id, role, weeks).pct}%,${prev && prev.total ? cur.pct - prev.pct : ''}`
     })
-    download('engagement-sites.csv', `Site,Users,Met goal,% met,Change vs last week (pts)\n${lines.join('\n')}`)
+    download('engagement-sites.csv', `Site,Users,Met goal (latest week),Latest week %,Range average %,Change vs last week (pts)\n${lines.join('\n')}`)
   }
 
   const viewSwitch = (
@@ -906,19 +939,12 @@ function ReportEngagementB() {
         draft={draft}
         onChange={setDraft}
         onApply={() => setApplied(draft)}
-        onReset={() => { setDraft(B_DEFAULTS); setApplied(B_DEFAULTS); setWeekIdx(B_WEEKS.length - 1) }}
+        onReset={() => { setDraft(DEFAULT_FILTERS); setApplied(DEFAULT_FILTERS) }}
         sites={schools}
         roles={USER_ROLES}
         showSite={!isSiteLeaderView}
-        weekMode={{
-          label: weekText,
-          canPrev: weekIdx > 0,
-          canNext: weekIdx < B_WEEKS.length - 1,
-          onPrev: () => setWeekIdx(i => Math.max(0, i - 1)),
-          onNext: () => setWeekIdx(i => Math.min(B_WEEKS.length - 1, i + 1)),
-          isLatest: weekIdx === B_WEEKS.length - 1,
-          onLatest: () => setWeekIdx(B_WEEKS.length - 1),
-        }}
+        minDate={FILTER_MIN}
+        maxDate={FILTER_MAX}
       />
 
       <div role="tablist" className="flex gap-6 border-b border-brand-border mb-6">
@@ -939,24 +965,180 @@ function ReportEngagementB() {
           </div>
           <p className="text-[15px] font-semibold text-brand-text mb-4">Users completing 3 lessons a week</p>
           {view === 'chart' ? (
-            <WeeklyBarChart
-              label="Users who met the goal each week" kind="line" percent points={points}
-              selectedWeek={week} onSelectWeek={w => setWeekIdx(B_WEEKS.indexOf(w))}
-            />
+            <WeeklyBarChart label="Users who met the goal each week" kind="line" percent points={points} />
           ) : isSiteLeaderView ? (
-            <WeeklyGoalTable schoolId={siteId} weeks={trail} role={role} rangeText={trailText} />
+            <WeeklyGoalTable schoolId={siteId} weeks={weeks} role={role} rangeText={rangeLabel(weeks)} />
           ) : (
-            <SitesOverviewTable week={week} prevWeek={prevWeek} role={role} siteId={siteId} onOpenSite={openSite} />
+            <SitesOverviewTable weeks={weeks} role={role} siteId={siteId} onOpenSite={openSite} />
           )}
         </div>
       ) : (
-        <SiteEducators school={site} weeks={[week]} role={role} showDots={false} showDays={false} drilldown goalColumn fStyle roleColumn />
+        <SiteEducators school={site} weeks={weeks} role={role} showDots={false} showDays={false} drilldown goalColumn={false} fStyle roleColumn />
       )}
+    </div>
+  )
+}
+
+// ─── Version C (2026-10-15) ──────────────────────────────────────────────────
+// School comparison first: no Site filter, just User role and the date range, and one table of
+// every site by week (the pattern from the manager's mock-up). A bold All sites row sits on top,
+// weeks run across the columns (newest first) with a weighted Range column at the end, and the
+// first column is pinned when the weeks scroll sideways. Clicking a site opens the shared site modal.
+function SitesMatrix({ weeks, role, siteId, onOpenSite }) {
+  const [sort, setSort] = useState({ key: 'range', dir: 'asc' })
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const cols = useMemo(() => [...weeks].reverse(), [weeks])
+  const build = id => {
+    const cells = cols.map(w => weekBands(id, w, role))
+    return { cells, range: rangeStats(id, role, weeks).pct, total: cells[0]?.total ?? 0 }
+  }
+  const allRow = useMemo(() => build(null), [cols, role])
+  const rows = useMemo(() => schools
+    .filter(sc => siteId == null || sc.id === siteId)
+    .map(sc => ({ sc, ...build(sc.id) }))
+    .filter(r => r.total > 0)
+    .sort((a, b) => {
+      const dir = sort.dir === 'asc' ? 1 : -1
+      if (sort.key === 'name') return dir * a.sc.name.localeCompare(b.sc.name)
+      return dir * (a.range - b.range) || a.sc.name.localeCompare(b.sc.name)
+    }), [cols, role, siteId, sort])
+  useEffect(() => { setPage(1) }, [weeks, role])
+  const shown = rows.slice((page - 1) * pageSize, page * pageSize)
+  const resort = (k, first) => { setSort(s => nextSort(s, k, first)); setPage(1) }
+  const stick = 'sticky left-0 z-10 min-w-48'
+  const cell = 'text-right tabular-nums min-w-16'
+
+  const numberCells = (r, bold) => (
+    <>
+      {r.cells.map((c, i) => (
+        <TableCell key={cols[i]} className={`${cell} ${bold ? 'font-semibold' : ''}`} title={`${weekRangeLabel(cols[i])}: ${c.met} of ${c.total} users`}>{c.pct}%</TableCell>
+      ))}
+      <TableCell className={`${cell} font-semibold`} title="Total who met the goal across the weeks, divided by total users across the weeks">{r.range}%</TableCell>
+    </>
+  )
+
+  return (
+    <div className="rounded-xl border border-brand-border bg-white overflow-hidden [&_td]:text-[13px]">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className={`${stick} bg-brand-bg text-[13px] font-medium`}><SortButton label="Site" col="name" sort={sort} onSort={k => resort(k)} /></TableHead>
+              {cols.map(w => (
+                <TableHead key={w} className={`${cell} text-[13px] font-medium`} title={weekRangeLabel(w)}>{format(parseISO(w), 'MMM d')}</TableHead>
+              ))}
+              <TableHead className={`${cell} text-[13px] font-medium`}><SortButton label="Range" col="range" sort={sort} onSort={k => resort(k)} align="right" /></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow className="hover:bg-transparent">
+              <TableCell className={`${stick} bg-white font-semibold`}>{siteId == null ? 'All sites' : schools.find(sc => sc.id === siteId)?.name}</TableCell>
+              {numberCells(allRow, true)}
+            </TableRow>
+            {siteId == null && shown.map(r => (
+              <TableRow key={r.sc.id} onClick={() => onOpenSite(r.sc)} className="cursor-pointer group">
+                <TableCell className={`${stick} bg-white group-hover:bg-brand-bg font-medium`}>
+                  <button type="button" onClick={e => { e.stopPropagation(); onOpenSite(r.sc) }} className="text-left text-[13px] text-[#134fb2] hover:underline">{r.sc.name}</button>
+                </TableCell>
+                {numberCells(r, false)}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      {siteId == null && <PaginationBar page={page} pageSize={pageSize} total={rows.length} onPage={setPage} onPageSize={n => { setPageSize(n); setPage(1) }} className="px-4 py-3 border-t border-brand-border" />}
+    </div>
+  )
+}
+
+function ReportEngagementC() {
+  const { isSiteLeaderView } = useRole()
+  const [draft, setDraft] = useState(DEFAULT_FILTERS)
+  const [applied, setApplied] = useState(DEFAULT_FILTERS)
+  const [modalSite, setModalSite] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const h = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [menuOpen])
+  useEffect(() => {
+    if (!modalSite) return
+    const onKey = e => { if (e.key === 'Escape') setModalSite(null) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [modalSite])
+
+  const weeks = useMemo(() => {
+    const ws = weeksForDates(parseISO(applied.start), parseISO(applied.end)).filter(w => !NO_SCHOOL_WEEKS.includes(w))
+    return ws.length ? ws : B_WEEKS.slice(-4)
+  }, [applied])
+  const role = applied.role
+  const siteId = isSiteLeaderView ? schools[0].id : null
+
+  function exportCsv() {
+    const cols = [...weeks].reverse()
+    const head = `Site,${cols.map(w => `"${weekRangeLabel(w)}"`).join(',')},Range`
+    const lines = schools.filter(sc => siteId == null || sc.id === siteId).map(sc => {
+      const cells = cols.map(w => `${weekBands(sc.id, w, role).pct}%`)
+      return `"${sc.name}",${cells.join(',')},${rangeStats(sc.id, role, weeks).pct}%`
+    })
+    const url = URL.createObjectURL(new Blob([`${head}\n${lines.join('\n')}`], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url; a.download = 'engagement-by-site.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div className="px-6 pt-8 pb-8">
+      <div className="flex items-end justify-between gap-6 mb-6">
+        <h2 className="text-2xl font-semibold text-brand-text">Engagement</h2>
+        <div className="relative shrink-0" ref={menuRef}>
+          <button className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all" onClick={() => setMenuOpen(o => !o)} aria-label="More options" aria-expanded={menuOpen}>
+            <MoreHorizontal size={13} />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
+              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
+                <Download size={13} className="text-brand-subtext" /> Export CSV
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div role="note" className="flex items-center gap-2 rounded-lg border border-state-info/30 bg-state-infoLight px-4 py-2.5 mb-6 text-[13px] text-[#134fb2]">
+        <Info size={14} className="shrink-0" aria-hidden="true" />
+        <p className="min-w-0"><span className="font-medium">Weekly goal: {GOAL} lessons per week.</span></p>
+        <Link to="/settings" className="ml-auto shrink-0 inline-flex items-center gap-1 font-medium hover:underline">
+          Change in Settings <ExternalLink size={12} aria-hidden="true" />
+        </Link>
+      </div>
+
+      <FiltersPanel
+        draft={draft}
+        onChange={setDraft}
+        onApply={() => setApplied(draft)}
+        onReset={() => { setDraft(DEFAULT_FILTERS); setApplied(DEFAULT_FILTERS) }}
+        sites={schools}
+        roles={USER_ROLES}
+        showSite={false}
+        minDate={FILTER_MIN}
+        maxDate={FILTER_MAX}
+      />
+
+      <SitesMatrix weeks={weeks} role={role} siteId={siteId} onOpenSite={setModalSite} />
+
+      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Users meeting goal" drilldown drilldownView="calendar" role={role} showMenu searchable paginate goalColumn={false} bordered />}
     </div>
   )
 }
 
 export default function ReportEngagement() {
   const { engagementVersion } = useEngagementVersion()
-  return engagementVersion === 'b' ? <ReportEngagementB /> : <ReportEngagementA />
+  return engagementVersion === 'c' ? <ReportEngagementC /> : engagementVersion === 'b' ? <ReportEngagementB /> : <ReportEngagementA />
 }
