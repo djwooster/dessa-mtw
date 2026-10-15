@@ -49,6 +49,15 @@ const ENGAGEMENT_VERSIONS = [
   { value: 'c', label: 'C', title: 'C, School comparison: no Site filter, one table of every site by week' },
 ]
 
+// Week by week page layouts (2026-10-15, Version A). Shown in place of the version switcher on that page.
+const YEAR_LAYOUTS = [
+  { value: 'grid', label: 'Wide grid', title: 'All 36 weeks in one grid, with numbers' },
+  { value: 'halves', label: 'Fall and Spring', title: 'Two stacked grids of about 18 weeks, with % numbers' },
+  { value: 'halves3', label: 'Fall and Spring (3)', title: 'Fall and Spring as a data table: row borders, more room per row, org primary blue scale' },
+  { value: 'halves4', label: 'Fall and Spring (4)', title: 'Fall and Spring as a data table: row borders, more room per row, org gray scale' },
+  { value: 'heat', label: 'Heat only', title: 'Shaded squares only, no numbers' },
+]
+
 const ENGAGEMENT_CONCEPTS = [
   // A, B, D and E commented out 2026-10-12 (kept in ReportEngagement.jsx); F is the report shown in prod.
   // { value: 'a', label: 'A', title: 'A, Original: sites where every educator met the goal (single line)' },
@@ -100,7 +109,11 @@ export default function Nav() {
   const { statConcept, setStatConcept } = useSiteEngagementConcept()
   const { dceConcept, setDceConcept } = useDceConcept()
   const { engagementConcept, setEngagementConcept } = useEngagementConcept()
-  const { engagementVersion, setEngagementVersion } = useEngagementVersion()
+  const { engagementVersion, setEngagementVersion, yearLayout, setYearLayout } = useEngagementVersion()
+  const onYearPage = location.pathname.startsWith('/reports/engagement/year') && engagementVersion === 'a'
+  const switcher = onYearPage
+    ? { options: YEAR_LAYOUTS, value: yearLayout, set: setYearLayout }
+    : { options: ENGAGEMENT_VERSIONS, value: engagementVersion, set: setEngagementVersion }
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
@@ -447,26 +460,26 @@ export default function Nav() {
             <Popover.Root>
               <Popover.Trigger asChild>
                 <button
-                  title={ENGAGEMENT_VERSIONS.find((c) => c.value === engagementVersion)?.title}
+                  title={switcher.options.find((c) => c.value === switcher.value)?.title}
                   className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-brand-border bg-white text-xs font-medium text-brand-text hover:bg-brand-bg transition-colors shrink-0 mr-1"
                 >
-                  {ENGAGEMENT_VERSIONS.find((c) => c.value === engagementVersion)?.label}
+                  {switcher.options.find((c) => c.value === switcher.value)?.label}
                   <ChevronDown size={12} className="text-brand-subtext" />
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content align="end" sideOffset={6} className="z-50 w-48 bg-white border border-brand-border rounded-xl shadow-lg outline-none py-1.5">
-                  {ENGAGEMENT_VERSIONS.map((c) => (
+                  {switcher.options.map((c) => (
                     <button
                       key={c.value}
                       title={c.title}
-                      onClick={() => setEngagementVersion(c.value)}
+                      onClick={() => switcher.set(c.value)}
                       className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left transition-colors ${
-                        engagementVersion === c.value ? 'text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
+                        switcher.value === c.value ? 'text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
                       }`}
                     >
                       {c.label}
-                      {engagementVersion === c.value && <Check size={13} className="text-dessa-teal" />}
+                      {switcher.value === c.value && <Check size={13} className="text-dessa-teal" />}
                     </button>
                   ))}
                 </Popover.Content>

@@ -8,8 +8,10 @@ const EngagementVersionContext = createContext(null)
 
 export function EngagementVersionProvider({ children }) {
   const [engagementVersion, setEngagementVersion] = useState('a')
+  // Week by week page (2026-10-15, Version A): three layouts to compare, switched from Nav while on that page.
+  const [yearLayout, setYearLayout] = useState('grid')
   return (
-    <EngagementVersionContext.Provider value={{ engagementVersion, setEngagementVersion }}>
+    <EngagementVersionContext.Provider value={{ engagementVersion, setEngagementVersion, yearLayout, setYearLayout }}>
       {children}
     </EngagementVersionContext.Provider>
   )

@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, Fragment } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { parseISO, addDays, format } from 'date-fns'
-import { MoreHorizontal, Download, Printer, ExternalLink, ChartLine, Table2, ChevronRight, ChevronLeft, ChevronDown, Check, Info, Calendar } from 'lucide-react'
+import { MoreHorizontal, Download, Printer, ExternalLink, ChartLine, Table2, CalendarRange, ChevronRight, ChevronLeft, ChevronDown, Check, Info, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import { schools, schoolWeeks, getWeekData, USER_ROLES, NO_SCHOOL_WEEKS, matchesSite } from '../lib/report2Data'
@@ -22,6 +22,7 @@ import SitesGoalTable, { siteGoalRows } from '../components/engagement/SitesGoal
 import GoalStatusBadge from '../components/engagement/GoalStatusBadge'
 import EducatorCalendar from '../components/engagement/EducatorCalendar'
 import PrintReport from '../components/engagement/PrintReport'
+import EngagementYear from '../components/engagement/EngagementYear'
 import WeeklyBarChart from '../components/engagement/WeeklyBarChart'
 import MonthBarChart, { MONTHS, DEFAULT_MONTH_IDX, weekRangeLabel } from '../components/engagement/MonthBarChart'
 import {
@@ -255,24 +256,32 @@ function ReportEngagementA() {
   // A site page (2026-10-15): clicking a site in the table opens engagement/site/:id, which looks like the
   // Site Leader view with a breadcrumb back to the high-level report.
   const navigate = useNavigate()
-  const routeSiteId = Number((useParams()['*'] ?? '').match(/^site\/(\d+)/)?.[1])
+  const subPath = useParams()['*'] ?? ''
+  const routeSiteId = Number(subPath.match(/^site\/(\d+)/)?.[1])
+  // Week by week page (2026-10-15): engagement/year, the whole school year by site for screenshots.
+  const isYearPage = isF && subPath === 'year' && !isSiteLeaderView
+  const { yearLayout } = useEngagementVersion()
   const routeSite = schools.find(sc => sc.id === routeSiteId) ?? null
   const selectedSite = isSiteLeaderView ? schools[0] : routeSite ?? pickedSite
   // Opening a site remembers where the report was scrolled; coming back (the breadcrumb or the browser
   // back button) puts the page there, and the tables keep their sort, page and search (usePersistedState).
   const overviewScroll = useRef(0)
-  const lastRouteId = useRef(routeSite?.id ?? null)
+  const routeKey = routeSite?.id ?? (isYearPage ? 'year' : null)
+  const lastRouteId = useRef(routeKey)
   function openSitePage(id) {
     overviewScroll.current = window.scrollY
     navigate(`/reports/engagement/site/${id}`)
   }
+  function openYearPage() {
+    overviewScroll.current = window.scrollY
+    navigate('/reports/engagement/year')
+  }
   useEffect(() => {
-    const id = routeSite?.id ?? null
-    if (id === lastRouteId.current) return
-    lastRouteId.current = id
-    const y = id ? 0 : overviewScroll.current
+    if (routeKey === lastRouteId.current) return
+    lastRouteId.current = routeKey
+    const y = routeKey ? 0 : overviewScroll.current
     requestAnimationFrame(() => window.scrollTo(0, y))
-  }, [routeSite])
+  }, [routeKey])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -387,6 +396,15 @@ function ReportEngagementA() {
       </TabsList>
     </Tabs>
   )
+  // The overview's chart card also links to the week by week page (2026-10-15).
+  const overviewSwitch = (
+    <div className="flex items-center gap-4 shrink-0">
+      <button type="button" onClick={openYearPage} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#134fb2] hover:underline">
+        <CalendarRange size={13} aria-hidden="true" /> Week by week
+      </button>
+      {viewSwitch}
+    </div>
+  )
   const rangeControls = isAFilters ? (isF ? viewSwitch : null) : (
     <div className="flex items-center gap-1 shrink-0">
       <Tabs value={rangeKey} onValueChange={k => { setRangeKey(k); setCustomWeeks(null) }}>
@@ -480,6 +498,8 @@ function ReportEngagementA() {
       </button>
     </div>
   )
+
+  if (isYearPage) return <EngagementYear siteIds={appliedFilters.site.map(Number)} role={roleFilter} layout={yearLayout} />
 
   return (
     <div className={`px-6 pb-8 ${isF && routeSite && !isSiteLeaderView ? 'pt-10' : 'pt-8'}`}>
@@ -640,7 +660,7 @@ function ReportEngagementA() {
         </div>
       */}
       {isD ? (
-        <EngagementOverviewD weeks={weeks} selectedId={dSiteIds.length === 1 ? dSiteIds[0] : null} selectedIds={isF ? dSiteIds : null} onSelect={id => setDSiteIds(id == null ? [] : [id])} showCards={!isE} role={roleFilter} viewSwitch={isF ? viewSwitch : null} view={graphView} rangeText={rangeLabel(weeks)} showSiteList={!isF} onOpenSite={openSitePage} />
+        <EngagementOverviewD weeks={weeks} selectedId={dSiteIds.length === 1 ? dSiteIds[0] : null} selectedIds={isF ? dSiteIds : null} onSelect={id => setDSiteIds(id == null ? [] : [id])} showCards={!isE} role={roleFilter} viewSwitch={isF ? overviewSwitch : null} view={graphView} rangeText={rangeLabel(weeks)} showSiteList={!isF} onOpenSite={openSitePage} />
       ) : isC ? (
         <>
           <div className="grid gap-8 mb-12 pb-8 border-b border-brand-border grid-cols-4">
