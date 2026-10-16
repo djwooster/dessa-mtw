@@ -316,11 +316,12 @@ function YtdTable({ rows, endOfYear = false, heat = false }) {
                       onClick={() => toggle(r.key)}
                       aria-expanded={isOpen}
                       aria-label={`${isOpen ? 'Hide' : 'Show'} weekly numbers for ${name}`}
-                      className="flex items-center gap-1.5 w-full min-w-0 text-left rounded-sm hover:text-dessa-teal transition-colors"
+                      className={`group flex items-center gap-1.5 w-full min-w-0 text-left rounded-sm ${r.total ? 'hover:text-dessa-teal transition-colors' : 'text-[#134fb2]'}`}
                     >
                       <ChevronRight size={14} className={`shrink-0 text-brand-subtext transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`} aria-hidden="true" />
                       {r.total && <School size={14} className="shrink-0" aria-hidden="true" />}
-                      <span className="truncate">
+                      {/* Site names use the report's link blue (2026-10-16); All sites stays navy. */}
+                      <span className={`truncate ${r.total ? '' : 'group-hover:underline'}`}>
                         {name}
                         {r.total && <span className="text-[11px] font-medium text-brand-subtext"> ({r.count})</span>}
                       </span>
