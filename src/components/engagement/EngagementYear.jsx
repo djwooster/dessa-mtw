@@ -5,7 +5,7 @@ import { parseISO, format, addDays } from 'date-fns'
 import { ChevronRight, Download, MoreHorizontal, Palette, School } from 'lucide-react'
 import { schools, schoolWeeks, NO_SCHOOL_WEEKS, matchesSite, USER_ROLES } from '../../lib/report2Data'
 import { weekBands } from './StackedGoalChart'
-import { GOAL } from '../../pages/Report2ConceptE'
+import { GOAL, SearchField } from '../../pages/Report2ConceptE'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table'
 import { useEngagementVersion } from '../../lib/engagementVersionContext'
 import FiltersPanel from './FiltersPanel'
@@ -267,7 +267,7 @@ const ytdAvg = (r, weeks, k = 'pct') => weeks.length ? Math.round(weeks.reduce((
 
 // `heat` (2026-10-16) shades every % cell with the org gray scale from Fall and Spring (4); the counts in the
 // drill down stay plain.
-function YtdTable({ rows, endOfYear = false, heat = false }) {
+function YtdTable({ rows, endOfYear = false, heat = false, searching = false }) {
   const weeks = useMemo(() => ytdWeeks(endOfYear), [endOfYear])
   const avgOf = (r, k) => ytdAvg(r, weeks, k)
   const ytd = r => avgOf(r, 'pct')
@@ -350,6 +350,11 @@ function YtdTable({ rows, endOfYear = false, heat = false }) {
               </Fragment>
             )
           })}
+          {searching && !rows.some(r => !r.total) && (
+            <TableRow className="hover:bg-transparent">
+              <TableCell colSpan={weeks.length + 2} className="py-6 text-center text-[13px] text-brand-subtext">No sites match your search.</TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
     </div>
@@ -403,11 +408,19 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
 
   const { ytdPreview: preview } = useEngagementVersion()
   const [heat, setHeat] = useState(false)
+  // Site search (YTD view, 2026-10-16): narrows the site rows by name; the All sites row always stays.
+  const [query, setQuery] = useState('')
+  const q = query.trim().toLowerCase()
+  // Sites are listed A to Z by default (2026-10-16), under the All sites row.
+  const shownRows = useMemo(() => {
+    const sorted = [...rows].sort((a, b) => (b.total ? 1 : 0) - (a.total ? 1 : 0) || a.name.localeCompare(b.name))
+    return q ? sorted.filter(r => r.total || r.name.toLowerCase().includes(q)) : sorted
+  }, [rows, q])
   // Export CSV (YTD view): one row per site under All sites, with YTD then each week, as on screen.
   function exportCsv() {
     const weeks = ytdWeeks(preview === 'end')
     const head = ['Site', 'YTD', ...weeks.map(w => format(w.date, 'MMM d yyyy'))].map(v => `"${v}"`).join(',')
-    const lines = rows.map(r => {
+    const lines = shownRows.map(r => {
       const name = r.total ? `${r.allSites ? 'All sites' : 'Selected sites'} (${r.count})` : r.name
       return [`"${name}"`, `${ytdAvg(r, weeks)}%`, ...weeks.map(w => `${r.cells[w.i].pct}%`)].join(',')
     })
@@ -478,6 +491,11 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
             <h3 className="text-lg font-semibold text-brand-text">Users completing {GOAL} lessons a week</h3>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {layout === 'halves5' && (
+              <div className="w-64">
+                <SearchField value={query} onChange={setQuery} placeholder="Search sites" height="h-8" />
+              </div>
+            )}
             {/* Heat map toggle (YTD view, 2026-10-16): shades the % cells; the color key shows under the table while it's on. */}
             {layout === 'halves5' && (
               <button
@@ -493,7 +511,7 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
         </header>
 
         {layout === 'halves5' ? (
-          <YtdTable rows={rows} endOfYear={preview === 'end'} heat={heat} />
+          <YtdTable rows={shownRows} endOfYear={preview === 'end'} heat={heat} searching={!!q} />
         ) : layout === 'halves' || TABLE_STEPS[layout] ? (
           <div className="flex flex-col gap-8">
             {[{ title: 'Fall 2025', weeks: FALL, Icon: FallLeaf }, { title: 'Spring 2026', weeks: SPRING, Icon: SpringFlower }].map(h => (
