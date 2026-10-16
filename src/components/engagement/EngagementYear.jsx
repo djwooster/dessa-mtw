@@ -1,11 +1,13 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useAnimationControls, useInView, useReducedMotion } from 'framer-motion'
-import { parseISO, format } from 'date-fns'
+import { parseISO, format, addDays } from 'date-fns'
 import { ChevronRight, Maximize2, Minimize2, School } from 'lucide-react'
 import { schools, schoolWeeks, NO_SCHOOL_WEEKS, matchesSite } from '../../lib/report2Data'
 import { weekBands } from './StackedGoalChart'
 import { GOAL } from '../../pages/Report2ConceptE'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table'
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs'
 
 // Week by week page (2026-10-15, Version A): every school week of the year, one row per site under an
 // All sites row. It is made to be screenshotted and shared with board members, so nothing depends on
@@ -237,6 +239,108 @@ function YearTable({ weeks, rows, steps, refined = false }) {
   )
 }
 
+// YTD concept (2026-10-16, manager feedback; first called Fall and Spring (5)): a plain table, year to date. No terms, no tiles or
+// colors. It uses the real date: the mock 2025-26 weeks are moved forward 52 weeks (to the 2026-27 school
+// year, starting Aug 31) and only weeks that have started by today are shown, newest first, with winter
+// break left out. YTD is the plain average of the weekly %s. Site and YTD stay pinned when the weeks scroll.
+const YTD_SHIFT_DAYS = 364
+// Opaque version of the 48% brand-bg tint, for pinned cells that sit over scrolled content.
+const TINT = 'bg-white bg-[linear-gradient(theme(colors.brand.bg/48%),theme(colors.brand.bg/48%))]'
+
+function YtdTable({ rows, endOfYear = false }) {
+  const weeks = useMemo(() => {
+    // End of year preview (2026-10-16): pretend today is the last week of the school year.
+    const today = endOfYear ? addDays(parseISO(schoolWeeks[schoolWeeks.length - 1]), YTD_SHIFT_DAYS + 4) : new Date()
+    return schoolWeeks
+      .map((w, i) => ({ i, date: addDays(parseISO(w), YTD_SHIFT_DAYS), off: NO_SCHOOL_WEEKS.includes(w) }))
+      .filter(w => !w.off && w.date <= today)
+      .reverse()
+  }, [endOfYear])
+  const avgOf = (r, k) => weeks.length ? Math.round(weeks.reduce((sum, w) => sum + r.cells[w.i][k], 0) / weeks.length) : 0
+  const ytd = r => avgOf(r, 'pct')
+  // Drill down (2026-10-16): opening a site adds its weekly Users, Met goal and % met rows under it. The YTD
+  // column shows the weekly average for Users and Met goal, and the site's YTD for % met.
+  const [open, setOpen] = useState(() => new Set())
+  const toggle = key => setOpen(prev => {
+    const next = new Set(prev)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    return next
+  })
+  const DETAILS = [
+    { label: 'Users', ytd: r => avgOf(r, 'total'), week: c => c.total },
+    { label: 'Met goal', ytd: r => avgOf(r, 'met'), week: c => c.met },
+    { label: '% met', ytd: r => `${ytd(r)}%`, week: c => `${c.pct}%` },
+  ]
+  // Pinned columns draw their right line as an inset shadow so it stays put while the weeks scroll under them.
+  const pinLine = 'border-r-0 shadow-[inset_-1px_0_0_theme(colors.brand.border)]'
+  const site = 'sticky left-0 z-10 w-56 min-w-56'
+  const avg = 'sticky left-56 z-10 w-16 min-w-16 text-right'
+  const num = 'text-right tabular-nums'
+  // Tighter than the shared table (2026-10-16): 28px header, 6px by 10px cells, with column lines.
+  const lines = 'border-r border-brand-border last:border-r-0'
+  const head = `h-7 px-2.5 text-[13px] font-medium ${lines}`
+  const cell = `px-2.5 py-1.5 text-[13px] ${lines}`
+
+  return (
+    <div className="rounded-lg border border-brand-border overflow-hidden">
+      <Table>
+        <TableHeader className="bg-transparent">
+          <TableRow className="hover:bg-transparent">
+            <TableHead className={`${site} ${TINT} ${head} ${pinLine}`}>Site</TableHead>
+            <TableHead className={`${avg} ${TINT} ${head} ${pinLine}`}>YTD</TableHead>
+            {weeks.map(w => (
+              <TableHead key={w.i} className={`${num} ${TINT} ${head}`}>{format(w.date, 'MMM d')}</TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map(r => {
+            const bg = r.total ? TINT : 'bg-white'
+            const isOpen = open.has(r.key)
+            const name = r.total ? (r.allSites ? 'All sites' : 'Selected sites') : r.name
+            return (
+              <Fragment key={r.key}>
+                <TableRow className="hover:bg-transparent">
+                  <TableCell className={`${site} ${bg} ${cell} ${pinLine} ${r.total ? 'font-semibold' : ''}`}>
+                    <button
+                      type="button"
+                      onClick={() => toggle(r.key)}
+                      aria-expanded={isOpen}
+                      aria-label={`${isOpen ? 'Hide' : 'Show'} weekly numbers for ${name}`}
+                      className="flex items-center gap-1.5 w-full min-w-0 text-left rounded-sm hover:text-dessa-teal transition-colors"
+                    >
+                      <ChevronRight size={14} className={`shrink-0 text-brand-subtext transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`} aria-hidden="true" />
+                      {r.total && <School size={14} className="shrink-0" aria-hidden="true" />}
+                      <span className="truncate">
+                        {name}
+                        {r.total && <span className="text-[11px] font-medium text-brand-subtext"> ({r.count})</span>}
+                      </span>
+                    </button>
+                  </TableCell>
+                  <TableCell className={`${avg} ${bg} ${num} ${cell} ${pinLine} font-semibold`}>{ytd(r)}%</TableCell>
+                  {weeks.map(w => (
+                    <TableCell key={w.i} className={`${num} ${bg} ${cell} ${r.total ? 'font-semibold' : ''}`}>{r.cells[w.i].pct}%</TableCell>
+                  ))}
+                </TableRow>
+                {isOpen && DETAILS.map(d => (
+                  <TableRow key={d.label} className="hover:bg-transparent">
+                    <TableCell className={`${site} bg-white ${cell} ${pinLine} pl-8 text-brand-subtext`}>{d.label}</TableCell>
+                    <TableCell className={`${avg} bg-white ${num} ${cell} ${pinLine}`}>{d.ytd(r)}</TableCell>
+                    {weeks.map(w => (
+                      <TableCell key={w.i} className={`${num} bg-white ${cell}`}>{d.week(r.cells[w.i])}</TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </Fragment>
+            )
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
 function Legend({ numbers, steps = STEPS }) {
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-brand-subtext">
@@ -273,6 +377,7 @@ export default function EngagementYear({ siteIds = [], role = 'all', layout = 'g
     document.addEventListener('fullscreenchange', onChange)
     return () => document.removeEventListener('fullscreenchange', onChange)
   }, [])
+  const [preview, setPreview] = useState('today')
   const toggleFullscreen = () => (fullscreen ? document.exitFullscreen() : cardRef.current?.requestFullscreen())
 
 
@@ -282,10 +387,10 @@ export default function EngagementYear({ siteIds = [], role = 'all', layout = 'g
         <ol className="flex items-center gap-1.5 text-[13px] text-brand-subtext">
           <li><Link to="/reports/engagement" className="hover:text-brand-text hover:underline transition-colors">Engagement</Link></li>
           <li aria-hidden="true"><ChevronRight size={12} /></li>
-          <li aria-current="page" className="text-brand-text">Week by week</li>
+          <li aria-current="page" className="text-brand-text">Year to date</li>
         </ol>
       </nav>
-      <h2 className="text-2xl font-semibold text-brand-text mb-3">Week by week</h2>
+      <h2 className="text-2xl font-semibold text-brand-text mb-3">Year to date</h2>
 
       <motion.section
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
@@ -296,17 +401,30 @@ export default function EngagementYear({ siteIds = [], role = 'all', layout = 'g
           <div className="min-w-0">
             <h3 className="text-lg font-semibold text-brand-text">Users completing {GOAL} lessons a week</h3>
           </div>
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className="inline-flex items-center gap-1.5 h-8 px-3 shrink-0 rounded-md border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors"
-          >
-            {fullscreen ? <Minimize2 size={14} className="text-brand-subtext" aria-hidden="true" /> : <Maximize2 size={14} className="text-brand-subtext" aria-hidden="true" />}
-            {fullscreen ? 'Exit fullscreen' : 'View fullscreen'}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* (5) only: preview the table as it will look at the end of the school year. */}
+            {layout === 'halves5' && (
+              <Tabs value={preview} onValueChange={setPreview}>
+                <TabsList className="p-0.5">
+                  <TabsTrigger value="today" className="text-[13px] px-3 py-1">Today</TabsTrigger>
+                  <TabsTrigger value="end" className="text-[13px] px-3 py-1">End of year</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="inline-flex items-center gap-1.5 h-8 px-3 shrink-0 rounded-md border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors"
+            >
+              {fullscreen ? <Minimize2 size={14} className="text-brand-subtext" aria-hidden="true" /> : <Maximize2 size={14} className="text-brand-subtext" aria-hidden="true" />}
+              {fullscreen ? 'Exit fullscreen' : 'View fullscreen'}
+            </button>
+          </div>
         </header>
 
-        {layout === 'halves' || TABLE_STEPS[layout] ? (
+        {layout === 'halves5' ? (
+          <YtdTable rows={rows} endOfYear={preview === 'end'} />
+        ) : layout === 'halves' || TABLE_STEPS[layout] ? (
           <div className="flex flex-col gap-8">
             {[{ title: 'Fall 2025', weeks: FALL, Icon: FallLeaf }, { title: 'Spring 2026', weeks: SPRING, Icon: SpringFlower }].map(h => (
               <div key={h.title}>
@@ -326,9 +444,11 @@ export default function EngagementYear({ siteIds = [], role = 'all', layout = 'g
           <YearGrid weeks={schoolWeeks} rows={rows} variant={layout} />
         )}
 
-        <div className="mt-5 pt-4 border-t border-brand-border">
-          <Legend numbers={layout !== 'heat'} steps={TABLE_STEPS[layout] ?? STEPS} />
-        </div>
+        {layout !== 'halves5' && (
+          <div className="mt-5 pt-4 border-t border-brand-border">
+            <Legend numbers={layout !== 'heat'} steps={TABLE_STEPS[layout] ?? STEPS} />
+          </div>
+        )}
       </motion.section>
     </div>
   )

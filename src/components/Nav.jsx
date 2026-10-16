@@ -55,6 +55,7 @@ const YEAR_LAYOUTS = [
   { value: 'halves', label: 'Fall and Spring', title: 'Two stacked grids of about 18 weeks, with % numbers' },
   { value: 'halves3', label: 'Fall and Spring (3)', title: 'Fall and Spring as a data table: row borders, more room per row, org primary blue scale' },
   { value: 'halves4', label: 'Fall and Spring (4)', title: 'Fall and Spring as a data table: row borders, more room per row, org gray scale' },
+  { value: 'halves5', label: 'YTD', title: 'Plain table, year to date: Site, YTD average, then each week newest first' },
   { value: 'heat', label: 'Heat only', title: 'Shaded squares only, no numbers' },
 ]
 

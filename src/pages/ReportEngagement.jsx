@@ -400,7 +400,7 @@ function ReportEngagementA() {
   const overviewSwitch = (
     <div className="flex items-center gap-4 shrink-0">
       <button type="button" onClick={openYearPage} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#134fb2] hover:underline">
-        <CalendarRange size={13} aria-hidden="true" /> Week by week
+        <CalendarRange size={13} aria-hidden="true" /> Year to date
       </button>
       {viewSwitch}
     </div>
