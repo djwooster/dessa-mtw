@@ -69,11 +69,12 @@ function MultiSelect({ label, value, onChange, options, allLabel = 'All', noun =
   )
 }
 
-export default function FiltersPanel({ draft, onChange, onApply, onReset, sites, roles, showSite = true, minDate, maxDate, weekMode = null }) {
+// `showDates` off (2026-10-16, Year to date page) drops the date fields for views with a fixed period.
+export default function FiltersPanel({ draft, onChange, onApply, onReset, sites, roles, showSite = true, minDate, maxDate, weekMode = null, showDates = true }) {
   const [open, setOpen] = useState(true)
   const set = patch => onChange({ ...draft, ...patch })
   // weekMode (2026-10-15, Engagement B) swaps Start and End date for a week cycler: { label, canPrev, canNext, onPrev, onNext, isLatest, onLatest }.
-  const valid = weekMode ? true : !!draft.start && !!draft.end && draft.start <= draft.end
+  const valid = weekMode || !showDates ? true : !!draft.start && !!draft.end && draft.start <= draft.end
 
   return (
     <section aria-label="Filters" className="rounded-xl border border-brand-border bg-white p-4 mb-6">
@@ -113,7 +114,7 @@ export default function FiltersPanel({ draft, onChange, onApply, onReset, sites,
               </div>
             </div>
           )}
-          {!weekMode && <>
+          {!weekMode && showDates && <>
           <div className="flex flex-col gap-1.5 flex-1 min-w-36">
             <span className={LABEL}>Start date</span>
             <DatePicker value={draft.start} onChange={v => set({ start: v })} placeholder="Start date" min={minDate} max={draft.end || maxDate} className="h-8 py-0 text-[13px] rounded-md" />

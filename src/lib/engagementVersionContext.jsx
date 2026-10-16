@@ -9,9 +9,12 @@ const EngagementVersionContext = createContext(null)
 export function EngagementVersionProvider({ children }) {
   const [engagementVersion, setEngagementVersion] = useState('a')
   // Week by week page (2026-10-15, Version A): three layouts to compare, switched from Nav while on that page.
-  const [yearLayout, setYearLayout] = useState('grid')
+  // YTD is first in the switcher and the default (2026-10-16).
+  const [yearLayout, setYearLayout] = useState('halves5')
+  // YTD's Today | End of year preview (2026-10-16), switched from Nav.
+  const [ytdPreview, setYtdPreview] = useState('today')
   return (
-    <EngagementVersionContext.Provider value={{ engagementVersion, setEngagementVersion, yearLayout, setYearLayout }}>
+    <EngagementVersionContext.Provider value={{ engagementVersion, setEngagementVersion, yearLayout, setYearLayout, ytdPreview, setYtdPreview }}>
       {children}
     </EngagementVersionContext.Provider>
   )

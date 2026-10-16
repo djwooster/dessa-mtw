@@ -6,6 +6,7 @@ import { useSiteEngagementConcept } from '../lib/siteEngagementConceptContext'
 import { useDceConcept } from '../lib/dceConceptContext'
 import { useEngagementConcept } from '../lib/engagementConceptContext'
 import { useEngagementVersion } from '../lib/engagementVersionContext'
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { RESOURCES_GRADE_GROUPS } from '../pages/ResourcesAltConcepts'
 
 // Site Engagement report-only concept switcher (2026-09-23) — a dropdown
@@ -51,11 +52,11 @@ const ENGAGEMENT_VERSIONS = [
 
 // Week by week page layouts (2026-10-15, Version A). Shown in place of the version switcher on that page.
 const YEAR_LAYOUTS = [
+  { value: 'halves5', label: 'YTD', title: 'Plain table, year to date: Site, YTD average, then each week newest first' },
   { value: 'grid', label: 'Wide grid', title: 'All 36 weeks in one grid, with numbers' },
   { value: 'halves', label: 'Fall and Spring', title: 'Two stacked grids of about 18 weeks, with % numbers' },
   { value: 'halves3', label: 'Fall and Spring (3)', title: 'Fall and Spring as a data table: row borders, more room per row, org primary blue scale' },
   { value: 'halves4', label: 'Fall and Spring (4)', title: 'Fall and Spring as a data table: row borders, more room per row, org gray scale' },
-  { value: 'halves5', label: 'YTD', title: 'Plain table, year to date: Site, YTD average, then each week newest first' },
   { value: 'heat', label: 'Heat only', title: 'Shaded squares only, no numbers' },
 ]
 
@@ -110,7 +111,7 @@ export default function Nav() {
   const { statConcept, setStatConcept } = useSiteEngagementConcept()
   const { dceConcept, setDceConcept } = useDceConcept()
   const { engagementConcept, setEngagementConcept } = useEngagementConcept()
-  const { engagementVersion, setEngagementVersion, yearLayout, setYearLayout } = useEngagementVersion()
+  const { engagementVersion, setEngagementVersion, yearLayout, setYearLayout, ytdPreview, setYtdPreview } = useEngagementVersion()
   const onYearPage = location.pathname.startsWith('/reports/engagement/year') && engagementVersion === 'a'
   const switcher = onYearPage
     ? { options: YEAR_LAYOUTS, value: yearLayout, set: setYearLayout }
@@ -456,6 +457,15 @@ export default function Nav() {
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>
+          )}
+          {/* YTD's Today | End of year preview (2026-10-16): a prototype control, so it lives here and stays out of screenshots. */}
+          {onYearPage && yearLayout === 'halves5' && (
+            <Tabs value={ytdPreview} onValueChange={setYtdPreview} className="shrink-0 mr-2">
+              <TabsList className="p-0.5">
+                <TabsTrigger value="today" className="text-xs px-3 py-1">Today</TabsTrigger>
+                <TabsTrigger value="end" className="text-xs px-3 py-1">End of year</TabsTrigger>
+              </TabsList>
+            </Tabs>
           )}
           {location.pathname.startsWith('/reports/engagement') && (
             <Popover.Root>

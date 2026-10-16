@@ -2,12 +2,13 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useAnimationControls, useInView, useReducedMotion } from 'framer-motion'
 import { parseISO, format, addDays } from 'date-fns'
-import { ChevronRight, Maximize2, Minimize2, School } from 'lucide-react'
-import { schools, schoolWeeks, NO_SCHOOL_WEEKS, matchesSite } from '../../lib/report2Data'
+import { ChevronRight, Download, Maximize2, Minimize2, MoreHorizontal, School } from 'lucide-react'
+import { schools, schoolWeeks, NO_SCHOOL_WEEKS, matchesSite, USER_ROLES } from '../../lib/report2Data'
 import { weekBands } from './StackedGoalChart'
 import { GOAL } from '../../pages/Report2ConceptE'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table'
-import { Tabs, TabsList, TabsTrigger } from '../ui/tabs'
+import { useEngagementVersion } from '../../lib/engagementVersionContext'
+import FiltersPanel from './FiltersPanel'
 
 // Week by week page (2026-10-15, Version A): every school week of the year, one row per site under an
 // All sites row. It is made to be screenshotted and shared with board members, so nothing depends on
@@ -247,19 +248,23 @@ const YTD_SHIFT_DAYS = 364
 // Opaque version of the 48% brand-bg tint, for pinned cells that sit over scrolled content.
 const TINT = 'bg-white bg-[linear-gradient(theme(colors.brand.bg/48%),theme(colors.brand.bg/48%))]'
 
+// The weeks that count toward YTD, newest first. The end of year preview (2026-10-16) pretends today is the
+// last week of the school year.
+function ytdWeeks(endOfYear) {
+  const today = endOfYear ? addDays(parseISO(schoolWeeks[schoolWeeks.length - 1]), YTD_SHIFT_DAYS + 4) : new Date()
+  return schoolWeeks
+    .map((w, i) => ({ i, date: addDays(parseISO(w), YTD_SHIFT_DAYS), off: NO_SCHOOL_WEEKS.includes(w) }))
+    .filter(w => !w.off && w.date <= today)
+    .reverse()
+}
+const ytdAvg = (r, weeks, k = 'pct') => weeks.length ? Math.round(weeks.reduce((sum, w) => sum + r.cells[w.i][k], 0) / weeks.length) : 0
+
 function YtdTable({ rows, endOfYear = false }) {
-  const weeks = useMemo(() => {
-    // End of year preview (2026-10-16): pretend today is the last week of the school year.
-    const today = endOfYear ? addDays(parseISO(schoolWeeks[schoolWeeks.length - 1]), YTD_SHIFT_DAYS + 4) : new Date()
-    return schoolWeeks
-      .map((w, i) => ({ i, date: addDays(parseISO(w), YTD_SHIFT_DAYS), off: NO_SCHOOL_WEEKS.includes(w) }))
-      .filter(w => !w.off && w.date <= today)
-      .reverse()
-  }, [endOfYear])
-  const avgOf = (r, k) => weeks.length ? Math.round(weeks.reduce((sum, w) => sum + r.cells[w.i][k], 0) / weeks.length) : 0
+  const weeks = useMemo(() => ytdWeeks(endOfYear), [endOfYear])
+  const avgOf = (r, k) => ytdAvg(r, weeks, k)
   const ytd = r => avgOf(r, 'pct')
-  // Drill down (2026-10-16): opening a site adds its weekly Users, Met goal and % met rows under it. The YTD
-  // column shows the weekly average for Users and Met goal, and the site's YTD for % met.
+  // Drill down (2026-10-16): opening a site adds its weekly Users and Met goal rows under it (% met was removed,
+  // it repeated the site row). The YTD column shows their weekly averages.
   const [open, setOpen] = useState(() => new Set())
   const toggle = key => setOpen(prev => {
     const next = new Set(prev)
@@ -270,13 +275,14 @@ function YtdTable({ rows, endOfYear = false }) {
   const DETAILS = [
     { label: 'Users', ytd: r => avgOf(r, 'total'), week: c => c.total },
     { label: 'Met goal', ytd: r => avgOf(r, 'met'), week: c => c.met },
-    { label: '% met', ytd: r => `${ytd(r)}%`, week: c => `${c.pct}%` },
   ]
   // Pinned columns draw their right line as an inset shadow so it stays put while the weeks scroll under them.
   const pinLine = 'border-r-0 shadow-[inset_-1px_0_0_theme(colors.brand.border)]'
   const site = 'sticky left-0 z-10 w-56 min-w-56'
   const avg = 'sticky left-56 z-10 w-16 min-w-16 text-right'
   const num = 'text-right tabular-nums'
+  // Week columns share one width, never under 75px; past that the table scrolls with Site and YTD pinned.
+  const weekCol = 'w-[75px] min-w-[75px]'
   // Tighter than the shared table (2026-10-16): 28px header, 6px by 10px cells, with column lines.
   const lines = 'border-r border-brand-border last:border-r-0'
   const head = `h-7 px-2.5 text-[13px] font-medium ${lines}`
@@ -290,7 +296,7 @@ function YtdTable({ rows, endOfYear = false }) {
             <TableHead className={`${site} ${TINT} ${head} ${pinLine}`}>Site</TableHead>
             <TableHead className={`${avg} ${TINT} ${head} ${pinLine}`}>YTD</TableHead>
             {weeks.map(w => (
-              <TableHead key={w.i} className={`${num} ${TINT} ${head}`}>{format(w.date, 'MMM d')}</TableHead>
+              <TableHead key={w.i} className={`${num} ${TINT} ${head} ${weekCol}`}>{format(w.date, 'MMM d')}</TableHead>
             ))}
           </TableRow>
         </TableHeader>
@@ -359,7 +365,22 @@ function Legend({ numbers, steps = STEPS }) {
   )
 }
 
-export default function EngagementYear({ siteIds = [], role = 'all', layout = 'grid' }) {
+export default function EngagementYear({ siteIds: reportSiteIds = [], role: reportRole = 'all', layout = 'grid' }) {
+  // Filters on the YTD view (2026-10-16): Site and User role, applied with Apply like the main report. They
+  // start from the report's filters and only change this page. No dates, since YTD is a fixed period.
+  const startFilters = { site: reportSiteIds.map(String), role: reportRole }
+  const [draft, setDraft] = useState(startFilters)
+  const [applied, setApplied] = useState(startFilters)
+  const siteIds = useMemo(() => applied.site.map(Number), [applied])
+  const role = applied.role
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+  useEffect(() => {
+    if (!menuOpen) return
+    const h = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [menuOpen])
   const rows = useMemo(() => {
     const picked = schools.filter(sc => matchesSite(siteIds, sc.id))
     const row = (key, name, scope, total) => ({ key, name, total, cells: schoolWeeks.map(w => weekBands(scope, w, role)) })
@@ -377,7 +398,22 @@ export default function EngagementYear({ siteIds = [], role = 'all', layout = 'g
     document.addEventListener('fullscreenchange', onChange)
     return () => document.removeEventListener('fullscreenchange', onChange)
   }, [])
-  const [preview, setPreview] = useState('today')
+  const { ytdPreview: preview } = useEngagementVersion()
+  // Export CSV (YTD view): one row per site under All sites, with YTD then each week, as on screen.
+  function exportCsv() {
+    const weeks = ytdWeeks(preview === 'end')
+    const head = ['Site', 'YTD', ...weeks.map(w => format(w.date, 'MMM d yyyy'))].map(v => `"${v}"`).join(',')
+    const lines = rows.map(r => {
+      const name = r.total ? `${r.allSites ? 'All sites' : 'Selected sites'} (${r.count})` : r.name
+      return [`"${name}"`, `${ytdAvg(r, weeks)}%`, ...weeks.map(w => `${r.cells[w.i].pct}%`)].join(',')
+    })
+    const url = URL.createObjectURL(new Blob([`${head}\n${lines.join('\n')}`], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'engagement-year-to-date.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
   const toggleFullscreen = () => (fullscreen ? document.exitFullscreen() : cardRef.current?.requestFullscreen())
 
 
@@ -390,7 +426,42 @@ export default function EngagementYear({ siteIds = [], role = 'all', layout = 'g
           <li aria-current="page" className="text-brand-text">Year to date</li>
         </ol>
       </nav>
-      <h2 className="text-2xl font-semibold text-brand-text mb-3">Year to date</h2>
+      {/* The YTD view's 3-dot menu sits above the card on the right, like the main report's. */}
+      <div className="flex items-center justify-between gap-4 mb-3">
+        <h2 className="text-2xl font-semibold text-brand-text">Year to date</h2>
+        {layout === 'halves5' && (
+          <div className="relative shrink-0" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(o => !o)}
+              aria-label="More options"
+              aria-expanded={menuOpen}
+              className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-colors"
+            >
+              <MoreHorizontal size={13} />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
+                <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
+                  <Download size={13} className="text-brand-subtext" /> Export CSV
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {layout === 'halves5' && (
+        <FiltersPanel
+          draft={draft}
+          onChange={setDraft}
+          onApply={() => setApplied(draft)}
+          onReset={() => { const all = { site: [], role: 'all' }; setDraft(all); setApplied(all) }}
+          sites={schools}
+          roles={USER_ROLES}
+          showDates={false}
+        />
+      )}
 
       <motion.section
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
@@ -402,15 +473,6 @@ export default function EngagementYear({ siteIds = [], role = 'all', layout = 'g
             <h3 className="text-lg font-semibold text-brand-text">Users completing {GOAL} lessons a week</h3>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {/* (5) only: preview the table as it will look at the end of the school year. */}
-            {layout === 'halves5' && (
-              <Tabs value={preview} onValueChange={setPreview}>
-                <TabsList className="p-0.5">
-                  <TabsTrigger value="today" className="text-[13px] px-3 py-1">Today</TabsTrigger>
-                  <TabsTrigger value="end" className="text-[13px] px-3 py-1">End of year</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            )}
             <button
               type="button"
               onClick={toggleFullscreen}

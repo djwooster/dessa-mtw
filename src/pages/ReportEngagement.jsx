@@ -352,7 +352,7 @@ function ReportEngagementA() {
   }
 
   function exportCsv() {
-    if (isF && graphView === 'table') {
+    if (isF && selectedSite && graphView === 'table') {
       const { sites } = siteGoalRows(selectedSite ? [selectedSite.id] : dSiteIds, weeks, roleFilter)
       const body = sites.map(r => `"${r.name}",${r.users},${r.met},${r.pct}%`).join('\n')
       const url = URL.createObjectURL(new Blob([`Site,Users,Met goal,% met\n${body}`], { type: 'text/csv' }))
@@ -396,14 +396,12 @@ function ReportEngagementA() {
       </TabsList>
     </Tabs>
   )
-  // The overview's chart card also links to the week by week page (2026-10-15).
-  const overviewSwitch = (
-    <div className="flex items-center gap-4 shrink-0">
-      <button type="button" onClick={openYearPage} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#134fb2] hover:underline">
-        <CalendarRange size={13} aria-hidden="true" /> Year to date
-      </button>
-      {viewSwitch}
-    </div>
+  // The overview's chart card links to the Year to date page (2026-10-15). Its Chart | Table switch was removed
+  // 2026-10-16 (the Year to date page shows that table), so the overview is always the chart.
+  const yearLink = (
+    <button type="button" onClick={openYearPage} className="inline-flex items-center gap-1.5 h-8 px-3 shrink-0 rounded-md border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors">
+      <CalendarRange size={14} className="text-brand-subtext" aria-hidden="true" /> Year to date
+    </button>
   )
   const rangeControls = isAFilters ? (isF ? viewSwitch : null) : (
     <div className="flex items-center gap-1 shrink-0">
@@ -660,7 +658,7 @@ function ReportEngagementA() {
         </div>
       */}
       {isD ? (
-        <EngagementOverviewD weeks={weeks} selectedId={dSiteIds.length === 1 ? dSiteIds[0] : null} selectedIds={isF ? dSiteIds : null} onSelect={id => setDSiteIds(id == null ? [] : [id])} showCards={!isE} role={roleFilter} viewSwitch={isF ? overviewSwitch : null} view={graphView} rangeText={rangeLabel(weeks)} showSiteList={!isF} onOpenSite={openSitePage} />
+        <EngagementOverviewD weeks={weeks} selectedId={dSiteIds.length === 1 ? dSiteIds[0] : null} selectedIds={isF ? dSiteIds : null} onSelect={id => setDSiteIds(id == null ? [] : [id])} showCards={!isE} role={roleFilter} viewSwitch={isF ? yearLink : null} view="chart" rangeText={rangeLabel(weeks)} showSiteList={!isF} onOpenSite={openSitePage} />
       ) : isC ? (
         <>
           <div className="grid gap-8 mb-12 pb-8 border-b border-brand-border grid-cols-4">
