@@ -545,6 +545,14 @@ function ReportEngagementA() {
               </Link>
             )}
           </div>
+          {/* Weekly goal as page subtext (2026-10-16), replacing the blue callout: same pattern as the Year to date
+              page's school year line, and still on screen in screenshots. */}
+          {isF && (
+            <p className="flex items-center gap-1.5 text-sm text-brand-subtext mt-1">
+              Weekly goal: {GOAL} lessons
+              <Link to="/settings" className="inline-flex items-center gap-1 text-[#134fb2] hover:underline">Edit <ExternalLink size={12} aria-hidden="true" /></Link>
+            </p>
+          )}
           {!rangeHeader && !goalBadge && !isAHeader && (
             <p className="text-sm text-brand-subtext mt-1">
               {selectedSite ? `Users at ${selectedSite.name}. Open a user to see their activity.` : 'This report shows Move This World lesson completion across your district, by site.'}
@@ -606,19 +614,6 @@ function ReportEngagementA() {
         </div>
       )}
       </div>
-
-      {/* Weekly goal callout (2026-10-13): a rounded callout under the page title so the goal is on screen in screenshots. */}
-      {isF && (
-        <div role="note" className="flex items-center gap-2 rounded-lg border border-state-info/30 bg-state-infoLight px-4 py-2.5 mb-6 text-[13px] text-[#134fb2]">
-          <Info size={14} className="shrink-0" aria-hidden="true" />
-          <p className="min-w-0">
-            <span className="font-medium">Weekly goal: {GOAL} lessons per week.</span>
-          </p>
-          <Link to="/settings" className="ml-auto shrink-0 inline-flex items-center gap-1 font-medium hover:underline">
-            Change in Settings <ExternalLink size={12} aria-hidden="true" />
-          </Link>
-        </div>
-      )}
 
       {isAFilters && (
         <FiltersPanel
