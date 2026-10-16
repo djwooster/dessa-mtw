@@ -286,9 +286,6 @@ function YtdTable({ rows, endOfYear = false, heat = false }) {
   ]
   // Pinned columns draw their right line as an inset shadow so it stays put while the weeks scroll under them.
   const pinLine = 'border-r-0 shadow-[inset_-1px_0_0_theme(colors.brand.border)]'
-  // The YTD column also casts a slight shadow to its right (2026-10-16), marking where the weeks start: an 8px
-  // gradient strip hung off the pinned cell, so it shows over the week cells whatever the table's border model.
-  const ytdEdge = `${pinLine} after:absolute after:top-0 after:bottom-0 after:left-full after:w-2 after:pointer-events-none after:bg-gradient-to-r after:from-brand-text/[0.14] after:to-transparent`
   const site = 'sticky left-0 z-10 w-56 min-w-56'
   const avg = 'sticky left-56 z-10 w-16 min-w-16 text-right'
   const num = 'text-right tabular-nums'
@@ -305,7 +302,7 @@ function YtdTable({ rows, endOfYear = false, heat = false }) {
         <TableHeader className="bg-transparent">
           <TableRow className="hover:bg-transparent">
             <TableHead className={`${site} ${TINT} ${head} ${pinLine}`}>Site</TableHead>
-            <TableHead className={`${avg} ${TINT} ${head} ${ytdEdge}`}>YTD</TableHead>
+            <TableHead className={`${avg} ${TINT} ${head} ${pinLine}`}>YTD</TableHead>
             {weeks.map(w => (
               <TableHead key={w.i} className={`${num} ${TINT} ${head} ${weekCol}`}>{format(w.date, 'MMM d')}</TableHead>
             ))}
@@ -336,7 +333,7 @@ function YtdTable({ rows, endOfYear = false, heat = false }) {
                       </span>
                     </button>
                   </TableCell>
-                  <TableCell className={`${avg} ${heat ? stepFor(ytd(r), STEPS_4).cls : bg} ${num} ${cell} ${ytdEdge} font-semibold`}>{ytd(r)}%</TableCell>
+                  <TableCell className={`${avg} ${heat ? stepFor(ytd(r), STEPS_4).cls : bg} ${num} ${cell} ${pinLine} font-semibold`}>{ytd(r)}%</TableCell>
                   {weeks.map(w => (
                     <TableCell key={w.i} className={`${num} ${heat ? stepFor(r.cells[w.i].pct, STEPS_4).cls : bg} ${cell} ${r.total ? 'font-semibold' : ''}`}>{r.cells[w.i].pct}%</TableCell>
                   ))}
@@ -344,7 +341,7 @@ function YtdTable({ rows, endOfYear = false, heat = false }) {
                 {isOpen && DETAILS.map(d => (
                   <TableRow key={d.label} className="hover:bg-transparent">
                     <TableCell className={`${site} bg-white ${cell} ${pinLine} pl-8 text-brand-text`}>{d.label}</TableCell>
-                    <TableCell className={`${avg} bg-white ${num} ${cell} ${ytdEdge}`}>{d.ytd(r)}</TableCell>
+                    <TableCell className={`${avg} bg-white ${num} ${cell} ${pinLine}`}>{d.ytd(r)}</TableCell>
                     {weeks.map(w => (
                       <TableCell key={w.i} className={`${num} bg-white ${cell}`}>{d.week(r.cells[w.i])}</TableCell>
                     ))}
