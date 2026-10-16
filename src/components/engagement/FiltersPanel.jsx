@@ -70,7 +70,8 @@ function MultiSelect({ label, value, onChange, options, allLabel = 'All', noun =
 }
 
 // `showDates` off (2026-10-16, Year to date page) drops the date fields for views with a fixed period.
-export default function FiltersPanel({ draft, onChange, onApply, onReset, sites, roles, showSite = true, minDate, maxDate, weekMode = null, showDates = true }) {
+// `action` (2026-10-16) sits at the right of the Filters title row, for a page's 3-dot menu.
+export default function FiltersPanel({ draft, onChange, onApply, onReset, sites, roles, showSite = true, minDate, maxDate, weekMode = null, showDates = true, action = null }) {
   const [open, setOpen] = useState(true)
   const set = patch => onChange({ ...draft, ...patch })
   // weekMode (2026-10-15, Engagement B) swaps Start and End date for a week cycler: { label, canPrev, canNext, onPrev, onNext, isLatest, onLatest }.
@@ -78,15 +79,18 @@ export default function FiltersPanel({ draft, onChange, onApply, onReset, sites,
 
   return (
     <section aria-label="Filters" className="rounded-xl border border-brand-border bg-white p-4 mb-6">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open}
-        className="flex items-center gap-1.5 text-lg font-semibold text-brand-text"
-      >
-        Filters
-        <ChevronDown size={16} className={`text-brand-subtext transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
-      </button>
+      <div className="flex items-center justify-between gap-4">
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          aria-expanded={open}
+          className="flex items-center gap-1.5 text-lg font-semibold text-brand-text"
+        >
+          Filters
+          <ChevronDown size={16} className={`text-brand-subtext transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </button>
+        {action}
+      </div>
 
       {open && (
         <form

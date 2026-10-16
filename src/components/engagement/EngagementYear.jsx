@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useAnimationControls, useInView, useReducedMotion } from 'framer-motion'
 import { parseISO, format, addDays } from 'date-fns'
-import { ChevronRight, Download, Maximize2, Minimize2, MoreHorizontal, Palette, School } from 'lucide-react'
+import { ChevronRight, Download, MoreHorizontal, Palette, School } from 'lucide-react'
 import { schools, schoolWeeks, NO_SCHOOL_WEEKS, matchesSite, USER_ROLES } from '../../lib/report2Data'
 import { weekBands } from './StackedGoalChart'
 import { GOAL } from '../../pages/Report2ConceptE'
@@ -248,6 +248,12 @@ const YTD_SHIFT_DAYS = 364
 // Opaque version of the 48% brand-bg tint, for pinned cells that sit over scrolled content.
 const TINT = 'bg-white bg-[linear-gradient(theme(colors.brand.bg/48%),theme(colors.brand.bg/48%))]'
 
+// "2026 to 2027 school year", from the first school week (moved by `shiftDays`).
+function schoolYearText(shiftDays) {
+  const y = addDays(parseISO(schoolWeeks[0]), shiftDays).getFullYear()
+  return `${y} to ${y + 1} school year`
+}
+
 // The weeks that count toward YTD, newest first. The end of year preview (2026-10-16) pretends today is the
 // last week of the school year.
 function ytdWeeks(endOfYear) {
@@ -280,6 +286,9 @@ function YtdTable({ rows, endOfYear = false, heat = false }) {
   ]
   // Pinned columns draw their right line as an inset shadow so it stays put while the weeks scroll under them.
   const pinLine = 'border-r-0 shadow-[inset_-1px_0_0_theme(colors.brand.border)]'
+  // The YTD column also casts a slight shadow to its right (2026-10-16), marking where the weeks start: an 8px
+  // gradient strip hung off the pinned cell, so it shows over the week cells whatever the table's border model.
+  const ytdEdge = `${pinLine} after:absolute after:top-0 after:bottom-0 after:left-full after:w-2 after:pointer-events-none after:bg-gradient-to-r after:from-brand-text/[0.14] after:to-transparent`
   const site = 'sticky left-0 z-10 w-56 min-w-56'
   const avg = 'sticky left-56 z-10 w-16 min-w-16 text-right'
   const num = 'text-right tabular-nums'
@@ -296,7 +305,7 @@ function YtdTable({ rows, endOfYear = false, heat = false }) {
         <TableHeader className="bg-transparent">
           <TableRow className="hover:bg-transparent">
             <TableHead className={`${site} ${TINT} ${head} ${pinLine}`}>Site</TableHead>
-            <TableHead className={`${avg} ${TINT} ${head} ${pinLine}`}>YTD</TableHead>
+            <TableHead className={`${avg} ${TINT} ${head} ${ytdEdge}`}>YTD</TableHead>
             {weeks.map(w => (
               <TableHead key={w.i} className={`${num} ${TINT} ${head} ${weekCol}`}>{format(w.date, 'MMM d')}</TableHead>
             ))}
@@ -327,15 +336,15 @@ function YtdTable({ rows, endOfYear = false, heat = false }) {
                       </span>
                     </button>
                   </TableCell>
-                  <TableCell className={`${avg} ${heat ? stepFor(ytd(r), STEPS_4).cls : bg} ${num} ${cell} ${pinLine} font-semibold`}>{ytd(r)}%</TableCell>
+                  <TableCell className={`${avg} ${heat ? stepFor(ytd(r), STEPS_4).cls : bg} ${num} ${cell} ${ytdEdge} font-semibold`}>{ytd(r)}%</TableCell>
                   {weeks.map(w => (
                     <TableCell key={w.i} className={`${num} ${heat ? stepFor(r.cells[w.i].pct, STEPS_4).cls : bg} ${cell} ${r.total ? 'font-semibold' : ''}`}>{r.cells[w.i].pct}%</TableCell>
                   ))}
                 </TableRow>
                 {isOpen && DETAILS.map(d => (
                   <TableRow key={d.label} className="hover:bg-transparent">
-                    <TableCell className={`${site} bg-white ${cell} ${pinLine} pl-8 text-brand-subtext`}>{d.label}</TableCell>
-                    <TableCell className={`${avg} bg-white ${num} ${cell} ${pinLine}`}>{d.ytd(r)}</TableCell>
+                    <TableCell className={`${site} bg-white ${cell} ${pinLine} pl-8 text-brand-text`}>{d.label}</TableCell>
+                    <TableCell className={`${avg} bg-white ${num} ${cell} ${ytdEdge}`}>{d.ytd(r)}</TableCell>
                     {weeks.map(w => (
                       <TableCell key={w.i} className={`${num} bg-white ${cell}`}>{d.week(r.cells[w.i])}</TableCell>
                     ))}
@@ -395,14 +404,6 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
   }, [siteIds, role])
   const pick = weeks => rows.map(r => ({ ...r, cells: weeks.map(w => r.cells[schoolWeeks.indexOf(w)]) }))
 
-  // View fullscreen (2026-10-15): the card alone fills the screen, for a clean screenshot. Esc exits.
-  const cardRef = useRef(null)
-  const [fullscreen, setFullscreen] = useState(false)
-  useEffect(() => {
-    const onChange = () => setFullscreen(document.fullscreenElement === cardRef.current)
-    document.addEventListener('fullscreenchange', onChange)
-    return () => document.removeEventListener('fullscreenchange', onChange)
-  }, [])
   const { ytdPreview: preview } = useEngagementVersion()
   const [heat, setHeat] = useState(false)
   // Export CSV (YTD view): one row per site under All sites, with YTD then each week, as on screen.
@@ -420,8 +421,28 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
     a.click()
     URL.revokeObjectURL(url)
   }
-  const toggleFullscreen = () => (fullscreen ? document.exitFullscreen() : cardRef.current?.requestFullscreen())
 
+  // The YTD view's 3-dot menu (Export CSV) lives in the Filters panel's title row (2026-10-16).
+  const menu = (
+    <div className="relative shrink-0" ref={menuRef}>
+      <button
+        type="button"
+        onClick={() => setMenuOpen(o => !o)}
+        aria-label="More options"
+        aria-expanded={menuOpen}
+        className="flex items-center justify-center w-8 h-8 rounded-md text-brand-text hover:bg-brand-bg transition-colors"
+      >
+        <MoreHorizontal size={13} />
+      </button>
+      {menuOpen && (
+        <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
+          <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
+            <Download size={13} className="text-brand-subtext" /> Export CSV
+          </button>
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <div className="px-6 pt-4 pb-8">
@@ -432,29 +453,10 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
           <li aria-current="page" className="text-brand-text">Year to date</li>
         </ol>
       </nav>
-      {/* The YTD view's 3-dot menu sits above the card on the right, like the main report's. */}
-      <div className="flex items-center justify-between gap-4 mb-3">
+      <div className="mb-3">
         <h2 className="text-2xl font-semibold text-brand-text">Year to date</h2>
-        {layout === 'halves5' && (
-          <div className="relative shrink-0" ref={menuRef}>
-            <button
-              type="button"
-              onClick={() => setMenuOpen(o => !o)}
-              aria-label="More options"
-              aria-expanded={menuOpen}
-              className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-colors"
-            >
-              <MoreHorizontal size={13} />
-            </button>
-            {menuOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
-                <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
-                  <Download size={13} className="text-brand-subtext" /> Export CSV
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+        {/* School year under the title (2026-10-16). YTD runs on the shifted 2026 to 2027 weeks; the other layouts show the mock 2025 to 2026 year. */}
+        <p className="text-base text-brand-subtext mt-1">{schoolYearText(layout === 'halves5' ? YTD_SHIFT_DAYS : 0)}</p>
       </div>
 
       {layout === 'halves5' && (
@@ -466,13 +468,13 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
           sites={schools}
           roles={USER_ROLES}
           showDates={false}
+          action={menu}
         />
       )}
 
       <motion.section
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
-        ref={cardRef}
-        className={`bg-white ${fullscreen ? 'overflow-auto p-8' : 'rounded-xl border border-brand-border p-5'}`}
+        className="rounded-xl border border-brand-border bg-white p-5"
       >
         <header className="flex items-start justify-between gap-4 mb-5">
           <div className="min-w-0">
@@ -490,14 +492,6 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
                 <Palette size={14} className={heat ? 'text-dessa-teal' : 'text-brand-subtext'} aria-hidden="true" /> Heat map
               </button>
             )}
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className="inline-flex items-center gap-1.5 h-8 px-3 shrink-0 rounded-md border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors"
-            >
-              {fullscreen ? <Minimize2 size={14} className="text-brand-subtext" aria-hidden="true" /> : <Maximize2 size={14} className="text-brand-subtext" aria-hidden="true" />}
-              {fullscreen ? 'Exit fullscreen' : 'View fullscreen'}
-            </button>
           </div>
         </header>
 
