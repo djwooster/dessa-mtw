@@ -2,13 +2,14 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useAnimationControls, useInView, useReducedMotion } from 'framer-motion'
 import { parseISO, format, addDays } from 'date-fns'
-import { ChevronRight, Download, MoreHorizontal, Palette, School } from 'lucide-react'
+import { Calendar, ChevronRight, Download, MoreHorizontal, Palette, School } from 'lucide-react'
 import { schools, schoolWeeks, NO_SCHOOL_WEEKS, matchesSite, USER_ROLES } from '../../lib/report2Data'
 import { weekBands } from './StackedGoalChart'
 import { GOAL, SearchField } from '../../pages/Report2ConceptE'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table'
 import { useEngagementVersion } from '../../lib/engagementVersionContext'
 import FiltersPanel from './FiltersPanel'
+import { PaginationBar } from '../ui/pagination'
 
 // Week by week page (2026-10-15, Version A): every school week of the year, one row per site under an
 // All sites row. It is made to be screenshotted and shared with board members, so nothing depends on
@@ -124,10 +125,11 @@ function TermTitle({ title, Icon, className }) {
   )
 }
 
-function monthSpans(weeks) {
+// `fmt` (2026-10-16): the YTD table adds the year, as in "Oct 2026".
+function monthSpans(weeks, fmt = 'MMM') {
   const spans = []
   weeks.forEach(w => {
-    const m = format(parseISO(w), 'MMM')
+    const m = format(parseISO(w), fmt)
     if (spans.length && spans[spans.length - 1].m === m) spans[spans.length - 1].n += 1
     else spans.push({ m, n: 1 })
   })
@@ -295,11 +297,28 @@ function YtdTable({ rows, endOfYear = false, heat = false, searching = false }) 
   const lines = 'border-r border-brand-border last:border-r-0'
   const head = `h-7 px-2.5 text-[13px] font-medium ${lines}`
   const cell = `px-2.5 py-1.5 text-[13px] ${lines}`
+  // Pagination (2026-10-16): the shared bar, 10 sites a page by default. All sites stays on top of every page,
+  // and any change to the rows (filters, search) goes back to page 1.
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const totalRow = rows.find(r => r.total)
+  const siteRows = rows.filter(r => !r.total)
+  useEffect(() => { setPage(1) }, [rows])
+  const pageRows = [...(totalRow ? [totalRow] : []), ...siteRows.slice((page - 1) * pageSize, page * pageSize)]
 
   return (
     <div className="rounded-lg border border-brand-border overflow-hidden">
       <Table>
         <TableHeader className="bg-transparent">
+          {/* Month band (2026-10-16), as in Fall and Spring: "Week of" over Site and YTD, each month spanning its weeks,
+              so the dates below read as the week each column starts. */}
+          <TableRow className="hover:bg-transparent">
+            <TableHead className={`${site} ${TINT} ${head} ${pinLine} text-xs font-medium text-brand-subtext`}>Week of</TableHead>
+            <TableHead className={`${avg} ${TINT} ${head} ${pinLine}`} aria-hidden="true" />
+            {monthSpans(weeks.map(w => format(w.date, 'yyyy-MM-dd')), 'MMM yyyy').map((s, i) => (
+              <TableHead key={i} colSpan={s.n} className={`${TINT} ${head} text-xs font-semibold uppercase tracking-wide text-brand-subtext`}>{s.m}</TableHead>
+            ))}
+          </TableRow>
           <TableRow className="hover:bg-transparent">
             <TableHead className={`${site} ${TINT} ${head} ${pinLine}`}>Site</TableHead>
             <TableHead className={`${avg} ${TINT} ${head} ${pinLine}`}>YTD</TableHead>
@@ -309,7 +328,7 @@ function YtdTable({ rows, endOfYear = false, heat = false, searching = false }) 
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map(r => {
+          {pageRows.map(r => {
             const bg = r.total ? TINT : 'bg-white'
             const isOpen = open.has(r.key)
             const name = r.total ? (r.allSites ? 'All sites' : 'Selected sites') : r.name
@@ -357,6 +376,7 @@ function YtdTable({ rows, endOfYear = false, heat = false, searching = false }) 
           )}
         </TableBody>
       </Table>
+      <PaginationBar page={page} pageSize={pageSize} total={siteRows.length} onPage={setPage} onPageSize={n => { setPageSize(n); setPage(1) }} className="px-4 py-3 border-t border-brand-border" />
     </div>
   )
 }
@@ -381,10 +401,12 @@ function Legend({ numbers, steps = STEPS, noSchool = true }) {
   )
 }
 
-export default function EngagementYear({ siteIds: reportSiteIds = [], role: reportRole = 'all', layout = 'grid' }) {
+export default function EngagementYear({ siteIds: reportSiteIds = [], role: reportRole = 'all', layout = 'grid', lockedSiteId = null }) {
   // Filters on the YTD view (2026-10-16): Site and User role, applied with Apply like the main report. They
   // start from the report's filters and only change this page. No dates, since YTD is a fixed period.
-  const startFilters = { site: reportSiteIds.map(String), role: reportRole }
+  // A Site Leader (`lockedSiteId`, 2026-10-16) sees only their site, with no Site filter.
+  const lockedSite = lockedSiteId ? [String(lockedSiteId)] : null
+  const startFilters = { site: lockedSite ?? reportSiteIds.map(String), role: reportRole }
   const [draft, setDraft] = useState(startFilters)
   const [applied, setApplied] = useState(startFilters)
   const siteIds = useMemo(() => applied.site.map(Number), [applied])
@@ -466,7 +488,7 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
       <div className="mb-3">
         <h2 className="text-2xl font-semibold text-brand-text">Year to date</h2>
         {/* School year under the title (2026-10-16). YTD runs on the shifted 2026 to 2027 weeks; the other layouts show the mock 2025 to 2026 year. */}
-        <p className="text-base text-brand-subtext mt-1">{schoolYearText(layout === 'halves5' ? YTD_SHIFT_DAYS : 0)}</p>
+        <p className="flex items-center gap-1.5 text-sm text-brand-subtext mt-1"><Calendar size={14} aria-hidden="true" />{schoolYearText(layout === 'halves5' ? YTD_SHIFT_DAYS : 0)}</p>
       </div>
 
       {layout === 'halves5' && (
@@ -474,9 +496,10 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
           draft={draft}
           onChange={setDraft}
           onApply={() => setApplied(draft)}
-          onReset={() => { const all = { site: [], role: 'all' }; setDraft(all); setApplied(all) }}
+          onReset={() => { const all = { site: lockedSite ?? [], role: 'all' }; setDraft(all); setApplied(all) }}
           sites={schools}
           roles={USER_ROLES}
+          showSite={!lockedSite}
           showDates={false}
           action={menu}
         />
@@ -490,25 +513,33 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
           <div className="min-w-0">
             <h3 className="text-lg font-semibold text-brand-text">Users completing {GOAL} lessons a week</h3>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {layout === 'halves5' && (
-              <div className="w-64">
-                <SearchField value={query} onChange={setQuery} placeholder="Search sites" height="h-8" />
-              </div>
-            )}
-            {/* Heat map toggle (YTD view, 2026-10-16): shades the % cells; the color key shows under the table while it's on. */}
-            {layout === 'halves5' && (
+        </header>
+        {/* Under the title (2026-10-16): site search on the left, Heat map and Export CSV side by side on the right. */}
+        {layout === 'halves5' && (
+          <div className="flex items-center justify-between gap-3 -mt-2 mb-4">
+            <div className="w-64">
+              <SearchField value={query} onChange={setQuery} placeholder="Search sites" height="h-8" />
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Heat map toggle: shades the % cells; the color key shows under the table while it's on. */}
               <button
                 type="button"
                 onClick={() => setHeat(h => !h)}
                 aria-pressed={heat}
-                className={`inline-flex items-center gap-1.5 h-8 px-3 shrink-0 rounded-md border text-[13px] font-medium transition-colors ${heat ? 'border-dessa-teal bg-dessa-tealLight text-dessa-teal' : 'border-brand-border bg-white text-brand-text hover:bg-brand-bg'}`}
+                className={`inline-flex items-center gap-1.5 h-8 px-3 shrink-0 whitespace-nowrap rounded-md border text-[13px] font-medium transition-colors ${heat ? 'border-dessa-teal bg-dessa-tealLight text-dessa-teal' : 'border-brand-border bg-white text-brand-text hover:bg-brand-bg'}`}
               >
                 <Palette size={14} className={heat ? 'text-dessa-teal' : 'text-brand-subtext'} aria-hidden="true" /> Heat map
               </button>
-            )}
+              <button
+                type="button"
+                onClick={exportCsv}
+                className="inline-flex items-center gap-1.5 h-8 px-3 shrink-0 whitespace-nowrap rounded-md border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors"
+              >
+                <Download size={14} className="text-brand-subtext" aria-hidden="true" /> Export CSV
+              </button>
+            </div>
           </div>
-        </header>
+        )}
 
         {layout === 'halves5' ? (
           <YtdTable rows={shownRows} endOfYear={preview === 'end'} heat={heat} searching={!!q} />

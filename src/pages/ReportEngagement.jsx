@@ -259,7 +259,8 @@ function ReportEngagementA() {
   const subPath = useParams()['*'] ?? ''
   const routeSiteId = Number(subPath.match(/^site\/(\d+)/)?.[1])
   // Week by week page (2026-10-15): engagement/year, the whole school year by site for screenshots.
-  const isYearPage = isF && subPath === 'year' && !isSiteLeaderView
+  // Site Leaders get it too (2026-10-16, it has its own nav item), showing just their site.
+  const isYearPage = isF && subPath === 'year'
   const { yearLayout } = useEngagementVersion()
   const routeSite = schools.find(sc => sc.id === routeSiteId) ?? null
   const selectedSite = isSiteLeaderView ? schools[0] : routeSite ?? pickedSite
@@ -497,7 +498,7 @@ function ReportEngagementA() {
     </div>
   )
 
-  if (isYearPage) return <EngagementYear siteIds={appliedFilters.site.map(Number)} role={roleFilter} layout={yearLayout} />
+  if (isYearPage) return <EngagementYear key={isSiteLeaderView ? 'site-leader' : 'all'} siteIds={appliedFilters.site.map(Number)} role={roleFilter} layout={yearLayout} lockedSiteId={isSiteLeaderView ? schools[0].id : null} />
 
   return (
     <div className={`px-6 pb-8 ${isF && routeSite && !isSiteLeaderView ? 'pt-10' : 'pt-8'}`}>

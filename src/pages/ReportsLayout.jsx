@@ -14,6 +14,8 @@ const REPORT_GROUPS = [
       // { label: 'Site Engagement', to: 'site-engagement' },
       // { label: 'Daily Curriculum Engagement', to: 'dce' },
       { label: 'Engagement', to: 'engagement' },
+      // Year to date (2026-10-16) as its own report; the Engagement breadcrumb and chart card button still lead here too.
+      { label: 'Year to date', to: 'engagement/year' },
     ],
   },
   {
@@ -44,7 +46,7 @@ const REPORT_GROUPS = [
 export default function ReportsLayout() {
   const { pathname } = useLocation()
   // Only the reports that honor the role show the switcher.
-  const showRoleSwitcher = pathname.endsWith('/site-engagement') || pathname.endsWith('/engagement')
+  const showRoleSwitcher = pathname.endsWith('/site-engagement') || pathname.endsWith('/engagement') || pathname.endsWith('/engagement/year')
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)]">
       <aside className="w-72 flex-shrink-0 border-r border-brand-border bg-white flex flex-col sticky top-14 self-start h-[calc(100vh-3.5rem)]">
@@ -69,9 +71,10 @@ export default function ReportsLayout() {
                   <NavLink
                     key={item.to}
                     to={item.to}
+                    // Engagement stays lit on its site pages but not on Year to date, which has its own item.
                     className={({ isActive }) =>
                       `block px-6 py-1.5 text-sm transition-colors ${
-                        isActive
+                        isActive && !(item.to === 'engagement' && pathname.startsWith('/reports/engagement/year'))
                           ? 'font-semibold text-dessa-teal'
                           : 'text-brand-text hover:text-dessa-teal'
                       }`
