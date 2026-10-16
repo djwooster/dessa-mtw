@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useAnimationControls, useInView, useReducedMotion } from 'framer-motion'
 import { parseISO, format, addDays } from 'date-fns'
-import { ChevronRight, Download, Maximize2, Minimize2, MoreHorizontal, School } from 'lucide-react'
+import { ChevronRight, Download, Maximize2, Minimize2, MoreHorizontal, Palette, School } from 'lucide-react'
 import { schools, schoolWeeks, NO_SCHOOL_WEEKS, matchesSite, USER_ROLES } from '../../lib/report2Data'
 import { weekBands } from './StackedGoalChart'
 import { GOAL } from '../../pages/Report2ConceptE'
@@ -259,7 +259,9 @@ function ytdWeeks(endOfYear) {
 }
 const ytdAvg = (r, weeks, k = 'pct') => weeks.length ? Math.round(weeks.reduce((sum, w) => sum + r.cells[w.i][k], 0) / weeks.length) : 0
 
-function YtdTable({ rows, endOfYear = false }) {
+// `heat` (2026-10-16) shades every % cell with the org gray scale from Fall and Spring (4); the counts in the
+// drill down stay plain.
+function YtdTable({ rows, endOfYear = false, heat = false }) {
   const weeks = useMemo(() => ytdWeeks(endOfYear), [endOfYear])
   const avgOf = (r, k) => ytdAvg(r, weeks, k)
   const ytd = r => avgOf(r, 'pct')
@@ -324,9 +326,9 @@ function YtdTable({ rows, endOfYear = false }) {
                       </span>
                     </button>
                   </TableCell>
-                  <TableCell className={`${avg} ${bg} ${num} ${cell} ${pinLine} font-semibold`}>{ytd(r)}%</TableCell>
+                  <TableCell className={`${avg} ${heat ? stepFor(ytd(r), STEPS_4).cls : bg} ${num} ${cell} ${pinLine} font-semibold`}>{ytd(r)}%</TableCell>
                   {weeks.map(w => (
-                    <TableCell key={w.i} className={`${num} ${bg} ${cell} ${r.total ? 'font-semibold' : ''}`}>{r.cells[w.i].pct}%</TableCell>
+                    <TableCell key={w.i} className={`${num} ${heat ? stepFor(r.cells[w.i].pct, STEPS_4).cls : bg} ${cell} ${r.total ? 'font-semibold' : ''}`}>{r.cells[w.i].pct}%</TableCell>
                   ))}
                 </TableRow>
                 {isOpen && DETAILS.map(d => (
@@ -347,7 +349,7 @@ function YtdTable({ rows, endOfYear = false }) {
   )
 }
 
-function Legend({ numbers, steps = STEPS }) {
+function Legend({ numbers, steps = STEPS, noSchool = true }) {
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-brand-subtext">
       <span>{numbers ? 'Numbers are the % of users who met the goal that week.' : 'Shade shows the % of users who met the goal that week.'}</span>
@@ -357,9 +359,11 @@ function Legend({ numbers, steps = STEPS }) {
             <span className={`h-3 w-4 rounded-sm ${s.cls}`} aria-hidden="true" /> {s.label}
           </li>
         ))}
-        <li className="inline-flex items-center gap-1.5">
-          <span className={`h-3 w-4 rounded-sm border border-brand-border ${NO_SCHOOL}`} aria-hidden="true" /> No school
-        </li>
+        {noSchool && (
+          <li className="inline-flex items-center gap-1.5">
+            <span className={`h-3 w-4 rounded-sm border border-brand-border ${NO_SCHOOL}`} aria-hidden="true" /> No school
+          </li>
+        )}
       </ul>
     </div>
   )
@@ -399,6 +403,7 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
     return () => document.removeEventListener('fullscreenchange', onChange)
   }, [])
   const { ytdPreview: preview } = useEngagementVersion()
+  const [heat, setHeat] = useState(false)
   // Export CSV (YTD view): one row per site under All sites, with YTD then each week, as on screen.
   function exportCsv() {
     const weeks = ytdWeeks(preview === 'end')
@@ -473,6 +478,17 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
             <h3 className="text-lg font-semibold text-brand-text">Users completing {GOAL} lessons a week</h3>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {/* Heat map toggle (YTD view, 2026-10-16): shades the % cells; the color key shows under the table while it's on. */}
+            {layout === 'halves5' && (
+              <button
+                type="button"
+                onClick={() => setHeat(h => !h)}
+                aria-pressed={heat}
+                className={`inline-flex items-center gap-1.5 h-8 px-3 shrink-0 rounded-md border text-[13px] font-medium transition-colors ${heat ? 'border-dessa-teal bg-dessa-tealLight text-dessa-teal' : 'border-brand-border bg-white text-brand-text hover:bg-brand-bg'}`}
+              >
+                <Palette size={14} className={heat ? 'text-dessa-teal' : 'text-brand-subtext'} aria-hidden="true" /> Heat map
+              </button>
+            )}
             <button
               type="button"
               onClick={toggleFullscreen}
@@ -485,7 +501,7 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
         </header>
 
         {layout === 'halves5' ? (
-          <YtdTable rows={rows} endOfYear={preview === 'end'} />
+          <YtdTable rows={rows} endOfYear={preview === 'end'} heat={heat} />
         ) : layout === 'halves' || TABLE_STEPS[layout] ? (
           <div className="flex flex-col gap-8">
             {[{ title: 'Fall 2025', weeks: FALL, Icon: FallLeaf }, { title: 'Spring 2026', weeks: SPRING, Icon: SpringFlower }].map(h => (
@@ -506,9 +522,9 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
           <YearGrid weeks={schoolWeeks} rows={rows} variant={layout} />
         )}
 
-        {layout !== 'halves5' && (
+        {(layout !== 'halves5' || heat) && (
           <div className="mt-5 pt-4 border-t border-brand-border">
-            <Legend numbers={layout !== 'heat'} steps={TABLE_STEPS[layout] ?? STEPS} />
+            <Legend numbers={layout !== 'heat'} steps={layout === 'halves5' ? STEPS_4 : TABLE_STEPS[layout] ?? STEPS} noSchool={layout !== 'halves5'} />
           </div>
         )}
       </motion.section>
