@@ -22,6 +22,7 @@ import SitesGoalTable, { siteGoalRows } from '../components/engagement/SitesGoal
 import GoalStatusBadge from '../components/engagement/GoalStatusBadge'
 import EducatorCalendar from '../components/engagement/EducatorCalendar'
 import PrintReport from '../components/engagement/PrintReport'
+import GoalBanner from '../components/engagement/GoalBanner'
 import EngagementYear from '../components/engagement/EngagementYear'
 import WeeklyBarChart from '../components/engagement/WeeklyBarChart'
 import MonthBarChart, { MONTHS, DEFAULT_MONTH_IDX, weekRangeLabel } from '../components/engagement/MonthBarChart'
@@ -251,6 +252,8 @@ function ReportEngagementA() {
   const [dSiteIds, setDSiteIds] = useState([])
   // Chart | Table switch on the weekly goal graph (2026-10-14, Concept F).
   const [graphView, setGraphView] = useState('chart')
+  // Graph | Table tabs under the page title (2026-10-16): Table shows the Year to date table in place.
+  const [overviewTab, setOverviewTab] = useState('graph')
   const [monthIdx, setMonthIdx] = useState(DEFAULT_MONTH_IDX)
   const month = MONTHS[monthIdx]
   // A site page (2026-10-15): clicking a site in the table opens engagement/site/:id, which looks like the
@@ -263,6 +266,8 @@ function ReportEngagementA() {
   const isYearPage = isF && subPath === 'year'
   const { yearLayout } = useEngagementVersion()
   const routeSite = schools.find(sc => sc.id === routeSiteId) ?? null
+  const showTabs = isF && !routeSite && !isYearPage
+  const showTable = showTabs && overviewTab === 'table'
   const selectedSite = isSiteLeaderView ? schools[0] : routeSite ?? pickedSite
   // Opening a site remembers where the report was scrolled; coming back (the breadcrumb or the browser
   // back button) puts the page there, and the tables keep their sort, page and search (usePersistedState).
@@ -511,7 +516,7 @@ function ReportEngagementA() {
           </ol>
         </nav>
       )}
-      <div className={`flex flex-wrap items-end justify-between gap-x-6 gap-y-4 ${isC ? 'mb-[72px]' : 'mb-6'}`}>
+      <div className={`flex flex-wrap items-end justify-between gap-x-6 gap-y-4 ${isC ? 'mb-[72px]' : showTabs ? 'mb-3' : 'mb-6'}`}>
         <div className="min-w-0">
           {/* The breadcrumb above replaces the plain back link in Concept F (2026-10-15). */}
           {selectedSite && !isSiteLeaderView && !isF && (
@@ -545,14 +550,6 @@ function ReportEngagementA() {
               </Link>
             )}
           </div>
-          {/* Weekly goal as page subtext (2026-10-16), replacing the blue callout: same pattern as the Year to date
-              page's school year line, and still on screen in screenshots. */}
-          {isF && (
-            <p className="flex items-center gap-1.5 text-sm text-brand-subtext mt-1">
-              Weekly goal: {GOAL} lessons
-              <Link to="/settings" className="inline-flex items-center gap-1 text-[#134fb2] hover:underline">Edit <ExternalLink size={12} aria-hidden="true" /></Link>
-            </p>
-          )}
           {!rangeHeader && !goalBadge && !isAHeader && (
             <p className="text-sm text-brand-subtext mt-1">
               {selectedSite ? `Users at ${selectedSite.name}. Open a user to see their activity.` : 'This report shows Move This World lesson completion across your district, by site.'}
@@ -587,7 +584,7 @@ function ReportEngagementA() {
             <Download size={14} className="text-brand-subtext" aria-hidden="true" /> Download
           </button>
         </div>
-      ) : (
+      ) : !showTable && (
       <div className="flex flex-wrap items-center justify-end gap-2">
         {/* Reset all removed 2026-10-08; the 3-dot menu now sits to the right of the Graph switcher. */}
         {/* Graph A/B switcher removed 2026-10-09 (kept on the engagement-prototype-full branch). Graph A is the only graph; setGraph and the month view stay in the code. */}
@@ -615,7 +612,23 @@ function ReportEngagementA() {
       )}
       </div>
 
-      {isAFilters && (
+      {showTabs && (
+        <div role="tablist" aria-label="Engagement views" className="flex gap-4 border-b border-brand-border mb-6">
+          {[['graph', 'Graph'], ['table', 'Table']].map(([k, label]) => (
+            <button
+              key={k} type="button" role="tab" aria-selected={overviewTab === k}
+              onClick={() => setOverviewTab(k)}
+              className={`pb-2 -mb-px text-sm font-medium border-b-2 transition-colors ${overviewTab === k ? 'border-dessa-teal text-brand-text' : 'border-transparent text-brand-subtext hover:text-brand-text'}`}
+            >{label}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Weekly goal callout (2026-10-13): a rounded callout under the page title so the goal is on screen in screenshots.
+          Back on 2026-10-16 after trying it as page subtext; the Year to date report shows it too. */}
+      {isF && <GoalBanner />}
+
+      {isAFilters && !showTable && (
         <FiltersPanel
           draft={draftFilters}
           onChange={setDraftFilters}
@@ -629,7 +642,9 @@ function ReportEngagementA() {
         />
       )}
 
-      {selectedSite ? (
+      {showTable ? (
+        <EngagementYear embedded siteIds={appliedFilters.site.map(Number)} role={roleFilter} layout="halves5" lockedSiteId={isSiteLeaderView ? schools[0].id : null} />
+      ) : selectedSite ? (
         <>
           <motion.div
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
@@ -757,7 +772,7 @@ function ReportEngagementA() {
       )}
 
       {/* Educator drill-down: Concept A's modal opens a six-month calendar per educator (2026-10-09); other concepts stay off since 2026-10-08. */}
-      {(isA || isF) && (
+      {(isA || isF) && !showTable && (
         <PrintReport
           title="Engagement"
           rangeText={rangeLabel(weeks)}

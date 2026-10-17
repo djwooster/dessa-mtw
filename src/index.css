@@ -62,6 +62,9 @@ body {
 }
 .print-footer { display: none; }
 @page { size: letter; margin: 0.6in 0.6in 0.9in; }
+/* Year to date print (2026-10-16): a landscape page for the wide week table. */
+@page landscape { size: letter landscape; margin: 0.6in 0.6in 0.9in; }
+.print-landscape { page: landscape; }
 @media print {
   #root { display: none !important; }
   body { background: white !important; }

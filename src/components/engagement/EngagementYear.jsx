@@ -1,14 +1,15 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { createPortal } from 'react-dom'
 import { motion, useAnimationControls, useInView, useReducedMotion } from 'framer-motion'
 import { parseISO, format, addDays } from 'date-fns'
-import { Calendar, ChevronRight, Download, MoreHorizontal, Palette, School } from 'lucide-react'
+import { Calendar, ChevronRight, Download, Palette, Printer, School } from 'lucide-react'
 import { schools, schoolWeeks, NO_SCHOOL_WEEKS, matchesSite, USER_ROLES } from '../../lib/report2Data'
 import { weekBands } from './StackedGoalChart'
 import { GOAL, SearchField } from '../../pages/Report2ConceptE'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table'
 import { useEngagementVersion } from '../../lib/engagementVersionContext'
 import FiltersPanel from './FiltersPanel'
+import GoalBanner from './GoalBanner'
 import { PaginationBar } from '../ui/pagination'
 
 // Week by week page (2026-10-15, Version A): every school week of the year, one row per site under an
@@ -41,6 +42,14 @@ const STEPS_4 = [
   { min: 40, label: '40 to 59%', cls: 'bg-org-gray-200 text-brand-text' },
   { min: 20, label: '20 to 39%', cls: 'bg-org-gray-100 text-brand-text' },
   { min: 0, label: 'Under 20%', cls: 'bg-org-gray-50 text-brand-text' },
+]
+// YTD heat map (2026-10-16): four bands of the DESSA teal, split at quarters to match the chart's 25% gridlines.
+// Only the full teal band carries white text; the lighter bands keep dark text (each pair passes 4.5:1).
+const STEPS_HEAT = [
+  { min: 75, label: '75% or more', cls: 'bg-dessa-teal text-white' },
+  { min: 50, label: '50 to 74%', cls: 'bg-dessa-teal/60 text-brand-text' },
+  { min: 25, label: '25 to 49%', cls: 'bg-dessa-teal/30 text-brand-text' },
+  { min: 0, label: 'Under 25%', cls: 'bg-dessa-teal/10 text-brand-text' },
 ]
 // The Fall and Spring table layouts and the scale each one uses.
 const TABLE_STEPS = { halves3: STEPS_3, halves4: STEPS_4 }
@@ -266,14 +275,83 @@ function ytdWeeks(endOfYear) {
     .reverse()
 }
 const ytdAvg = (r, weeks, k = 'pct') => weeks.length ? Math.round(weeks.reduce((sum, w) => sum + r.cells[w.i][k], 0) / weeks.length) : 0
+const ytdRowName = r => r.total ? `${r.allSites ? 'All sites' : 'Selected sites'} (${r.count})` : r.name
 
-// `heat` (2026-10-16) shades every % cell with the org gray scale from Fall and Spring (4); the counts in the
+// Print layout for the YTD view (2026-10-16), the same letterhead as the Engagement print (PrintReport), on a
+// landscape page. Every site prints, not just the current page. The weeks go in blocks of 12, newest first,
+// each repeating Site and YTD so a block reads on its own. With the heat map on, the bands print too.
+const PRINT_WEEKS = 12
+function YtdPrint({ rows, weeks, heat, schoolYear }) {
+  const blocks = []
+  for (let i = 0; i < weeks.length; i += PRINT_WEEKS) blocks.push(weeks.slice(i, i + PRINT_WEEKS))
+  const blockLabel = b => {
+    const from = b[b.length - 1].date
+    const to = b[0].date
+    return from.getFullYear() === to.getFullYear()
+      ? `Weeks of ${format(from, 'MMM d')} to ${format(to, 'MMM d, yyyy')}`
+      : `Weeks of ${format(from, 'MMM d, yyyy')} to ${format(to, 'MMM d, yyyy')}`
+  }
+  const shade = pct => heat ? stepFor(pct, STEPS_HEAT).cls : ''
+  return createPortal(
+    <div className="print-report print-landscape text-brand-text" style={{ width: '9.8in' }}>
+      <header className="flex items-end justify-between border-b-2 border-dessa-teal pb-4 mb-6">
+        <div>
+          <img src="/dessa-mtw-logo.svg" alt="DESSA x Move This World" className="h-6 w-auto mb-4" />
+          <h1 className="text-3xl font-semibold leading-tight">Year to date</h1>
+        </div>
+        <div className="text-right text-xs text-brand-subtext leading-5">
+          <p><span className="font-semibold text-brand-text">{schoolYear}</span></p>
+          <p>Goal: {GOAL} lessons per week</p>
+          <p>Generated {format(new Date(), 'MMM d, yyyy')}</p>
+        </div>
+      </header>
+      <h2 className="text-base font-semibold mb-4">Users completing {GOAL} lessons a week</h2>
+      {blocks.map((b, bi) => (
+        <section key={bi} className={bi ? 'mt-8' : ''}>
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-subtext mb-2">{blockLabel(b)}</p>
+          <table className="w-full text-[11px] tabular-nums border-collapse">
+            <thead>
+              <tr className="border-b border-brand-text">
+                <th className="py-1.5 pr-2 text-left font-semibold">Site</th>
+                <th className="py-1.5 px-1.5 text-right font-semibold">YTD</th>
+                {b.map(w => <th key={w.i} className="py-1.5 px-1.5 text-right font-semibold whitespace-nowrap">{format(w.date, 'MMM d')}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.key} className="border-b border-brand-border print-avoid-break">
+                  <td className={`py-1.5 pr-2 ${r.total ? 'font-semibold' : ''}`}>{ytdRowName(r)}</td>
+                  <td className={`py-1.5 px-1.5 text-right font-semibold ${shade(ytdAvg(r, weeks))}`}>{ytdAvg(r, weeks)}%</td>
+                  {b.map(w => <td key={w.i} className={`py-1.5 px-1.5 text-right ${r.total ? 'font-semibold' : ''} ${shade(r.cells[w.i].pct)}`}>{r.cells[w.i].pct}%</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ))}
+      {heat && (
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-6 text-[11px] text-brand-subtext print-avoid-break">
+          {STEPS_HEAT.map(st => (
+            <li key={st.label} className="flex items-center gap-1.5"><span className={`h-3 w-4 rounded-sm ${st.cls}`} aria-hidden="true" />{st.label}</li>
+          ))}
+        </ul>
+      )}
+      <footer className="print-footer text-[11px] text-brand-subtext">
+        <span>Move This World and DESSA, Riverside Insights</span>
+        <span>Year to date, {schoolYear}</span>
+      </footer>
+    </div>,
+    document.body
+  )
+}
+
+// `heat` (2026-10-16) shades every % cell in DESSA teal (STEPS_HEAT); the counts in the
 // drill down stay plain.
 function YtdTable({ rows, endOfYear = false, heat = false, searching = false }) {
   const weeks = useMemo(() => ytdWeeks(endOfYear), [endOfYear])
   const avgOf = (r, k) => ytdAvg(r, weeks, k)
   const ytd = r => avgOf(r, 'pct')
-  // Drill down (2026-10-16): opening a site adds its weekly Users and Met goal rows under it (% met was removed,
+  // Drill down (2026-10-16): opening a site adds its weekly Total users and Users who met the goal rows under it (% met was removed,
   // it repeated the site row). The YTD column shows their weekly averages.
   const [open, setOpen] = useState(() => new Set())
   const toggle = key => setOpen(prev => {
@@ -283,8 +361,8 @@ function YtdTable({ rows, endOfYear = false, heat = false, searching = false }) 
     return next
   })
   const DETAILS = [
-    { label: 'Users', ytd: r => avgOf(r, 'total'), week: c => c.total },
-    { label: 'Met goal', ytd: r => avgOf(r, 'met'), week: c => c.met },
+    { label: 'Total users', ytd: r => avgOf(r, 'total'), week: c => c.total },
+    { label: 'Users who met the goal', ytd: r => avgOf(r, 'met'), week: c => c.met },
   ]
   // Pinned columns draw their right line as an inset shadow so it stays put while the weeks scroll under them.
   const pinLine = 'border-r-0 shadow-[inset_-1px_0_0_theme(colors.brand.border)]'
@@ -329,32 +407,33 @@ function YtdTable({ rows, endOfYear = false, heat = false, searching = false }) 
         </TableHeader>
         <TableBody>
           {pageRows.map(r => {
-            const bg = r.total ? TINT : 'bg-white'
+            // The whole row opens the drill down (2026-10-16), with a hover shade on every cell but heat map ones.
+            const bg = `${r.total ? TINT : 'bg-white'} group-hover/row:bg-brand-bg`
             const isOpen = open.has(r.key)
             const name = r.total ? (r.allSites ? 'All sites' : 'Selected sites') : r.name
             return (
               <Fragment key={r.key}>
-                <TableRow className="hover:bg-transparent">
+                <TableRow onClick={() => toggle(r.key)} className="group/row cursor-pointer hover:bg-transparent">
                   <TableCell className={`${site} ${bg} ${cell} ${pinLine} ${r.total ? 'font-semibold' : ''}`}>
                     <button
                       type="button"
-                      onClick={() => toggle(r.key)}
+                      onClick={e => { e.stopPropagation(); toggle(r.key) }}
                       aria-expanded={isOpen}
                       aria-label={`${isOpen ? 'Hide' : 'Show'} weekly numbers for ${name}`}
-                      className={`group flex items-center gap-1.5 w-full min-w-0 text-left rounded-sm ${r.total ? 'hover:text-dessa-teal transition-colors' : 'text-[#134fb2]'}`}
+                      className="flex items-center gap-1.5 w-full min-w-0 text-left rounded-sm"
                     >
                       <ChevronRight size={14} className={`shrink-0 text-brand-subtext transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`} aria-hidden="true" />
                       {r.total && <School size={14} className="shrink-0" aria-hidden="true" />}
-                      {/* Site names use the report's link blue (2026-10-16); All sites stays navy. */}
-                      <span className={`truncate ${r.total ? '' : 'group-hover:underline'}`}>
+                      {/* Plain table text (2026-10-16): site names are no longer link blue, since the row opens the drill down. */}
+                      <span className="truncate">
                         {name}
                         {r.total && <span className="text-[11px] font-medium text-brand-subtext"> ({r.count})</span>}
                       </span>
                     </button>
                   </TableCell>
-                  <TableCell className={`${avg} ${heat ? stepFor(ytd(r), STEPS_4).cls : bg} ${num} ${cell} ${pinLine} font-semibold`}>{ytd(r)}%</TableCell>
+                  <TableCell className={`${avg} ${heat ? stepFor(ytd(r), STEPS_HEAT).cls : bg} ${num} ${cell} ${pinLine} font-semibold`}>{ytd(r)}%</TableCell>
                   {weeks.map(w => (
-                    <TableCell key={w.i} className={`${num} ${heat ? stepFor(r.cells[w.i].pct, STEPS_4).cls : bg} ${cell} ${r.total ? 'font-semibold' : ''}`}>{r.cells[w.i].pct}%</TableCell>
+                    <TableCell key={w.i} className={`${num} ${heat ? stepFor(r.cells[w.i].pct, STEPS_HEAT).cls : bg} ${cell} ${r.total ? 'font-semibold' : ''}`}>{r.cells[w.i].pct}%</TableCell>
                   ))}
                 </TableRow>
                 {isOpen && DETAILS.map(d => (
@@ -401,7 +480,8 @@ function Legend({ numbers, steps = STEPS, noSchool = true }) {
   )
 }
 
-export default function EngagementYear({ siteIds: reportSiteIds = [], role: reportRole = 'all', layout = 'grid', lockedSiteId = null }) {
+// `embedded` (2026-10-16): the Engagement page's Table tab shows this in place, under its own title and goal banner.
+export default function EngagementYear({ siteIds: reportSiteIds = [], role: reportRole = 'all', layout = 'grid', lockedSiteId = null, embedded = false }) {
   // Filters on the YTD view (2026-10-16): Site and User role, applied with Apply like the main report. They
   // start from the report's filters and only change this page. No dates, since YTD is a fixed period.
   // A Site Leader (`lockedSiteId`, 2026-10-16) sees only their site, with no Site filter.
@@ -411,14 +491,6 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
   const [applied, setApplied] = useState(startFilters)
   const siteIds = useMemo(() => applied.site.map(Number), [applied])
   const role = applied.role
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef(null)
-  useEffect(() => {
-    if (!menuOpen) return
-    const h = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [menuOpen])
   const rows = useMemo(() => {
     const picked = schools.filter(sc => matchesSite(siteIds, sc.id))
     const row = (key, name, scope, total) => ({ key, name, total, cells: schoolWeeks.map(w => weekBands(scope, w, role)) })
@@ -443,8 +515,7 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
     const weeks = ytdWeeks(preview === 'end')
     const head = ['Site', 'YTD', ...weeks.map(w => format(w.date, 'MMM d yyyy'))].map(v => `"${v}"`).join(',')
     const lines = shownRows.map(r => {
-      const name = r.total ? `${r.allSites ? 'All sites' : 'Selected sites'} (${r.count})` : r.name
-      return [`"${name}"`, `${ytdAvg(r, weeks)}%`, ...weeks.map(w => `${r.cells[w.i].pct}%`)].join(',')
+      return [`"${ytdRowName(r)}"`, `${ytdAvg(r, weeks)}%`, ...weeks.map(w => `${r.cells[w.i].pct}%`)].join(',')
     })
     const url = URL.createObjectURL(new Blob([`${head}\n${lines.join('\n')}`], { type: 'text/csv' }))
     const a = document.createElement('a')
@@ -454,42 +525,25 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
     URL.revokeObjectURL(url)
   }
 
-  // The YTD view's 3-dot menu (Export CSV) lives in the Filters panel's title row (2026-10-16).
-  const menu = (
-    <div className="relative shrink-0" ref={menuRef}>
-      <button
-        type="button"
-        onClick={() => setMenuOpen(o => !o)}
-        aria-label="More options"
-        aria-expanded={menuOpen}
-        className="flex items-center justify-center w-8 h-8 rounded-md text-brand-text hover:bg-brand-bg transition-colors"
-      >
-        <MoreHorizontal size={13} />
-      </button>
-      {menuOpen && (
-        <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
-          <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
-            <Download size={13} className="text-brand-subtext" /> Export CSV
-          </button>
-        </div>
-      )}
-    </div>
-  )
+  // Print (2026-10-16) replaces the 3-dot menu: the browser prints YtdPrint only, named for the PDF file.
+  function printYtd() {
+    const prevTitle = document.title
+    document.title = `Year to date, ${schoolYearText(YTD_SHIFT_DAYS)}`
+    window.addEventListener('afterprint', () => { document.title = prevTitle }, { once: true })
+    window.print()
+  }
 
   return (
-    <div className="px-6 pt-4 pb-8">
-      <nav aria-label="Breadcrumb" className="mb-5">
-        <ol className="flex items-center gap-1.5 text-[13px] text-brand-subtext">
-          <li><Link to="/reports/engagement" className="hover:text-brand-text hover:underline transition-colors">Engagement</Link></li>
-          <li aria-hidden="true"><ChevronRight size={12} /></li>
-          <li aria-current="page" className="text-brand-text">Year to date</li>
-        </ol>
-      </nav>
+    <div className={embedded ? '' : 'px-6 pt-8 pb-8'}>
+      {!embedded && <>
       <div className="mb-3">
         <h2 className="text-2xl font-semibold text-brand-text">Year to date</h2>
         {/* School year under the title (2026-10-16). YTD runs on the shifted 2026 to 2027 weeks; the other layouts show the mock 2025 to 2026 year. */}
         <p className="flex items-center gap-1.5 text-sm text-brand-subtext mt-1"><Calendar size={14} aria-hidden="true" />{schoolYearText(layout === 'halves5' ? YTD_SHIFT_DAYS : 0)}</p>
       </div>
+
+      <GoalBanner />
+      </>}
 
       {layout === 'halves5' && (
         <FiltersPanel
@@ -501,7 +555,6 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
           roles={USER_ROLES}
           showSite={!lockedSite}
           showDates={false}
-          action={menu}
         />
       )}
 
@@ -537,6 +590,13 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
               >
                 <Download size={14} className="text-brand-subtext" aria-hidden="true" /> Export CSV
               </button>
+              <button
+                type="button"
+                onClick={printYtd}
+                className="inline-flex items-center gap-1.5 h-8 px-3 shrink-0 whitespace-nowrap rounded-md border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors"
+              >
+                <Printer size={14} className="text-brand-subtext" aria-hidden="true" /> Print
+              </button>
             </div>
           </div>
         )}
@@ -565,10 +625,11 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
 
         {(layout !== 'halves5' || heat) && (
           <div className="mt-5 pt-4 border-t border-brand-border">
-            <Legend numbers={layout !== 'heat'} steps={layout === 'halves5' ? STEPS_4 : TABLE_STEPS[layout] ?? STEPS} noSchool={layout !== 'halves5'} />
+            <Legend numbers={layout !== 'heat'} steps={layout === 'halves5' ? STEPS_HEAT : TABLE_STEPS[layout] ?? STEPS} noSchool={layout !== 'halves5'} />
           </div>
         )}
       </motion.section>
+      {layout === 'halves5' && <YtdPrint rows={shownRows} weeks={ytdWeeks(preview === 'end')} heat={heat} schoolYear={schoolYearText(YTD_SHIFT_DAYS)} />}
     </div>
   )
 }
