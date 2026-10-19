@@ -11,7 +11,7 @@ import { Checkbox } from '../ui/checkbox'
 // A Site Leader has one site, so `showSite` is off for them.
 const LABEL = 'text-xs font-semibold uppercase tracking-wide text-brand-subtext'
 
-function Select({ label, value, onChange, children, className = '' }) {
+function Select({ label, value, onChange, children, className = '', disabled = false }) {
   return (
     <label className={`flex flex-col gap-1.5 ${className}`}>
       <span className={LABEL}>{label}</span>
@@ -19,7 +19,8 @@ function Select({ label, value, onChange, children, className = '' }) {
         <select
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="appearance-none w-full h-8 pl-2.5 pr-8 text-[13px] rounded-md border border-brand-border bg-white text-brand-text hover:border-dessa-teal/50 focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal"
+          disabled={disabled}
+          className="appearance-none w-full h-8 pl-2.5 pr-8 text-[13px] rounded-md border border-brand-border bg-white text-brand-text hover:border-dessa-teal/50 focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-brand-bg disabled:hover:border-brand-border"
         >
           {children}
         </select>
@@ -31,7 +32,7 @@ function Select({ label, value, onChange, children, className = '' }) {
 
 // Multi-select with a checkbox per option (2026-10-15). An empty list means all; the trigger
 // shows "All", the one name, or a count.
-function MultiSelect({ label, value, onChange, options, allLabel = 'All', noun = 'selected', className = '' }) {
+function MultiSelect({ label, value, onChange, options, allLabel = 'All', noun = 'selected', className = '', disabled = false }) {
   const summary = value.length === 0 ? allLabel : value.length === 1 ? options.find(o => o.value === value[0])?.label : `${value.length} ${noun}`
   const toggle = v => onChange(value.includes(v) ? value.filter(x => x !== v) : [...value, v])
   return (
@@ -41,7 +42,8 @@ function MultiSelect({ label, value, onChange, options, allLabel = 'All', noun =
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="relative w-full h-8 pl-2.5 pr-8 text-left text-[13px] rounded-md border border-brand-border bg-white text-brand-text hover:border-dessa-teal/50 focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal truncate"
+            disabled={disabled}
+            className="relative w-full h-8 pl-2.5 pr-8 text-left text-[13px] rounded-md border border-brand-border bg-white text-brand-text hover:border-dessa-teal/50 focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal truncate disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-brand-bg disabled:hover:border-brand-border"
           >
             {summary}
             <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext" aria-hidden="true" />
@@ -71,7 +73,8 @@ function MultiSelect({ label, value, onChange, options, allLabel = 'All', noun =
 
 // `showDates` off (2026-10-16, Year to date page) drops the date fields for views with a fixed period.
 // `action` (2026-10-16) sits at the right of the Filters title row, for a page's 3-dot menu.
-export default function FiltersPanel({ draft, onChange, onApply, onReset, sites, roles, showSite = true, minDate, maxDate, weekMode = null, showDates = true, action = null }) {
+// `disabled` (2026-10-19, End of year preview) shows the values read only; the action stays usable.
+export default function FiltersPanel({ draft, onChange, onApply, onReset, sites, roles, showSite = true, minDate, maxDate, weekMode = null, showDates = true, action = null, disabled = false }) {
   const [open, setOpen] = useState(true)
   const set = patch => onChange({ ...draft, ...patch })
   // weekMode (2026-10-15, Engagement B) swaps Start and End date for a week cycler: { label, canPrev, canNext, onPrev, onNext, isLatest, onLatest }.
@@ -95,15 +98,15 @@ export default function FiltersPanel({ draft, onChange, onApply, onReset, sites,
       {open && (
         <form
           className="flex flex-wrap items-end gap-3 mt-3"
-          onSubmit={e => { e.preventDefault(); if (valid) onApply() }}
+          onSubmit={e => { e.preventDefault(); if (valid && !disabled) onApply() }}
         >
           {showSite && (
             <MultiSelect
-              label="Site" value={draft.site} onChange={v => set({ site: v })} noun="sites" className="flex-1 min-w-36"
+              label="Site" value={draft.site} onChange={v => set({ site: v })} noun="sites" className="flex-1 min-w-36" disabled={disabled}
               options={sites.map(s => ({ value: String(s.id), label: s.name }))}
             />
           )}
-          <Select label="User role" value={draft.role} onChange={v => set({ role: v })} className="flex-1 min-w-36">
+          <Select label="User role" value={draft.role} onChange={v => set({ role: v })} className="flex-1 min-w-36" disabled={disabled}>
             <option value="all">All</option>
             {roles.map(r => <option key={r} value={r}>{r}</option>)}
           </Select>
@@ -121,22 +124,22 @@ export default function FiltersPanel({ draft, onChange, onApply, onReset, sites,
           {!weekMode && showDates && <>
           <div className="flex flex-col gap-1.5 flex-1 min-w-36">
             <span className={LABEL}>Start date</span>
-            <DatePicker value={draft.start} onChange={v => set({ start: v })} placeholder="Start date" min={minDate} max={draft.end || maxDate} className="h-8 py-0 text-[13px] rounded-md" />
+            <DatePicker value={draft.start} onChange={v => set({ start: v })} placeholder="Start date" min={minDate} max={draft.end || maxDate} disabled={disabled} className="h-8 py-0 text-[13px] rounded-md" />
           </div>
           <div className="flex flex-col gap-1.5 flex-1 min-w-36">
             <span className={LABEL}>End date</span>
-            <DatePicker value={draft.end} onChange={v => set({ end: v })} placeholder="End date" min={draft.start || minDate} max={maxDate} className="h-8 py-0 text-[13px] rounded-md" />
+            <DatePicker value={draft.end} onChange={v => set({ end: v })} placeholder="End date" min={draft.start || minDate} max={maxDate} disabled={disabled} className="h-8 py-0 text-[13px] rounded-md" />
           </div>
           </>}
           <div className="flex items-center gap-2 shrink-0 ml-auto">
             <button
               type="submit"
-              disabled={!valid}
+              disabled={!valid || disabled}
               className="h-8 px-4 rounded-md bg-dessa-teal text-[13px] font-medium text-white hover:bg-dessa-teal/90 transition-colors disabled:opacity-40 disabled:hover:bg-dessa-teal"
             >
               Apply
             </button>
-            <button type="button" onClick={onReset} className="h-8 px-2 text-[13px] font-medium text-brand-subtext hover:text-brand-text transition-colors">
+            <button type="button" onClick={onReset} disabled={disabled} className="h-8 px-2 text-[13px] font-medium text-brand-subtext hover:text-brand-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-brand-subtext">
               Reset filters
             </button>
           </div>

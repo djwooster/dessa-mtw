@@ -358,6 +358,7 @@ export default function EngagementYear({ filters, lockedSiteId = null, tabs = nu
         showSite={!lockedSiteId}
         minDate={filters.minDate}
         maxDate={filters.maxDate}
+        disabled={filters.readOnly}
         action={menu}
       />
       {tabs}

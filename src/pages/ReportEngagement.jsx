@@ -208,6 +208,9 @@ const FILTER_MIN = toKey(FIRST_DATE)
 const FILTER_MAX = toKey(LAST_DATE)
 // Default range (2026-10-19): the last 4 weeks up to today's week.
 const DEFAULT_FILTERS = { site: [], role: 'all', start: PAST_WEEKS[Math.max(0, PAST_WEEKS.length - 4)], end: FILTER_MAX }
+// End of year preview (2026-10-19): the whole school year, first Monday to last Friday.
+const YEAR_END = toKey(addDays(parseISO(schoolWeeks[schoolWeeks.length - 1]), 4))
+const YEAR_WEEKS = weeksForDates(FIRST_DATE, parseISO(YEAR_END))
 
 // Engagement report (Concept F). Versions B and C and their switcher were deleted 2026-10-19; this is the only version.
 export default function ReportEngagement() {
@@ -262,10 +265,13 @@ export default function ReportEngagement() {
   const subPath = useParams()['*'] ?? ''
   const routeSiteId = Number(subPath.match(/^site\/(\d+)/)?.[1])
   // Graph | Table tabs (2026-10-16): Table shows the YTD table in place.
-  const { overviewTab, setOverviewTab } = useEngagementVersion()
+  const { overviewTab, setOverviewTab, ytdPreview } = useEngagementVersion()
   const routeSite = schools.find(sc => sc.id === routeSiteId) ?? null
   const showTabs = isF && !routeSite
   const showTable = showTabs && overviewTab === 'table'
+  // End of year (2026-10-19, Table tab only): shows what a user would see on the last week of the school year.
+  // The filters show the full year and are read only; the applied filters come back on Today.
+  const endOfYear = showTable && ytdPreview === 'end'
   const selectedSite = isSiteLeaderView ? schools[0] : routeSite ?? pickedSite
   // Opening a site remembers where the report was scrolled; coming back (the breadcrumb or the browser
   // back button) puts the page there, and the tables keep their sort, page and search (usePersistedState).
@@ -497,7 +503,7 @@ export default function ReportEngagement() {
   // draws them under its own Filters panel.
   // The Users table under the report (2026-10-19 also under the Table tab's YTD table).
   const usersTable = (
-    <SiteEducators siteList={isF && dSiteIds.length ? schools.filter(sc => dSiteIds.includes(sc.id)) : null} school={!isF ? schools.find(sc => dSiteIds.length === 1 && sc.id === dSiteIds[0]) ?? null : null} weeks={weeks} showDots={false} showDays={false} drilldown={isF} goalColumn={false} fStyle={isF} rangeBadge={isE ? rangeLabel(weeks) : null} role={roleFilter} roleColumn={isF} stateKey={isF ? 'overviewUsers' : null} />
+    <SiteEducators siteList={isF && dSiteIds.length ? schools.filter(sc => dSiteIds.includes(sc.id)) : null} school={!isF ? schools.find(sc => dSiteIds.length === 1 && sc.id === dSiteIds[0]) ?? null : null} weeks={endOfYear ? YEAR_WEEKS : weeks} showDots={false} showDays={false} drilldown={isF} goalColumn={false} fStyle={isF} rangeBadge={isE ? rangeLabel(weeks) : null} role={roleFilter} roleColumn={isF} stateKey={isF ? 'overviewUsers' : null} />
   )
   const viewTabs = showTabs && (
     <div role="tablist" aria-label="Engagement views" className="flex gap-4 border-b border-brand-border mb-6">
@@ -647,7 +653,11 @@ export default function ReportEngagement() {
       {showTable ? (
         <EngagementYear
           tabs={viewTabs} lockedSiteId={isSiteLeaderView ? schools[0].id : null}
-          filters={{
+          filters={endOfYear ? {
+            draft: { ...appliedFilters, start: FILTER_MIN, end: YEAR_END }, applied: { ...appliedFilters, start: FILTER_MIN, end: YEAR_END },
+            onChange: () => {}, onApply: () => {}, onReset: () => {}, readOnly: true,
+            minDate: FILTER_MIN, maxDate: YEAR_END,
+          } : {
             draft: draftFilters, applied: appliedFilters, onChange: setDraftFilters,
             onApply: () => { setAppliedFilters(draftFilters); setDSiteIds(draftFilters.site.map(Number)) },
             onReset: () => { setDraftFilters(DEFAULT_FILTERS); setAppliedFilters(DEFAULT_FILTERS); setDSiteIds([]) },
