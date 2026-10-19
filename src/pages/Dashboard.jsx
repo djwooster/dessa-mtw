@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Calendar, ChevronDown } from 'lucide-react'
+import { ChevronRight, Calendar, ChevronDown, ClipboardCheck, BookOpen, ArrowRight, ArrowUpRight } from 'lucide-react'
+import { useDashboardConcept } from '../lib/dashboardConceptContext'
 
 const stagger = (i) => ({
   initial: { opacity: 0, y: 8 },
@@ -262,8 +263,261 @@ const strategies = [
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
+// Concept C (2026-10-19): an editorial layout after an agency site the user shared. Thin rules, a large
+// headline above the subtext, then the two cards as columns split by a rule: icon,
+// large title, description, topic chips and a teal text link. Replaced the production empty state that held C.
+function EditorialDashboard() {
+  const navigate = useNavigate()
+  const look = {
+    ratings: { Icon: ClipboardCheck, badge: 'bg-dessa-teal text-white', chips: ['Competencies', 'Strengths', 'Strategies'] },
+    curriculum: { Icon: BookOpen, badge: 'bg-mtw-amber text-brand-text', chips: ['Courses', 'Video lessons', 'Activities'] },
+  }
+
+  return (
+    <div className="px-6 pt-10 pb-7">
+      <motion.section {...stagger(0)} className="rounded-xl border border-brand-border bg-white px-8 pb-2">
+        <header className="flex flex-col gap-1 py-8 border-b border-brand-text/15">
+          <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-brand-text">
+            Welcome to your new platform, Tara.
+          </h1>
+          <p className="text-base text-brand-subtext max-w-2xl">Rate your students to see where they shine, or bring your first lesson to class.</p>
+        </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-2">
+          {NEW_CUSTOMER_CARDS.map((c, i) => {
+            const { Icon, badge, chips } = look[c.key]
+            return (
+              <div key={c.key} className={`flex flex-col py-6 ${i === 0 ? 'md:pr-8 md:border-r border-brand-text/15' : 'md:pl-8 border-t md:border-t-0 border-brand-text/15'}`}>
+                <span className={`flex items-center justify-center w-12 h-12 rounded-full mb-16 ${badge}`}>
+                  <Icon size={20} aria-hidden="true" />
+                </span>
+                <h2 className="text-2xl font-semibold leading-tight tracking-tight text-brand-text">{c.title}</h2>
+                <p className="text-sm text-brand-subtext mt-3">{c.body}</p>
+                <ul className="flex flex-wrap gap-1.5 mt-5" aria-label="Topics">
+                  {chips.map(chip => (
+                    <li key={chip} className="rounded-full border border-brand-text/25 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand-text">{chip}</li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => navigate(c.to)}
+                  className="self-start inline-flex items-center gap-2 mt-6 pb-1 border-b-2 border-dessa-teal text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:border-dessa-navy transition-colors"
+                >
+                  {c.cta}
+                  <ArrowRight size={14} aria-hidden="true" />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+
+      </motion.section>
+    </div>
+  )
+}
+
+// New customer concepts B, D and E (2026-10-19): the page has two jobs, getting the user to rate their students or
+// to explore the curriculum, so each gets a card with its own button. No "no data" message.
+const NEW_CUSTOMER_CARDS = [
+  {
+    key: 'ratings', to: '/ratings', title: 'Rate your students', cta: 'Start rating',
+    body: 'See where each student shines and where they could use support.',
+  },
+  {
+    key: 'curriculum', to: '/mtw', title: 'Explore the curriculum', cta: 'Browse courses',
+    body: 'Find a course and bring your first lesson to class.',
+  },
+]
+
+// Concept D (was C): two plain cards side by side. Ratings is DESSA (teal, rounded-md button); the curriculum is
+// MTW (amber, rounded-full button), per the brand split.
+function TwoCardsDashboard() {
+  const navigate = useNavigate()
+  const look = {
+    ratings: { Icon: ClipboardCheck, tile: 'bg-dessa-tealLight text-dessa-teal', button: 'rounded-md bg-dessa-teal text-white hover:bg-dessa-teal/90' },
+    curriculum: { Icon: BookOpen, tile: 'bg-mtw-amberLight text-brand-text', button: 'rounded-full bg-mtw-amber text-brand-text hover:brightness-105' },
+  }
+
+  return (
+    <div className="px-6 pt-10 pb-7">
+      <motion.h1 {...stagger(0)} className="text-2xl font-semibold text-brand-text mb-6">Welcome back, Tara!</motion.h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {NEW_CUSTOMER_CARDS.map((c, i) => {
+          const { Icon, tile, button } = look[c.key]
+          return (
+            <motion.section key={c.key} {...stagger(i + 1)} className="flex flex-col items-start rounded-xl border border-brand-border bg-white p-5">
+              <div className={`flex items-center justify-center w-11 h-11 rounded-lg mb-4 ${tile}`}>
+                <Icon size={20} aria-hidden="true" />
+              </div>
+              <h2 className="text-lg font-semibold text-brand-text">{c.title}</h2>
+              <p className="text-sm text-brand-subtext mt-1 mb-5">{c.body}</p>
+              <button
+                onClick={() => navigate(c.to)}
+                className={`mt-auto flex items-center gap-1.5 h-10 px-5 text-sm font-semibold transition-all ${button}`}
+              >
+                {c.cta}
+                <ChevronRight size={14} aria-hidden="true" />
+              </button>
+            </motion.section>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// Shapes from the brand style guide (2026-10-19), each drawn in a perfect square as the guide asks.
+// Ratings: the 3 by 3 grid of dots. Curriculum: the two arches.
+function DotGridShape({ className }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+      {[8, 24, 40].flatMap(y => [8, 24, 40].map(x => <circle key={`${x}-${y}`} cx={x} cy={y} r="7.6" fill="currentColor" />))}
+    </svg>
+  )
+}
+const ARCH_PATHS = ['M0 0 A24 24 0 0 0 48 0 L36 0 A12 12 0 0 1 12 0 Z', 'M0 48 A24 24 0 0 1 48 48 L36 48 A12 12 0 0 0 12 48 Z']
+function ArchesShape({ className }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+      {ARCH_PATHS.map(d => <path key={d} d={d} fill="currentColor" />)}
+    </svg>
+  )
+}
+
+// Concept E (was D): the same two cards as bold color blocks, after an agency site the user shared. A shape at the top,
+// then the number, a large title with a round arrow, and the description. Everything shows without hover.
+// The whole card is the button.
+function BoldCardsDashboard() {
+  const navigate = useNavigate()
+  const look = {
+    ratings: { Shape: DotGridShape, card: 'bg-dessa-teal text-white', rule: 'border-white/60', ring: 'border-white' },
+    curriculum: { Shape: ArchesShape, card: 'bg-mtw-amber text-brand-text', rule: 'border-brand-text/60', ring: 'border-brand-text' },
+  }
+
+  return (
+    <div className="px-6 pt-10 pb-7">
+      <motion.h1 {...stagger(0)} className="text-2xl font-semibold text-brand-text mb-6">Welcome back, Tara!</motion.h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {NEW_CUSTOMER_CARDS.map((c, i) => {
+          const { Shape, card, rule, ring } = look[c.key]
+          return (
+            <motion.button
+              key={c.key}
+              {...stagger(i + 1)}
+              whileHover={{ y: -2 }}
+              onClick={() => navigate(c.to)}
+              aria-label={`${c.title}. ${c.cta}`}
+              className={`flex flex-col justify-between min-h-80 rounded-2xl p-6 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-dessa-teal ${card}`}
+            >
+              <Shape className="w-12 h-12" />
+              <div>
+                <p className="text-sm font-medium mb-1">0{i + 1}.</p>
+                <div className={`flex items-end justify-between gap-4 pb-4 border-b ${rule}`}>
+                  <h2 className="text-3xl font-semibold leading-tight">{c.title}</h2>
+                  <span className={`flex items-center justify-center w-10 h-10 rounded-full border-2 shrink-0 ${ring}`}>
+                    <ArrowRight size={18} aria-hidden="true" />
+                  </span>
+                </div>
+                <p className="text-sm mt-4">{c.body}</p>
+              </div>
+            </motion.button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// Concept B (2026-10-19, was E): a big greeting above the two cards, after a kids' sports
+// site the user shared. Each card has a tag, title and description over a tinted panel with a shape
+// illustration from the style guide (shapes only, no faces: the brand has none yet). The whole card is the button.
+// A burst with `n` points, for the Ratings illustration.
+const burstPoints = (cx, cy, R, r, n) => Array.from({ length: n * 2 }, (_, k) => {
+  const a = (Math.PI * k) / n - Math.PI / 2
+  const rad = k % 2 ? r : R
+  return `${(cx + rad * Math.cos(a)).toFixed(1)},${(cy + rad * Math.sin(a)).toFixed(1)}`
+}).join(' ')
+
+function RatingsIllustration() {
+  return (
+    <svg viewBox="0 0 200 160" className="w-full h-full" aria-hidden="true">
+      <polygon points={burstPoints(96, 88, 52, 34, 12)} className="fill-dessa-teal stroke-dessa-teal" strokeWidth="8" strokeLinejoin="round" />
+      <circle cx="150" cy="40" r="14" className="fill-mtw-coral" />
+      {[0, 1, 2].map(i => <circle key={i} cx={30 + i * 14} cy="132" r="5" className="fill-dessa-navy" />)}
+    </svg>
+  )
+}
+
+function CurriculumIllustration() {
+  return (
+    <svg viewBox="0 0 200 160" className="w-full h-full" aria-hidden="true">
+      <g transform="translate(58 38) scale(1.75)" className="fill-mtw-amber">
+        {ARCH_PATHS.map(d => <path key={d} d={d} />)}
+      </g>
+      <g className="fill-mtw-coral">
+        {[[0, -11], [11, 0], [0, 11], [-11, 0]].map(([x, y]) => <circle key={`${x}${y}`} cx={160 + x} cy={40 + y} r="10" />)}
+      </g>
+      <rect x="22" y="122" width="36" height="16" rx="8" className="fill-dessa-navy" />
+    </svg>
+  )
+}
+
+function ShowcaseDashboard() {
+  const navigate = useNavigate()
+  const look = {
+    ratings: { tag: 'DESSA', panel: 'bg-dessa-tealLight', Illustration: RatingsIllustration },
+    curriculum: { tag: 'Move This World', panel: 'bg-mtw-amberLight', Illustration: CurriculumIllustration },
+  }
+
+  return (
+    <div className="px-6 pt-10 pb-7">
+      {/* Vertical (2026-10-19): the greeting sits above the cards instead of beside them. Narrowed and centered
+          the same day at the user's request (too wide at full width). */}
+      <div className="flex flex-col gap-8 max-w-5xl mx-auto">
+        <motion.div {...stagger(0)}>
+          <h1 className="text-4xl font-semibold leading-tight tracking-tight text-brand-text">Welcome to your new platform, Tara.</h1>
+          <p className="text-base text-brand-subtext mt-4 max-w-2xl">DESSA and Move This World now live together in one place. Rate your students to see their strengths, then find lessons that help them grow, all from one home.</p>
+        </motion.div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {NEW_CUSTOMER_CARDS.map((c, i) => {
+            const { tag, panel, Illustration } = look[c.key]
+            return (
+              <motion.button
+                key={c.key}
+                {...stagger(i + 1)}
+                whileHover={{ y: -2 }}
+                onClick={() => navigate(c.to)}
+                aria-label={`${c.title}. ${c.cta}`}
+                className="flex flex-col rounded-2xl border border-brand-border bg-white text-left overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-dessa-teal"
+              >
+                <div className="p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="rounded-full bg-brand-bg px-2.5 py-1 text-xs font-medium text-brand-text">{tag}</span>
+                    <span className="flex items-center justify-center w-7 h-7 rounded-full bg-brand-bg text-brand-text">
+                      <ArrowUpRight size={14} aria-hidden="true" />
+                    </span>
+                  </div>
+                  <h2 className="text-3xl font-semibold leading-tight tracking-tight text-brand-text mt-4">{c.title}</h2>
+                  <p className="text-sm text-brand-subtext mt-3">{c.body}</p>
+                </div>
+                <div className={`mt-auto h-56 rounded-2xl p-6 ${panel}`}>
+                  <Illustration />
+                </div>
+              </motion.button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { dashboardConcept } = useDashboardConcept()
+  if (dashboardConcept === 'b') return <ShowcaseDashboard />
+  if (dashboardConcept === 'c') return <EditorialDashboard />
+  if (dashboardConcept === 'd') return <TwoCardsDashboard />
+  if (dashboardConcept === 'e') return <BoldCardsDashboard />
 
   return (
     <div className="px-6 pt-10 pb-7">

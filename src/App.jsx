@@ -32,6 +32,7 @@ import { DceConceptProvider } from './lib/dceConceptContext'
 import { EngagementConceptProvider } from './lib/engagementConceptContext'
 import { EngagementVersionProvider } from './lib/engagementVersionContext'
 import { RoleProvider } from './lib/roleContext'
+import { DashboardConceptProvider } from './lib/dashboardConceptContext'
 
 function Placeholder({ title }) {
   return (
@@ -63,7 +64,9 @@ export default function App() {
             <EngagementConceptProvider>
             <EngagementVersionProvider>
             <RoleProvider>
+            <DashboardConceptProvider>
               <AppShell handleBookmark={handleBookmark} />
+            </DashboardConceptProvider>
             </RoleProvider>
             </EngagementVersionProvider>
             </EngagementConceptProvider>
