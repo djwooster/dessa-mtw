@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, addDays } from 'date-fns'
 import { X, MoreHorizontal, Download, Printer, ChevronRight, Calendar, Search, ArrowUp, ArrowDown, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
-import { schools, schoolWeeks, getWeekData, MOST_RECENT_WEEK, matchesSite } from '../lib/report2Data'
+import { schools, schoolWeeks, getWeekData, MOST_RECENT_WEEK, PAST_WEEKS, TODAY_WEEK_IDX, matchesSite } from '../lib/report2Data'
 import { PaginationBar } from '../components/ui/pagination'
 import { DatePicker } from '../components/ui/date-picker'
 import EducatorCalendar from '../components/engagement/EducatorCalendar'
@@ -27,7 +27,7 @@ export const RANGE_PRESETS = [
   { value: '30d', label: '30 days', weeks: Math.round(30 / 7) },
   { value: '60d', label: '60 days', weeks: Math.round(60 / 7) },
   { value: '90d', label: '90 days', weeks: Math.round(90 / 7) },
-  { value: 'all', label: '2025-2026 School Year', weeks: schoolWeeks.length },
+  { value: 'all', label: '2026-2027 School Year', weeks: PAST_WEEKS.length },
 ]
 
 // Per-site detail overlay (2026-09-24) — started as two interchangeable
@@ -57,7 +57,8 @@ export function rangeLabel(weeksList) {
 // snaps to every Monday to Friday week it touches, and "previous period" is
 // the equal number of weeks right before the selected ones.
 export const FIRST_DATE = parseISO(schoolWeeks[0])
-export const LAST_DATE = addDays(parseISO(schoolWeeks[schoolWeeks.length - 1]), 4)
+// Reports stop at today's week (2026-10-19).
+export const LAST_DATE = addDays(parseISO(MOST_RECENT_WEEK), 4)
 
 export function weeksForDates(from, to) {
   return schoolWeeks.filter(w => {
@@ -200,10 +201,10 @@ function recentLabel(schoolId, teacherIndex) {
 }
 
 export function getLastActive(schoolId, teacherIndex) {
-  for (let i = schoolWeeks.length - 1; i >= 0; i--) {
+  for (let i = TODAY_WEEK_IDX; i >= 0; i--) {
     const data = getWeekData(schoolId, schoolWeeks[i], GOAL)
     if (data.teachers[teacherIndex].daysActive > 0) {
-      const weeksAgo = schoolWeeks.length - 1 - i
+      const weeksAgo = TODAY_WEEK_IDX - i
       return weeksAgo === 0 ? recentLabel(schoolId, teacherIndex) : `${weeksAgo}w ago`
     }
   }
@@ -837,7 +838,7 @@ export default function Report2ConceptE() {
   const [rangeKey, setRangeKey] = useState('30d')
   const [customWeeks, setCustomWeeks] = useState(null)
   const presetWeeks = RANGE_PRESETS.find(p => p.value === rangeKey)?.weeks
-  const weeks = useMemo(() => customWeeks ?? schoolWeeks.slice(-presetWeeks), [customWeeks, presetWeeks])
+  const weeks = useMemo(() => customWeeks ?? PAST_WEEKS.slice(-presetWeeks), [customWeeks, presetWeeks])
 
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)

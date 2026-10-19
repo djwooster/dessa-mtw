@@ -39,27 +39,6 @@ const DCE_CONCEPTS = [
   { value: 'd', label: 'D', title: 'D, Today plus this week: day dots, with a calendar on demand' },
 ]
 
-// Combined Engagement report concept switcher (2026-10-06). A is the original
-// chart; B charts educators who met the goal, stacked with those making progress;
-// C is the analytics layout (stat strip plus a 2x2 grid of weekly charts).
-// New Engagement version switcher (2026-10-14): A is the report as it stands (Concept F). B (2026-10-15)
-// locks the report to one week at a time.
-const ENGAGEMENT_VERSIONS = [
-  { value: 'a', label: 'A', title: 'A, Engagement report as it stands: chart with a weekly table view' },
-  { value: 'b', label: 'B', title: 'B, Date range filters, Sites and Users tabs, site table with latest week and range average' },
-  { value: 'c', label: 'C', title: 'C, School comparison: no Site filter, one table of every site by week' },
-]
-
-// Week by week page layouts (2026-10-15, Version A). Shown in place of the version switcher on that page.
-const YEAR_LAYOUTS = [
-  { value: 'halves5', label: 'YTD', title: 'Plain table, year to date: Site, YTD average, then each week newest first' },
-  { value: 'grid', label: 'Wide grid', title: 'All 36 weeks in one grid, with numbers' },
-  { value: 'halves', label: 'Fall and Spring', title: 'Two stacked grids of about 18 weeks, with % numbers' },
-  { value: 'halves3', label: 'Fall and Spring (3)', title: 'Fall and Spring as a data table: row borders, more room per row, org primary blue scale' },
-  { value: 'halves4', label: 'Fall and Spring (4)', title: 'Fall and Spring as a data table: row borders, more room per row, org gray scale' },
-  { value: 'heat', label: 'Heat only', title: 'Shaded squares only, no numbers' },
-]
-
 const ENGAGEMENT_CONCEPTS = [
   // A, B, D and E commented out 2026-10-12 (kept in ReportEngagement.jsx); F is the report shown in prod.
   // { value: 'a', label: 'A', title: 'A, Original: sites where every educator met the goal (single line)' },
@@ -111,11 +90,7 @@ export default function Nav() {
   const { statConcept, setStatConcept } = useSiteEngagementConcept()
   const { dceConcept, setDceConcept } = useDceConcept()
   const { engagementConcept, setEngagementConcept } = useEngagementConcept()
-  const { engagementVersion, setEngagementVersion, yearLayout, setYearLayout, ytdPreview, setYtdPreview } = useEngagementVersion()
-  const onYearPage = location.pathname.startsWith('/reports/engagement/year') && engagementVersion === 'a'
-  const switcher = onYearPage
-    ? { options: YEAR_LAYOUTS, value: yearLayout, set: setYearLayout }
-    : { options: ENGAGEMENT_VERSIONS, value: engagementVersion, set: setEngagementVersion }
+  const { ytdPreview, setYtdPreview, overviewTab } = useEngagementVersion()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
@@ -458,44 +433,15 @@ export default function Nav() {
               </Popover.Portal>
             </Popover.Root>
           )}
-          {/* YTD's Today | End of year preview (2026-10-16): a prototype control, so it lives here and stays out of screenshots. */}
-          {onYearPage && yearLayout === 'halves5' && (
+          {/* YTD's Today | End of year preview (2026-10-16): a prototype control, so it lives here and stays out of screenshots.
+              Only on the Engagement report's Table tab (2026-10-19), which shows the YTD table. */}
+          {location.pathname === '/reports/engagement' && overviewTab === 'table' && (
             <Tabs value={ytdPreview} onValueChange={setYtdPreview} className="shrink-0 mr-2">
               <TabsList className="p-0.5">
                 <TabsTrigger value="today" className="text-xs px-3 py-1">Today</TabsTrigger>
                 <TabsTrigger value="end" className="text-xs px-3 py-1">End of year</TabsTrigger>
               </TabsList>
             </Tabs>
-          )}
-          {location.pathname.startsWith('/reports/engagement') && (
-            <Popover.Root>
-              <Popover.Trigger asChild>
-                <button
-                  title={switcher.options.find((c) => c.value === switcher.value)?.title}
-                  className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-brand-border bg-white text-xs font-medium text-brand-text hover:bg-brand-bg transition-colors shrink-0 mr-1"
-                >
-                  {switcher.options.find((c) => c.value === switcher.value)?.label}
-                  <ChevronDown size={12} className="text-brand-subtext" />
-                </button>
-              </Popover.Trigger>
-              <Popover.Portal>
-                <Popover.Content align="end" sideOffset={6} className="z-50 w-48 bg-white border border-brand-border rounded-xl shadow-lg outline-none py-1.5">
-                  {switcher.options.map((c) => (
-                    <button
-                      key={c.value}
-                      title={c.title}
-                      onClick={() => switcher.set(c.value)}
-                      className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left transition-colors ${
-                        switcher.value === c.value ? 'text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
-                      }`}
-                    >
-                      {c.label}
-                      {switcher.value === c.value && <Check size={13} className="text-dessa-teal" />}
-                    </button>
-                  ))}
-                </Popover.Content>
-              </Popover.Portal>
-            </Popover.Root>
           )}
           {/* Engagement concept switcher removed 2026-10-12: Concept F is the decided design (context default 'f').
           {location.pathname.startsWith('/reports/engagement') && (

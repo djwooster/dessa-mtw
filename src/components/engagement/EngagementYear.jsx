@@ -1,48 +1,21 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { motion, useAnimationControls, useInView, useReducedMotion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { parseISO, format, addDays } from 'date-fns'
-import { Calendar, ChevronRight, Download, Palette, Printer, School } from 'lucide-react'
+import { ChevronRight, Download, MoreHorizontal, Palette, Printer, School } from 'lucide-react'
 import { schools, schoolWeeks, NO_SCHOOL_WEEKS, matchesSite, USER_ROLES } from '../../lib/report2Data'
 import { weekBands } from './StackedGoalChart'
 import { GOAL, SearchField } from '../../pages/Report2ConceptE'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table'
 import { useEngagementVersion } from '../../lib/engagementVersionContext'
 import FiltersPanel from './FiltersPanel'
-import GoalBanner from './GoalBanner'
 import { PaginationBar } from '../ui/pagination'
 
-// Week by week page (2026-10-15, Version A): every school week of the year, one row per site under an
-// All sites row. It is made to be screenshotted and shared with board members, so nothing depends on
-// hover: the card states its own title and color key (the subtext with year and filters was removed 2026-10-15). It follows the report's Site and
-// Role filters but always shows the whole school year. Three layouts to compare (switched in Nav):
-// 'grid' all 36 weeks in one wide grid with numbers, 'halves' Fall and Spring stacked with % numbers,
-// 'heat' tinted squares only, 'halves3' and 'halves4' Fall and Spring as a bordered data table in the org blue or gray scale.
+// The Engagement report's Table tab (2026-10-15 as a Week by week page, YTD table since 2026-10-16): every school
+// week so far, one row per site under an All sites row. It is made to be screenshotted and shared with board
+// members, so nothing depends on hover. The Year to date page and its other layouts (Wide grid, Fall and
+// Spring, Heat only) were deleted 2026-10-19; this table is only reached from the Engagement tabs.
 
-// Five steps of the brand teal; the darkest step switches to white text for contrast.
-const STEPS = [
-  { min: 80, label: '80% or more', cls: 'bg-dessa-teal text-white' },
-  { min: 60, label: '60 to 79%', cls: 'bg-dessa-teal/70 text-brand-text' },
-  { min: 40, label: '40 to 59%', cls: 'bg-dessa-teal/45 text-brand-text' },
-  { min: 20, label: '20 to 39%', cls: 'bg-dessa-teal/25 text-brand-text' },
-  { min: 0, label: 'Under 20%', cls: 'bg-dessa-teal/10 text-brand-text' },
-]
-// Fall and Spring (3) and (4) (2026-10-15): the org palette the user shared (org-primary, org-gray).
-// Light steps carry dark text and the top step white text (each pair passes 4.5:1).
-const STEPS_3 = [
-  { min: 80, label: '80% or more', cls: 'bg-org-primary-600 text-white' },
-  { min: 60, label: '60 to 79%', cls: 'bg-org-primary-300 text-brand-text' },
-  { min: 40, label: '40 to 59%', cls: 'bg-org-primary-200 text-brand-text' },
-  { min: 20, label: '20 to 39%', cls: 'bg-org-primary-100 text-brand-text' },
-  { min: 0, label: 'Under 20%', cls: 'bg-org-primary-50 text-brand-text' },
-]
-const STEPS_4 = [
-  { min: 80, label: '80% or more', cls: 'bg-org-gray-600 text-white' },
-  { min: 60, label: '60 to 79%', cls: 'bg-org-gray-300 text-brand-text' },
-  { min: 40, label: '40 to 59%', cls: 'bg-org-gray-200 text-brand-text' },
-  { min: 20, label: '20 to 39%', cls: 'bg-org-gray-100 text-brand-text' },
-  { min: 0, label: 'Under 20%', cls: 'bg-org-gray-50 text-brand-text' },
-]
 // YTD heat map (2026-10-16): four bands of the DESSA teal, split at quarters to match the chart's 25% gridlines.
 // Only the full teal band carries white text; the lighter bands keep dark text (each pair passes 4.5:1).
 const STEPS_HEAT = [
@@ -51,88 +24,7 @@ const STEPS_HEAT = [
   { min: 25, label: '25 to 49%', cls: 'bg-dessa-teal/30 text-brand-text' },
   { min: 0, label: 'Under 25%', cls: 'bg-dessa-teal/10 text-brand-text' },
 ]
-// The Fall and Spring table layouts and the scale each one uses.
-const TABLE_STEPS = { halves3: STEPS_3, halves4: STEPS_4 }
-const stepFor = (pct, steps = STEPS) => steps.find(s => pct >= s.min)
-const NO_SCHOOL = 'bg-[repeating-linear-gradient(135deg,theme(colors.brand.border)_0_2px,transparent_2px_6px)]'
-
-const FALL = schoolWeeks.filter(w => w < '2026-01-01')
-const SPRING = schoolWeeks.filter(w => w >= '2026-01-01')
-
-// Term illustrations for (4) (2026-10-15): small flat vector drawings in the MTW palette, drawn from
-// the user's references: a three-lobed leaf for Fall and a six-petal flower for Spring, at 32px so they read at a glance.
-// Decorative only.
-// Three-lobed leaf after the user's simpler reference: a large top lobe, a left lobe and a lower right lobe
-// in burnt orange (coral laid over amber), with darker veins that fan from one point into the stem.
-function LeafLobes() {
-  return (
-    <>
-      <ellipse cx="14.6" cy="8.4" rx="4.3" ry="6.6" transform="rotate(38 14.6 8.4)" />
-      <ellipse cx="7.4" cy="10.6" rx="3.2" ry="5.1" transform="rotate(-12 7.4 10.6)" />
-      <ellipse cx="14" cy="15.8" rx="3" ry="5.4" transform="rotate(78 14 15.8)" />
-      <circle cx="10.2" cy="13.6" r="3.4" />
-    </>
-  )
-}
-const LEAF_VEINS = 'M5.4 21.4 L8.8 16.2 C10.8 13 14 8.6 17.2 4.6 M8.8 16.2 C8 13.8 7.1 11 6.6 8.2 M8.8 16.2 C11 16.4 13.6 16.2 16.6 15.4 M11.4 12.4 C11.4 10.8 11.6 9.4 12 8.2 M12.6 10.8 C14.2 10.6 15.4 10.2 16.6 9.6'
-
-function FallLeaf({ className = '' }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <g className="fill-mtw-amber"><LeafLobes /></g>
-      <g className="fill-mtw-coral" opacity="0.7"><LeafLobes /></g>
-      <g strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" fill="none">
-        <path d={LEAF_VEINS} className="stroke-mtw-coral" />
-        <path d={LEAF_VEINS} className="stroke-brand-text" opacity="0.2" />
-      </g>
-    </svg>
-  )
-}
-
-// Six rounded petals pinched at the base (slight size and angle variation so it feels hand drawn), a lighter
-// inner layer, and a dark star of stamens with white dots, after the user's yellow flower reference.
-const PETAL = 'M12 12 C11 10.9 8.4 8 8.6 5 C8.8 2.7 10.5 1.4 12 1.4 C13.5 1.4 15.2 2.7 15.4 5 C15.6 8 13 10.9 12 12 Z'
-const PETALS = [[12, 1], [70, 0.95], [133, 1], [194, 0.97], [251, 1], [312, 0.94]]
-const petalAt = (a, k) => `rotate(${a} 12 12) translate(12 12) scale(${k}) translate(-12 -12)`
-
-function SpringFlower({ className = '' }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      {PETALS.map(([a, k]) => <path key={a} d={PETAL} transform={petalAt(a, k)} className="fill-mtw-amber" />)}
-      <g className="fill-white" opacity="0.4">
-        {PETALS.map(([a]) => <path key={a} d={PETAL} transform={petalAt(a, 0.56)} />)}
-      </g>
-      {[0, 40, 80, 120, 160, 200, 240, 280, 320].map(a => (
-        <ellipse key={a} cx="12" cy="10.2" rx="0.55" ry="1.4" transform={`rotate(${a} 12 12)`} className="fill-brand-text" />
-      ))}
-      <circle cx="12" cy="12" r="1.05" className="fill-brand-text" />
-      {[[11.6, 11.7], [12.45, 11.85], [11.9, 12.45]].map(([x, y]) => <circle key={x} cx={x} cy={y} r="0.27" className="fill-white" />)}
-    </svg>
-  )
-}
-
-// Term heading for (4) (2026-10-15): the illustration gives a quick wave the first time it scrolls into view,
-// and again whenever the heading is hovered. It sways from its base like a leaf on a breeze. Skipped when
-// the viewer prefers reduced motion.
-function TermTitle({ title, Icon, className }) {
-  const ref = useRef(null)
-  const inView = useInView(ref, { once: true, amount: 0.8 })
-  const controls = useAnimationControls()
-  const reduce = useReducedMotion()
-  const wave = () => {
-    if (reduce) return
-    controls.start({ rotate: [0, -14, 10, -6, 3, 0], transition: { duration: 0.9, ease: 'easeInOut' } })
-  }
-  useEffect(() => { if (inView) wave() }, [inView])
-  return (
-    <motion.p onHoverStart={wave} className={className}>
-      <motion.span ref={ref} animate={controls} style={{ originX: 0.5, originY: 0.85 }} className="inline-flex shrink-0">
-        <Icon className="h-8 w-8" />
-      </motion.span>
-      {title}
-    </motion.p>
-  )
-}
+const stepFor = (pct, steps = STEPS_HEAT) => steps.find(s => pct >= s.min)
 
 // `fmt` (2026-10-16): the YTD table adds the year, as in "Oct 2026".
 function monthSpans(weeks, fmt = 'MMM') {
@@ -145,133 +37,30 @@ function monthSpans(weeks, fmt = 'MMM') {
   return spans
 }
 
-function YearGrid({ weeks, rows, variant }) {
-  const heat = variant === 'heat'
-  const roomy = variant === 'halves'
-  const cellW = roomy ? '2.75rem' : '1.5rem'
-  return (
-    <div className="overflow-x-auto">
-      <div
-        role="table"
-        aria-label="Share of users who met the weekly goal, by site and week"
-        className="grid gap-px text-xs tabular-nums"
-        style={{ gridTemplateColumns: `minmax(9rem, 12rem) repeat(${weeks.length}, minmax(${cellW}, 1fr))` }}
-      >
-        {/* Month row, then the Monday each week starts */}
-        <div role="presentation" />
-        {monthSpans(weeks).map((s, i) => (
-          <div key={i} role="presentation" style={{ gridColumn: `span ${s.n}` }} className="pb-1 text-xs font-semibold uppercase tracking-wide text-brand-subtext border-b border-brand-border">{s.m}</div>
-        ))}
-        <div role="columnheader" className="pt-1 pb-2 text-xs font-medium text-brand-subtext">Week of</div>
-        {weeks.map(w => (
-          <div key={w} role="columnheader" className={`pt-1 pb-2 text-xs font-medium text-brand-subtext ${heat ? 'text-left' : 'text-center'}`}>
-            {format(parseISO(w), 'd')}
-          </div>
-        ))}
-
-        {rows.map((r, ri) => (
-          <Fragment key={r.key}>
-            <div role="rowheader" title={r.name} className={`flex items-center min-w-0 pr-3 text-[13px] ${r.total ? 'font-semibold' : ''}`}>
-              <span className="truncate">{r.name}</span>
-            </div>
-            {r.cells.map((c, ci) => {
-              const off = NO_SCHOOL_WEEKS.includes(weeks[ci])
-              return (
-                <div
-                  key={weeks[ci]}
-                  role="cell"
-                  aria-label={off ? 'No school' : `${c.pct}%`}
-                  className={`flex items-center justify-center rounded-sm ${heat ? 'h-6' : roomy ? 'h-8' : 'h-7'} ${off ? NO_SCHOOL : stepFor(c.pct).cls} ${r.total ? 'font-semibold' : ''}`}
-                >
-                  {!heat && !off && (roomy ? `${c.pct}%` : c.pct)}
-                </div>
-              )
-            })}
-            {ri === 0 && rows.length > 1 && <div role="presentation" style={{ gridColumn: `1 / -1` }} className="h-px bg-brand-border my-1.5" />}
-          </Fragment>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// Fall and Spring (3) and (4): a data table first, with a border around the whole table. Each site is its own
-// row with a border above it and 1px of room above and below its tiles; every tile shows its % with the sign.
-// `refined` turns on the tweaks being tried in (4) only: no row padding, 30px tiles with 3px gaps, a site count and School icon on the
-// top row, and darker borders on its tiles.
-function YearTable({ weeks, rows, steps, refined = false }) {
-  // (4) is a touch tighter: 30px tiles and 3px gaps (4px and 32px elsewhere).
-  const gap = refined ? 'gap-x-[3px]' : 'gap-x-1'
-  const cols = { gridTemplateColumns: `minmax(9rem, 12rem) repeat(${weeks.length}, minmax(2.75rem, 1fr))` }
-  return (
-    <div className="overflow-x-auto rounded-lg border border-brand-border">
-      <div role="table" aria-label="Share of users who met the weekly goal, by site and week" className="text-xs tabular-nums">
-        {/* Header band on brand-bg (2026-10-15) so the months and Week of row stand apart from the data. */}
-        <div className="bg-brand-bg/[0.48] pt-2">
-          <div role="presentation" className={`grid ${gap} px-3`} style={cols}>
-            <div />
-            {monthSpans(weeks).map((s, i) => (
-              <div key={i} style={{ gridColumn: `span ${s.n}` }} className="pb-1 text-xs font-semibold uppercase tracking-wide text-brand-subtext">{s.m}</div>
-            ))}
-          </div>
-          <div role="row" className={`grid ${gap} px-3`} style={cols}>
-            <div role="columnheader" className="pt-1 pb-2 text-xs font-medium text-brand-subtext">Week of</div>
-            {weeks.map(w => (
-              <div key={w} role="columnheader" className="pt-1 pb-2 text-center text-xs font-medium text-brand-subtext">{format(parseISO(w), 'd')}</div>
-            ))}
-          </div>
-        </div>
-        {/* (4) adds the site count to the top row: All sites (20), or Selected sites (3) when sites are picked in Filters. */}
-        {rows.map(row => row.total && refined ? { ...row, name: row.allSites ? 'All sites' : 'Selected sites', countText: `(${row.count})` } : row).map(r => (
-          <Fragment key={r.key}>
-            {/* (4) only (2026-10-15): the All sites % tiles get a darker border. */}
-            <div role="row" className={`grid ${gap} px-3 ${refined ? 'py-0' : 'py-px'} border-t border-brand-border ${r.total ? 'bg-brand-bg/[0.48]' : ''}`} style={cols}>
-              <div role="rowheader" title={r.name} className={`flex items-center gap-1.5 min-w-0 pr-3 text-[13px] ${r.total ? 'font-semibold' : ''}`}>
-                {r.total && refined && <School size={14} className="shrink-0" aria-hidden="true" />}
-                <span className="truncate">{r.name}{r.countText && <span className="text-[11px] font-medium text-brand-subtext"> {r.countText}</span>}</span>
-              </div>
-              {r.cells.map((c, ci) => {
-                const off = NO_SCHOOL_WEEKS.includes(weeks[ci])
-                return (
-                  <div
-                    key={weeks[ci]}
-                    role="cell"
-                    aria-label={off ? 'No school' : `${c.pct}%`}
-                    className={`flex items-center justify-center ${refined ? 'h-[30px]' : 'h-8'} rounded-md ${off ? NO_SCHOOL : stepFor(c.pct, steps).cls} ${r.total ? 'font-semibold' : 'font-medium'} ${r.total && refined && !off ? 'border border-org-gray-700' : ''}`}
-                  >
-                    {!off && `${c.pct}%`}
-                  </div>
-                )
-              })}
-            </div>
-          </Fragment>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // YTD concept (2026-10-16, manager feedback; first called Fall and Spring (5)): a plain table, year to date. No terms, no tiles or
-// colors. It uses the real date: the mock 2025-26 weeks are moved forward 52 weeks (to the 2026-27 school
-// year, starting Aug 31) and only weeks that have started by today are shown, newest first, with winter
-// break left out. YTD is the plain average of the weekly %s. Site and YTD stay pinned when the weeks scroll.
-const YTD_SHIFT_DAYS = 364
+// colors. It uses the real date: the 2026-27 school year starts Aug 31 (the mock data itself moved there on
+// 2026-10-19; before that this view shifted it) and only weeks that have started by today are shown, newest
+// first, with winter break left out. YTD is the plain average of the weekly %s. Site and YTD stay pinned when
+// the weeks scroll.
 // Opaque version of the 48% brand-bg tint, for pinned cells that sit over scrolled content.
 const TINT = 'bg-white bg-[linear-gradient(theme(colors.brand.bg/48%),theme(colors.brand.bg/48%))]'
 
-// "2026 to 2027 school year", from the first school week (moved by `shiftDays`).
-function schoolYearText(shiftDays) {
-  const y = addDays(parseISO(schoolWeeks[0]), shiftDays).getFullYear()
+// "2026 to 2027 school year", from the first school week.
+function schoolYearText() {
+  const y = parseISO(schoolWeeks[0]).getFullYear()
   return `${y} to ${y + 1} school year`
 }
 
 // The weeks that count toward YTD, newest first. The end of year preview (2026-10-16) pretends today is the
-// last week of the school year.
-function ytdWeeks(endOfYear) {
-  const today = endOfYear ? addDays(parseISO(schoolWeeks[schoolWeeks.length - 1]), YTD_SHIFT_DAYS + 4) : new Date()
+// last week of the school year. `range` (2026-10-19, the Engagement Table tab's Start and End date) keeps the
+// weeks that overlap it, the same rule as the Graph tab.
+function ytdWeeks(endOfYear, range = null) {
+  const today = endOfYear ? addDays(parseISO(schoolWeeks[schoolWeeks.length - 1]), 4) : new Date()
+  const from = range && parseISO(range.start)
+  const to = range && parseISO(range.end)
   return schoolWeeks
-    .map((w, i) => ({ i, date: addDays(parseISO(w), YTD_SHIFT_DAYS), off: NO_SCHOOL_WEEKS.includes(w) }))
-    .filter(w => !w.off && w.date <= today)
+    .map((w, i) => ({ i, date: parseISO(w), off: NO_SCHOOL_WEEKS.includes(w) }))
+    .filter(w => !w.off && w.date <= today && (!range || (addDays(w.date, 4) >= from && w.date <= to)))
     .reverse()
 }
 const ytdAvg = (r, weeks, k = 'pct') => weeks.length ? Math.round(weeks.reduce((sum, w) => sum + r.cells[w.i][k], 0) / weeks.length) : 0
@@ -347,8 +136,7 @@ function YtdPrint({ rows, weeks, heat, schoolYear }) {
 
 // `heat` (2026-10-16) shades every % cell in DESSA teal (STEPS_HEAT); the counts in the
 // drill down stay plain.
-function YtdTable({ rows, endOfYear = false, heat = false, searching = false }) {
-  const weeks = useMemo(() => ytdWeeks(endOfYear), [endOfYear])
+function YtdTable({ rows, weeks, heat = false, searching = false }) {
   const avgOf = (r, k) => ytdAvg(r, weeks, k)
   const ytd = r => avgOf(r, 'pct')
   // Drill down (2026-10-16): opening a site adds its weekly Total users and Users who met the goal rows under it (% met was removed,
@@ -460,37 +248,37 @@ function YtdTable({ rows, endOfYear = false, heat = false, searching = false }) 
   )
 }
 
-function Legend({ numbers, steps = STEPS, noSchool = true }) {
+// The heat map's color key, under the table while the heat map is on.
+function Legend() {
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-brand-subtext">
-      <span>{numbers ? 'Numbers are the % of users who met the goal that week.' : 'Shade shows the % of users who met the goal that week.'}</span>
+      <span>Numbers are the % of users who met the goal that week.</span>
       <ul className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {[...steps].reverse().map(s => (
+        {[...STEPS_HEAT].reverse().map(s => (
           <li key={s.min} className="inline-flex items-center gap-1.5">
             <span className={`h-3 w-4 rounded-sm ${s.cls}`} aria-hidden="true" /> {s.label}
           </li>
         ))}
-        {noSchool && (
-          <li className="inline-flex items-center gap-1.5">
-            <span className={`h-3 w-4 rounded-sm border border-brand-border ${NO_SCHOOL}`} aria-hidden="true" /> No school
-          </li>
-        )}
       </ul>
     </div>
   )
 }
 
-// `embedded` (2026-10-16): the Engagement page's Table tab shows this in place, under its own title and goal banner.
-export default function EngagementYear({ siteIds: reportSiteIds = [], role: reportRole = 'all', layout = 'grid', lockedSiteId = null, embedded = false }) {
-  // Filters on the YTD view (2026-10-16): Site and User role, applied with Apply like the main report. They
-  // start from the report's filters and only change this page. No dates, since YTD is a fixed period.
-  // A Site Leader (`lockedSiteId`, 2026-10-16) sees only their site, with no Site filter.
-  const lockedSite = lockedSiteId ? [String(lockedSiteId)] : null
-  const startFilters = { site: lockedSite ?? reportSiteIds.map(String), role: reportRole }
-  const [draft, setDraft] = useState(startFilters)
-  const [applied, setApplied] = useState(startFilters)
-  const siteIds = useMemo(() => applied.site.map(Number), [applied])
+// Filters are the Engagement report's, shared with the Graph tab (2026-10-19): Site, User role, Start and End date,
+// and the dates narrow the weeks. A Site Leader (`lockedSiteId`) sees only their site, with no Site filter.
+// `tabs` are the Graph | Table tabs, drawn under the Filters panel; `below` is the Users table, under the card.
+export default function EngagementYear({ filters, lockedSiteId = null, tabs = null, below = null }) {
+  const { draft, applied } = filters
+  const siteIds = useMemo(() => (lockedSiteId ? [lockedSiteId] : applied.site.map(Number)), [applied, lockedSiteId])
   const role = applied.role
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+  useEffect(() => {
+    if (!menuOpen) return
+    const h = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [menuOpen])
   const rows = useMemo(() => {
     const picked = schools.filter(sc => matchesSite(siteIds, sc.id))
     const row = (key, name, scope, total) => ({ key, name, total, cells: schoolWeeks.map(w => weekBands(scope, w, role)) })
@@ -498,9 +286,9 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
     if (siteRows.length === 1) return siteRows
     return [{ ...row('all', siteIds.length ? `${siteIds.length} sites` : 'All sites', siteIds, true), count: siteRows.length, allSites: !siteIds.length }, ...siteRows]
   }, [siteIds, role])
-  const pick = weeks => rows.map(r => ({ ...r, cells: weeks.map(w => r.cells[schoolWeeks.indexOf(w)]) }))
 
   const { ytdPreview: preview } = useEngagementVersion()
+  const weeks = useMemo(() => ytdWeeks(preview === 'end', { start: applied.start, end: applied.end }), [preview, applied.start, applied.end])
   const [heat, setHeat] = useState(false)
   // Site search (YTD view, 2026-10-16): narrows the site rows by name; the All sites row always stays.
   const [query, setQuery] = useState('')
@@ -512,7 +300,6 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
   }, [rows, q])
   // Export CSV (YTD view): one row per site under All sites, with YTD then each week, as on screen.
   function exportCsv() {
-    const weeks = ytdWeeks(preview === 'end')
     const head = ['Site', 'YTD', ...weeks.map(w => format(w.date, 'MMM d yyyy'))].map(v => `"${v}"`).join(',')
     const lines = shownRows.map(r => {
       return [`"${ytdRowName(r)}"`, `${ytdAvg(r, weeks)}%`, ...weeks.map(w => `${r.cells[w.i].pct}%`)].join(',')
@@ -525,38 +312,55 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
     URL.revokeObjectURL(url)
   }
 
-  // Print (2026-10-16) replaces the 3-dot menu: the browser prints YtdPrint only, named for the PDF file.
+  // Print (2026-10-16): the browser prints YtdPrint only, named for the PDF file.
   function printYtd() {
     const prevTitle = document.title
-    document.title = `Year to date, ${schoolYearText(YTD_SHIFT_DAYS)}`
+    document.title = `Year to date, ${schoolYearText()}`
     window.addEventListener('afterprint', () => { document.title = prevTitle }, { once: true })
     window.print()
   }
 
-  return (
-    <div className={embedded ? '' : 'px-6 pt-8 pb-8'}>
-      {!embedded && <>
-      <div className="mb-3">
-        <h2 className="text-2xl font-semibold text-brand-text">Year to date</h2>
-        {/* School year under the title (2026-10-16). YTD runs on the shifted 2026 to 2027 weeks; the other layouts show the mock 2025 to 2026 year. */}
-        <p className="flex items-center gap-1.5 text-sm text-brand-subtext mt-1"><Calendar size={14} aria-hidden="true" />{schoolYearText(layout === 'halves5' ? YTD_SHIFT_DAYS : 0)}</p>
-      </div>
-
-      <GoalBanner />
-      </>}
-
-      {layout === 'halves5' && (
-        <FiltersPanel
-          draft={draft}
-          onChange={setDraft}
-          onApply={() => setApplied(draft)}
-          onReset={() => { const all = { site: lockedSite ?? [], role: 'all' }; setDraft(all); setApplied(all) }}
-          sites={schools}
-          roles={USER_ROLES}
-          showSite={!lockedSite}
-          showDates={false}
-        />
+  // 3-dot menu (Export CSV, Print) in the Filters panel's title row (2026-10-19), the same as the Engagement
+  // Graph tab. It replaces the Export CSV and Print buttons that sat above the table.
+  const menu = (
+    <div className="relative shrink-0" ref={menuRef}>
+      <button
+        type="button"
+        onClick={() => setMenuOpen(o => !o)}
+        aria-label="More options"
+        aria-expanded={menuOpen}
+        className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
+      >
+        <MoreHorizontal size={13} />
+      </button>
+      {menuOpen && (
+        <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
+          <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
+            <Download size={13} className="text-brand-subtext" /> Export CSV
+          </button>
+          <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { printYtd(); setMenuOpen(false) }}>
+            <Printer size={13} className="text-brand-subtext" /> Print
+          </button>
+        </div>
       )}
+    </div>
+  )
+
+  return (
+    <div>
+      <FiltersPanel
+        draft={draft}
+        onChange={filters.onChange}
+        onApply={filters.onApply}
+        onReset={filters.onReset}
+        sites={schools}
+        roles={USER_ROLES}
+        showSite={!lockedSiteId}
+        minDate={filters.minDate}
+        maxDate={filters.maxDate}
+        action={menu}
+      />
+      {tabs}
 
       <motion.section
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
@@ -567,69 +371,34 @@ export default function EngagementYear({ siteIds: reportSiteIds = [], role: repo
             <h3 className="text-lg font-semibold text-brand-text">Users completing {GOAL} lessons a week</h3>
           </div>
         </header>
-        {/* Under the title (2026-10-16): site search on the left, Heat map and Export CSV side by side on the right. */}
-        {layout === 'halves5' && (
-          <div className="flex items-center justify-between gap-3 -mt-2 mb-4">
-            <div className="w-64">
-              <SearchField value={query} onChange={setQuery} placeholder="Search sites" height="h-8" />
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Heat map toggle: shades the % cells; the color key shows under the table while it's on. */}
-              <button
-                type="button"
-                onClick={() => setHeat(h => !h)}
-                aria-pressed={heat}
-                className={`inline-flex items-center gap-1.5 h-8 px-3 shrink-0 whitespace-nowrap rounded-md border text-[13px] font-medium transition-colors ${heat ? 'border-dessa-teal bg-dessa-tealLight text-dessa-teal' : 'border-brand-border bg-white text-brand-text hover:bg-brand-bg'}`}
-              >
-                <Palette size={14} className={heat ? 'text-dessa-teal' : 'text-brand-subtext'} aria-hidden="true" /> Heat map
-              </button>
-              <button
-                type="button"
-                onClick={exportCsv}
-                className="inline-flex items-center gap-1.5 h-8 px-3 shrink-0 whitespace-nowrap rounded-md border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors"
-              >
-                <Download size={14} className="text-brand-subtext" aria-hidden="true" /> Export CSV
-              </button>
-              <button
-                type="button"
-                onClick={printYtd}
-                className="inline-flex items-center gap-1.5 h-8 px-3 shrink-0 whitespace-nowrap rounded-md border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors"
-              >
-                <Printer size={14} className="text-brand-subtext" aria-hidden="true" /> Print
-              </button>
-            </div>
+        {/* Under the title (2026-10-16): site search on the left, Heat map on the right. */}
+        <div className="flex items-center justify-between gap-3 -mt-2 mb-4">
+          <div className="w-64">
+            <SearchField value={query} onChange={setQuery} placeholder="Search sites" height="h-8" />
           </div>
-        )}
-
-        {layout === 'halves5' ? (
-          <YtdTable rows={shownRows} endOfYear={preview === 'end'} heat={heat} searching={!!q} />
-        ) : layout === 'halves' || TABLE_STEPS[layout] ? (
-          <div className="flex flex-col gap-8">
-            {[{ title: 'Fall 2025', weeks: FALL, Icon: FallLeaf }, { title: 'Spring 2026', weeks: SPRING, Icon: SpringFlower }].map(h => (
-              <div key={h.title}>
-                {/* (4) marks each term with an illustration (2026-10-15): a leaf for Fall, a flower for Spring. */}
-                {layout === 'halves4' ? (
-                  <TermTitle title={h.title} Icon={h.Icon} className="flex items-center gap-1 w-fit text-sm font-medium text-brand-text mb-3" />
-                ) : (
-                  <p className={`${TABLE_STEPS[layout] ? 'text-sm font-medium' : 'text-xs font-semibold uppercase tracking-wide'} text-brand-text mb-3`}>{h.title}</p>
-                )}
-                {TABLE_STEPS[layout]
-                  ? <YearTable weeks={h.weeks} rows={pick(h.weeks)} steps={TABLE_STEPS[layout]} refined={layout === 'halves4'} />
-                  : <YearGrid weeks={h.weeks} rows={pick(h.weeks)} variant="halves" />}
-              </div>
-            ))}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Heat map toggle: shades the % cells; the color key shows under the table while it's on. */}
+            <button
+              type="button"
+              onClick={() => setHeat(h => !h)}
+              aria-pressed={heat}
+              className={`inline-flex items-center gap-1.5 h-8 px-3 shrink-0 whitespace-nowrap rounded-md border text-[13px] font-medium transition-colors ${heat ? 'border-dessa-teal bg-dessa-tealLight text-dessa-teal' : 'border-brand-border bg-white text-brand-text hover:bg-brand-bg'}`}
+            >
+              <Palette size={14} className={heat ? 'text-dessa-teal' : 'text-brand-subtext'} aria-hidden="true" /> Heat map
+            </button>
           </div>
-        ) : (
-          <YearGrid weeks={schoolWeeks} rows={rows} variant={layout} />
-        )}
+        </div>
 
-        {(layout !== 'halves5' || heat) && (
+        <YtdTable rows={shownRows} weeks={weeks} heat={heat} searching={!!q} />
+
+        {heat && (
           <div className="mt-5 pt-4 border-t border-brand-border">
-            <Legend numbers={layout !== 'heat'} steps={layout === 'halves5' ? STEPS_HEAT : TABLE_STEPS[layout] ?? STEPS} noSchool={layout !== 'halves5'} />
+            <Legend />
           </div>
         )}
       </motion.section>
-      {layout === 'halves5' && <YtdPrint rows={shownRows} weeks={ytdWeeks(preview === 'end')} heat={heat} schoolYear={schoolYearText(YTD_SHIFT_DAYS)} />}
+      {below && <div className="mt-6">{below}</div>}
+      <YtdPrint rows={shownRows} weeks={weeks} heat={heat} schoolYear={schoolYearText()} />
     </div>
   )
 }

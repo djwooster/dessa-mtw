@@ -157,18 +157,18 @@ function isPeakWeek(schoolId, weekIdx) {
 // a smaller Spring Challenge in March. Schools not listed for a given week
 // fall back to their normal probabilistic behavior. Keyed by weekIdx.
 const CHALLENGE_WEEKS = {
-  9:  [1, 2, 4, 5, 6, 8, 10, 13, 16, 18, 19, 20], // Nov 3 — Fall Engagement Challenge kicks off
-  10: [1, 2, 4, 5, 6, 8, 10, 13, 16, 18, 19, 20], // Nov 10 — broad participation continues
-  11: [4, 6, 8, 16, 18, 20],                       // Nov 17 — tapering to the core group
-  26: [2, 5, 6, 8, 16, 19, 20],                    // Mar 2 — a smaller Spring Challenge
-  27: [2, 5, 6, 8, 16, 19, 20],                    // Mar 9 — spring challenge continues
+  9:  [1, 2, 4, 5, 6, 8, 10, 13, 16, 18, 19, 20], // Nov 2 — Fall Engagement Challenge kicks off
+  10: [1, 2, 4, 5, 6, 8, 10, 13, 16, 18, 19, 20], // Nov 9 — broad participation continues
+  11: [4, 6, 8, 16, 18, 20],                       // Nov 16 — tapering to the core group
+  26: [2, 5, 6, 8, 16, 19, 20],                    // Mar 1 — a smaller Spring Challenge
+  27: [2, 5, 6, 8, 16, 19, 20],                    // Mar 8 — spring challenge continues
 }
 
 // Winter break (2026-09-24) — engagement genuinely drops for every school
 // while school is out, not just the usual low performers. Forces every
 // teacher's week to a non-passing day count for these two weeks, overriding
 // the normal probabilistic model and any of the overrides above.
-const WINTER_BREAK_WEEKS = [16, 17] // Dec 22, Dec 29
+const WINTER_BREAK_WEEKS = [16, 17] // Dec 21, Dec 28
 
 function formatDate(d) {
   const y   = d.getFullYear()
@@ -177,10 +177,12 @@ function formatDate(d) {
   return `${y}-${m}-${day}`
 }
 
+// The 2026 to 2027 school year (moved from 2025 to 2026 on 2026-10-19, so the Engagement report runs on the
+// real calendar). Every week keeps its index, so the mock data is unchanged, just 52 weeks later.
 function generateSchoolWeeks() {
   const weeks = []
-  const d = new Date(2025, 8, 1)
-  const end = new Date(2026, 4, 11)
+  const d = new Date(2026, 7, 31)
+  const end = new Date(2027, 4, 10)
   while (d < end) {
     weeks.push(formatDate(new Date(d)))
     d.setDate(d.getDate() + 7)
@@ -227,7 +229,11 @@ export function getWeekData(schoolId, weekStart, goal = 3) {
   return { weekStart, totalTeachers: count, meetingGoal, pct, teachers: teacherData }
 }
 
-export const MOST_RECENT_WEEK = schoolWeeks[schoolWeeks.length - 1]
+// Today's week (2026-10-19): the latest week that has started, so reports stop at today and the rest of the
+// year stays in the data for previews. Before the first week it falls back to the first week.
+export const TODAY_WEEK_IDX = Math.max(0, schoolWeeks.findLastIndex(w => new Date(`${w}T00:00:00`) <= new Date()))
+export const PAST_WEEKS = schoolWeeks.slice(0, TODAY_WEEK_IDX + 1)
+export const MOST_RECENT_WEEK = schoolWeeks[TODAY_WEEK_IDX]
 
 export function getDistrictWeekData(weekStart, goal = 3) {
   const all = schools.map(s => getWeekData(s.id, weekStart, goal))

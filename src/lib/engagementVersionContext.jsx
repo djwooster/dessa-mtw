@@ -1,20 +1,16 @@
 import { createContext, useContext, useState } from 'react'
 
-// Engagement report version switcher (2026-10-14). Concept F was decided, so this is a fresh
-// switcher for the next round on top of it: 'a' is the version as it stands today (Concept F);
-// 'b' will be a new table design for the Chart | Table view. The switcher lives in Nav, the page
-// reads from context. It is separate from engagementConceptContext.jsx (the retired A-F one).
+// Engagement report state shared with Nav. It held a version switcher (A, B, C) from 2026-10-14; that was
+// deleted 2026-10-19, leaving the Table tab's state. Separate from engagementConceptContext.jsx (the retired A-F one).
 const EngagementVersionContext = createContext(null)
 
 export function EngagementVersionProvider({ children }) {
-  const [engagementVersion, setEngagementVersion] = useState('a')
-  // Week by week page (2026-10-15, Version A): three layouts to compare, switched from Nav while on that page.
-  // YTD is first in the switcher and the default (2026-10-16).
-  const [yearLayout, setYearLayout] = useState('halves5')
-  // YTD's Today | End of year preview (2026-10-16), switched from Nav.
+  // YTD's Today | End of year preview (2026-10-16), switched from Nav on the Table tab.
   const [ytdPreview, setYtdPreview] = useState('today')
+  // Graph | Table tabs on the Engagement page (2026-10-16), kept here so Nav can show Today | End of year on Table.
+  const [overviewTab, setOverviewTab] = useState('graph')
   return (
-    <EngagementVersionContext.Provider value={{ engagementVersion, setEngagementVersion, yearLayout, setYearLayout, ytdPreview, setYtdPreview }}>
+    <EngagementVersionContext.Provider value={{ ytdPreview, setYtdPreview, overviewTab, setOverviewTab }}>
       {children}
     </EngagementVersionContext.Provider>
   )

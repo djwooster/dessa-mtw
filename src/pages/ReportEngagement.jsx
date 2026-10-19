@@ -1,11 +1,11 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { parseISO, addDays, format } from 'date-fns'
-import { MoreHorizontal, Download, Printer, ExternalLink, ChartLine, Table2, CalendarRange, ChevronRight, ChevronLeft, ChevronDown, Check, Info, Calendar } from 'lucide-react'
+import { MoreHorizontal, Download, Printer, ExternalLink, ChartLine, Table2, ChevronRight, ChevronLeft, ChevronDown, Check, Info, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { schools, schoolWeeks, getWeekData, USER_ROLES, NO_SCHOOL_WEEKS, matchesSite } from '../lib/report2Data'
+import { schools, schoolWeeks, getWeekData, USER_ROLES, NO_SCHOOL_WEEKS, matchesSite, PAST_WEEKS } from '../lib/report2Data'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { RangePicker } from '../components/ui/range-picker'
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
@@ -206,13 +206,15 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
 const toKey = d => format(d, 'yyyy-MM-dd')
 const FILTER_MIN = toKey(FIRST_DATE)
 const FILTER_MAX = toKey(LAST_DATE)
-const DEFAULT_FILTERS = { site: [], role: 'all', start: schoolWeeks[schoolWeeks.length - 4], end: FILTER_MAX }
+// Default range (2026-10-19): the last 4 weeks up to today's week.
+const DEFAULT_FILTERS = { site: [], role: 'all', start: PAST_WEEKS[Math.max(0, PAST_WEEKS.length - 4)], end: FILTER_MAX }
 
-function ReportEngagementA() {
+// Engagement report (Concept F). Versions B and C and their switcher were deleted 2026-10-19; this is the only version.
+export default function ReportEngagement() {
   const [rangeKey, setRangeKey] = useState('30d')
   const [customWeeks, setCustomWeeks] = useState(null)
   const presetWeeks = RANGE_PRESETS.find(p => p.value === rangeKey)?.weeks
-  const baseWeeks = useMemo(() => customWeeks ?? schoolWeeks.slice(-presetWeeks), [customWeeks, presetWeeks])
+  const baseWeeks = useMemo(() => customWeeks ?? PAST_WEEKS.slice(-presetWeeks), [customWeeks, presetWeeks])
 
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
@@ -252,8 +254,6 @@ function ReportEngagementA() {
   const [dSiteIds, setDSiteIds] = useState([])
   // Chart | Table switch on the weekly goal graph (2026-10-14, Concept F).
   const [graphView, setGraphView] = useState('chart')
-  // Graph | Table tabs under the page title (2026-10-16): Table shows the Year to date table in place.
-  const [overviewTab, setOverviewTab] = useState('graph')
   const [monthIdx, setMonthIdx] = useState(DEFAULT_MONTH_IDX)
   const month = MONTHS[monthIdx]
   // A site page (2026-10-15): clicking a site in the table opens engagement/site/:id, which looks like the
@@ -261,26 +261,20 @@ function ReportEngagementA() {
   const navigate = useNavigate()
   const subPath = useParams()['*'] ?? ''
   const routeSiteId = Number(subPath.match(/^site\/(\d+)/)?.[1])
-  // Week by week page (2026-10-15): engagement/year, the whole school year by site for screenshots.
-  // Site Leaders get it too (2026-10-16, it has its own nav item), showing just their site.
-  const isYearPage = isF && subPath === 'year'
-  const { yearLayout } = useEngagementVersion()
+  // Graph | Table tabs (2026-10-16): Table shows the YTD table in place.
+  const { overviewTab, setOverviewTab } = useEngagementVersion()
   const routeSite = schools.find(sc => sc.id === routeSiteId) ?? null
-  const showTabs = isF && !routeSite && !isYearPage
+  const showTabs = isF && !routeSite
   const showTable = showTabs && overviewTab === 'table'
   const selectedSite = isSiteLeaderView ? schools[0] : routeSite ?? pickedSite
   // Opening a site remembers where the report was scrolled; coming back (the breadcrumb or the browser
   // back button) puts the page there, and the tables keep their sort, page and search (usePersistedState).
   const overviewScroll = useRef(0)
-  const routeKey = routeSite?.id ?? (isYearPage ? 'year' : null)
+  const routeKey = routeSite?.id ?? null
   const lastRouteId = useRef(routeKey)
   function openSitePage(id) {
     overviewScroll.current = window.scrollY
     navigate(`/reports/engagement/site/${id}`)
-  }
-  function openYearPage() {
-    overviewScroll.current = window.scrollY
-    navigate('/reports/engagement/year')
   }
   useEffect(() => {
     if (routeKey === lastRouteId.current) return
@@ -402,13 +396,6 @@ function ReportEngagementA() {
       </TabsList>
     </Tabs>
   )
-  // The overview's chart card links to the Year to date page (2026-10-15). Its Chart | Table switch was removed
-  // 2026-10-16 (the Year to date page shows that table), so the overview is always the chart.
-  const yearLink = (
-    <button type="button" onClick={openYearPage} className="inline-flex items-center gap-1.5 h-8 px-3 shrink-0 rounded-md border border-brand-border bg-white text-[13px] font-medium text-brand-text hover:bg-brand-bg transition-colors">
-      <CalendarRange size={14} className="text-brand-subtext" aria-hidden="true" /> Year to date
-    </button>
-  )
   const rangeControls = isAFilters ? (isF ? viewSwitch : null) : (
     <div className="flex items-center gap-1 shrink-0">
       <Tabs value={rangeKey} onValueChange={k => { setRangeKey(k); setCustomWeeks(null) }}>
@@ -503,7 +490,50 @@ function ReportEngagementA() {
     </div>
   )
 
-  if (isYearPage) return <EngagementYear key={isSiteLeaderView ? 'site-leader' : 'all'} siteIds={appliedFilters.site.map(Number)} role={roleFilter} layout={yearLayout} lockedSiteId={isSiteLeaderView ? schools[0].id : null} />
+  // The Year to date page (engagement/year) was deleted 2026-10-19; old links land on the report.
+  if (subPath === 'year') return <Navigate to="/reports/engagement" replace />
+
+  // Graph | Table tabs (2026-10-16), between Filters and the report since 2026-10-19. On Table, the YTD view
+  // draws them under its own Filters panel.
+  // The Users table under the report (2026-10-19 also under the Table tab's YTD table).
+  const usersTable = (
+    <SiteEducators siteList={isF && dSiteIds.length ? schools.filter(sc => dSiteIds.includes(sc.id)) : null} school={!isF ? schools.find(sc => dSiteIds.length === 1 && sc.id === dSiteIds[0]) ?? null : null} weeks={weeks} showDots={false} showDays={false} drilldown={isF} goalColumn={false} fStyle={isF} rangeBadge={isE ? rangeLabel(weeks) : null} role={roleFilter} roleColumn={isF} stateKey={isF ? 'overviewUsers' : null} />
+  )
+  const viewTabs = showTabs && (
+    <div role="tablist" aria-label="Engagement views" className="flex gap-4 border-b border-brand-border mb-6">
+      {[['graph', 'Graph'], ['table', 'Table']].map(([k, label]) => (
+        <button
+          key={k} type="button" role="tab" aria-selected={overviewTab === k}
+          onClick={() => setOverviewTab(k)}
+          className={`pb-2 -mb-px text-sm font-medium border-b-2 transition-colors ${overviewTab === k ? 'border-dessa-teal text-brand-text' : 'border-transparent text-brand-subtext hover:text-brand-text'}`}
+        >{label}</button>
+      ))}
+    </div>
+  )
+
+  // 3-dot menu (Export CSV, Print). In Concept F it sits in the Filters panel's title row (2026-10-19), as on Year to date.
+  const moreMenu = (
+    <div className="relative shrink-0" ref={menuRef}>
+      <button
+        className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
+        onClick={() => setMenuOpen(o => !o)}
+        aria-label="More options"
+        aria-expanded={menuOpen}
+      >
+        <MoreHorizontal size={13} />
+      </button>
+      {menuOpen && (
+        <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
+          <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
+            <Download size={13} className="text-brand-subtext" /> Export CSV
+          </button>
+          <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { printReport(); setMenuOpen(false) }}>
+            <Printer size={13} className="text-brand-subtext" /> Print
+          </button>
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <div className={`px-6 pb-8 ${isF && routeSite && !isSiteLeaderView ? 'pt-10' : 'pt-8'}`}>
@@ -516,7 +546,7 @@ function ReportEngagementA() {
           </ol>
         </nav>
       )}
-      <div className={`flex flex-wrap items-end justify-between gap-x-6 gap-y-4 ${isC ? 'mb-[72px]' : showTabs ? 'mb-3' : 'mb-6'}`}>
+      <div className={`flex flex-wrap items-end justify-between gap-x-6 gap-y-4 ${isC ? 'mb-[72px]' : 'mb-6'}`}>
         <div className="min-w-0">
           {/* The breadcrumb above replaces the plain back link in Concept F (2026-10-15). */}
           {selectedSite && !isSiteLeaderView && !isF && (
@@ -584,45 +614,14 @@ function ReportEngagementA() {
             <Download size={14} className="text-brand-subtext" aria-hidden="true" /> Download
           </button>
         </div>
-      ) : !showTable && (
+      ) : !isF && (
       <div className="flex flex-wrap items-center justify-end gap-2">
         {/* Reset all removed 2026-10-08; the 3-dot menu now sits to the right of the Graph switcher. */}
         {/* Graph A/B switcher removed 2026-10-09 (kept on the engagement-prototype-full branch). Graph A is the only graph; setGraph and the month view stay in the code. */}
-        <div className="relative shrink-0" ref={menuRef}>
-          <button
-            className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
-            onClick={() => setMenuOpen(o => !o)}
-            aria-label="More options"
-            aria-expanded={menuOpen}
-          >
-            <MoreHorizontal size={13} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
-              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
-                <Download size={13} className="text-brand-subtext" /> Export CSV
-              </button>
-              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { printReport(); setMenuOpen(false) }}>
-                <Printer size={13} className="text-brand-subtext" /> Print
-              </button>
-            </div>
-          )}
-        </div>
+        {moreMenu}
         </div>
       )}
       </div>
-
-      {showTabs && (
-        <div role="tablist" aria-label="Engagement views" className="flex gap-4 border-b border-brand-border mb-6">
-          {[['graph', 'Graph'], ['table', 'Table']].map(([k, label]) => (
-            <button
-              key={k} type="button" role="tab" aria-selected={overviewTab === k}
-              onClick={() => setOverviewTab(k)}
-              className={`pb-2 -mb-px text-sm font-medium border-b-2 transition-colors ${overviewTab === k ? 'border-dessa-teal text-brand-text' : 'border-transparent text-brand-subtext hover:text-brand-text'}`}
-            >{label}</button>
-          ))}
-        </div>
-      )}
 
       {/* Weekly goal callout (2026-10-13): a rounded callout under the page title so the goal is on screen in screenshots.
           Back on 2026-10-16 after trying it as page subtext; the Year to date report shows it too. */}
@@ -639,11 +638,23 @@ function ReportEngagementA() {
           showSite={!isSiteLeaderView && !selectedSite}
           minDate={FILTER_MIN}
           maxDate={FILTER_MAX}
+          action={isF ? moreMenu : null}
         />
       )}
 
+      {!showTable && viewTabs}
+
       {showTable ? (
-        <EngagementYear embedded siteIds={appliedFilters.site.map(Number)} role={roleFilter} layout="halves5" lockedSiteId={isSiteLeaderView ? schools[0].id : null} />
+        <EngagementYear
+          tabs={viewTabs} lockedSiteId={isSiteLeaderView ? schools[0].id : null}
+          filters={{
+            draft: draftFilters, applied: appliedFilters, onChange: setDraftFilters,
+            onApply: () => { setAppliedFilters(draftFilters); setDSiteIds(draftFilters.site.map(Number)) },
+            onReset: () => { setDraftFilters(DEFAULT_FILTERS); setAppliedFilters(DEFAULT_FILTERS); setDSiteIds([]) },
+            minDate: FILTER_MIN, maxDate: FILTER_MAX,
+          }}
+          below={usersTable}
+        />
       ) : selectedSite ? (
         <>
           <motion.div
@@ -669,7 +680,7 @@ function ReportEngagementA() {
         </div>
       */}
       {isD ? (
-        <EngagementOverviewD weeks={weeks} selectedId={dSiteIds.length === 1 ? dSiteIds[0] : null} selectedIds={isF ? dSiteIds : null} onSelect={id => setDSiteIds(id == null ? [] : [id])} showCards={!isE} role={roleFilter} viewSwitch={isF ? yearLink : null} view="chart" rangeText={rangeLabel(weeks)} showSiteList={!isF} onOpenSite={openSitePage} />
+        <EngagementOverviewD weeks={weeks} selectedId={dSiteIds.length === 1 ? dSiteIds[0] : null} selectedIds={isF ? dSiteIds : null} onSelect={id => setDSiteIds(id == null ? [] : [id])} showCards={!isE} role={roleFilter} viewSwitch={null} view="chart" rangeText={rangeLabel(weeks)} showSiteList={!isF} onOpenSite={openSitePage} />
       ) : isC ? (
         <>
           <div className="grid gap-8 mb-12 pb-8 border-b border-brand-border grid-cols-4">
@@ -722,7 +733,7 @@ function ReportEngagementA() {
       )}
 
       {isD ? (
-        <SiteEducators siteList={isF && dSiteIds.length ? schools.filter(sc => dSiteIds.includes(sc.id)) : null} school={!isF ? schools.find(sc => dSiteIds.length === 1 && sc.id === dSiteIds[0]) ?? null : null} weeks={weeks} showDots={false} showDays={false} drilldown={isF} goalColumn={false} fStyle={isF} rangeBadge={isE ? rangeLabel(weeks) : null} role={roleFilter} roleColumn={isF} stateKey={isF ? 'overviewUsers' : null} />
+        usersTable
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.14 }}
@@ -793,404 +804,4 @@ function ReportEngagementA() {
       {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Users meeting goal" drilldown={engagementConcept === 'a'} drilldownView="calendar" role={roleFilter} dateFilter={engagementConcept === 'a' ? { start: appliedFilters.start, end: appliedFilters.end, min: FILTER_MIN, max: FILTER_MAX, onChange: setReportDates } : null} showMenu={engagementConcept === 'a'} searchable={engagementConcept === 'a'} paginate={engagementConcept === 'a'} goalColumn bordered />}
     </div>
   )
-}
-
-// ─── Version B (2026-10-15) ──────────────────────────────────────────────────
-// A normal date range, like A (Site, User role, Start and End date, Apply) and two tabs (the stat
-// strip tried here was removed 2026-10-15). Tabs: Sites (the chart for the
-// range, or a one-row-per-site table) and Users (the users table). Clicking a site opens the Users
-// tab filtered to that site. Winter break weeks are left out of the range.
-const B_WEEKS = schoolWeeks.filter(w => !NO_SCHOOL_WEEKS.includes(w))
-
-function rangeStats(siteId, role, weekList) {
-  let met = 0, total = 0, lessons = 0
-  const active = new Set()
-  const everyone = new Set()
-  schools.filter(sc => matchesSite(siteId, sc.id)).forEach(sc => {
-    weekList.forEach(w => {
-      getWeekData(sc.id, w, GOAL).teachers.forEach((t, i) => {
-        if (role !== 'all' && t.role !== role) return
-        everyone.add(`${sc.id}-${i}`)
-        total += 1
-        if (t.metGoal) met += 1
-        lessons += t.daysActive
-        if (t.daysActive > 0) active.add(`${sc.id}-${i}`)
-      })
-    })
-  })
-  return { pct: total ? Math.round((met / total) * 100) : 0, lessons, active: active.size, users: everyone.size }
-}
-
-const sign = n => (n > 0 ? '+' : n < 0 ? '−' : '')
-function SitesOverviewTable({ weeks, role, siteId, onOpenSite }) {
-  const [sort, setSort] = useState({ key: 'pct', dir: 'asc' })
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-  const latest = weeks[weeks.length - 1]
-  const prevWeek = B_WEEKS[B_WEEKS.indexOf(latest) - 1] ?? null
-  const rowFor = id => {
-    const cur = weekBands(id, latest, role)
-    const prev = prevWeek ? weekBands(id, prevWeek, role) : null
-    const avg = rangeStats(id, role, weeks).pct
-    return { ...cur, avg, delta: prev && prev.total ? cur.pct - prev.pct : null }
-  }
-  const allRow = useMemo(() => rowFor(siteId), [siteId, weeks, role])
-  const rows = useMemo(() => schools
-    .filter(sc => matchesSite(siteId, sc.id))
-    .map(sc => ({ sc, ...rowFor(sc.id) }))
-    .filter(r => r.total > 0)
-    .sort((a, b) => {
-      const dir = sort.dir === 'asc' ? 1 : -1
-      if (sort.key === 'name') return dir * a.sc.name.localeCompare(b.sc.name)
-      if (sort.key === 'users') return dir * (a.total - b.total) || a.sc.name.localeCompare(b.sc.name)
-      if (sort.key === 'avg') return dir * (a.avg - b.avg) || a.sc.name.localeCompare(b.sc.name)
-      if (sort.key === 'delta') return dir * ((a.delta ?? -999) - (b.delta ?? -999)) || a.sc.name.localeCompare(b.sc.name)
-      return dir * (a.pct - b.pct) || a.sc.name.localeCompare(b.sc.name)
-    }), [siteId, weeks, role, sort])
-  useEffect(() => { setPage(1) }, [weeks, siteId, role])
-  const shown = rows.slice((page - 1) * pageSize, page * pageSize)
-  const deltaText = d => d == null ? '–' : `${sign(d)}${Math.abs(d)} pts`
-  const resort = (k, first) => { setSort(s => nextSort(s, k, first)); setPage(1) }
-  const right = 'text-right tabular-nums'
-
-  return (
-    <div className="rounded-lg border border-brand-border overflow-hidden [&_td]:text-[13px]">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="text-[13px] font-medium"><SortButton label="Site" col="name" sort={sort} onSort={k => resort(k)} /></TableHead>
-            <TableHead className="text-[13px] font-medium text-right"><SortButton label="Users" col="users" sort={sort} onSort={k => resort(k, 'desc')} align="right" /></TableHead>
-            <TableHead className="text-[13px] font-medium text-right"><SortButton label="Latest week" col="pct" sort={sort} onSort={k => resort(k)} align="right" /></TableHead>
-            <TableHead className="text-[13px] font-medium text-right"><SortButton label="Range average" col="avg" sort={sort} onSort={k => resort(k)} align="right" /></TableHead>
-            <TableHead className="text-[13px] font-medium text-right"><SortButton label="vs last week" col="delta" sort={sort} onSort={k => resort(k, 'desc')} align="right" /></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {!(siteId && siteId.length === 1) && <TableRow className="hover:bg-transparent bg-brand-bg/50">
-            <TableCell className="font-semibold">{!siteId || !siteId.length ? 'All sites' : `${siteId.length} selected sites`}</TableCell>
-            <TableCell className={`${right} font-semibold`}>{allRow.total}</TableCell>
-            <TableCell className={`${right} font-semibold`}>{allRow.pct}%</TableCell>
-            <TableCell className={`${right} font-semibold`}>{allRow.avg}%</TableCell>
-            <TableCell className={`${right} font-semibold text-brand-subtext`}>{deltaText(allRow.delta)}</TableCell>
-          </TableRow>}
-          {shown.map(r => (
-            <TableRow key={r.sc.id} onClick={() => onOpenSite(r.sc.id)} className="cursor-pointer">
-              <TableCell className="font-medium">
-                <button type="button" onClick={e => { e.stopPropagation(); onOpenSite(r.sc.id) }} className="text-left text-[13px] text-[#134fb2] hover:underline">{r.sc.name}</button>
-              </TableCell>
-              <TableCell className={`${right} text-brand-subtext`}>{r.total}</TableCell>
-              <TableCell className={right} title={`${r.met} of ${r.total} users`}>{r.pct}%</TableCell>
-              <TableCell className={right}>{r.avg}%</TableCell>
-              <TableCell className={`${right} text-brand-subtext`}>{deltaText(r.delta)}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <PaginationBar page={page} pageSize={pageSize} total={rows.length} onPage={setPage} onPageSize={n => { setPageSize(n); setPage(1) }} className="px-4 py-3 border-t border-brand-border" />
-    </div>
-  )
-}
-
-function ReportEngagementB() {
-  const { isSiteLeaderView } = useRole()
-  const [tab, setTab] = useState('sites')
-  const [view, setView] = useState('chart')
-  const [draft, setDraft] = useState(DEFAULT_FILTERS)
-  const [applied, setApplied] = useState(DEFAULT_FILTERS)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef(null)
-
-  useEffect(() => {
-    if (!menuOpen) return
-    const h = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [menuOpen])
-
-  const weeks = useMemo(() => {
-    const ws = weeksForDates(parseISO(applied.start), parseISO(applied.end)).filter(w => !NO_SCHOOL_WEEKS.includes(w))
-    return ws.length ? ws : B_WEEKS.slice(-4)
-  }, [applied])
-  const siteId = isSiteLeaderView ? [schools[0].id] : applied.site.length ? applied.site.map(Number) : null
-  const role = applied.role
-  const siteList = siteId ? schools.filter(sc => siteId.includes(sc.id)) : null
-  const site = siteList && siteList.length === 1 ? siteList[0] : null
-
-  const points = useMemo(() => weeks.map(w => {
-    const b = weekBands(siteId, w, role)
-    return { week: w, value: b.pct, detail: `${b.pct}% (${b.met} of ${b.total} users)` }
-  }), [weeks, siteId, role])
-
-  function openSite(id) {
-    setApplied(a => ({ ...a, site: [String(id)] }))
-    setDraft(d => ({ ...d, site: [String(id)] }))
-    setTab('users')
-  }
-  function download(name, text) {
-    const url = URL.createObjectURL(new Blob([text], { type: 'text/csv' }))
-    const a = document.createElement('a')
-    a.href = url; a.download = name; a.click()
-    URL.revokeObjectURL(url)
-  }
-  function exportCsv() {
-    const latest = weeks[weeks.length - 1]
-    if (tab === 'users') {
-      const lines = (siteList ?? schools).flatMap(sc => {
-        const data = getWeekData(sc.id, latest, GOAL).teachers
-        return getRosterNames(sc.id).map((n, i) => ({ n, i })).filter(({ i }) => role === 'all' || data[i].role === role)
-          .map(({ n, i }) => `"${n}","${sc.name}","${data[i].role}","${getLastActive(sc.id, i)}"`)
-      })
-      download('engagement-users.csv', `User,Site,Role,Last Active\n${lines.join('\n')}`)
-      return
-    }
-    const prevWeek = B_WEEKS[B_WEEKS.indexOf(latest) - 1] ?? null
-    const lines = schools.filter(sc => matchesSite(siteId, sc.id)).map(sc => {
-      const cur = weekBands(sc.id, latest, role)
-      const prev = prevWeek ? weekBands(sc.id, prevWeek, role) : null
-      return `"${sc.name}",${cur.total},${cur.met},${cur.pct}%,${rangeStats(sc.id, role, weeks).pct}%,${prev && prev.total ? cur.pct - prev.pct : ''}`
-    })
-    download('engagement-sites.csv', `Site,Users,Met goal (latest week),Latest week %,Range average %,Change vs last week (pts)\n${lines.join('\n')}`)
-  }
-
-  const viewSwitch = (
-    <Tabs value={view} onValueChange={setView}>
-      <TabsList className="p-0.5">
-        <TabsTrigger value="chart" className="gap-1.5 text-[13px] px-3 py-1"><ChartLine size={13} aria-hidden="true" /> Chart</TabsTrigger>
-        <TabsTrigger value="table" className="gap-1.5 text-[13px] px-3 py-1"><Table2 size={13} aria-hidden="true" /> Table</TabsTrigger>
-      </TabsList>
-    </Tabs>
-  )
-
-  return (
-    <div className="px-6 pt-8 pb-8">
-      <div className="flex items-end justify-between gap-6 mb-6">
-        <h2 className="text-2xl font-semibold text-brand-text">Engagement</h2>
-        <div className="relative shrink-0" ref={menuRef}>
-          <button className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all" onClick={() => setMenuOpen(o => !o)} aria-label="More options" aria-expanded={menuOpen}>
-            <MoreHorizontal size={13} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
-              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
-                <Download size={13} className="text-brand-subtext" /> Export CSV
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div role="note" className="flex items-center gap-2 rounded-lg border border-state-info/30 bg-state-infoLight px-4 py-2.5 mb-6 text-[13px] text-[#134fb2]">
-        <Info size={14} className="shrink-0" aria-hidden="true" />
-        <p className="min-w-0"><span className="font-medium">Weekly goal: {GOAL} lessons per week.</span></p>
-        <Link to="/settings" className="ml-auto shrink-0 inline-flex items-center gap-1 font-medium hover:underline">
-          Change in Settings <ExternalLink size={12} aria-hidden="true" />
-        </Link>
-      </div>
-
-      <FiltersPanel
-        draft={draft}
-        onChange={setDraft}
-        onApply={() => setApplied(draft)}
-        onReset={() => { setDraft(DEFAULT_FILTERS); setApplied(DEFAULT_FILTERS) }}
-        sites={schools}
-        roles={USER_ROLES}
-        showSite={!isSiteLeaderView}
-        minDate={FILTER_MIN}
-        maxDate={FILTER_MAX}
-      />
-
-      <div role="tablist" className="flex gap-6 border-b border-brand-border mb-6">
-        {[['sites', isSiteLeaderView ? 'Overview' : 'Sites'], ['users', 'Users']].map(([k, label]) => (
-          <button
-            key={k} type="button" role="tab" aria-selected={tab === k}
-            onClick={() => setTab(k)}
-            className={`pb-2.5 -mb-px text-sm font-medium border-b-2 transition-colors ${tab === k ? 'border-dessa-teal text-brand-text' : 'border-transparent text-brand-subtext hover:text-brand-text'}`}
-          >{label}</button>
-        ))}
-      </div>
-
-      {tab === 'sites' ? (
-        <div className="rounded-xl border border-brand-border bg-white p-5">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <h3 className="text-lg font-semibold text-brand-text">{site ? site.name : siteList ? `${siteList.length} sites` : 'All sites'}</h3>
-            {viewSwitch}
-          </div>
-          <p className="text-[15px] font-semibold text-brand-text mb-4">Users completing 3 lessons a week</p>
-          {view === 'chart' ? (
-            <WeeklyBarChart label="Users who met the goal each week" kind="line" percent points={points} />
-          ) : isSiteLeaderView ? (
-            <WeeklyGoalTable schoolId={siteId && siteId[0]} weeks={weeks} role={role} rangeText={rangeLabel(weeks)} />
-          ) : (
-            <SitesOverviewTable weeks={weeks} role={role} siteId={siteId} onOpenSite={openSite} />
-          )}
-        </div>
-      ) : (
-        <SiteEducators siteList={siteList} weeks={weeks} role={role} showDots={false} showDays={false} drilldown goalColumn={false} fStyle roleColumn />
-      )}
-    </div>
-  )
-}
-
-// ─── Version C (2026-10-15) ──────────────────────────────────────────────────
-// School comparison first: no Site filter, just User role and the date range, and one table of
-// every site by week (the pattern from the manager's mock-up). A bold All sites row sits on top,
-// weeks run across the columns (newest first) with a weighted Range column at the end, and the
-// first column is pinned when the weeks scroll sideways. Clicking a site opens the shared site modal.
-function SitesMatrix({ weeks, role, siteId, onOpenSite }) {
-  const [sort, setSort] = useState({ key: 'range', dir: 'asc' })
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-  const cols = useMemo(() => [...weeks].reverse(), [weeks])
-  const build = id => {
-    const cells = cols.map(w => weekBands(id, w, role))
-    return { cells, range: rangeStats(id, role, weeks).pct, total: cells[0]?.total ?? 0 }
-  }
-  const allRow = useMemo(() => build(null), [cols, role])
-  const rows = useMemo(() => schools
-    .filter(sc => siteId == null || sc.id === siteId)
-    .map(sc => ({ sc, ...build(sc.id) }))
-    .filter(r => r.total > 0)
-    .sort((a, b) => {
-      const dir = sort.dir === 'asc' ? 1 : -1
-      if (sort.key === 'name') return dir * a.sc.name.localeCompare(b.sc.name)
-      return dir * (a.range - b.range) || a.sc.name.localeCompare(b.sc.name)
-    }), [cols, role, siteId, sort])
-  useEffect(() => { setPage(1) }, [weeks, role])
-  const shown = rows.slice((page - 1) * pageSize, page * pageSize)
-  const resort = (k, first) => { setSort(s => nextSort(s, k, first)); setPage(1) }
-  const stick = 'sticky left-0 z-10 min-w-48'
-  const cell = 'text-right tabular-nums min-w-16'
-
-  const numberCells = (r, bold) => (
-    <>
-      {r.cells.map((c, i) => (
-        <TableCell key={cols[i]} className={`${cell} ${bold ? 'font-semibold' : ''}`} title={`${weekRangeLabel(cols[i])}: ${c.met} of ${c.total} users`}>{c.pct}%</TableCell>
-      ))}
-      <TableCell className={`${cell} font-semibold`} title="Total who met the goal across the weeks, divided by total users across the weeks">{r.range}%</TableCell>
-    </>
-  )
-
-  return (
-    <div className="rounded-xl border border-brand-border bg-white overflow-hidden [&_td]:text-[13px]">
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className={`${stick} bg-brand-bg text-[13px] font-medium`}><SortButton label="Site" col="name" sort={sort} onSort={k => resort(k)} /></TableHead>
-              {cols.map(w => (
-                <TableHead key={w} className={`${cell} text-[13px] font-medium`} title={weekRangeLabel(w)}>{format(parseISO(w), 'MMM d')}</TableHead>
-              ))}
-              <TableHead className={`${cell} text-[13px] font-medium`}><SortButton label="Range" col="range" sort={sort} onSort={k => resort(k)} align="right" /></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow className="hover:bg-transparent">
-              <TableCell className={`${stick} bg-white font-semibold`}>{siteId == null ? 'All sites' : schools.find(sc => sc.id === siteId)?.name}</TableCell>
-              {numberCells(allRow, true)}
-            </TableRow>
-            {siteId == null && shown.map(r => (
-              <TableRow key={r.sc.id} onClick={() => onOpenSite(r.sc)} className="cursor-pointer group">
-                <TableCell className={`${stick} bg-white group-hover:bg-brand-bg font-medium`}>
-                  <button type="button" onClick={e => { e.stopPropagation(); onOpenSite(r.sc) }} className="text-left text-[13px] text-[#134fb2] hover:underline">{r.sc.name}</button>
-                </TableCell>
-                {numberCells(r, false)}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      {siteId == null && <PaginationBar page={page} pageSize={pageSize} total={rows.length} onPage={setPage} onPageSize={n => { setPageSize(n); setPage(1) }} className="px-4 py-3 border-t border-brand-border" />}
-    </div>
-  )
-}
-
-function ReportEngagementC() {
-  const { isSiteLeaderView } = useRole()
-  const [draft, setDraft] = useState(DEFAULT_FILTERS)
-  const [applied, setApplied] = useState(DEFAULT_FILTERS)
-  const [modalSite, setModalSite] = useState(null)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef(null)
-
-  useEffect(() => {
-    if (!menuOpen) return
-    const h = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [menuOpen])
-  useEffect(() => {
-    if (!modalSite) return
-    const onKey = e => { if (e.key === 'Escape') setModalSite(null) }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [modalSite])
-
-  const weeks = useMemo(() => {
-    const ws = weeksForDates(parseISO(applied.start), parseISO(applied.end)).filter(w => !NO_SCHOOL_WEEKS.includes(w))
-    return ws.length ? ws : B_WEEKS.slice(-4)
-  }, [applied])
-  const role = applied.role
-  const siteId = isSiteLeaderView ? schools[0].id : null
-
-  function exportCsv() {
-    const cols = [...weeks].reverse()
-    const head = `Site,${cols.map(w => `"${weekRangeLabel(w)}"`).join(',')},Range`
-    const lines = schools.filter(sc => siteId == null || sc.id === siteId).map(sc => {
-      const cells = cols.map(w => `${weekBands(sc.id, w, role).pct}%`)
-      return `"${sc.name}",${cells.join(',')},${rangeStats(sc.id, role, weeks).pct}%`
-    })
-    const url = URL.createObjectURL(new Blob([`${head}\n${lines.join('\n')}`], { type: 'text/csv' }))
-    const a = document.createElement('a')
-    a.href = url; a.download = 'engagement-by-site.csv'; a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  return (
-    <div className="px-6 pt-8 pb-8">
-      <div className="flex items-end justify-between gap-6 mb-6">
-        <h2 className="text-2xl font-semibold text-brand-text">Engagement</h2>
-        <div className="relative shrink-0" ref={menuRef}>
-          <button className="flex items-center justify-center w-8 h-8 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all" onClick={() => setMenuOpen(o => !o)} aria-label="More options" aria-expanded={menuOpen}>
-            <MoreHorizontal size={13} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
-              <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
-                <Download size={13} className="text-brand-subtext" /> Export CSV
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div role="note" className="flex items-center gap-2 rounded-lg border border-state-info/30 bg-state-infoLight px-4 py-2.5 mb-6 text-[13px] text-[#134fb2]">
-        <Info size={14} className="shrink-0" aria-hidden="true" />
-        <p className="min-w-0"><span className="font-medium">Weekly goal: {GOAL} lessons per week.</span></p>
-        <Link to="/settings" className="ml-auto shrink-0 inline-flex items-center gap-1 font-medium hover:underline">
-          Change in Settings <ExternalLink size={12} aria-hidden="true" />
-        </Link>
-      </div>
-
-      <FiltersPanel
-        draft={draft}
-        onChange={setDraft}
-        onApply={() => setApplied(draft)}
-        onReset={() => { setDraft(DEFAULT_FILTERS); setApplied(DEFAULT_FILTERS) }}
-        sites={schools}
-        roles={USER_ROLES}
-        showSite={false}
-        minDate={FILTER_MIN}
-        maxDate={FILTER_MAX}
-      />
-
-      <SitesMatrix weeks={weeks} role={role} siteId={siteId} onOpenSite={setModalSite} />
-
-      {modalSite && <SiteDetailModal school={modalSite} weeks={weeks} onClose={() => setModalSite(null)} title="Users meeting goal" drilldown drilldownView="calendar" role={role} showMenu searchable paginate goalColumn={false} bordered />}
-    </div>
-  )
-}
-
-export default function ReportEngagement() {
-  const { engagementVersion } = useEngagementVersion()
-  return engagementVersion === 'c' ? <ReportEngagementC /> : engagementVersion === 'b' ? <ReportEngagementB /> : <ReportEngagementA />
 }

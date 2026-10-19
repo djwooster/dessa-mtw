@@ -6,8 +6,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 // completed a lesson, weekends muted. Three months in a single row (two rows
 // took too much scrolling in the modal); the arrows page one month at a time.
 // `dayMap` is { 'yyyy-MM-dd': true } for active days (see educatorDayMap).
-const FIRST_MONTH = new Date(2025, 8, 1) // Sep 2025, the start of the data
-const MONTH_COUNT = 9 // Sep 2025 to May 2026
+const FIRST_MONTH = new Date(2026, 8, 1) // Sep 2026, the start of the data (moved a year on 2026-10-19)
+const MONTH_COUNT = 9 // Sep 2026 to May 2027
 const MIN_WINDOW = 3 // never fewer than three months
 const MONTH_W = 174 // one month grid: 7 cells of 24px plus gaps
 const MONTH_GAP = 24
