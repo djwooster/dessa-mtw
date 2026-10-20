@@ -56,9 +56,8 @@ const DASHBOARD_CONCEPTS = [
   { value: 'a', label: 'A', title: 'A, Current Dashboard' },
   { value: 'b', label: 'B', title: 'B, Production today: the empty dashboard a new Move This World customer sees' },
   { value: 'c', label: 'C', title: 'C, Production layout with an empty state that invites a first DESSA rating' },
-  { value: 'd', label: 'D', title: 'D, Concept C with a grid of tinted icon tiles' },
-  { value: 'e', label: 'E', title: 'E, New customer: a big greeting above two cards with shape illustrations' },
-  { value: 'f', label: 'F', title: 'F, New customer: an editorial layout with the two cards as ruled columns' },
+  { value: 'd', label: 'D', title: 'D, New customer: a big greeting above two cards with shape illustrations' },
+  { value: 'e', label: 'E', title: 'E, New customer: an editorial layout with the two cards as ruled columns' },
 ]
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
@@ -102,7 +101,7 @@ export default function Nav() {
   const { dceConcept, setDceConcept } = useDceConcept()
   const { engagementConcept, setEngagementConcept } = useEngagementConcept()
   const { ytdPreview, setYtdPreview, overviewTab } = useEngagementVersion()
-  const { dashboardConcept, setDashboardConcept, showcaseArt, setShowcaseArt } = useDashboardConcept()
+  const { dashboardConcept, setDashboardConcept, showcaseArt, setShowcaseArt, inviteArt, setInviteArt, rated, setRated, bannerStyle, setBannerStyle } = useDashboardConcept()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
@@ -412,7 +411,34 @@ export default function Nav() {
             </Popover.Root>
           )}
           {/* Concept B's illustration subtab (2026-10-19), same Tabs as the Engagement Today | End of year preview. */}
-          {location.pathname === '/' && dashboardConcept === 'e' && (
+          {/* Before | After ratings (2026-10-20): resets or skips the simulated rating flow. B is the control, so not there. */}
+          {location.pathname === '/' && ['c', 'd', 'e'].includes(dashboardConcept) && (
+            <Tabs value={rated ? 'after' : 'before'} onValueChange={v => setRated(v === 'after')} className="shrink-0 mr-2">
+              <TabsList className="p-0.5">
+                <TabsTrigger value="before" className="text-xs px-3 py-1">Before ratings</TabsTrigger>
+                <TabsTrigger value="after" className="text-xs px-3 py-1">After ratings</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {/* Concept D after ratings: the Move This World banner style (2026-10-20). */}
+          {location.pathname === '/' && dashboardConcept === 'd' && rated && (
+            <Tabs value={bannerStyle} onValueChange={setBannerStyle} className="shrink-0 mr-2">
+              <TabsList className="p-0.5">
+                <TabsTrigger value="card" className="text-xs px-3 py-1">Card</TabsTrigger>
+                <TabsTrigger value="recommend" className="text-xs px-3 py-1">Recommendation</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {/* Concept C's image subtab (2026-10-20), C and D combined. */}
+          {location.pathname === '/' && dashboardConcept === 'c' && !rated && (
+            <Tabs value={inviteArt} onValueChange={setInviteArt} className="shrink-0 mr-2">
+              <TabsList className="p-0.5">
+                <TabsTrigger value="mark" className="text-xs px-3 py-1">Rating mark</TabsTrigger>
+                <TabsTrigger value="tiles" className="text-xs px-3 py-1">Icon tiles</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {location.pathname === '/' && dashboardConcept === 'd' && !rated && (
             <Tabs value={showcaseArt} onValueChange={setShowcaseArt} className="shrink-0 mr-2">
               <TabsList className="p-0.5">
                 <TabsTrigger value="circles" className="text-xs px-3 py-1">Circles</TabsTrigger>

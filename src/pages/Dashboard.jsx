@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ChevronRight, Calendar, ChevronDown, ClipboardCheck, BookOpen, ArrowRight, ArrowUpRight, Info, Users, Sparkles, Lightbulb, TrendingUp } from 'lucide-react'
 import { SidePanel } from '../components/ui/side-panel'
 import { useDashboardConcept } from '../lib/dashboardConceptContext'
+import { toast } from 'sonner'
 
 const stagger = (i) => ({
   initial: { opacity: 0, y: 8 },
@@ -263,13 +264,91 @@ const strategies = [
   },
 ]
 
+// Classroom Strategies card (pulled out of concept A 2026-10-20 so concept D's after ratings view can reuse it).
+// `stacked` puts the two samples in one column, for a half width card. `quiet` (2026-10-20, concept D after
+// ratings) makes the samples static and swaps the library button for a text link, the only hover interaction.
+function StrategiesCard({ stacked = false, quiet = false }) {
+  const navigate = useNavigate()
+  return (
+    <div className="bg-white rounded-2xl border border-brand-border shadow-sm flex flex-col h-full">
+      <div className="px-5 pt-5 pb-4 border-b border-brand-border">
+        <h3 className="text-base font-semibold text-brand-text">
+          Try These Classroom Strategies
+        </h3>
+        <p className="text-sm text-brand-subtext mt-0.5">
+          We've built a full library of proven strategies. Here are two samples to explore.
+        </p>
+      </div>
+      <div className="p-5 flex flex-col gap-3">
+        <div className={`grid grid-cols-1 gap-3 ${stacked ? '' : 'md:grid-cols-2'}`}>
+          {strategies.map((s) => (
+            <motion.div
+              key={s.title}
+              whileHover={quiet ? undefined : { y: -1 }}
+              className={`flex rounded-xl border overflow-hidden ${quiet ? '' : 'cursor-pointer hover:shadow-sm transition-shadow'}`}
+              style={{ borderColor: `${s.color}40` }}
+            >
+              <div
+                className="w-32 flex-shrink-0 flex flex-col items-center justify-center px-3 py-4 text-center"
+                style={{ background: s.bg }}
+              >
+                <span className="text-xl mb-1.5">{s.emoji}</span>
+                <p
+                  className="text-xs font-semibold leading-snug"
+                  style={{ color: s.color }}
+                >
+                  {s.competency}
+                </p>
+              </div>
+              <div className="flex-1 px-4 py-4">
+                <p className="text-sm text-brand-subtext mb-1.5">
+                  <span className="font-semibold text-brand-text">Title:</span>{' '}
+                  {s.title}
+                </p>
+                <p className="text-sm text-brand-subtext mb-1.5">
+                  <span className="font-semibold text-brand-text">Duration:</span>{' '}
+                  {s.duration}
+                </p>
+                <p className="text-sm text-brand-subtext leading-relaxed">
+                  <span className="font-semibold text-brand-text">Description:</span>{' '}
+                  {s.description}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        <p className="text-sm text-center text-brand-subtext px-2">
+          Class-level strategy recommendations will appear once a Full DESSA has been
+          completed.
+        </p>
+
+        {quiet ? (
+          <button
+            onClick={() => navigate('/resource-library')}
+            className="group self-center inline-flex items-center gap-1.5 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4 transition-colors"
+          >
+            Browse the DESSA Strategy Library
+            <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+          </button>
+        ) : (
+          <button className="w-full py-2.5 rounded-md text-sm font-semibold border border-dessa-teal text-dessa-teal hover:bg-dessa-tealLight transition-colors">
+            Browse the DESSA Strategy Library
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
-// Concept F (2026-10-19, earlier C, D and E): an editorial layout after an agency site the user shared. Thin rules, a large
+// Concept E (2026-10-19, earlier C, D, E and F): an editorial layout after an agency site the user shared. Thin rules, a large
 // headline above the subtext, then the two cards as columns split by a rule: icon,
 // large title, description, topic chips and a teal text link. Replaced the production empty state that held C.
 function EditorialDashboard() {
   const navigate = useNavigate()
+  const simulateRating = useSimulateRating()
   const look = {
     // Badges are a
     // light tint of the card's color with a darker icon; full amber is unreadable on its own tint, so the book
@@ -306,7 +385,7 @@ function EditorialDashboard() {
                     ))}
                   </ul>
                   <button
-                    onClick={() => navigate(c.to)}
+                    onClick={() => (c.key === 'ratings' ? simulateRating() : navigate(c.to))}
                     className="self-start inline-flex items-center gap-2 mt-6 pb-1 border-b-2 border-dessa-teal text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:border-dessa-navy transition-colors"
                   >
                     {c.cta}
@@ -339,7 +418,7 @@ const NEW_CUSTOMER_CARDS = [
   },
 ]
 
-// Concept E (2026-10-19, earlier B, C, D and E): a big greeting above the two cards, after a kids' sports
+// Concept D (2026-10-19, earlier B, C, D and E): a big greeting above the two cards, after a kids' sports
 // site the user shared. Each card has a tag, title and description over a tinted panel with a shape
 // illustration from the style guide (shapes only, no faces: the brand has none yet). The whole card is the button.
 // A burst with `n` points, for the Ratings illustration.
@@ -429,7 +508,7 @@ const STYLE_SHAPES = {
   badge: () => <path d={scallopPath(8, 48, 34)} />,
 }
 
-// Concept E's "Hero shape" subtab (was concept H): one large style guide shape, solid, with a smaller shape cut into its center in the
+// Concept D's "Hero shape" subtab (was concept H): one large style guide shape, solid, with a smaller shape cut into its center in the
 // panel's tint. Ratings: a sparkle inside the scalloped badge. Curriculum: a circle inside the eight petal flower.
 function RatingsHeroShape() {
   return (
@@ -477,6 +556,7 @@ function PlatformSubtext({ className = '' }) {
 
 function ShowcaseDashboard() {
   const navigate = useNavigate()
+  const simulateRating = useSimulateRating()
   const { showcaseArt } = useDashboardConcept()
   const art = SHOWCASE_ILLUSTRATIONS[showcaseArt === 'hero' ? 'hero' : 'b']
   const look = {
@@ -500,7 +580,7 @@ function ShowcaseDashboard() {
                 key={c.key}
                 {...stagger(i + 1)}
                 whileHover={{ y: -2 }}
-                onClick={() => navigate(c.to)}
+                onClick={() => (c.key === 'ratings' ? simulateRating() : navigate(c.to))}
                 aria-label={`${c.title}. ${c.cta}`}
                 className="flex flex-col rounded-2xl border border-brand-border bg-white text-left overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-dessa-teal"
               >
@@ -553,7 +633,7 @@ function RatingMark({ className }) {
 
 // Concept C (2026-10-20, first F) is the same page with `invite` on: the "No data" card becomes an empty state that
 // invites the user to complete their first DESSA rating.
-// Concept D illustration (2026-10-20, after a Sprig empty state the user shared): a loose grid of tinted tiles,
+// Concept C's Icon tiles image (2026-10-20, first its own concept D; after a Sprig empty state the user shared): a loose grid of tinted tiles,
 // three over two, each with a dark line icon for part of the rating story: students, rating, strengths,
 // strategies, growth. Tints come from brand colors.
 const INVITE_TILES = [
@@ -575,9 +655,11 @@ function InviteTiles() {
   )
 }
 
-// `tiles` (2026-10-20, concept D) swaps the rating mark composition for the tile grid.
-function ProductionEmptyDashboard({ invite = false, tiles = false }) {
+// Concept C's Nav subtab (2026-10-20) picks the rating mark or the tile grid.
+function ProductionEmptyDashboard({ invite = false }) {
   const navigate = useNavigate()
+  const simulateRating = useSimulateRating()
+  const { inviteArt } = useDashboardConcept()
 
   return (
     <div className="px-6 pt-10 pb-7 min-h-[calc(100vh-3.5rem)] bg-org-gray-50">
@@ -602,14 +684,14 @@ function ProductionEmptyDashboard({ invite = false, tiles = false }) {
 
       {invite ? (
         <motion.section {...stagger(2)} className="flex flex-col items-center justify-center min-h-[310px] rounded-md bg-white px-6 py-12 text-center">
-          {tiles ? <InviteTiles /> : <RatingMark className="w-32 h-32 mb-6 text-dessa-teal" />}
+          {inviteArt === 'tiles' ? <InviteTiles /> : <RatingMark className="w-32 h-32 mb-6 text-mtw-purple" />}
           <h2 className="text-2xl font-semibold text-brand-text">See your students' strengths</h2>
           <p className="text-base text-brand-subtext mt-2 max-w-xl">
             Complete your first DESSA rating and this dashboard fills in with where each student shines, where they could use support, and strategies to try.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
             <button
-              onClick={() => navigate('/ratings')}
+              onClick={simulateRating}
               className="flex items-center gap-1.5 h-10 px-5 rounded-md bg-dessa-teal text-sm font-semibold text-white hover:bg-dessa-teal/90 transition-colors"
             >
               Start rating
@@ -627,15 +709,186 @@ function ProductionEmptyDashboard({ invite = false, tiles = false }) {
   )
 }
 
+// Simulated rating flow (2026-10-20). Each concept's "Start rating" stands in for the whole flow (rating every
+// student) and lands back on the dashboard, now in its after ratings view, with a toast to mark the moment.
+function useSimulateRating() {
+  const { setRated } = useDashboardConcept()
+  return () => {
+    setRated(true)
+    window.scrollTo({ top: 0 })
+    toast.success('Your first ratings are in', { description: 'Your dashboard now shows where your students shine.' })
+  }
+}
+
+// After ratings view, one per concept (2026-10-20). A placeholder until the user shares the mock dashboard
+// designs; it keeps the concept's greeting so the switch reads as the same page filling in.
+function AfterRatingsPlaceholder({ concept }) {
+  return (
+    <div className="px-6 pt-10 pb-7">
+      <motion.h1 {...stagger(0)} className="text-[32px] font-semibold leading-tight tracking-tight text-brand-text mb-5">Welcome back, Tara</motion.h1>
+      <motion.section {...stagger(1)} className="flex flex-col items-center justify-center min-h-80 rounded-xl border-2 border-dashed border-brand-border bg-white px-6 text-center">
+        <p className="text-lg font-semibold text-brand-text">Concept {concept.toUpperCase()} dashboard after ratings</p>
+        <p className="text-sm text-brand-subtext mt-1">Mock dashboard coming next. Use Before ratings in the top bar to start over.</p>
+      </motion.section>
+    </div>
+  )
+}
+
+// Concept D after ratings (2026-10-20): the production dashboard a user lands on after rating (from the user's
+// screenshot: ratings pie, classroom strategies, competencies) with mock data. The design work is the Move This
+// World banner, offered two ways with the Nav subtab: a compact version of D's curriculum card, or the card
+// recommending a lesson matched to the ratings (a soft amber strip was tried and removed 2026-10-20).
+const MOCK_RATINGS = [
+  { key: 'strength', label: 'Strength', count: 3, fill: 'fill-dessa-green' },
+  { key: 'typical', label: 'Typical', count: 1, fill: 'fill-dessa-blue' },
+]
+function RatingsPie() {
+  const total = MOCK_RATINGS.reduce((n, r) => n + r.count, 0)
+  let start = -Math.PI / 2
+  const slices = MOCK_RATINGS.map(r => {
+    const end = start + (2 * Math.PI * r.count) / total
+    const large = end - start > Math.PI ? 1 : 0
+    const pt = a => `${(100 + 90 * Math.cos(a)).toFixed(2)} ${(100 + 90 * Math.sin(a)).toFixed(2)}`
+    const mid = (start + end) / 2
+    const slice = { ...r, d: `M100 100 L${pt(start)} A90 90 0 ${large} 1 ${pt(end)} Z`, lx: 100 + 50 * Math.cos(mid), ly: 100 + 50 * Math.sin(mid) }
+    start = end
+    return slice
+  })
+  return (
+    <svg viewBox="0 0 200 200" className="w-64 h-64" role="img" aria-label="3 students strength, 1 student typical">
+      {slices.map(sl => <path key={sl.key} d={sl.d} className={sl.fill} stroke="white" strokeWidth="2" />)}
+      {slices.map(sl => (
+        <text key={`t${sl.key}`} x={sl.lx} y={sl.ly} textAnchor="middle" className="fill-brand-text text-[10px] font-semibold">
+          <tspan x={sl.lx} dy="-2">{sl.count} {sl.count === 1 ? 'student' : 'students'}</tspan>
+          <tspan x={sl.lx} dy="12">{sl.label}</tspan>
+        </text>
+      ))}
+    </svg>
+  )
+}
+
+const MOCK_COMPETENCIES = [
+  { name: 'Self-Awareness', need: 0, typical: 1, strength: 3 },
+  { name: 'Self-Management', need: 1, typical: 2, strength: 1 },
+  { name: 'Social Awareness', need: 0, typical: 2, strength: 2 },
+  { name: 'Relationship Skills', need: 0, typical: 0, strength: 4 },
+  { name: 'Responsible Decision Making', need: 0, typical: 1, strength: 3 },
+  { name: 'Optimistic Thinking', need: 0, typical: 2, strength: 2 },
+]
+function CompetencyRows() {
+  return (
+    <div className="flex flex-col gap-3">
+      {MOCK_COMPETENCIES.map(c => {
+        const total = c.need + c.typical + c.strength
+        return (
+          <div key={c.name} className="flex items-center gap-4">
+            <p className="w-56 shrink-0 text-sm text-brand-text">{c.name}</p>
+            <div className="flex-1 flex h-4 rounded-full overflow-hidden bg-brand-bg">
+              {[['need', 'bg-dessa-salmon'], ['typical', 'bg-dessa-blue'], ['strength', 'bg-dessa-green']].map(([k, bg]) => (
+                c[k] > 0 && <span key={k} className={bg} style={{ width: `${(c[k] / total) * 100}%` }} />
+              ))}
+            </div>
+          </div>
+        )
+      })}
+      <div className="flex items-center gap-4 mt-1 text-xs text-brand-subtext">
+        <span className="flex items-center"><Dot color="#F08080" />Need</span>
+        <span className="flex items-center"><Dot color="#A8C8E8" />Typical</span>
+        <span className="flex items-center"><Dot color="#5DB87A" />Strength</span>
+      </div>
+    </div>
+  )
+}
+
+// Banner image variations (2026-10-20): D's amber flower, then the user's idea-1 to idea-3 (public/). Each idea file
+// is a white canvas around a tinted square, so the square's tint becomes the panel background and the shape is
+// drawn cropped to that square. Clicking the image cycles through them; a prototype shortcut, with no hover styling.
+const BANNER_ARTS = [
+  null,
+  { tint: 'rgba(160, 201, 235, 0.32)', fill: '#142C4D', d: 'M179.089 97C179.715 97.7127 183.937 105.899 184.477 107.054C197.053 133.906 214.62 144.838 240.287 158.043C206.027 174.709 196.096 185.052 179.309 218.875C178.217 217.573 171.097 203.439 169.102 200.147C155.692 178.03 140.335 169.093 118 157.997C152.752 140.711 161.823 131.312 179.089 97Z' },
+  { tint: 'rgba(255, 162, 0, 0.22)', fill: '#FA5A27', d: 'M137.481 97.1207C164.07 97.1808 174.473 136.645 179.107 157.353C182.98 139.241 193.795 101.198 215.276 97.3182C220.69 96.3574 226.269 97.5925 230.768 100.75C235.537 104.112 238.772 109.236 239.754 114.987C244.314 141.269 198.92 155.06 179.549 158.249C200.006 162.81 254.177 177.517 236.63 209.97C233.634 215.511 227.104 218.317 221.181 219.629C195.2 220.822 182.82 179.726 179.31 159.474C173.933 176.853 166.022 214.131 144.417 219.154C138.85 220.445 132.994 219.454 128.158 216.403C123.321 213.403 119.878 208.605 118.577 203.066C112.28 175.376 159.178 162.6 178.641 158.24C160.583 155.629 149.444 150.361 133.909 141.758C112.562 129.931 111.887 102.009 137.481 97.1207Z' },
+  { tint: 'rgba(255, 120, 124, 0.2)', fill: '#FFA200', d: 'M177.911 89.8213C192.54 93.1064 192.245 115.877 191.519 127.761C219.625 91.9367 249.637 110.436 209.767 145.597C212.221 145.47 214.689 145.385 217.15 145.342C256.232 144.844 259.124 173.343 209.541 171.358C212.331 173.581 214.957 176.007 217.39 178.617C244.31 207.199 220.4 223.612 191.491 189.19C192.561 201.938 192.245 219.221 180.482 227C179.988 227.003 179.488 226.985 178.994 226.948C165.64 225.848 165.133 199.176 165.983 189.222C163.824 191.902 161.486 194.434 158.991 196.796C131.042 223.68 113.171 201.599 147.838 171.394C145.13 171.515 142.422 171.591 139.714 171.622C101.209 171.848 98.8024 143.883 147.7 145.535C110.093 114.449 134.401 89.3875 165.784 127.622C165.017 115.244 165.257 96.0975 177.911 89.8213Z' },
+]
+
+function CurriculumBanner({ style }) {
+  const navigate = useNavigate()
+  const [art, setArt] = useState(0)
+  // Card and Recommendation: a compact version of D's curriculum card. A static card (2026-10-20); only the
+  // Browse courses link is interactive.
+  const recommend = style === 'recommend'
+  return (
+    <div className="w-full flex items-stretch rounded-xl border border-brand-border bg-white overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setArt(a => (a + 1) % BANNER_ARTS.length)}
+        aria-label="Show the next image"
+        className={`w-28 shrink-0 cursor-default focus:outline-none ${BANNER_ARTS[art] ? '' : 'bg-mtw-amberLight p-3'}`}
+        style={BANNER_ARTS[art] ? { background: BANNER_ARTS[art].tint } : undefined}
+      >
+        {BANNER_ARTS[art] ? (
+          <svg viewBox="86 65 186 186" preserveAspectRatio="xMidYMid slice" className="w-full h-full" aria-hidden="true">
+            <path d={BANNER_ARTS[art].d} fill={BANNER_ARTS[art].fill} />
+          </svg>
+        ) : <CurriculumIllustration />}
+      </button>
+      <div className="flex-1 min-w-0 px-5 py-4">
+        <span className="rounded-full bg-brand-bg px-2.5 py-1 text-xs font-medium text-brand-text">{recommend ? 'Recommended for your class' : 'Curriculum'}</span>
+        <p className="text-lg font-semibold text-brand-text mt-2">{recommend ? 'Cooling Down Strategies' : 'Jump back into the curriculum'}</p>
+        <p className="text-sm text-brand-subtext mt-0.5">{recommend ? 'A Move This World lesson to build Self-Management, based on your ratings.' : 'Pick up where you left off.'}</p>
+      </div>
+      {/* "Browse courses" with the arrow (2026-10-20), in place of the arrow alone. */}
+      <button
+        onClick={() => navigate('/mtw')}
+        className="group self-center inline-flex items-center gap-1.5 mr-5 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4 transition-colors shrink-0"
+      >
+        Browse courses
+        <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+      </button>
+    </div>
+  )
+}
+
+function AfterRatingsD() {
+  const { bannerStyle } = useDashboardConcept()
+  const card = 'bg-white rounded-2xl border border-brand-border shadow-sm'
+  const header = (title) => (
+    <div className="px-5 pt-5 pb-4 border-b border-brand-border flex items-center justify-between gap-3">
+      <div>
+        <h3 className="text-base font-semibold text-brand-text">{title}</h3>
+        <button className="text-sm font-semibold text-dessa-teal hover:text-dessa-navy transition-colors mt-0.5">View details</button>
+      </div>
+      <RatingWindowSelect label="26-27 Pre" />
+    </div>
+  )
+  return (
+    <div className="px-6 pt-10 pb-7">
+      <motion.h1 {...stagger(0)} className="text-[32px] font-semibold leading-tight tracking-tight text-brand-text mb-5">Welcome back, Tara</motion.h1>
+      <motion.div {...stagger(1)} className="mb-5"><CurriculumBanner style={bannerStyle} /></motion.div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        <motion.div {...stagger(2)} className={`${card} flex flex-col`}>
+          {header("My students' DESSA ratings")}
+          <div className="flex-1 flex items-center justify-center p-5"><RatingsPie /></div>
+        </motion.div>
+        <motion.div {...stagger(2)}><StrategiesCard stacked quiet /></motion.div>
+      </div>
+      <motion.div {...stagger(3)} className={card}>
+        {header('Competencies')}
+        <div className="p-5"><CompetencyRows /></div>
+      </motion.div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { dashboardConcept } = useDashboardConcept()
+  const { dashboardConcept, rated } = useDashboardConcept()
+  if (rated && dashboardConcept === 'd') return <AfterRatingsD />
+  if (rated && ['c', 'e'].includes(dashboardConcept)) return <AfterRatingsPlaceholder concept={dashboardConcept} />
   // Order (2026-10-20): B is always the production empty state, right after A; the proposals follow.
   if (dashboardConcept === 'b') return <ProductionEmptyDashboard />
   if (dashboardConcept === 'c') return <ProductionEmptyDashboard invite />
-  if (dashboardConcept === 'd') return <ProductionEmptyDashboard invite tiles />
-  if (dashboardConcept === 'e') return <ShowcaseDashboard />
-  if (dashboardConcept === 'f') return <EditorialDashboard />
+  if (dashboardConcept === 'd') return <ShowcaseDashboard />
+  if (dashboardConcept === 'e') return <EditorialDashboard />
 
   return (
     <div className="px-6 pt-10 pb-7">
@@ -722,64 +975,7 @@ export default function Dashboard() {
 
       {/* ── Classroom Strategies ── */}
       <motion.div {...stagger(4)}>
-        <div className="bg-white rounded-2xl border border-brand-border shadow-sm flex flex-col">
-          <div className="px-5 pt-5 pb-4 border-b border-brand-border">
-            <h3 className="text-base font-semibold text-brand-text">
-              Try These Classroom Strategies
-            </h3>
-            <p className="text-sm text-brand-subtext mt-0.5">
-              We've built a full library of proven strategies. Here are two samples to explore.
-            </p>
-          </div>
-          <div className="p-5 flex flex-col gap-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {strategies.map((s) => (
-                <motion.div
-                  key={s.title}
-                  whileHover={{ y: -1 }}
-                  className="flex rounded-xl border overflow-hidden cursor-pointer hover:shadow-sm transition-shadow"
-                  style={{ borderColor: `${s.color}40` }}
-                >
-                  <div
-                    className="w-32 flex-shrink-0 flex flex-col items-center justify-center px-3 py-4 text-center"
-                    style={{ background: s.bg }}
-                  >
-                    <span className="text-xl mb-1.5">{s.emoji}</span>
-                    <p
-                      className="text-xs font-semibold leading-snug"
-                      style={{ color: s.color }}
-                    >
-                      {s.competency}
-                    </p>
-                  </div>
-                  <div className="flex-1 px-4 py-4">
-                    <p className="text-sm text-brand-subtext mb-1.5">
-                      <span className="font-semibold text-brand-text">Title:</span>{' '}
-                      {s.title}
-                    </p>
-                    <p className="text-sm text-brand-subtext mb-1.5">
-                      <span className="font-semibold text-brand-text">Duration:</span>{' '}
-                      {s.duration}
-                    </p>
-                    <p className="text-sm text-brand-subtext leading-relaxed">
-                      <span className="font-semibold text-brand-text">Description:</span>{' '}
-                      {s.description}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            <p className="text-sm text-center text-brand-subtext px-2">
-              Class-level strategy recommendations will appear once a Full DESSA has been
-              completed.
-            </p>
-
-            <button className="w-full py-2.5 rounded-md text-sm font-semibold border border-dessa-teal text-dessa-teal hover:bg-dessa-tealLight transition-colors">
-              Browse the DESSA Strategy Library
-            </button>
-          </div>
-        </div>
+        <StrategiesCard />
       </motion.div>
 
     </div>
