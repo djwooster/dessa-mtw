@@ -832,16 +832,20 @@ function CurriculumBanner({ style }) {
         ) : <CurriculumIllustration />}
       </button>
       <div className="flex-1 min-w-0 px-5 py-4">
-        <span className="rounded-full bg-brand-bg px-2.5 py-1 text-xs font-medium text-brand-text">{recommend ? 'Recommended for your class' : 'Curriculum'}</span>
+        {/* Plain label with a book icon (2026-10-20), no pill background. */}
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-subtext">
+          <BookOpen size={14} aria-hidden="true" />
+          {recommend ? 'Recommended for your class' : 'Curriculum'}
+        </span>
         <p className="text-lg font-semibold text-brand-text mt-2">{recommend ? 'Cooling Down Strategies' : 'Jump back into the curriculum'}</p>
         <p className="text-sm text-brand-subtext mt-0.5">{recommend ? 'A Move This World lesson to build Self-Management, based on your ratings.' : 'Pick up where you left off.'}</p>
       </div>
-      {/* "Browse courses" with the arrow (2026-10-20), in place of the arrow alone. */}
+      {/* Text link with the arrow (2026-10-20), first "Browse courses", now "Next lesson". */}
       <button
         onClick={() => navigate('/mtw')}
         className="group self-center inline-flex items-center gap-1.5 mr-5 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4 transition-colors shrink-0"
       >
-        Browse courses
+        Next lesson
         <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
       </button>
     </div>
