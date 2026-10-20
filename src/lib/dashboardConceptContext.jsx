@@ -8,18 +8,13 @@ const DashboardConceptContext = createContext(null)
 
 export function DashboardConceptProvider({ children }) {
   const [dashboardConcept, setDashboardConcept] = useState('a')
-  // Concept B's illustration subtab (2026-10-19): 'circles' (overlapping circles and the dot grid) or 'hero'
-  // (one large style guide shape with a cutout, formerly concept H).
-  const [showcaseArt, setShowcaseArt] = useState('circles')
-  // Concept C's image subtab (2026-10-20, C and D combined): 'mark' (the rating mark) or 'tiles' (icon tiles).
-  const [inviteArt, setInviteArt] = useState('mark')
   // Simulated ratings (2026-10-20): a concept's "Start rating" stands in for the whole rating flow and flips this
   // on, so the dashboard shows that concept's after ratings view. The Nav Before | After control resets it.
   const [rated, setRated] = useState(false)
   // Concept D after ratings (2026-10-20): the Move This World banner style, 'card' or 'recommend'.
   const [bannerStyle, setBannerStyle] = useState('card')
   return (
-    <DashboardConceptContext.Provider value={{ dashboardConcept, setDashboardConcept, showcaseArt, setShowcaseArt, inviteArt, setInviteArt, rated, setRated, bannerStyle, setBannerStyle }}>
+    <DashboardConceptContext.Provider value={{ dashboardConcept, setDashboardConcept, rated, setRated, bannerStyle, setBannerStyle }}>
       {children}
     </DashboardConceptContext.Provider>
   )

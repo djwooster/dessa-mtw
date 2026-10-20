@@ -56,7 +56,8 @@ Two text colors, full stop: `brand-text` (primary) and `brand-subtext` (secondar
 
 **Buttons:**
 - DESSA-context buttons: `rounded-md`. MTW-context buttons: `rounded-full`. This split is intentional (see brand personalities below) — don't unify the shape language across contexts.
-- Default height `h-10`–`h-11` for primary actions; horizontal padding scales with size (`px-4` small / `px-6` default / `px-8` large).
+- Default primary button (settled 2026-10-20 on Dashboard concept C): `h-9 px-4 gap-1 rounded-md text-sm font-semibold`, a 14px trailing chevron when it moves the user forward. Go larger only for a hero action (`h-10 px-5`).
+- Default link button (2026-10-20): `inline-flex items-center gap-1.5 text-sm font-semibold text-dessa-teal`, a 14px trailing `ArrowRight`; on hover it turns `dessa-navy`, underlines (`underline-offset-4`) and the arrow nudges right (`translate-x-0.5`). Use it for a card's call to action, and keep the card itself static (no hover lift) so the link is the only interactive part.
 
 **Motion & delight:**
 - Page reveals `{opacity:0, y:8} → {opacity:1, y:0}`, card hover `{y:-2}` (existing Framer Motion conventions — keep using these as the baseline, don't invent new easing/timing per screen).

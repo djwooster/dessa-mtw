@@ -58,6 +58,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-center" richColors />
+      {/* Dashboard toasts (2026-10-20): top right, just under the 56px nav, for custom white toasts. */}
+      <Toaster id="dashboard" position="top-right" offset={{ top: 72, right: 24 }} />
       <ResourcesConceptProvider>
         <SiteEngagementConceptProvider>
           <DceConceptProvider>

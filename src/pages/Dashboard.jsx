@@ -1,7 +1,7 @@
-import { motion } from 'framer-motion'
+import { motion, MotionConfig } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { ChevronRight, Calendar, ChevronDown, ClipboardCheck, BookOpen, ArrowRight, ArrowUpRight, Info, Users, Sparkles, Lightbulb, TrendingUp } from 'lucide-react'
+import { ChevronRight, Calendar, ChevronDown, ClipboardCheck, BookOpen, ArrowRight, Info, X, Users, Sparkles, Lightbulb, TrendingUp } from 'lucide-react'
 import { SidePanel } from '../components/ui/side-panel'
 import { useDashboardConcept } from '../lib/dashboardConceptContext'
 import { toast } from 'sonner'
@@ -324,12 +324,9 @@ function StrategiesCard({ stacked = false, quiet = false }) {
         </p>
 
         {quiet ? (
-          <button
-            onClick={() => navigate('/resource-library')}
-            className="group self-center inline-flex items-center gap-1.5 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4 transition-colors"
-          >
+          <button onClick={() => navigate('/resource-library')} className={`self-center ${TEXT_LINK}`}>
             Browse the DESSA Strategy Library
-            <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+            <ArrowRight size={14} className={TEXT_LINK_ARROW} aria-hidden="true" />
           </button>
         ) : (
           <button className="w-full py-2.5 rounded-md text-sm font-semibold border border-dessa-teal text-dessa-teal hover:bg-dessa-tealLight transition-colors">
@@ -532,7 +529,7 @@ const SHOWCASE_ILLUSTRATIONS = {
   hero: { ratings: RatingsHeroShape, curriculum: CurriculumHeroShape },
 }
 
-// The Nav subtab picks Circles or Hero shape.
+// Clicking an image picks Circles or Hero shape.
 // The new customer subtext (2026-10-19, from concept B, shared with every concept): DESSA is a dashed link that
 // opens the About the DESSA panel.
 function PlatformSubtext({ className = '' }) {
@@ -557,7 +554,8 @@ function PlatformSubtext({ className = '' }) {
 function ShowcaseDashboard() {
   const navigate = useNavigate()
   const simulateRating = useSimulateRating()
-  const { showcaseArt } = useDashboardConcept()
+  // Clicking either image swaps both between Circles and Hero shape (2026-10-20, replaced the Nav subtab).
+  const [showcaseArt, setShowcaseArt] = useState('circles')
   const art = SHOWCASE_ILLUSTRATIONS[showcaseArt === 'hero' ? 'hero' : 'b']
   const look = {
     ratings: { tag: 'DESSA', panel: 'bg-dessa-tealLight', Illustration: art.ratings },
@@ -576,28 +574,29 @@ function ShowcaseDashboard() {
           {NEW_CUSTOMER_CARDS.map((c, i) => {
             const { tag, panel, Illustration } = look[c.key]
             return (
-              <motion.button
+              // Static card (2026-10-20): no hover; the call to action under the description is the only link.
+              <motion.div
                 key={c.key}
                 {...stagger(i + 1)}
-                whileHover={{ y: -2 }}
-                onClick={() => (c.key === 'ratings' ? simulateRating() : navigate(c.to))}
-                aria-label={`${c.title}. ${c.cta}`}
-                className="flex flex-col rounded-2xl border border-brand-border bg-white text-left overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-dessa-teal"
+                className="flex flex-col rounded-2xl border border-brand-border bg-white overflow-hidden"
               >
                 <div className="p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="rounded-full bg-brand-bg px-2.5 py-1 text-xs font-medium text-brand-text">{tag}</span>
-                    <span className="flex items-center justify-center w-7 h-7 rounded-full bg-brand-bg text-brand-text">
-                      <ArrowUpRight size={14} aria-hidden="true" />
-                    </span>
-                  </div>
+                  <span className="rounded-full bg-brand-bg px-2.5 py-1 text-xs font-medium text-brand-text">{tag}</span>
                   <h2 className="text-2xl font-semibold leading-tight tracking-tight text-brand-text mt-4">{c.title}</h2>
                   <p className="text-sm text-brand-subtext mt-3">{c.body}</p>
+                  <button onClick={() => (c.key === 'ratings' ? simulateRating() : navigate(c.to))} className={`mt-4 ${TEXT_LINK}`}>
+                    {c.cta}
+                    <ArrowRight size={14} className={TEXT_LINK_ARROW} aria-hidden="true" />
+                  </button>
                 </div>
-                <div className={`mt-auto h-56 rounded-2xl p-6 ${panel}`}>
+                {/* Clicking the image swaps the art. */}
+                <div
+                  className={`mt-auto h-56 rounded-2xl p-6 ${panel}`}
+                  onClick={() => setShowcaseArt(a => (a === 'hero' ? 'circles' : 'hero'))}
+                >
                   <Illustration />
                 </div>
-              </motion.button>
+              </motion.div>
             )
           })}
         </div>
@@ -655,45 +654,50 @@ function InviteTiles() {
   )
 }
 
-// Concept C's Nav subtab (2026-10-20) picks the rating mark or the tile grid.
+// On concept C, clicking the image swaps the rating mark and the tile grid.
 function ProductionEmptyDashboard({ invite = false }) {
   const navigate = useNavigate()
   const simulateRating = useSimulateRating()
-  const { inviteArt } = useDashboardConcept()
+  // Concept C's image: clicking it swaps the rating mark and the icon tiles (2026-10-20, replaced the Nav subtab).
+  const [inviteArt, setInviteArt] = useState('mark')
 
   return (
     <div className="px-6 pt-10 pb-7 min-h-[calc(100vh-3.5rem)] bg-org-gray-50">
       <motion.h1 {...stagger(0)} className="text-[28px] font-bold text-brand-text mb-5">Welcome back, Tara!</motion.h1>
 
-      <motion.div {...stagger(1)} className="flex items-center gap-4 rounded-sm bg-org-primary-900 px-5 py-3 mb-3">
-        <div className="w-12 h-10 rounded-sm bg-white p-1 shrink-0">
-          <img src="/logo-png.png" alt="Move This World" className="w-full h-full object-contain" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-white">Move This World · Curriculum</p>
-          <p className="text-base font-semibold text-white">Choose a course to get started with your students</p>
-        </div>
-        <button
-          onClick={() => navigate('/mtw')}
-          className="flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-org-primary-700 text-sm font-semibold text-white hover:bg-org-primary-hover transition-colors shrink-0"
-        >
-          Browse Courses
-          <ChevronRight size={14} aria-hidden="true" />
-        </button>
-      </motion.div>
+      {/* Concept C uses concept D's new curriculum banner (2026-10-20); B keeps production's navy banner. */}
+      {invite ? (
+        <motion.div {...stagger(1)} className="mb-3"><CurriculumBanner style="card" buttonCta /></motion.div>
+      ) : (
+        <motion.div {...stagger(1)} className="flex items-center gap-4 rounded-sm bg-org-primary-900 px-5 py-3 mb-3">
+          <div className="w-12 h-10 rounded-sm bg-white p-1 shrink-0">
+            <img src="/logo-png.png" alt="Move This World" className="w-full h-full object-contain" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-white">Move This World · Curriculum</p>
+            <p className="text-base font-semibold text-white">Choose a course to get started with your students</p>
+          </div>
+          <button
+            onClick={() => navigate('/mtw')}
+            className="flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-org-primary-700 text-sm font-semibold text-white hover:bg-org-primary-hover transition-colors shrink-0"
+          >
+            Browse Courses
+            <ChevronRight size={14} aria-hidden="true" />
+          </button>
+        </motion.div>
+      )}
 
       {invite ? (
         <motion.section {...stagger(2)} className="flex flex-col items-center justify-center min-h-[310px] rounded-md bg-white px-6 py-12 text-center">
-          {inviteArt === 'tiles' ? <InviteTiles /> : <RatingMark className="w-32 h-32 mb-6 text-mtw-purple" />}
+          <div onClick={() => setInviteArt(a => (a === 'tiles' ? 'mark' : 'tiles'))}>
+            {inviteArt === 'tiles' ? <InviteTiles /> : <RatingMark className="w-32 h-32 mb-6 text-mtw-purple" />}
+          </div>
           <h2 className="text-2xl font-semibold text-brand-text">See your students' strengths</h2>
           <p className="text-base text-brand-subtext mt-2 max-w-xl">
             Complete your first DESSA rating and this dashboard fills in with where each student shines, where they could use support, and strategies to try.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
-            <button
-              onClick={simulateRating}
-              className="flex items-center gap-1.5 h-10 px-5 rounded-md bg-dessa-teal text-sm font-semibold text-white hover:bg-dessa-teal/90 transition-colors"
-            >
+            <button onClick={simulateRating} className={PRIMARY_BUTTON}>
               Start rating
               <ChevronRight size={14} aria-hidden="true" />
             </button>
@@ -716,21 +720,50 @@ function useSimulateRating() {
   return () => {
     setRated(true)
     window.scrollTo({ top: 0 })
-    toast.success('Your first ratings are in', { description: 'Your dashboard now shows where your students shine.' })
+    toast.custom(id => <RatingsDoneToast onClose={() => toast.dismiss(id)} />, { toasterId: 'dashboard', duration: 5000 })
   }
 }
 
-// After ratings view, one per concept (2026-10-20). A placeholder until the user shares the mock dashboard
-// designs; it keeps the concept's greeting so the switch reads as the same page filling in.
-function AfterRatingsPlaceholder({ concept }) {
+// Completion toast (2026-10-20): white, slides in from the right at the top right. A teal circle pops in, a ring
+// ripples out once and the check draws itself. Motion is skipped for users who ask for reduced motion.
+function RatingsDoneToast({ onClose }) {
   return (
-    <div className="px-6 pt-10 pb-7">
-      <motion.h1 {...stagger(0)} className="text-[32px] font-semibold leading-tight tracking-tight text-brand-text mb-5">Welcome back, Tara</motion.h1>
-      <motion.section {...stagger(1)} className="flex flex-col items-center justify-center min-h-80 rounded-xl border-2 border-dashed border-brand-border bg-white px-6 text-center">
-        <p className="text-lg font-semibold text-brand-text">Concept {concept.toUpperCase()} dashboard after ratings</p>
-        <p className="text-sm text-brand-subtext mt-1">Mock dashboard coming next. Use Before ratings in the top bar to start over.</p>
-      </motion.section>
-    </div>
+    <MotionConfig reducedMotion="user">
+      <motion.div
+        initial={{ x: 40, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+        role="status"
+        className="flex items-start gap-3 w-[360px] rounded-xl border border-brand-border bg-white p-4 shadow-lg"
+      >
+        <svg viewBox="0 0 32 32" className="w-8 h-8 shrink-0 overflow-visible" aria-hidden="true">
+          <motion.circle
+            cx="16" cy="16" r="14" fill="none" className="stroke-dessa-teal" strokeWidth="2"
+            style={{ transformOrigin: '16px 16px' }}
+            initial={{ scale: 1, opacity: 0.5 }} animate={{ scale: 1.6, opacity: 0 }}
+            transition={{ delay: 0.3, duration: 0.6, ease: 'easeOut' }}
+          />
+          <motion.circle
+            cx="16" cy="16" r="14" className="fill-dessa-teal"
+            style={{ transformOrigin: '16px 16px' }}
+            initial={{ scale: 0 }} animate={{ scale: 1 }}
+            transition={{ type: 'spring', damping: 14, stiffness: 300, delay: 0.1 }}
+          />
+          <motion.path
+            d="M10 16.5 L14 20.5 L22 11.5" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+            transition={{ delay: 0.35, duration: 0.35, ease: 'easeOut' }}
+          />
+        </svg>
+        <div className="flex-1 min-w-0 pt-0.5">
+          <p className="text-sm font-semibold text-brand-text">Your first ratings are in</p>
+          <p className="text-sm text-brand-subtext mt-0.5">Your dashboard now shows where your students shine.</p>
+        </div>
+        <button onClick={onClose} aria-label="Dismiss" className="shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors">
+          <X size={14} />
+        </button>
+      </motion.div>
+    </MotionConfig>
   )
 }
 
@@ -810,7 +843,17 @@ const BANNER_ARTS = [
   { tint: 'rgba(255, 120, 124, 0.2)', fill: '#FFA200', d: 'M177.911 89.8213C192.54 93.1064 192.245 115.877 191.519 127.761C219.625 91.9367 249.637 110.436 209.767 145.597C212.221 145.47 214.689 145.385 217.15 145.342C256.232 144.844 259.124 173.343 209.541 171.358C212.331 173.581 214.957 176.007 217.39 178.617C244.31 207.199 220.4 223.612 191.491 189.19C192.561 201.938 192.245 219.221 180.482 227C179.988 227.003 179.488 226.985 178.994 226.948C165.64 225.848 165.133 199.176 165.983 189.222C163.824 191.902 161.486 194.434 158.991 196.796C131.042 223.68 113.171 201.599 147.838 171.394C145.13 171.515 142.422 171.591 139.714 171.622C101.209 171.848 98.8024 143.883 147.7 145.535C110.093 114.449 134.401 89.3875 165.784 127.622C165.017 115.244 165.257 96.0975 177.911 89.8213Z' },
 ]
 
-function CurriculumBanner({ style }) {
+// Primary button being tuned on concept C (2026-10-20): slightly tighter than the h-10 px-5 default. The design
+// system's button spacing gets updated to match once this is settled.
+const PRIMARY_BUTTON = 'inline-flex items-center gap-1 h-9 px-4 rounded-md bg-dessa-teal text-sm font-semibold text-white hover:bg-dessa-teal/90 transition-colors'
+
+// Default link button (2026-10-20, from the curriculum banner): teal semibold text with a trailing arrow; on hover
+// it turns navy, underlines and the arrow nudges right. Used for a card's call to action when the card is static.
+const TEXT_LINK = 'group inline-flex items-center gap-1.5 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4 transition-colors'
+const TEXT_LINK_ARROW = 'transition-transform group-hover:translate-x-0.5'
+
+// `buttonCta` (2026-10-20, concept C) shows Next lesson as the primary button instead of the text link.
+function CurriculumBanner({ style, buttonCta = false }) {
   const navigate = useNavigate()
   const [art, setArt] = useState(0)
   // Card and Recommendation: a compact version of D's curriculum card. A static card (2026-10-20); only the
@@ -841,13 +884,17 @@ function CurriculumBanner({ style }) {
         <p className="text-sm text-brand-subtext mt-0.5">{recommend ? 'A Move This World lesson to build Self-Management, based on your ratings.' : 'Pick up where you left off.'}</p>
       </div>
       {/* Text link with the arrow (2026-10-20), first "Browse courses", now "Next lesson". */}
-      <button
-        onClick={() => navigate('/mtw')}
-        className="group self-center inline-flex items-center gap-1.5 mr-5 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4 transition-colors shrink-0"
-      >
-        Next lesson
-        <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-      </button>
+      {buttonCta ? (
+        <button onClick={() => navigate('/mtw')} className={`self-center mr-5 shrink-0 ${PRIMARY_BUTTON}`}>
+          Next lesson
+          <ChevronRight size={14} aria-hidden="true" />
+        </button>
+      ) : (
+        <button onClick={() => navigate('/mtw')} className={`self-center mr-5 shrink-0 ${TEXT_LINK}`}>
+          Next lesson
+          <ArrowRight size={14} className={TEXT_LINK_ARROW} aria-hidden="true" />
+        </button>
+      )}
     </div>
   )
 }
@@ -886,8 +933,8 @@ function AfterRatingsD() {
 export default function Dashboard() {
   const navigate = useNavigate()
   const { dashboardConcept, rated } = useDashboardConcept()
-  if (rated && dashboardConcept === 'd') return <AfterRatingsD />
-  if (rated && ['c', 'e'].includes(dashboardConcept)) return <AfterRatingsPlaceholder concept={dashboardConcept} />
+  // D's after ratings screen is the default after view for every concept (2026-10-20); a concept can get its own later.
+  if (rated && ['c', 'd', 'e'].includes(dashboardConcept)) return <AfterRatingsD />
   // Order (2026-10-20): B is always the production empty state, right after A; the proposals follow.
   if (dashboardConcept === 'b') return <ProductionEmptyDashboard />
   if (dashboardConcept === 'c') return <ProductionEmptyDashboard invite />

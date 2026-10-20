@@ -101,7 +101,7 @@ export default function Nav() {
   const { dceConcept, setDceConcept } = useDceConcept()
   const { engagementConcept, setEngagementConcept } = useEngagementConcept()
   const { ytdPreview, setYtdPreview, overviewTab } = useEngagementVersion()
-  const { dashboardConcept, setDashboardConcept, showcaseArt, setShowcaseArt, inviteArt, setInviteArt, rated, setRated, bannerStyle, setBannerStyle } = useDashboardConcept()
+  const { dashboardConcept, setDashboardConcept, rated, setRated, bannerStyle, setBannerStyle } = useDashboardConcept()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
@@ -420,29 +420,12 @@ export default function Nav() {
               </TabsList>
             </Tabs>
           )}
-          {/* Concept D after ratings: the Move This World banner style (2026-10-20). */}
-          {location.pathname === '/' && dashboardConcept === 'd' && rated && (
+          {/* After ratings (D's screen, shared by C, D and E): the Move This World banner style (2026-10-20). */}
+          {location.pathname === '/' && ['c', 'd', 'e'].includes(dashboardConcept) && rated && (
             <Tabs value={bannerStyle} onValueChange={setBannerStyle} className="shrink-0 mr-2">
               <TabsList className="p-0.5">
                 <TabsTrigger value="card" className="text-xs px-3 py-1">Card</TabsTrigger>
                 <TabsTrigger value="recommend" className="text-xs px-3 py-1">Recommendation</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
-          {/* Concept C's image subtab (2026-10-20), C and D combined. */}
-          {location.pathname === '/' && dashboardConcept === 'c' && !rated && (
-            <Tabs value={inviteArt} onValueChange={setInviteArt} className="shrink-0 mr-2">
-              <TabsList className="p-0.5">
-                <TabsTrigger value="mark" className="text-xs px-3 py-1">Rating mark</TabsTrigger>
-                <TabsTrigger value="tiles" className="text-xs px-3 py-1">Icon tiles</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
-          {location.pathname === '/' && dashboardConcept === 'd' && !rated && (
-            <Tabs value={showcaseArt} onValueChange={setShowcaseArt} className="shrink-0 mr-2">
-              <TabsList className="p-0.5">
-                <TabsTrigger value="circles" className="text-xs px-3 py-1">Circles</TabsTrigger>
-                <TabsTrigger value="hero" className="text-xs px-3 py-1">Hero shape</TabsTrigger>
               </TabsList>
             </Tabs>
           )}
