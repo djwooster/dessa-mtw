@@ -507,7 +507,8 @@ export default function ReportEngagement() {
   )
   const viewTabs = showTabs && (
     <div role="tablist" aria-label="Engagement views" className="flex gap-4 border-b border-brand-border mb-6">
-      {[['graph', 'Graph'], ['table', 'Table']].map(([k, label]) => (
+      {/* Labels renamed 2026-10-20: Graph is Trend, Table is Weekly detail. */}
+      {[['graph', 'Trend'], ['table', 'Weekly detail']].map(([k, label]) => (
         <button
           key={k} type="button" role="tab" aria-selected={overviewTab === k}
           onClick={() => setOverviewTab(k)}

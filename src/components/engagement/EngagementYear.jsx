@@ -102,7 +102,7 @@ function YtdPrint({ rows, weeks, heat, schoolYear }) {
             <thead>
               <tr className="border-b border-brand-text">
                 <th className="py-1.5 pr-2 text-left font-semibold">Site</th>
-                <th className="py-1.5 px-1.5 text-right font-semibold">YTD</th>
+                <th className="py-1.5 px-1.5 text-right font-semibold whitespace-nowrap">YTD Average</th>
                 {b.map(w => <th key={w.i} className="py-1.5 px-1.5 text-right font-semibold whitespace-nowrap">{format(w.date, 'MMM d')}</th>)}
               </tr>
             </thead>
@@ -155,7 +155,8 @@ function YtdTable({ rows, weeks, heat = false, searching = false }) {
   // Pinned columns draw their right line as an inset shadow so it stays put while the weeks scroll under them.
   const pinLine = 'border-r-0 shadow-[inset_-1px_0_0_theme(colors.brand.border)]'
   const site = 'sticky left-0 z-10 w-56 min-w-56'
-  const avg = 'sticky left-56 z-10 w-16 min-w-16 text-right'
+  // Widened 2026-10-20 to fit the "YTD Average" header on one line.
+  const avg = 'sticky left-56 z-10 w-28 min-w-28 text-right whitespace-nowrap'
   const num = 'text-right tabular-nums'
   // Week columns share one width, never under 75px; past that the table scrolls with Site and YTD pinned.
   const weekCol = 'w-[75px] min-w-[75px]'
@@ -187,7 +188,7 @@ function YtdTable({ rows, weeks, heat = false, searching = false }) {
           </TableRow>
           <TableRow className="hover:bg-transparent">
             <TableHead className={`${site} ${TINT} ${head} ${pinLine}`}>Site</TableHead>
-            <TableHead className={`${avg} ${TINT} ${head} ${pinLine}`}>YTD</TableHead>
+            <TableHead className={`${avg} ${TINT} ${head} ${pinLine}`}>YTD Average</TableHead>
             {weeks.map(w => (
               <TableHead key={w.i} className={`${num} ${TINT} ${head} ${weekCol}`}>{format(w.date, 'MMM d')}</TableHead>
             ))}
@@ -300,7 +301,7 @@ export default function EngagementYear({ filters, lockedSiteId = null, tabs = nu
   }, [rows, q])
   // Export CSV (YTD view): one row per site under All sites, with YTD then each week, as on screen.
   function exportCsv() {
-    const head = ['Site', 'YTD', ...weeks.map(w => format(w.date, 'MMM d yyyy'))].map(v => `"${v}"`).join(',')
+    const head = ['Site', 'YTD Average', ...weeks.map(w => format(w.date, 'MMM d yyyy'))].map(v => `"${v}"`).join(',')
     const lines = shownRows.map(r => {
       return [`"${ytdRowName(r)}"`, `${ytdAvg(r, weeks)}%`, ...weeks.map(w => `${r.cells[w.i].pct}%`)].join(',')
     })

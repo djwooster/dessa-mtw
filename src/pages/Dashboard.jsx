@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Calendar, ChevronDown, ClipboardCheck, BookOpen, ArrowRight, ArrowUpRight } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronRight, Calendar, ChevronDown, ClipboardCheck, BookOpen, ArrowRight, ArrowUpRight, Info, Users, Sparkles, Lightbulb, TrendingUp } from 'lucide-react'
+import { SidePanel } from '../components/ui/side-panel'
 import { useDashboardConcept } from '../lib/dashboardConceptContext'
 
 const stagger = (i) => ({
@@ -263,171 +265,81 @@ const strategies = [
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
-// Concept C (2026-10-19): an editorial layout after an agency site the user shared. Thin rules, a large
+// Concept F (2026-10-19, earlier C, D and E): an editorial layout after an agency site the user shared. Thin rules, a large
 // headline above the subtext, then the two cards as columns split by a rule: icon,
 // large title, description, topic chips and a teal text link. Replaced the production empty state that held C.
 function EditorialDashboard() {
   const navigate = useNavigate()
   const look = {
-    ratings: { Icon: ClipboardCheck, badge: 'bg-dessa-teal text-white', chips: ['Competencies', 'Strengths', 'Strategies'] },
-    curriculum: { Icon: BookOpen, badge: 'bg-mtw-amber text-brand-text', chips: ['Courses', 'Video lessons', 'Activities'] },
+    // Badges are a
+    // light tint of the card's color with a darker icon; full amber is unreadable on its own tint, so the book
+    // uses a darker amber (one-off, about 4 to 1 contrast).
+    ratings: { Icon: ClipboardCheck, badge: 'bg-dessa-teal/15 text-dessa-teal', chips: ['Competencies', 'Strengths', 'Strategies'], copy: { title: 'Rate with the DESSA' } },
+    // `copy` (2026-10-20) overrides the shared card copy for this concept only.
+    curriculum: { Icon: BookOpen, badge: 'bg-mtw-amber/15 text-[#A86500]', chips: ['Courses', 'Video lessons', 'Activities'] },
   }
 
   return (
     <div className="px-6 pt-10 pb-7">
-      <motion.section {...stagger(0)} className="rounded-xl border border-brand-border bg-white px-8 pb-2">
-        <header className="flex flex-col gap-1 py-8 border-b border-brand-text/15">
-          <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-brand-text">
-            Welcome to your new platform, Tara.
-          </h1>
-          <p className="text-base text-brand-subtext max-w-2xl">Rate your students to see where they shine, or bring your first lesson to class.</p>
-        </header>
+      {/* Full width with the standard 24px gutter, 40px top and a 20px gap to the cards, matching concept E (2026-10-20). */}
+      <div>
+        {/* Heading out of the panel (2026-10-19), sized like concept B. */}
+        <motion.header {...stagger(0)} className="flex flex-col gap-1 mb-5">
+          <h1 className="text-[32px] font-semibold leading-tight tracking-tight text-brand-text">Welcome back, Tara</h1>
+          </motion.header>
+        <motion.section {...stagger(1)} className="rounded-xl border border-brand-border bg-white px-8 py-2">
 
-        <div className="grid grid-cols-1 md:grid-cols-2">
-          {NEW_CUSTOMER_CARDS.map((c, i) => {
-            const { Icon, badge, chips } = look[c.key]
-            return (
-              <div key={c.key} className={`flex flex-col py-6 ${i === 0 ? 'md:pr-8 md:border-r border-brand-text/15' : 'md:pl-8 border-t md:border-t-0 border-brand-text/15'}`}>
-                <span className={`flex items-center justify-center w-12 h-12 rounded-full mb-16 ${badge}`}>
-                  <Icon size={20} aria-hidden="true" />
-                </span>
-                <h2 className="text-2xl font-semibold leading-tight tracking-tight text-brand-text">{c.title}</h2>
-                <p className="text-sm text-brand-subtext mt-3">{c.body}</p>
-                <ul className="flex flex-wrap gap-1.5 mt-5" aria-label="Topics">
-                  {chips.map(chip => (
-                    <li key={chip} className="rounded-full border border-brand-text/25 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand-text">{chip}</li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() => navigate(c.to)}
-                  className="self-start inline-flex items-center gap-2 mt-6 pb-1 border-b-2 border-dessa-teal text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:border-dessa-navy transition-colors"
-                >
-                  {c.cta}
-                  <ArrowRight size={14} aria-hidden="true" />
-                </button>
-              </div>
-            )
-          })}
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            {NEW_CUSTOMER_CARDS.map((shared, i) => {
+              const { Icon, badge, chips, copy } = look[shared.key]
+              const c = { ...shared, ...copy }
+              return (
+                <div key={c.key} className={`flex flex-col py-6 ${i === 0 ? 'md:pr-8 md:border-r border-brand-text/15' : 'md:pl-8 border-t md:border-t-0 border-brand-text/15'}`}>
+                  <span className={`flex items-center justify-center w-[60px] h-[60px] rounded-md mb-16 ${badge}`}>
+                    <Icon size={24} aria-hidden="true" />
+                  </span>
+                  <h2 className="text-2xl font-semibold leading-tight tracking-tight text-brand-text">{c.title}</h2>
+                  <p className="text-sm text-brand-subtext mt-3 max-w-lg">{c.body}</p>
+                  <ul className="flex flex-wrap gap-1.5 mt-5" aria-label="Topics">
+                    {chips.map(chip => (
+                      <li key={chip} className="rounded-full border border-brand-text/25 px-2 py-0.5 text-xs font-medium text-brand-text">{chip}</li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => navigate(c.to)}
+                    className="self-start inline-flex items-center gap-2 mt-6 pb-1 border-b-2 border-dessa-teal text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:border-dessa-navy transition-colors"
+                  >
+                    {c.cta}
+                    <ArrowRight size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
 
-      </motion.section>
+        </motion.section>
+      </div>
     </div>
   )
 }
 
-// New customer concepts B, D and E (2026-10-19): the page has two jobs, getting the user to rate their students or
+// New customer concepts B to F (2026-10-19): the page has two jobs, getting the user to rate their students or
 // to explore the curriculum, so each gets a card with its own button. No "no data" message.
+// Curriculum comes first in every concept (2026-10-19). The two sentence descriptions started in concept C and
+// were shared with every concept the same day. The curriculum card welcomes users back (2026-10-20): they've
+// already been using it this school year.
 const NEW_CUSTOMER_CARDS = [
   {
-    key: 'ratings', to: '/ratings', title: 'Rate your students', cta: 'Start rating',
-    body: 'See where each student shines and where they could use support.',
+    key: 'curriculum', to: '/mtw', title: 'Jump back into the curriculum', cta: 'Continue your course',
+    body: 'Pick up where you left off. Each lesson pairs a short video with an activity your whole class can do together.',
   },
   {
-    key: 'curriculum', to: '/mtw', title: 'Explore the curriculum', cta: 'Browse courses',
-    body: 'Find a course and bring your first lesson to class.',
+    key: 'ratings', to: '/ratings', title: 'Rate your students', cta: 'Start rating',
+    body: 'See where each student shines and where they could use support. Your ratings unlock strategies and lessons matched to your class.',
   },
 ]
 
-// Concept D (was C): two plain cards side by side. Ratings is DESSA (teal, rounded-md button); the curriculum is
-// MTW (amber, rounded-full button), per the brand split.
-function TwoCardsDashboard() {
-  const navigate = useNavigate()
-  const look = {
-    ratings: { Icon: ClipboardCheck, tile: 'bg-dessa-tealLight text-dessa-teal', button: 'rounded-md bg-dessa-teal text-white hover:bg-dessa-teal/90' },
-    curriculum: { Icon: BookOpen, tile: 'bg-mtw-amberLight text-brand-text', button: 'rounded-full bg-mtw-amber text-brand-text hover:brightness-105' },
-  }
-
-  return (
-    <div className="px-6 pt-10 pb-7">
-      <motion.h1 {...stagger(0)} className="text-2xl font-semibold text-brand-text mb-6">Welcome back, Tara!</motion.h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {NEW_CUSTOMER_CARDS.map((c, i) => {
-          const { Icon, tile, button } = look[c.key]
-          return (
-            <motion.section key={c.key} {...stagger(i + 1)} className="flex flex-col items-start rounded-xl border border-brand-border bg-white p-5">
-              <div className={`flex items-center justify-center w-11 h-11 rounded-lg mb-4 ${tile}`}>
-                <Icon size={20} aria-hidden="true" />
-              </div>
-              <h2 className="text-lg font-semibold text-brand-text">{c.title}</h2>
-              <p className="text-sm text-brand-subtext mt-1 mb-5">{c.body}</p>
-              <button
-                onClick={() => navigate(c.to)}
-                className={`mt-auto flex items-center gap-1.5 h-10 px-5 text-sm font-semibold transition-all ${button}`}
-              >
-                {c.cta}
-                <ChevronRight size={14} aria-hidden="true" />
-              </button>
-            </motion.section>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// Shapes from the brand style guide (2026-10-19), each drawn in a perfect square as the guide asks.
-// Ratings: the 3 by 3 grid of dots. Curriculum: the two arches.
-function DotGridShape({ className }) {
-  return (
-    <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
-      {[8, 24, 40].flatMap(y => [8, 24, 40].map(x => <circle key={`${x}-${y}`} cx={x} cy={y} r="7.6" fill="currentColor" />))}
-    </svg>
-  )
-}
-const ARCH_PATHS = ['M0 0 A24 24 0 0 0 48 0 L36 0 A12 12 0 0 1 12 0 Z', 'M0 48 A24 24 0 0 1 48 48 L36 48 A12 12 0 0 0 12 48 Z']
-function ArchesShape({ className }) {
-  return (
-    <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
-      {ARCH_PATHS.map(d => <path key={d} d={d} fill="currentColor" />)}
-    </svg>
-  )
-}
-
-// Concept E (was D): the same two cards as bold color blocks, after an agency site the user shared. A shape at the top,
-// then the number, a large title with a round arrow, and the description. Everything shows without hover.
-// The whole card is the button.
-function BoldCardsDashboard() {
-  const navigate = useNavigate()
-  const look = {
-    ratings: { Shape: DotGridShape, card: 'bg-dessa-teal text-white', rule: 'border-white/60', ring: 'border-white' },
-    curriculum: { Shape: ArchesShape, card: 'bg-mtw-amber text-brand-text', rule: 'border-brand-text/60', ring: 'border-brand-text' },
-  }
-
-  return (
-    <div className="px-6 pt-10 pb-7">
-      <motion.h1 {...stagger(0)} className="text-2xl font-semibold text-brand-text mb-6">Welcome back, Tara!</motion.h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {NEW_CUSTOMER_CARDS.map((c, i) => {
-          const { Shape, card, rule, ring } = look[c.key]
-          return (
-            <motion.button
-              key={c.key}
-              {...stagger(i + 1)}
-              whileHover={{ y: -2 }}
-              onClick={() => navigate(c.to)}
-              aria-label={`${c.title}. ${c.cta}`}
-              className={`flex flex-col justify-between min-h-80 rounded-2xl p-6 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-dessa-teal ${card}`}
-            >
-              <Shape className="w-12 h-12" />
-              <div>
-                <p className="text-sm font-medium mb-1">0{i + 1}.</p>
-                <div className={`flex items-end justify-between gap-4 pb-4 border-b ${rule}`}>
-                  <h2 className="text-3xl font-semibold leading-tight">{c.title}</h2>
-                  <span className={`flex items-center justify-center w-10 h-10 rounded-full border-2 shrink-0 ${ring}`}>
-                    <ArrowRight size={18} aria-hidden="true" />
-                  </span>
-                </div>
-                <p className="text-sm mt-4">{c.body}</p>
-              </div>
-            </motion.button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// Concept B (2026-10-19, was E): a big greeting above the two cards, after a kids' sports
+// Concept E (2026-10-19, earlier B, C, D and E): a big greeting above the two cards, after a kids' sports
 // site the user shared. Each card has a tag, title and description over a tinted panel with a shape
 // illustration from the style guide (shapes only, no faces: the brand has none yet). The whole card is the button.
 // A burst with `n` points, for the Ratings illustration.
@@ -437,45 +349,148 @@ const burstPoints = (cx, cy, R, r, n) => Array.from({ length: n * 2 }, (_, k) =>
   return `${(cx + rad * Math.cos(a)).toFixed(1)},${(cy + rad * Math.sin(a)).toFixed(1)}`
 }).join(' ')
 
+// Card illustrations (refined 2026-10-19 after a Pinterest board the user shared): one bold, deliberate shape
+// from the style guide per card, filling the panel, in tones of the card's brand color. Circles overlap with a
+// multiply blend so the overlaps read as darker tones, like a printed poster.
 function RatingsIllustration() {
+  // The style guide's 3 by 3 dot grid, stepping from light to full teal like a rating scale.
   return (
-    <svg viewBox="0 0 200 160" className="w-full h-full" aria-hidden="true">
-      <polygon points={burstPoints(96, 88, 52, 34, 12)} className="fill-dessa-teal stroke-dessa-teal" strokeWidth="8" strokeLinejoin="round" />
-      <circle cx="150" cy="40" r="14" className="fill-mtw-coral" />
-      {[0, 1, 2].map(i => <circle key={i} cx={30 + i * 14} cy="132" r="5" className="fill-dessa-navy" />)}
+    <svg viewBox="0 0 136 136" className="w-full h-full" aria-hidden="true">
+      {[0, 1, 2].flatMap(row => [0, 1, 2].map(col => (
+        <circle
+          key={`${row}-${col}`} cx={24 + col * 44} cy={24 + row * 44} r="24"
+          className="fill-dessa-teal" fillOpacity={0.25 + (0.75 * (row + col)) / 4} style={{ mixBlendMode: 'multiply' }}
+        />
+      )))}
     </svg>
   )
 }
 
 function CurriculumIllustration() {
+  // The style guide's four petal flower, made of four large overlapping amber circles.
   return (
-    <svg viewBox="0 0 200 160" className="w-full h-full" aria-hidden="true">
-      <g transform="translate(58 38) scale(1.75)" className="fill-mtw-amber">
-        {ARCH_PATHS.map(d => <path key={d} d={d} />)}
-      </g>
-      <g className="fill-mtw-coral">
-        {[[0, -11], [11, 0], [0, 11], [-11, 0]].map(([x, y]) => <circle key={`${x}${y}`} cx={160 + x} cy={40 + y} r="10" />)}
-      </g>
-      <rect x="22" y="122" width="36" height="16" rx="8" className="fill-dessa-navy" />
+    <svg viewBox="0 0 120 120" className="w-full h-full" aria-hidden="true">
+      {[[60, 34], [86, 60], [60, 86], [34, 60]].map(([cx, cy]) => (
+        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="34" className="fill-mtw-amber" fillOpacity="0.7" style={{ mixBlendMode: 'multiply' }} />
+      ))}
     </svg>
+  )
+}
+
+// "About the DESSA" (2026-10-19, concept B): opened from the DESSA link in the subtext, for new Move This World
+// customers who may not know it yet.
+function AboutDessaPanel({ open, onClose }) {
+  const navigate = useNavigate()
+  const sections = [
+    ['What it is', 'The DESSA (Devereux Student Strengths Assessment) is a short rating that helps you see the strengths each student brings to class, like self awareness, relationship skills and decision making.'],
+    ['How it works', "You rate each student on everyday behaviors you've seen in class. Most educators rate three times a year: fall, winter and spring."],
+    ['What you get', 'A picture of where each student shines and where they could use support, plus classroom strategies and Move This World lessons matched to what you see.'],
+  ]
+  return (
+    <SidePanel
+      open={open}
+      onClose={onClose}
+      title="About the DESSA"
+      action={
+        <button onClick={() => navigate('/ratings')} className="flex-1 h-9 rounded-lg bg-dessa-teal text-sm font-medium text-white hover:bg-dessa-teal/90 transition-colors">
+          Start rating
+        </button>
+      }
+    >
+      <div className="flex flex-col gap-6">
+        {sections.map(([heading, body]) => (
+          <div key={heading}>
+            <h3 className="text-sm font-semibold text-brand-text mb-1.5">{heading}</h3>
+            <p className="text-sm text-brand-subtext leading-relaxed">{body}</p>
+          </div>
+        ))}
+      </div>
+    </SidePanel>
+  )
+}
+
+// Style guide star and flower shapes (2026-10-19), each drawn in a 100 by 100 square in currentColor, for
+// concept B's Hero shape subtab. Solid fills, no opacity.
+const turns = (n, offset = 0) => Array.from({ length: n }, (_, k) => offset + (360 * k) / n)
+const petalPath = (len, w) => `M50 50 C${50 - w} ${50 - len * 0.35} ${50 - w} ${50 - len} 50 ${50 - len} C${50 + w} ${50 - len} ${50 + w} ${50 - len * 0.35} 50 50 Z`
+const Petals = ({ n, len = 48, w = 14, offset = 0 }) => turns(n, offset).map(a => <path key={a} d={petalPath(len, w)} transform={`rotate(${a} 50 50)`} />)
+const scallopPath = (n, R, r) => {
+  const pt = (a, rad) => `${(50 + rad * Math.cos(a)).toFixed(1)} ${(50 + rad * Math.sin(a)).toFixed(1)}`
+  const step = (2 * Math.PI) / n
+  let d = `M${pt(-Math.PI / 2, R)}`
+  for (let k = 0; k < n; k++) {
+    const a = -Math.PI / 2 + k * step
+    d += ` Q${pt(a + step / 2, r)} ${pt(a + step, R)}`
+  }
+  return `${d} Z`
+}
+const STYLE_SHAPES = {
+  sparkle: () => <path d="M50 2 C54 36 64 46 98 50 C64 54 54 64 50 98 C46 64 36 54 2 50 C36 46 46 36 50 2 Z" />,
+  badge: () => <path d={scallopPath(8, 48, 34)} />,
+}
+
+// Concept E's "Hero shape" subtab (was concept H): one large style guide shape, solid, with a smaller shape cut into its center in the
+// panel's tint. Ratings: a sparkle inside the scalloped badge. Curriculum: a circle inside the eight petal flower.
+function RatingsHeroShape() {
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden="true">
+      <g className="fill-dessa-teal">{STYLE_SHAPES.badge()}</g>
+      <g className="fill-dessa-tealLight" transform="translate(50 50) scale(0.45) translate(-50 -50)">{STYLE_SHAPES.sparkle()}</g>
+    </svg>
+  )
+}
+function CurriculumHeroShape() {
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden="true">
+      <g className="fill-mtw-amber"><Petals n={8} w={13} /></g>
+      <circle cx="50" cy="50" r="11" className="fill-mtw-amberLight" />
+    </svg>
+  )
+}
+
+const SHOWCASE_ILLUSTRATIONS = {
+  b: { ratings: RatingsIllustration, curriculum: CurriculumIllustration },
+  hero: { ratings: RatingsHeroShape, curriculum: CurriculumHeroShape },
+}
+
+// The Nav subtab picks Circles or Hero shape.
+// The new customer subtext (2026-10-19, from concept B, shared with every concept): DESSA is a dashed link that
+// opens the About the DESSA panel.
+function PlatformSubtext({ className = '' }) {
+  const [aboutOpen, setAboutOpen] = useState(false)
+  return (
+    <>
+      <p className={`text-base text-brand-subtext max-w-2xl ${className}`}>
+        <button
+          type="button"
+          onClick={() => setAboutOpen(true)}
+          className="inline-flex items-center gap-1 font-medium text-dessa-teal underline decoration-dashed decoration-1 underline-offset-4 hover:text-dessa-navy transition-colors"
+        >
+          DESSA <Info size={14} aria-hidden="true" />
+        </button>{' '}
+        and Move This World now live together in one place. Rate your students to see their strengths, then find lessons that help them grow, all from one home.
+      </p>
+      <AboutDessaPanel open={aboutOpen} onClose={() => setAboutOpen(false)} />
+    </>
   )
 }
 
 function ShowcaseDashboard() {
   const navigate = useNavigate()
+  const { showcaseArt } = useDashboardConcept()
+  const art = SHOWCASE_ILLUSTRATIONS[showcaseArt === 'hero' ? 'hero' : 'b']
   const look = {
-    ratings: { tag: 'DESSA', panel: 'bg-dessa-tealLight', Illustration: RatingsIllustration },
-    curriculum: { tag: 'Move This World', panel: 'bg-mtw-amberLight', Illustration: CurriculumIllustration },
+    ratings: { tag: 'DESSA', panel: 'bg-dessa-tealLight', Illustration: art.ratings },
+    curriculum: { tag: 'Move This World', panel: 'bg-mtw-amberLight', Illustration: art.curriculum },
   }
 
   return (
     <div className="px-6 pt-10 pb-7">
-      {/* Vertical (2026-10-19): the greeting sits above the cards instead of beside them. Narrowed and centered
-          the same day at the user's request (too wide at full width). */}
-      <div className="flex flex-col gap-8 max-w-5xl mx-auto">
+      {/* Vertical (2026-10-19): the greeting sits above the cards instead of beside them. Full width with a 20px gap
+          to the cards since 2026-10-20, matching concept E. */}
+      <div className="flex flex-col gap-5">
         <motion.div {...stagger(0)}>
-          <h1 className="text-4xl font-semibold leading-tight tracking-tight text-brand-text">Welcome to your new platform, Tara.</h1>
-          <p className="text-base text-brand-subtext mt-4 max-w-2xl">DESSA and Move This World now live together in one place. Rate your students to see their strengths, then find lessons that help them grow, all from one home.</p>
+          <h1 className="text-[32px] font-semibold leading-tight tracking-tight text-brand-text">Welcome to your new platform, Tara.</h1>
         </motion.div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {NEW_CUSTOMER_CARDS.map((c, i) => {
@@ -496,7 +511,7 @@ function ShowcaseDashboard() {
                       <ArrowUpRight size={14} aria-hidden="true" />
                     </span>
                   </div>
-                  <h2 className="text-3xl font-semibold leading-tight tracking-tight text-brand-text mt-4">{c.title}</h2>
+                  <h2 className="text-2xl font-semibold leading-tight tracking-tight text-brand-text mt-4">{c.title}</h2>
                   <p className="text-sm text-brand-subtext mt-3">{c.body}</p>
                 </div>
                 <div className={`mt-auto h-56 rounded-2xl p-6 ${panel}`}>
@@ -511,13 +526,116 @@ function ShowcaseDashboard() {
   )
 }
 
+// Concept B (2026-10-20, always B; first E): a recreation of today's production dashboard for a new Move This World customer, the
+// empty state before any ratings this school year, copy included, so the proposals can be compared against it.
+// Colors come from the org design system palette, which is what production uses. No gray organization bar.
+// The user's rating illustration (public/rating.svg, 2026-10-20), inlined so its dark shapes take the text color;
+// the white dots stay white.
+function RatingMarkPaths() {
+  return (
+    <>
+      <path d="M30.8928 73.6528C21.4669 72.2185 13.0089 67.08 7.39313 59.3792C1.39978 51.2643 -1.07857 41.078 0.527898 31.1182C2.1275 21.4338 7.53732 12.7943 15.5628 7.13747C28.2566 -1.92422 45.7218 0.234436 60.7978 0.22551L109.053 0.210403L159.177 0.229628C179.649 0.246106 200.698 -3.16353 214.16 15.7446C219.996 23.9817 222.234 34.2374 220.36 44.1567C218.568 53.7992 212.979 62.3192 204.851 67.7989C201.309 70.2253 194.258 73.486 189.823 73.7146L190.956 75.1043C223.833 76.9519 238.086 136.286 188.848 147.318C202.846 151.218 213.913 157.308 219.076 172.181C226.113 192.446 213.192 217.522 191.251 220.357C177.926 222.078 162.698 221.377 149.009 221.382L95.4878 221.379C75.5305 221.371 55.6557 221.537 35.6298 221.135C8.04533 220.581 -8.51364 190.457 4.53717 166.537C10.8738 154.924 20.3753 150.668 32.4169 147.283C24.9475 145.986 18.9886 143.783 13.0982 138.821C5.66313 132.568 1.0291 123.605 0.225868 113.922C-0.611691 103.992 2.56003 94.1395 9.04768 86.5718C14.1485 80.7159 22.7712 75.5272 30.6388 75.0391L30.8928 73.6528Z" fill="currentColor" />
+      <path d="M30.893 73.6528C21.467 72.2185 13.0091 67.08 7.3933 59.3792C1.39995 51.2643 -1.0784 41.078 0.528068 31.1182C2.12767 21.4338 7.53749 12.7943 15.5629 7.13747C28.2568 -1.92422 45.7219 0.234436 60.798 0.22551L109.054 0.210403L159.177 0.229628C179.649 0.246106 200.698 -3.16353 214.16 15.7446C219.996 23.9817 222.234 34.2374 220.36 44.1567C218.568 53.7992 212.98 62.3192 204.851 67.7989C201.309 70.2253 194.258 73.486 189.823 73.7146C187.153 73.3706 176.003 73.7641 172.722 73.7757L135.547 73.7778L65.329 73.7359C54.3103 73.7201 41.6783 73.2718 30.893 73.6528Z" fill="currentColor" />
+      <path d="M31.9293 17.3754C42.8793 14.6056 54.0079 21.2224 56.8089 32.1688C59.6099 43.1159 53.0262 54.2634 42.083 57.0936C31.1055 59.9347 19.9082 53.3166 17.0935 42.3276C14.2856 31.338 20.9312 20.1554 31.9293 17.3754Z" fill="white" />
+      <path d="M30.8927 73.6529C41.678 73.2718 54.31 73.7201 65.3287 73.7359L135.546 73.7778L172.722 73.7758C176.003 73.7641 187.152 73.3707 189.823 73.7146L190.956 75.1043C188.244 75.4517 175.31 75.0913 171.692 75.0721L132.134 75.0501L67.0725 75.1002C56.9738 75.1414 40.3324 75.7703 30.6387 75.0391L30.8927 73.6529Z" fill="currentColor" />
+      <path d="M181.393 90.8797C192.466 89.4077 202.675 97.0611 204.371 108.1C206.066 119.138 198.618 129.504 187.62 131.422C180.301 132.698 172.873 129.918 168.184 124.156C163.502 118.393 162.294 110.547 165.033 103.644C167.772 96.7412 174.033 91.8581 181.393 90.8797Z" fill="white" />
+      <path d="M67.086 164.331C74.3014 162.823 81.7776 165.309 86.6519 170.841C91.5262 176.374 93.0572 184.099 90.6544 191.072C88.2516 198.045 82.2926 203.191 75.0429 204.547C64.0036 206.615 53.3487 199.403 51.1656 188.379C48.9824 177.355 56.0879 166.629 67.086 164.331Z" fill="white" />
+    </>
+  )
+}
+
+// Concept C settled on one mark (2026-10-20): the Stack composition's front mark, without the lighter copies.
+function RatingMark({ className }) {
+  return (
+    <svg viewBox="0 0 221 222" fill="none" className={className} aria-hidden="true"><RatingMarkPaths /></svg>
+  )
+}
+
+// Concept C (2026-10-20, first F) is the same page with `invite` on: the "No data" card becomes an empty state that
+// invites the user to complete their first DESSA rating.
+// Concept D illustration (2026-10-20, after a Sprig empty state the user shared): a loose grid of tinted tiles,
+// three over two, each with a dark line icon for part of the rating story: students, rating, strengths,
+// strategies, growth. Tints come from brand colors.
+const INVITE_TILES = [
+  { Icon: Users, tint: 'bg-dessa-teal/20' },
+  { Icon: ClipboardCheck, tint: 'bg-mtw-amber/25' },
+  { Icon: Sparkles, tint: 'bg-mtw-coral/20' },
+  { Icon: Lightbulb, tint: 'bg-mtw-purple/20' },
+  { Icon: TrendingUp, tint: 'bg-mtw-green/20' },
+]
+function InviteTiles() {
+  return (
+    <div className="grid grid-cols-3 gap-3 mb-6" aria-hidden="true">
+      {INVITE_TILES.map(({ Icon, tint }) => (
+        <span key={tint} className={`flex items-center justify-center w-14 h-14 rounded-xl ${tint}`}>
+          <Icon size={24} strokeWidth={1.75} className="text-brand-text" />
+        </span>
+      ))}
+    </div>
+  )
+}
+
+// `tiles` (2026-10-20, concept D) swaps the rating mark composition for the tile grid.
+function ProductionEmptyDashboard({ invite = false, tiles = false }) {
+  const navigate = useNavigate()
+
+  return (
+    <div className="px-6 pt-10 pb-7 min-h-[calc(100vh-3.5rem)] bg-org-gray-50">
+      <motion.h1 {...stagger(0)} className="text-[28px] font-bold text-brand-text mb-5">Welcome back, Tara!</motion.h1>
+
+      <motion.div {...stagger(1)} className="flex items-center gap-4 rounded-sm bg-org-primary-900 px-5 py-3 mb-3">
+        <div className="w-12 h-10 rounded-sm bg-white p-1 shrink-0">
+          <img src="/logo-png.png" alt="Move This World" className="w-full h-full object-contain" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-white">Move This World · Curriculum</p>
+          <p className="text-base font-semibold text-white">Choose a course to get started with your students</p>
+        </div>
+        <button
+          onClick={() => navigate('/mtw')}
+          className="flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-org-primary-700 text-sm font-semibold text-white hover:bg-org-primary-hover transition-colors shrink-0"
+        >
+          Browse Courses
+          <ChevronRight size={14} aria-hidden="true" />
+        </button>
+      </motion.div>
+
+      {invite ? (
+        <motion.section {...stagger(2)} className="flex flex-col items-center justify-center min-h-[310px] rounded-md bg-white px-6 py-12 text-center">
+          {tiles ? <InviteTiles /> : <RatingMark className="w-32 h-32 mb-6 text-dessa-teal" />}
+          <h2 className="text-2xl font-semibold text-brand-text">See your students' strengths</h2>
+          <p className="text-base text-brand-subtext mt-2 max-w-xl">
+            Complete your first DESSA rating and this dashboard fills in with where each student shines, where they could use support, and strategies to try.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+            <button
+              onClick={() => navigate('/ratings')}
+              className="flex items-center gap-1.5 h-10 px-5 rounded-md bg-dessa-teal text-sm font-semibold text-white hover:bg-dessa-teal/90 transition-colors"
+            >
+              Start rating
+              <ChevronRight size={14} aria-hidden="true" />
+            </button>
+          </div>
+        </motion.section>
+      ) : (
+        <motion.section {...stagger(2)} className="flex flex-col items-center justify-center gap-3 min-h-[310px] rounded-md bg-white px-6 py-16 text-center">
+          <h2 className="text-[28px] font-semibold text-brand-text">No Data Available for the 2026-2027 School Year</h2>
+          <p className="text-base text-brand-text">This dashboard will activate once ratings have occurred this school year. Historical data is found in Reports.</p>
+        </motion.section>
+      )}
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const { dashboardConcept } = useDashboardConcept()
-  if (dashboardConcept === 'b') return <ShowcaseDashboard />
-  if (dashboardConcept === 'c') return <EditorialDashboard />
-  if (dashboardConcept === 'd') return <TwoCardsDashboard />
-  if (dashboardConcept === 'e') return <BoldCardsDashboard />
+  // Order (2026-10-20): B is always the production empty state, right after A; the proposals follow.
+  if (dashboardConcept === 'b') return <ProductionEmptyDashboard />
+  if (dashboardConcept === 'c') return <ProductionEmptyDashboard invite />
+  if (dashboardConcept === 'd') return <ProductionEmptyDashboard invite tiles />
+  if (dashboardConcept === 'e') return <ShowcaseDashboard />
+  if (dashboardConcept === 'f') return <EditorialDashboard />
 
   return (
     <div className="px-6 pt-10 pb-7">

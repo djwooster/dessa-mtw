@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
 
-export function SidePanel({ open, onClose, title, children }) {
+// `action` (2026-10-19) is an optional primary button that sits beside Close in the footer.
+export function SidePanel({ open, onClose, title, children, action = null }) {
   return (
     <AnimatePresence>
       {open && (
@@ -30,13 +31,14 @@ export function SidePanel({ open, onClose, title, children }) {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-8 py-6">{children}</div>
-            <div className="px-8 py-5 border-t border-brand-border shrink-0">
+            <div className="flex gap-3 px-8 py-5 border-t border-brand-border shrink-0">
               <button
                 onClick={onClose}
-                className="w-full h-9 rounded-lg border border-brand-border text-sm font-medium text-brand-subtext hover:bg-brand-bg transition-colors"
+                className="flex-1 h-9 rounded-lg border border-brand-border text-sm font-medium text-brand-subtext hover:bg-brand-bg transition-colors"
               >
                 Close
               </button>
+              {action}
             </div>
           </motion.aside>
         </>

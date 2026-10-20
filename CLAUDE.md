@@ -32,11 +32,14 @@ A small, reusable set of styles — not exhaustive component coverage, just enou
 | H1 | 36px (`text-4xl`) semibold | `brand-text` | Page hero headline only |
 | H2 | 24px (`text-2xl`) semibold | `brand-text` | Section headers |
 | H3 | 18px (`text-lg`) semibold | `brand-text` | Card titles |
-| Eyebrow/Label | 13px (`text-xs`) semibold, uppercase, tracking-wide | `brand-subtext` | Facet titles, small caps labels |
+| Label | 12px (`text-xs`) medium or semibold, sentence case | `brand-subtext` | Facet titles, small labels, chips. Default for any small label |
+| Eyebrow (rare) | 12px (`text-xs`) semibold, uppercase, tracking-wide | `brand-subtext` | Use sparingly, at most one per screen, only when a label truly needs to stand apart. Never for chips, tags or repeated labels |
 | Table Header | 14px (`text-sm`) semibold, sentence case | `brand-text` on `brand-bg` | Table/list column headers (see `ui/table.jsx`'s `TableHeader`/`TableHead`) |
 | Body | 14px (`text-sm`) regular | `brand-text` | Default UI copy, table cells |
 | Body-large | 16px (`text-base`) regular | `brand-subtext` | Intro/subcopy sitting under a headline |
 | Caption | 12px (`text-xs`) medium | `brand-subtext` | Timestamps, meta text, badge labels |
+
+All caps with wide tracking reads busy when it repeats (2026-10-20, user feedback): default to sentence case for labels, chips and tags, and save the uppercase eyebrow for rare one-off moments.
 
 Two text colors, full stop: `brand-text` (primary) and `brand-subtext` (secondary/muted). Don't reach for a third gray or a manually-darkened hex — for a disabled/placeholder feel, reduce opacity on `brand-subtext` instead of introducing a new shade.
 

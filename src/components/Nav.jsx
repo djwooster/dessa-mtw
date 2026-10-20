@@ -54,10 +54,11 @@ const ENGAGEMENT_CONCEPTS = [
 // Dashboard concept switcher (2026-10-19), same dropdown as DCE's. A is the current Dashboard, kept as the baseline.
 const DASHBOARD_CONCEPTS = [
   { value: 'a', label: 'A', title: 'A, Current Dashboard' },
-  { value: 'b', label: 'B', title: 'B, New customer: a big greeting beside two cards with shape illustrations' },
-  { value: 'c', label: 'C', title: 'C, New customer: an editorial layout with a large headline and the two cards as ruled columns' },
-  { value: 'd', label: 'D', title: 'D, New customer: two cards side by side, Rate your students and Explore the curriculum' },
-  { value: 'e', label: 'E', title: 'E, New customer: the same two cards as bold color blocks with style guide shapes' },
+  { value: 'b', label: 'B', title: 'B, Production today: the empty dashboard a new Move This World customer sees' },
+  { value: 'c', label: 'C', title: 'C, Production layout with an empty state that invites a first DESSA rating' },
+  { value: 'd', label: 'D', title: 'D, Concept C with a grid of tinted icon tiles' },
+  { value: 'e', label: 'E', title: 'E, New customer: a big greeting above two cards with shape illustrations' },
+  { value: 'f', label: 'F', title: 'F, New customer: an editorial layout with the two cards as ruled columns' },
 ]
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
@@ -101,7 +102,7 @@ export default function Nav() {
   const { dceConcept, setDceConcept } = useDceConcept()
   const { engagementConcept, setEngagementConcept } = useEngagementConcept()
   const { ytdPreview, setYtdPreview, overviewTab } = useEngagementVersion()
-  const { dashboardConcept, setDashboardConcept } = useDashboardConcept()
+  const { dashboardConcept, setDashboardConcept, showcaseArt, setShowcaseArt } = useDashboardConcept()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
@@ -409,6 +410,15 @@ export default function Nav() {
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>
+          )}
+          {/* Concept B's illustration subtab (2026-10-19), same Tabs as the Engagement Today | End of year preview. */}
+          {location.pathname === '/' && dashboardConcept === 'e' && (
+            <Tabs value={showcaseArt} onValueChange={setShowcaseArt} className="shrink-0 mr-2">
+              <TabsList className="p-0.5">
+                <TabsTrigger value="circles" className="text-xs px-3 py-1">Circles</TabsTrigger>
+                <TabsTrigger value="hero" className="text-xs px-3 py-1">Hero shape</TabsTrigger>
+              </TabsList>
+            </Tabs>
           )}
           {location.pathname === '/' && (
             <Popover.Root>
