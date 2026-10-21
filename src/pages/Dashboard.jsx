@@ -667,7 +667,7 @@ function ProductionEmptyDashboard({ invite = false }) {
 
       {/* Concept C uses concept D's new curriculum banner (2026-10-20); B keeps production's navy banner. */}
       {invite ? (
-        <motion.div {...stagger(1)} className="mb-3"><CurriculumBanner style="card" buttonCta /></motion.div>
+        <motion.div {...stagger(1)} className="mb-3"><CurriculumBanner /></motion.div>
       ) : (
         <motion.div {...stagger(1)} className="flex items-center gap-4 rounded-sm bg-org-primary-900 px-5 py-3 mb-3">
           <div className="w-12 h-10 rounded-sm bg-white p-1 shrink-0">
@@ -768,9 +768,8 @@ function RatingsDoneToast({ onClose }) {
 }
 
 // Concept D after ratings (2026-10-20): the production dashboard a user lands on after rating (from the user's
-// screenshot: ratings pie, classroom strategies, competencies) with mock data. The design work is the Move This
-// World banner, offered two ways with the Nav subtab: a compact version of D's curriculum card, or the card
-// recommending a lesson matched to the ratings (a soft amber strip was tried and removed 2026-10-20).
+// screenshot: ratings pie, classroom strategies, competencies) with mock data, and the curriculum banner. A soft
+// amber strip and a Recommendation version of the banner were tried and removed (2026-10-20 and 2026-10-21).
 const MOCK_RATINGS = [
   { key: 'strength', label: 'Strength', count: 3, fill: 'fill-dessa-green' },
   { key: 'typical', label: 'Typical', count: 1, fill: 'fill-dessa-blue' },
@@ -852,13 +851,11 @@ const PRIMARY_BUTTON = 'inline-flex items-center gap-1 h-9 px-4 rounded-md bg-de
 const TEXT_LINK = 'group inline-flex items-center gap-1.5 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4 transition-colors'
 const TEXT_LINK_ARROW = 'transition-transform group-hover:translate-x-0.5'
 
-// `buttonCta` (2026-10-20, concept C) shows Next lesson as the primary button instead of the text link.
-function CurriculumBanner({ style, buttonCta = false }) {
+// The curriculum banner: a compact version of D's curriculum card, static, with Next lesson as the primary button
+// (2026-10-21; the Recommendation version and the text link were removed).
+function CurriculumBanner() {
   const navigate = useNavigate()
   const [art, setArt] = useState(0)
-  // Card and Recommendation: a compact version of D's curriculum card. A static card (2026-10-20); only the
-  // Browse courses link is interactive.
-  const recommend = style === 'recommend'
   return (
     <div className="w-full flex items-stretch rounded-xl border border-brand-border bg-white overflow-hidden">
       <button
@@ -878,29 +875,20 @@ function CurriculumBanner({ style, buttonCta = false }) {
         {/* Plain label with a book icon (2026-10-20), no pill background. */}
         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-subtext">
           <BookOpen size={14} aria-hidden="true" />
-          {recommend ? 'Recommended for your class' : 'Curriculum'}
+          Curriculum
         </span>
-        <p className="text-lg font-semibold text-brand-text mt-2">{recommend ? 'Cooling Down Strategies' : 'Jump back into the curriculum'}</p>
-        <p className="text-sm text-brand-subtext mt-0.5">{recommend ? 'A Move This World lesson to build Self-Management, based on your ratings.' : 'Pick up where you left off.'}</p>
+        <p className="text-lg font-semibold text-brand-text mt-2">Jump back into the curriculum</p>
+        <p className="text-sm text-brand-subtext mt-0.5">Pick up where you left off.</p>
       </div>
-      {/* Text link with the arrow (2026-10-20), first "Browse courses", now "Next lesson". */}
-      {buttonCta ? (
-        <button onClick={() => navigate('/mtw')} className={`self-center mr-5 shrink-0 ${PRIMARY_BUTTON}`}>
-          Next lesson
-          <ChevronRight size={14} aria-hidden="true" />
-        </button>
-      ) : (
-        <button onClick={() => navigate('/mtw')} className={`self-center mr-5 shrink-0 ${TEXT_LINK}`}>
-          Next lesson
-          <ArrowRight size={14} className={TEXT_LINK_ARROW} aria-hidden="true" />
-        </button>
-      )}
+      <button onClick={() => navigate('/mtw')} className={`self-center mr-5 shrink-0 ${PRIMARY_BUTTON}`}>
+        Next lesson
+        <ChevronRight size={14} aria-hidden="true" />
+      </button>
     </div>
   )
 }
 
 function AfterRatingsD() {
-  const { bannerStyle } = useDashboardConcept()
   const card = 'bg-white rounded-2xl border border-brand-border shadow-sm'
   const header = (title) => (
     <div className="px-5 pt-5 pb-4 border-b border-brand-border flex items-center justify-between gap-3">
@@ -914,7 +902,7 @@ function AfterRatingsD() {
   return (
     <div className="px-6 pt-10 pb-7">
       <motion.h1 {...stagger(0)} className="text-[32px] font-semibold leading-tight tracking-tight text-brand-text mb-5">Welcome back, Tara</motion.h1>
-      <motion.div {...stagger(1)} className="mb-5"><CurriculumBanner style={bannerStyle} /></motion.div>
+      <motion.div {...stagger(1)} className="mb-5"><CurriculumBanner /></motion.div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
         <motion.div {...stagger(2)} className={`${card} flex flex-col`}>
           {header("My students' DESSA ratings")}
@@ -930,16 +918,22 @@ function AfterRatingsD() {
   )
 }
 
+// Concept C is the chosen design (2026-10-21): the Dashboard shows it, with D's after ratings screen once the user
+// has rated. The other concepts and the Nav concept switcher are commented out; their components stay in this file.
 export default function Dashboard() {
+  const { rated } = useDashboardConcept()
+  if (rated) return <AfterRatingsD />
+  return <ProductionEmptyDashboard invite />
+  // const { dashboardConcept } = useDashboardConcept()
+  // if (dashboardConcept === 'a') return <CurrentDashboard />
+  // if (dashboardConcept === 'b') return <ProductionEmptyDashboard />
+  // if (dashboardConcept === 'd') return <ShowcaseDashboard />
+  // if (dashboardConcept === 'e') return <EditorialDashboard />
+}
+
+// Concept A: the Dashboard as it was before the new customer concepts (commented out of the Dashboard 2026-10-21).
+function CurrentDashboard() {
   const navigate = useNavigate()
-  const { dashboardConcept, rated } = useDashboardConcept()
-  // D's after ratings screen is the default after view for every concept (2026-10-20); a concept can get its own later.
-  if (rated && ['c', 'd', 'e'].includes(dashboardConcept)) return <AfterRatingsD />
-  // Order (2026-10-20): B is always the production empty state, right after A; the proposals follow.
-  if (dashboardConcept === 'b') return <ProductionEmptyDashboard />
-  if (dashboardConcept === 'c') return <ProductionEmptyDashboard invite />
-  if (dashboardConcept === 'd') return <ShowcaseDashboard />
-  if (dashboardConcept === 'e') return <EditorialDashboard />
 
   return (
     <div className="px-6 pt-10 pb-7">

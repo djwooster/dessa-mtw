@@ -7,14 +7,13 @@ import { createContext, useContext, useState } from 'react'
 const DashboardConceptContext = createContext(null)
 
 export function DashboardConceptProvider({ children }) {
-  const [dashboardConcept, setDashboardConcept] = useState('a')
+  // Concept C is the chosen design (2026-10-21); the switcher is commented out in Nav.
+  const [dashboardConcept, setDashboardConcept] = useState('c')
   // Simulated ratings (2026-10-20): a concept's "Start rating" stands in for the whole rating flow and flips this
   // on, so the dashboard shows that concept's after ratings view. The Nav Before | After control resets it.
   const [rated, setRated] = useState(false)
-  // Concept D after ratings (2026-10-20): the Move This World banner style, 'card' or 'recommend'.
-  const [bannerStyle, setBannerStyle] = useState('card')
   return (
-    <DashboardConceptContext.Provider value={{ dashboardConcept, setDashboardConcept, rated, setRated, bannerStyle, setBannerStyle }}>
+    <DashboardConceptContext.Provider value={{ dashboardConcept, setDashboardConcept, rated, setRated }}>
       {children}
     </DashboardConceptContext.Provider>
   )

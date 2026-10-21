@@ -101,7 +101,7 @@ export default function Nav() {
   const { dceConcept, setDceConcept } = useDceConcept()
   const { engagementConcept, setEngagementConcept } = useEngagementConcept()
   const { ytdPreview, setYtdPreview, overviewTab } = useEngagementVersion()
-  const { dashboardConcept, setDashboardConcept, rated, setRated, bannerStyle, setBannerStyle } = useDashboardConcept()
+  const { dashboardConcept, setDashboardConcept, rated, setRated } = useDashboardConcept()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
 
   function goToGrade(grade) {
@@ -411,8 +411,8 @@ export default function Nav() {
             </Popover.Root>
           )}
           {/* Concept B's illustration subtab (2026-10-19), same Tabs as the Engagement Today | End of year preview. */}
-          {/* Before | After ratings (2026-10-20): resets or skips the simulated rating flow. B is the control, so not there. */}
-          {location.pathname === '/' && ['c', 'd', 'e'].includes(dashboardConcept) && (
+          {/* Before | After ratings (2026-10-20): resets or skips the simulated rating flow on the Dashboard. */}
+          {location.pathname === '/' && (
             <Tabs value={rated ? 'after' : 'before'} onValueChange={v => setRated(v === 'after')} className="shrink-0 mr-2">
               <TabsList className="p-0.5">
                 <TabsTrigger value="before" className="text-xs px-3 py-1">Before ratings</TabsTrigger>
@@ -420,15 +420,7 @@ export default function Nav() {
               </TabsList>
             </Tabs>
           )}
-          {/* After ratings (D's screen, shared by C, D and E): the Move This World banner style (2026-10-20). */}
-          {location.pathname === '/' && ['c', 'd', 'e'].includes(dashboardConcept) && rated && (
-            <Tabs value={bannerStyle} onValueChange={setBannerStyle} className="shrink-0 mr-2">
-              <TabsList className="p-0.5">
-                <TabsTrigger value="card" className="text-xs px-3 py-1">Card</TabsTrigger>
-                <TabsTrigger value="recommend" className="text-xs px-3 py-1">Recommendation</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
+          {/* Dashboard concept switcher commented out 2026-10-21: concept C is the chosen design.
           {location.pathname === '/' && (
             <Popover.Root>
               <Popover.Trigger asChild>
@@ -463,6 +455,7 @@ export default function Nav() {
               </Popover.Portal>
             </Popover.Root>
           )}
+          */}
           {location.pathname === '/reports/dce' && (
             <Popover.Root>
               <Popover.Trigger asChild>
