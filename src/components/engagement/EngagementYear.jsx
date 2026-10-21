@@ -321,8 +321,8 @@ export default function EngagementYear({ filters, lockedSiteId = null, tabs = nu
     window.print()
   }
 
-  // 3-dot menu (Export CSV, Print) in the Filters panel's title row (2026-10-19), the same as the Engagement
-  // Graph tab. It replaces the Export CSV and Print buttons that sat above the table.
+  // 3-dot menu (Print) in the Filters panel's title row (2026-10-19), the same as the Engagement Graph tab.
+  // Export CSV moved out to a link button next to Heat map (2026-10-21).
   const menu = (
     <div className="relative shrink-0" ref={menuRef}>
       <button
@@ -336,9 +336,6 @@ export default function EngagementYear({ filters, lockedSiteId = null, tabs = nu
       </button>
       {menuOpen && (
         <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
-          <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
-            <Download size={13} className="text-brand-subtext" /> Export CSV
-          </button>
           <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { printYtd(); setMenuOpen(false) }}>
             <Printer size={13} className="text-brand-subtext" /> Print
           </button>
@@ -373,7 +370,7 @@ export default function EngagementYear({ filters, lockedSiteId = null, tabs = nu
             <h3 className="text-lg font-semibold text-brand-text">Users completing {GOAL} lessons a week</h3>
           </div>
         </header>
-        {/* Under the title (2026-10-16): site search on the left, Heat map on the right. */}
+        {/* Under the title (2026-10-16): site search on the left, Heat map and Export CSV on the right. */}
         <div className="flex items-center justify-between gap-3 -mt-2 mb-4">
           <div className="w-64">
             <SearchField value={query} onChange={setQuery} placeholder="Search sites" height="h-8" />
@@ -387,6 +384,13 @@ export default function EngagementYear({ filters, lockedSiteId = null, tabs = nu
               className={`inline-flex items-center gap-1.5 h-8 px-3 shrink-0 whitespace-nowrap rounded-md border text-[13px] font-medium transition-colors ${heat ? 'border-dessa-teal bg-dessa-tealLight text-dessa-teal' : 'border-brand-border bg-white text-brand-text hover:bg-brand-bg'}`}
             >
               <Palette size={14} className={heat ? 'text-dessa-teal' : 'text-brand-subtext'} aria-hidden="true" /> Heat map
+            </button>
+            <button
+              type="button"
+              onClick={exportCsv}
+              className="inline-flex items-center gap-1.5 h-8 px-2 shrink-0 whitespace-nowrap text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4 transition-colors"
+            >
+              <Download size={14} aria-hidden="true" /> Export CSV
             </button>
           </div>
         </div>
