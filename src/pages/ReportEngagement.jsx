@@ -47,7 +47,7 @@ const MONTH_BACK = 4
 // in the district (with a Site column and paging); otherwise one site's.
 const PAGE_SIZE = 25
 
-function SiteEducators({ school, weeks, showDots = true, showDays = true, drilldown = true, rangeBadge = null, goalColumn = false, roleColumn = false, fStyle = false, role = 'all', siteList = null, stateKey = null }) {
+function SiteEducators({ school, weeks, showDots = true, showDays = true, drilldown = true, rangeBadge = null, goalColumn = false, roleColumn = false, fStyle = false, role = 'all', siteList = null, stateKey = null, exportable = false }) {
   const latest = weeks[weeks.length - 1]
   const weekIdx = schoolWeeks.indexOf(latest)
   const [openKey, setOpenKey] = useState(null)
@@ -94,6 +94,19 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
   const weekStart = parseISO(latest)
   const dayLetters = ['M', 'T', 'W', 'T', 'F']
 
+  // Export CSV (2026-10-21): the users the table shows after search and sort, across every page.
+  function exportUsers() {
+    const q = v => `"${String(v).replace(/"/g, '""')}"`
+    const header = ['User', allSites && 'Site', roleColumn && 'Role', 'Last Active'].filter(Boolean).join(',')
+    const body = rows.map(r => [r.name, allSites && r.sc.name, roleColumn && r.role, r.last].filter(v => v !== false).map(q).join(',')).join('\n')
+    const url = URL.createObjectURL(new Blob([`${header}\n${body}`], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'engagement-users.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className={`bg-white rounded-xl border border-brand-border overflow-hidden ${fStyle ? '[&_td]:text-[13px]' : ''}`}>
       <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-brand-border">
@@ -105,6 +118,16 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
           <span className="inline-flex items-center gap-1.5 shrink-0 text-[13px] font-medium text-brand-subtext tabular-nums">
             <Calendar size={12} aria-hidden="true" /> {rangeBadge}
           </span>
+        )}
+        {/* Same link button as Export CSV beside Heat map on Weekly detail. */}
+        {exportable && (
+          <button
+            type="button"
+            onClick={exportUsers}
+            className="inline-flex items-center gap-1.5 h-8 px-2 shrink-0 whitespace-nowrap text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4 transition-colors"
+          >
+            <Download size={14} aria-hidden="true" /> Export CSV
+          </button>
         )}
       </div>
       <Table>
@@ -503,7 +526,7 @@ export default function ReportEngagement() {
   // draws them under its own Filters panel.
   // The Users table under the report (2026-10-19 also under the Table tab's YTD table).
   const usersTable = (
-    <SiteEducators siteList={isF && dSiteIds.length ? schools.filter(sc => dSiteIds.includes(sc.id)) : null} school={!isF ? schools.find(sc => dSiteIds.length === 1 && sc.id === dSiteIds[0]) ?? null : null} weeks={endOfYear ? YEAR_WEEKS : weeks} showDots={false} showDays={false} drilldown={isF} goalColumn={false} fStyle={isF} rangeBadge={isE ? rangeLabel(weeks) : null} role={roleFilter} roleColumn={isF} stateKey={isF ? 'overviewUsers' : null} />
+    <SiteEducators siteList={isF && dSiteIds.length ? schools.filter(sc => dSiteIds.includes(sc.id)) : null} school={!isF ? schools.find(sc => dSiteIds.length === 1 && sc.id === dSiteIds[0]) ?? null : null} weeks={endOfYear ? YEAR_WEEKS : weeks} showDots={false} showDays={false} drilldown={isF} goalColumn={false} fStyle={isF} rangeBadge={isE ? rangeLabel(weeks) : null} role={roleFilter} roleColumn={isF} stateKey={isF ? 'overviewUsers' : null} exportable={isF} />
   )
   const viewTabs = showTabs && (
     <div role="tablist" aria-label="Engagement views" className="flex gap-4 border-b border-brand-border mb-6">
