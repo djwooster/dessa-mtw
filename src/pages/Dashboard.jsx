@@ -862,14 +862,15 @@ function CurriculumBanner() {
         type="button"
         onClick={() => setArt(a => (a + 1) % BANNER_ARTS.length)}
         aria-label="Show the next image"
-        className={`w-28 shrink-0 cursor-default focus:outline-none ${BANNER_ARTS[art] ? '' : 'bg-mtw-amberLight p-3'}`}
+        className="w-28 shrink-0 cursor-default focus:outline-none"
         style={BANNER_ARTS[art] ? { background: BANNER_ARTS[art].tint } : undefined}
       >
+        {/* Default image (2026-10-22): the user's blue-flower.svg, background included. */}
         {BANNER_ARTS[art] ? (
           <svg viewBox="86 65 186 186" preserveAspectRatio="xMidYMid slice" className="w-full h-full" aria-hidden="true">
             <path d={BANNER_ARTS[art].d} fill={BANNER_ARTS[art].fill} />
           </svg>
-        ) : <CurriculumIllustration />}
+        ) : <img src="/blue-flower.svg" alt="" className="w-full h-full object-cover" />}
       </button>
       <div className="flex-1 min-w-0 px-5 py-4">
         {/* Plain label with a book icon (2026-10-20), no pill background. */}
@@ -920,7 +921,7 @@ function AfterRatingsD() {
 
 // ─── After ratings, production layout (2026-10-22) ────────────────────────────
 // A copy of the production DESSA dashboard from the user's screenshots, colors and all, with mock data. The navy
-// Move This World banner is swapped for our curriculum banner. Type is Geist on this view only.
+// Move This World banner is swapped for our curriculum banner.
 
 const P_TITLE = 'text-xl font-semibold text-org-gray-800'
 const P_LINK = 'text-base font-semibold text-org-primary-700 hover:text-org-primary-900 hover:underline underline-offset-4 transition-colors'
@@ -932,13 +933,14 @@ const P_LEVELS = {
   strength: { fill: 'bg-org-green-100',   stroke: 'border-org-green-700',   text: 'text-org-green-900',   swatch: 'bg-org-green-100' },
 }
 
-// Decorative, like RatingWindowSelect: the production picker chrome without a data model behind it.
-function PSelect({ label, icon = true, className = '' }) {
+// Decorative, like RatingWindowSelect: the production picker without a data model behind it. Sized like a
+// shadcn select trigger (2026-10-22): h-9, thin border, 14px text, width fits the label.
+function PSelect({ label, icon = true }) {
   return (
-    <button type="button" className={`flex items-center gap-3 h-12 px-4 rounded border-2 border-org-gray-300 bg-white text-[15px] text-org-gray-800 shrink-0 ${className}`}>
-      {icon && <Calendar size={15} aria-hidden="true" />}
-      <span className="flex-1 text-left">{label}</span>
-      <ChevronDown size={18} className="ml-4" aria-hidden="true" />
+    <button type="button" className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-brand-border bg-white text-sm text-org-gray-800 whitespace-nowrap shrink-0 hover:bg-brand-bg transition-colors">
+      {icon && <Calendar size={14} className="text-brand-subtext" aria-hidden="true" />}
+      {label}
+      <ChevronDown size={16} className="ml-1 text-brand-subtext" aria-hidden="true" />
     </button>
   )
 }
@@ -1157,7 +1159,7 @@ function PSupportStrategies() {
             </tbody>
           </table>
           <div className="flex justify-end mt-4">
-            <PSelect label="10" icon={false} className="w-24" />
+            <PSelect label="10" icon={false} />
           </div>
         </div>
       ) : (
@@ -1177,21 +1179,21 @@ function PSupportStrategies() {
 function AfterRatingsProduction() {
   const card = 'bg-white rounded p-6'
   return (
-    <div className="px-6 pt-10 pb-10 min-h-[calc(100vh-3.5rem)] bg-org-gray-50" style={{ fontFamily: "'Geist', sans-serif" }}>
-      <motion.h1 {...stagger(0)} className="text-4xl font-bold text-org-gray-900 mb-7">Welcome back, Tara!</motion.h1>
+    <div className="px-6 pt-10 pb-10 min-h-[calc(100vh-3.5rem)] bg-org-gray-50">
+      <motion.h1 {...stagger(0)} className="text-[32px] font-bold leading-tight text-org-gray-900 mb-7">Welcome back, Tara!</motion.h1>
       <motion.div {...stagger(1)} className="mb-4"><CurriculumBanner /></motion.div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <motion.div {...stagger(2)} className={card}>
-          <PCardHeader title="Timeline" link={false} select={<PSelect label="Default Rating Window" className="w-64" />} />
+          <PCardHeader title="Timeline" link={false} select={<PSelect label="Default Rating Window" />} />
           <PTimeline />
         </motion.div>
         <motion.div {...stagger(2)} className={card}>
-          <PCardHeader title="My Students" select={<PSelect label="26-27 Pre - Default" className="w-64" />} />
+          <PCardHeader title="My Students" select={<PSelect label="26-27 Pre - Default" />} />
           <PMyStudentsChart />
         </motion.div>
       </div>
       <motion.div {...stagger(3)} className={`${card} mb-4`}>
-        <PCardHeader title="Grade Level Comparison" select={<PSelect label="26-27 Pre - Default" className="w-64" />} />
+        <PCardHeader title="Grade Level Comparison" select={<PSelect label="26-27 Pre - Default" />} />
         <PGradeChart />
       </motion.div>
       <motion.div {...stagger(4)} className={card}>

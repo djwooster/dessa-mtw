@@ -15,7 +15,11 @@ Treat every screen — including throwaway comparison concepts — as if a senio
 - Laws of UX (Fitts's Law, Hick's Law, etc.)
 - Invoke the `ui-ux-pro-max` skill when building or reviewing UI
 
-**Aesthetic direction:** tightening toward Notion/Linear — tighter density, thin borders over shadows, restrained color (brand color for actions/data points, not decoration) — with room for delight through motion and occasional warmer touches, not through flashier core interactions.
+**Aesthetic direction: one design language (set 2026-10-22).** DESSA and MTW are being consolidated into one product with one cohesive visual language, modeled on shadcn, Supabase, Notion and Linear: compact controls, tight spacing, thin light borders, no resting shadows, restrained color (brand color for actions and data points, not decoration), and room for delight through motion and occasional warmer touches, not through flashier core interactions. This is the default for every new screen, DESSA and MTW alike. The reference screen is the Dashboard's After ratings view (`AfterRatingsProduction` in `Dashboard.jsx`) once its sizes are brought in line with the scale below.
+
+Older screens are brought in line one at a time, only when we're already working on that screen. Don't sweep the app.
+
+What to avoid, because it reads big and unruly: 48px controls, 2px outlines, 20px+ card titles, 16px body text in dense UI, wide padding inside cards, heavy shadows on resting surfaces, and controls stretched to fixed widths so labels wrap.
 
 **Standing rules:**
 - Don't patch a confusing interaction with adjacent explainer/caption text — if a control needs a sentence next to it to be understood, redesign the control instead.
@@ -26,12 +30,14 @@ Treat every screen — including throwaway comparison concepts — as if a senio
 ## Design system
 A small, reusable set of styles — not exhaustive component coverage, just enough to stop text sizes/colors drifting into one-offs and to move quickly by drawing from these instead of inventing new values per screen.
 
+**Typeface:** Geist, app-wide (2026-10-22, replaced Inter). Loaded from Google Fonts in `index.html` and `index.css`, set as Tailwind's `sans`.
+
 **Typography** — built on the existing `brand-text`/`brand-subtext` tokens, no new colors needed for type:
 | Role | Size / weight | Color | Use |
 |---|---|---|---|
-| H1 | 36px (`text-4xl`) semibold | `brand-text` | Page hero headline only |
+| H1 | 32px (`text-[32px]`) bold, `leading-tight` | `brand-text` | Page headline, one per page |
 | H2 | 24px (`text-2xl`) semibold | `brand-text` | Section headers |
-| H3 | 18px (`text-lg`) semibold | `brand-text` | Card titles |
+| H3 | 16 to 18px (`text-base` or `text-lg`) semibold | `brand-text` | Card titles. Never 20px or larger inside a card |
 | Label | 12px (`text-xs`) medium or semibold, sentence case | `brand-subtext` | Facet titles, small labels, chips. Default for any small label |
 | Eyebrow (rare) | 12px (`text-xs`) semibold, uppercase, tracking-wide | `brand-subtext` | Use sparingly, at most one per screen, only when a label truly needs to stand apart. Never for chips, tags or repeated labels |
 | Table Header | 14px (`text-sm`) semibold, sentence case | `brand-text` on `brand-bg` | Table/list column headers (see `ui/table.jsx`'s `TableHeader`/`TableHead`) |
@@ -47,16 +53,23 @@ Two text colors, full stop: `brand-text` (primary) and `brand-subtext` (secondar
 - **State colors** (`state.error` / `state.warning` / `state.success` / `state.info`, each with a `*Light` tint) — added specifically for UI states like form validation and alerts, deliberately separate from the `dessa-green`/`dessa-blue`/`dessa-salmon` data-viz palette (which means strength/typical/need on charts, not error/warning/success — don't conflate the two).
 - Brand color (`dessa-teal`, `mtw-amber`, etc.) is for actions and key data points, per the Notion/Linear direction above — not for decorating unrelated surfaces.
 
-**Spacing & density** (Notion/Linear direction):
+**Spacing & density:**
 - Standard page container: `px-6` side padding, no max-width cap — same gutter Dashboard, Nav, and every other page uses, no exceptions (including hero/landing-style screens).
-- Prefer `p-4`/`p-5` for card bodies over `p-6`+.
-- Prefer a thin `border border-brand-border` over `shadow-md`/`shadow-lg` for resting-state surfaces; save real shadows for things that float above content (popovers, modals, dropdowns).
+- Cards: `rounded-lg` (8px), a 1px `border border-brand-border`, white, no shadow, `p-4` or `p-5` inside. 16px (`gap-4`) between cards; 24px (`mb-6`) between a page headline and its content.
+- Corner radius: 8px (`rounded-lg`) for cards, panels and modals; 6px (`rounded-md`) for controls (buttons, inputs, dropdowns, chips). No `rounded-xl` or larger on new surfaces.
+- Borders are always 1px and light (`brand-border`). No 2px outlines on controls or cards; a 2px line is only for an active tab underline or a focus ring.
+- Save real shadows for things that float above content (popovers, modals, dropdown menus, toasts).
 - Reuse Tailwind's default spacing scale (4px increments) rather than arbitrary pixel values.
 - Row/card layouts that might render at more than one container width should use flexible, truncating widths (`flex-1 min-w-0` + `truncate`), not fixed pixel widths with `shrink-0` — fixed non-shrinking widths overflow instead of compressing.
 
-**Buttons:**
-- DESSA-context buttons: `rounded-md`. MTW-context buttons: `rounded-full`. This split is intentional (see brand personalities below) — don't unify the shape language across contexts.
-- Default primary button (settled 2026-10-20 on Dashboard concept C): `h-9 px-4 gap-1 rounded-md text-sm font-semibold`, a 14px trailing chevron when it moves the user forward. Go larger only for a hero action (`h-10 px-5`).
+**Controls** (shadcn sizing, 36px by default):
+- Height `h-9` for buttons, inputs and dropdowns; `h-8` only inside dense toolbars or table rows. Never taller than `h-10`.
+- Text 14px (`text-sm`); icons 14px inside controls, 16px for a trailing chevron in a dropdown, icons in `brand-subtext`.
+- Dropdown trigger (2026-10-22, `PSelect` in `Dashboard.jsx`): `inline-flex items-center gap-2 h-9 px-3 rounded-md border border-brand-border bg-white text-sm whitespace-nowrap`, leading icon optional, trailing 16px `ChevronDown`, hover `bg-brand-bg`. Width fits the label; don't fix widths that force a label to wrap.
+
+**Buttons** — one shape and one set of variants across DESSA and MTW (2026-10-22: MTW's `rounded-full` buttons are retired as the product consolidates):
+- Default primary button: the Dashboard's Next lesson button, `inline-flex items-center gap-1 h-9 px-4 rounded-md bg-dessa-teal text-sm font-semibold text-white hover:bg-dessa-teal/90`, a 14px trailing chevron when it moves the user forward. Go larger only for a hero action (`h-10 px-5`).
+- Outline button: coming next, to be defined.
 - Default link button (2026-10-20): `inline-flex items-center gap-1.5 text-sm font-semibold text-dessa-teal`, a 14px trailing `ArrowRight`; on hover it turns `dessa-navy`, underlines (`underline-offset-4`) and the arrow nudges right (`translate-x-0.5`). Use it for a card's call to action, and keep the card itself static (no hover lift) so the link is the only interactive part.
 
 **Motion & delight:**
@@ -66,15 +79,15 @@ Two text colors, full stop: `brand-text` (primary) and `brand-subtext` (secondar
 ---
 
 ## Design tokens — `tailwind.config.js`
-Two brand personalities sharing one card shell (type scale and state colors are covered above, under Design system):
+One visual language (see Design system above); the two brands now differ only in accent color, not in shape or density:
 
 **DESSA** — cool, clinical, trustworthy
-- Primary action: `dessa-teal` (#2A7F8F) — buttons use `rounded-md`
+- Primary action: `dessa-teal` (#2A7F8F), for every primary button in the product
 - Text/nav: `dessa-navy` (#1B2B4B)
 - Data colors: `dessa-green` (strength), `dessa-blue` (typical), `dessa-salmon` (need)
 
 **MTW** — warm, playful, energetic
-- Primary brand: `mtw-amber` (#F5A623) — buttons use `rounded-full`
+- Primary brand: `mtw-amber` (#F5A623), an accent only (badges, active indicators), never a button fill
 - Accent: `mtw-teal` (#2D7D78), `mtw-coral` (#E8653A)
 
 **Shared**
@@ -93,8 +106,7 @@ Two brand personalities sharing one card shell (type scale and state colors are 
 
 ## Key product decisions (captured)
 - **MTW lives under its own "MTW" nav item** — not mixed into the main DESSA navigation. The nav item uses standard styling (same as all other nav items — no amber tinting on the label itself). Amber (`#F5A623` / `mtw-amber`) appears only as accent inside the MTW pages: enrolled badge, bookmark count badge, sidebar active-unit indicator, main activity left border.
-- **Dashboard = DESSA home** with a compact top strip for "Continue Today's Lesson" (MTW CTA), then DESSA ratings widget, classroom strategies, and competency breakdown
-- **Dashboard content mirrors the real DESSA dashboard**: My Student's DESSA Ratings (pie chart), Try These Classroom Strategies (two sample cards), Student Competency Breakdown (stacked bar per competency)
+- **Dashboard** (2026-10-22): before ratings, the curriculum banner and a Start rating invite; after ratings, the production DESSA dashboard layout (Timeline, My Students, Grade Level Comparison, Support Strategies) with the curriculum banner in place of the navy MTW banner. Nav's Before | After ratings control switches between them.
 - Ratings page = district-level (9,895 students). Dashboard pie = single class (30 students, Tara's).
 - Optimistic Thinking is shown as the 6th (new) DESSA competency — appears in curriculum with a "NEW" badge and in the competency breakdown
 - Lesson view navigates back to `/mtw`, not `/curriculum`

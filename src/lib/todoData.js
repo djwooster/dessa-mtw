@@ -37,7 +37,7 @@ export const TODO_SECTIONS = [
       { id: 'resources-demo-resource', text: 'Resources: decide on a demo resource tagged "All Grades"/"Pre-K"', note: 'So those filter pills aren\'t dead ends on the live page. Asked repeatedly, never answered.' },
       { id: 'resources-clear-filters', text: 'Resources: scope a "Clear all filters" mechanism', note: 'Logged as an idea, not yet designed.' },
       { id: 'repo-cleanup', text: 'Repo cleanup: commented-out code and possibly-unnecessary files', note: 'Explicitly deferred — next session, not this one.' },
-      { id: 'visual-language-refine', text: 'Refine our visual language and design system so new concepts match what you expect', note: 'Bring the detailed prompt from your other product as a model. Add a rule that a reference image is matched closely and our system rules give way on concepts. Widen the type scale and palette for expressive ideas, and write down the look you want in words and examples.' },
+      { id: 'visual-language-refine', text: 'Finish our one product visual language', note: 'The basics are written down: Geist, compact controls, 8px cards, thin light borders and one button style. Next, send reference screens to refine it, add an outline button, and update existing screens to match.' },
     ],
   },
 ]
