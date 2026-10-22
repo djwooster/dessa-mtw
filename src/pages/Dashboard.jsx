@@ -918,11 +918,296 @@ function AfterRatingsD() {
   )
 }
 
+// ─── After ratings, production layout (2026-10-22) ────────────────────────────
+// A copy of the production DESSA dashboard from the user's screenshots, colors and all, with mock data. The navy
+// Move This World banner is swapped for our curriculum banner. Type is Geist on this view only.
+
+const P_TITLE = 'text-xl font-semibold text-org-gray-800'
+const P_LINK = 'text-base font-semibold text-org-primary-700 hover:text-org-primary-900 hover:underline underline-offset-4 transition-colors'
+
+// Fills and strokes from the org palette: Need red, Typical primary, Strength green.
+const P_LEVELS = {
+  need:     { fill: 'bg-org-red-100',     stroke: 'border-org-red-700',     text: 'text-org-red-800',     swatch: 'bg-org-red-100' },
+  typical:  { fill: 'bg-org-primary-100', stroke: 'border-org-primary-800', text: 'text-org-primary-900', swatch: 'bg-org-primary-100' },
+  strength: { fill: 'bg-org-green-100',   stroke: 'border-org-green-700',   text: 'text-org-green-900',   swatch: 'bg-org-green-100' },
+}
+
+// Decorative, like RatingWindowSelect: the production picker chrome without a data model behind it.
+function PSelect({ label, icon = true, className = '' }) {
+  return (
+    <button type="button" className={`flex items-center gap-3 h-12 px-4 rounded border-2 border-org-gray-300 bg-white text-[15px] text-org-gray-800 shrink-0 ${className}`}>
+      {icon && <Calendar size={15} aria-hidden="true" />}
+      <span className="flex-1 text-left">{label}</span>
+      <ChevronDown size={18} className="ml-4" aria-hidden="true" />
+    </button>
+  )
+}
+
+function PCardHeader({ title, link = true, select }) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <h3 className={P_TITLE}>{title}</h3>
+        {link && <button type="button" className={`${P_LINK} mt-1`}>View Details</button>}
+      </div>
+      {select}
+    </div>
+  )
+}
+
+const P_WINDOWS = [
+  { key: 'pre',  label: 'Pre',  start: 'Aug 1', months: 5, fill: 'bg-org-green-100',  text: 'text-org-green-700',   dot: 'bg-org-green-600' },
+  { key: 'mid',  label: 'Mid',  start: 'Jan 1', months: 4, fill: 'bg-org-primary-100', text: 'text-org-primary-800', dot: 'bg-org-primary-800' },
+  { key: 'post', label: 'Post', start: 'May 1', months: 3, fill: 'bg-org-primary-50',  text: 'text-org-primary-800', dot: 'bg-org-primary-800' },
+]
+
+function PTimeline() {
+  const now = new Date()
+  const startYear = schoolYearStart(now)
+  const progress = yearProgress(now)
+  return (
+    <div className="mt-6 rounded-md border border-org-gray-50 px-6 pt-6 pb-6">
+      <p className="text-base text-org-gray-700">Year at a glance</p>
+      <p className="text-xl font-bold text-org-gray-900 mt-0.5">{startYear}-{startYear + 1}</p>
+      <div className="flex text-[13px] text-org-gray-700 mt-5 mb-2">
+        {YEAR_MONTHS.map(m => <span key={m} className="flex-1 text-center">{m}</span>)}
+      </div>
+      <div className="relative">
+        <div className="flex gap-0.5 h-9">
+          {P_WINDOWS.map(w => (
+            <div key={w.key} className={`flex items-center justify-center rounded-sm text-sm font-semibold ${w.fill} ${w.text}`} style={{ flex: w.months }}>{w.label}</div>
+          ))}
+        </div>
+        {/* Today marker */}
+        <div className="absolute -top-1 -bottom-2 w-0.5 -ml-px bg-org-red-600" style={{ left: `${progress * 100}%` }} aria-hidden="true">
+          <span className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-org-red-600" />
+        </div>
+      </div>
+      <div className="flex mt-6">
+        {P_WINDOWS.map((w, i) => (
+          <div key={w.key} className={`text-[13px] ${i === P_WINDOWS.length - 1 ? 'text-right' : ''}`} style={{ flex: w.months }}>
+            <span className="inline-flex items-center gap-1.5 text-org-gray-800"><span className={`w-2 h-2 rounded-full ${w.dot}`} />{w.label}</span>
+            <p className="text-org-gray-800">{w.start}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Mock, from the screenshot: Educator and Student side by side per level.
+const P_MY_STUDENTS = [
+  { key: 'need',     label: 'Need',     educator: 7,  student: 0 },
+  { key: 'typical',  label: 'Typical',  educator: 62, student: 100 },
+  { key: 'strength', label: 'Strength', educator: 31, student: 0 },
+]
+
+function PBar({ level, value }) {
+  const c = P_LEVELS[level]
+  const inside = value >= 15
+  return (
+    <div className="relative flex-1 max-w-28 h-full flex flex-col justify-end">
+      {!inside && <span className={`absolute inset-x-0 text-center text-sm font-semibold ${c.text}`} style={{ bottom: `calc(${value}% + 2px)` }}>{value}%</span>}
+      {value > 0
+        ? <div className={`border-2 ${c.fill} ${c.stroke} flex items-center justify-center text-sm font-semibold ${c.text}`} style={{ height: `${value}%` }}>{inside && `${value}%`}</div>
+        : <div className={`border-t-2 ${c.stroke}`} />}
+    </div>
+  )
+}
+
+function PMyStudentsChart() {
+  return (
+    <div className="mt-6">
+      <div className="flex h-52 border-l border-b border-org-gray-100">
+        {P_MY_STUDENTS.map(d => (
+          <div key={d.key} className="flex-1 flex items-end justify-center gap-2 px-4">
+            <PBar level={d.key} value={d.educator} />
+            <PBar level={d.key} value={d.student} />
+          </div>
+        ))}
+      </div>
+      <div className="flex mt-3">
+        {P_MY_STUDENTS.map(d => (
+          <div key={d.key} className="flex-1 text-center text-[15px] font-medium text-org-gray-800 leading-relaxed">
+            <p>Educator · Student</p>
+            <p>{d.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Mock, from the screenshot (7th grade's Need is too thin to label).
+const P_GRADES = [
+  { grade: '1st', need: 6, typical: 64, strength: 30 },
+  { grade: '2nd', need: 9, typical: 63, strength: 28 },
+  { grade: '3rd', need: 8, typical: 56, strength: 36 },
+  { grade: '4th', need: 9, typical: 59, strength: 32 },
+  { grade: '5th', need: 6, typical: 64, strength: 30 },
+  { grade: '6th', need: 7, typical: 64, strength: 29 },
+  { grade: '7th', need: 3, typical: 62, strength: 35 },
+  { grade: '8th', need: 7, typical: 68, strength: 25 },
+]
+
+const P_LEGEND = [['need', 'Need for Instruction'], ['typical', 'Typical'], ['strength', 'Strength']]
+
+function PGradeChart() {
+  const segment = (level, value) => {
+    const c = P_LEVELS[level]
+    return (
+      <div className={`border-2 ${c.fill} ${c.stroke} flex items-center justify-center text-sm font-semibold leading-none ${c.text}`} style={{ height: `${value}%` }}>
+        {value >= 5 && `${value}%`}
+      </div>
+    )
+  }
+  return (
+    <div className="mt-12">
+      <div className="flex gap-4">
+        <span className="text-[13px] font-semibold text-org-gray-800 [writing-mode:vertical-rl] rotate-180 self-start mt-8 whitespace-nowrap">% of Students</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex gap-12 h-44 px-5 border-l border-b border-org-gray-100">
+            {P_GRADES.map(g => (
+              <div key={g.grade} className="flex-1 flex flex-col">
+                {segment('strength', g.strength)}
+                {segment('typical', g.typical)}
+                {segment('need', g.need)}
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-12 px-5 mt-3">
+            {P_GRADES.map(g => <p key={g.grade} className="flex-1 text-center text-[15px] font-medium text-org-gray-800">{g.grade}</p>)}
+          </div>
+          <p className="text-center text-base font-semibold text-org-gray-900 mt-6">Student Grade Level</p>
+        </div>
+      </div>
+      <div className="flex items-center justify-center gap-4 mt-5">
+        {P_LEGEND.map(([k, label]) => (
+          <span key={k} className="inline-flex items-center gap-2 text-base font-medium text-org-gray-900">
+            <span className={`w-4 h-4 ${P_LEVELS[k].swatch}`} />{label}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const P_STRATEGY_COLUMNS = [
+  { label: 'Type', sort: true },
+  { label: 'Start Date', sort: true, active: true },
+  { label: 'End Date', sort: true },
+  { label: 'Scope', sort: true },
+  { label: 'Target Competencies', sort: false, wide: true },
+  { label: 'Strategy Owner', sort: true },
+]
+
+// Mock school-wide numbers for the Overall Metrics tab.
+const P_STRATEGY_METRICS = [
+  { value: 4, label: 'Active strategies' },
+  { value: 12, label: 'Students with a strategy' },
+  { value: 3, label: 'Completed this year' },
+]
+
+function PSupportStrategies() {
+  const [tab, setTab] = useState('mine')
+  return (
+    <>
+      <div className="flex items-center justify-between gap-4">
+        <h3 className="flex items-baseline gap-6">
+          <span className={P_TITLE}>Support Strategies</span>
+          <span className="text-xl text-org-gray-800">2026-2027</span>
+        </h3>
+        <button type="button" className={P_LINK}>View Details</button>
+      </div>
+      <div role="tablist" aria-label="Support strategies" className="flex gap-8 mt-6 px-8 border-b border-org-gray-50">
+        {[['overall', 'Overall Metrics'], ['mine', 'My Support Strategies']].map(([k, label]) => (
+          <button
+            key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+            className={`pb-4 -mb-px text-base border-b-4 transition-colors ${tab === k ? 'font-semibold text-org-gray-900 border-org-primary-700' : 'font-medium text-org-gray-700 border-transparent hover:text-org-gray-900'}`}
+          >{label}</button>
+        ))}
+      </div>
+      {tab === 'mine' ? (
+        <div className="pt-8">
+          <div className="px-4">
+            <div className="flex items-center gap-7">
+              <h4 className="text-2xl font-bold text-org-black">Support Strategies</h4>
+              <button type="button" className="h-10 px-4 rounded bg-org-primary-700 text-sm font-semibold text-white hover:bg-org-primary-800 transition-colors">Add</button>
+            </div>
+            <p className="text-base text-org-gray-700 mt-5">Help your students by assigning an objective for them to focus on to improve their competencies.</p>
+          </div>
+          <table className="w-full mt-9 text-left">
+            <thead>
+              <tr className="bg-org-primary-25 border-b border-org-gray-50">
+                {P_STRATEGY_COLUMNS.map((c, i) => (
+                  <th key={c.label} className={`h-16 px-4 text-[15px] font-normal text-org-gray-800 ${i > 0 ? 'border-l border-org-gray-50' : ''} ${c.wide ? 'w-1/4' : ''}`}>
+                    <span className="flex items-center justify-between gap-2">
+                      {c.label}
+                      {c.sort && <span aria-hidden="true" className={`text-[9px] ${c.active ? 'text-org-gray-900' : 'text-org-gray-300'}`}>▲</span>}
+                    </span>
+                  </th>
+                ))}
+                <th className="w-20 border-l border-org-gray-50"><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="bg-org-primary-25">
+                <td colSpan={P_STRATEGY_COLUMNS.length + 1} className="h-28 text-center text-[15px] text-org-gray-800">No data found</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="flex justify-end mt-4">
+            <PSelect label="10" icon={false} className="w-24" />
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-4 pt-8">
+          {P_STRATEGY_METRICS.map(m => (
+            <div key={m.label} className="rounded-md border border-org-gray-50 p-6">
+              <p className="text-3xl font-bold text-org-gray-900">{m.value}</p>
+              <p className="text-base text-org-gray-700 mt-1">{m.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
+function AfterRatingsProduction() {
+  const card = 'bg-white rounded p-6'
+  return (
+    <div className="px-6 pt-10 pb-10 min-h-[calc(100vh-3.5rem)] bg-org-gray-50" style={{ fontFamily: "'Geist', sans-serif" }}>
+      <motion.h1 {...stagger(0)} className="text-4xl font-bold text-org-gray-900 mb-7">Welcome back, Tara!</motion.h1>
+      <motion.div {...stagger(1)} className="mb-4"><CurriculumBanner /></motion.div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <motion.div {...stagger(2)} className={card}>
+          <PCardHeader title="Timeline" link={false} select={<PSelect label="Default Rating Window" className="w-64" />} />
+          <PTimeline />
+        </motion.div>
+        <motion.div {...stagger(2)} className={card}>
+          <PCardHeader title="My Students" select={<PSelect label="26-27 Pre - Default" className="w-64" />} />
+          <PMyStudentsChart />
+        </motion.div>
+      </div>
+      <motion.div {...stagger(3)} className={`${card} mb-4`}>
+        <PCardHeader title="Grade Level Comparison" select={<PSelect label="26-27 Pre - Default" className="w-64" />} />
+        <PGradeChart />
+      </motion.div>
+      <motion.div {...stagger(4)} className={card}>
+        <PSupportStrategies />
+      </motion.div>
+    </div>
+  )
+}
+
 // Concept C is the chosen design (2026-10-21): the Dashboard shows it, with D's after ratings screen once the user
 // has rated. The other concepts and the Nav concept switcher are commented out; their components stay in this file.
 export default function Dashboard() {
   const { rated } = useDashboardConcept()
-  if (rated) return <AfterRatingsD />
+  // After ratings is the production layout (2026-10-22); AfterRatingsD was the view before it.
+  if (rated) return <AfterRatingsProduction />
+  // if (rated) return <AfterRatingsD />
   return <ProductionEmptyDashboard invite />
   // const { dashboardConcept } = useDashboardConcept()
   // if (dashboardConcept === 'a') return <CurrentDashboard />
