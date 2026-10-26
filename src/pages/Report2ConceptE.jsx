@@ -6,13 +6,13 @@
 // weekly, not daily, so the day-based presets (30/60/90) are converted to
 // the nearest whole week count — "30 days" renders as ~4 weekly points,
 // not 30 daily ones.
-import { useState, useMemo, useRef, useEffect, Fragment } from 'react'
+import { useState, useMemo, useRef, useEffect, useLayoutEffect, Fragment } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, addDays } from 'date-fns'
-import { X, MoreHorizontal, Download, Printer, ChevronRight, Calendar, Search, ArrowUp, ArrowDown, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
-import { schools, schoolWeeks, getWeekData, MOST_RECENT_WEEK, PAST_WEEKS, TODAY_WEEK_IDX, matchesSite } from '../lib/report2Data'
+import { X, MoreHorizontal, Download, Printer, ChevronRight, Calendar, Search, ArrowUp, ArrowDown, ArrowUpDown, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
+import { schools, schoolWeeks, getWeekData, MOST_RECENT_WEEK, PAST_WEEKS, TODAY_WEEK_IDX, matchesSite, getOtherDays } from '../lib/report2Data'
 import { PaginationBar } from '../components/ui/pagination'
 import { DatePicker } from '../components/ui/date-picker'
 import EducatorCalendar from '../components/engagement/EducatorCalendar'
@@ -80,17 +80,22 @@ export function agoRank(label) {
   return Number(m[1]) * { m: 1, h: 60, d: 1440, w: 10080 }[m[2]]
 }
 
+// aria-sort belongs on the column header, not the button (2026-10-26), so the button sets it on its own <th>.
+// Columns that aren't the active sort show a muted up and down arrow, so it's clear they can be sorted.
 export function SortButton({ label, col, sort, onSort, align = 'left' }) {
   const active = sort.key === col
+  const ref = useRef(null)
+  const ariaSort = active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'
+  useLayoutEffect(() => { ref.current?.closest('th')?.setAttribute('aria-sort', ariaSort) }, [ariaSort])
   return (
     <button
+      ref={ref}
       type="button"
       onClick={() => onSort(col)}
-      aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
       className={`inline-flex items-center gap-1 font-medium text-brand-text hover:text-dessa-teal transition-colors ${align === 'right' ? 'flex-row-reverse' : ''}`}
     >
       {label}
-      {active && (sort.dir === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />)}
+      {active ? (sort.dir === 'asc' ? <ArrowUp size={13} aria-hidden="true" /> : <ArrowDown size={13} aria-hidden="true" />) : <ArrowUpDown size={13} className="text-brand-subtext/60" aria-hidden="true" />}
     </button>
   )
 }
@@ -209,6 +214,33 @@ export function getLastActive(schoolId, teacherIndex) {
     }
   }
   return 'Never'
+}
+
+// The same two helpers for users without a weekly goal (report2Data's getOtherUsers, 2026-10-26). Their index is
+// offset by 500 wherever it seeds a mock pattern, so they don't mirror the staff at the same position.
+export function getOtherLastActive(siteId, idx) {
+  for (let i = TODAY_WEEK_IDX; i >= 0; i--) {
+    if (getOtherDays(siteId, idx, i) > 0) {
+      const weeksAgo = TODAY_WEEK_IDX - i
+      return weeksAgo === 0 ? recentLabel(siteId, 500 + idx) : `${weeksAgo}w ago`
+    }
+  }
+  return 'Never'
+}
+
+export function otherDayMap(siteId, idx) {
+  const map = {}
+  PAST_WEEKS.forEach((w, weekIdx) => {
+    activeDayOrder(siteId, 500 + idx, weekIdx).slice(0, getOtherDays(siteId, idx, weekIdx)).forEach(d => { map[format(addDays(parseISO(w), d), 'yyyy-MM-dd')] = true })
+  })
+  return pastOnly(map)
+}
+
+// Day maps stop at today (2026-10-26), so the calendar never shows lessons that haven't happened yet.
+const TODAY_KEY = format(new Date(), 'yyyy-MM-dd')
+function pastOnly(map) {
+  Object.keys(map).forEach(k => { if (k > TODAY_KEY) delete map[k] })
+  return map
 }
 
 // `metric` (2026-10-08): 'sites' (default) plots the % of sites where every
@@ -474,11 +506,11 @@ export function activeDayOrder(schoolId, teacherIndex, weekIdx) {
 // mock stand-in as the dot grid; the totals are exact.
 export function educatorDayMap(schoolId, teacherIndex) {
   const map = {}
-  schoolWeeks.forEach((w, weekIdx) => {
+  PAST_WEEKS.forEach((w, weekIdx) => {
     const k = getWeekData(schoolId, w, GOAL).teachers[teacherIndex].daysActive
     activeDayOrder(schoolId, teacherIndex, weekIdx).slice(0, k).forEach(d => { map[format(addDays(parseISO(w), d), 'yyyy-MM-dd')] = true })
   })
-  return map
+  return pastOnly(map)
 }
 
 export function EducatorActivityGrid({ schoolId, teacherIndex, weeks }) {

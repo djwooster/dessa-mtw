@@ -5,7 +5,8 @@ import { parseISO, addDays, format } from 'date-fns'
 import { MoreHorizontal, Download, Printer, ExternalLink, ChartLine, Table2, ChevronRight, ChevronLeft, ChevronDown, Check, Info, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { schools, schoolWeeks, getWeekData, USER_ROLES, NO_SCHOOL_WEEKS, matchesSite, PAST_WEEKS } from '../lib/report2Data'
+import { schools, schoolWeeks, getWeekData, USER_ROLES, NO_SCHOOL_WEEKS, matchesSite, PAST_WEEKS, OTHER_ROLES, isGoalRole, getOtherUsers, getOtherDays, DISTRICT_OFFICE } from '../lib/report2Data'
+import NoGoalNotice from '../components/engagement/NoGoalNotice'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { RangePicker } from '../components/ui/range-picker'
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
@@ -29,7 +30,7 @@ import MonthBarChart, { MONTHS, DEFAULT_MONTH_IDX, weekRangeLabel } from '../com
 import {
   GOAL, RANGE_PRESETS, FIRST_DATE, LAST_DATE, rangeLabel, weeksForDates,
   SortButton, nextSort, SearchField, SiteGoalLineChart, SiteWeeklyChart,
-  getRosterNames, getLastActive, agoRank, activeDayOrder, WEEKDAYS, EducatorActivityGrid, SiteDetailModal, educatorDayMap,
+  getRosterNames, getLastActive, agoRank, activeDayOrder, WEEKDAYS, EducatorActivityGrid, SiteDetailModal, educatorDayMap, getOtherLastActive, otherDayMap,
 } from './Report2ConceptE'
 import { PILL_LABELS, CONSISTENCY_THRESHOLD, districtWeek, SummaryCard } from './Report2ConceptF'
 
@@ -60,14 +61,25 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
   const list = siteList && siteList.length ? siteList : school ? [school] : schools
   const allSites = list.length > 1
 
-  const base = useMemo(() => list.flatMap(sc => {
-    const names = getRosterNames(sc.id)
-    const data = getWeekData(sc.id, latest, GOAL).teachers
-    return names.map((name, i) => ({ name, i })).filter(({ i }) => role === 'all' || data[i].role === role).map(({ name, i }) => {
-      const days = data[i].daysActive
-      return { key: `${sc.id}-${i}`, sc, name, i, role: data[i].role, days, met: data[i].metGoal, active: new Set(activeDayOrder(sc.id, i, weekIdx).slice(0, days)), last: getLastActive(sc.id, i)}
+  const base = useMemo(() => {
+    const staff = list.flatMap(sc => {
+      const names = getRosterNames(sc.id)
+      const data = getWeekData(sc.id, latest, GOAL).teachers
+      return names.map((name, i) => ({ name, i })).filter(({ i }) => role === 'all' || data[i].role === role).map(({ name, i }) => {
+        const days = data[i].daysActive
+        return { key: `${sc.id}-${i}`, sc, name, i, role: data[i].role, days, met: data[i].metGoal, active: new Set(activeDayOrder(sc.id, i, weekIdx).slice(0, days)), last: getLastActive(sc.id, i)}
+      })
     })
-  }), [list, latest, weekIdx, role])
+    // Users without a weekly goal (2026-10-26): School Support and families at each listed site, plus district admins
+    // (under the district office) when no site is picked.
+    if (role !== 'all' && !OTHER_ROLES.includes(role)) return staff
+    const sites = list === schools ? [...schools, DISTRICT_OFFICE] : list
+    const others = sites.flatMap(sc => getOtherUsers(sc.id).filter(u => role === 'all' || u.role === role).map(u => {
+      const days = getOtherDays(sc.id, u.idx, weekIdx)
+      return { key: `${sc.id}-o${u.idx}`, sc, name: u.name, i: u.idx, other: true, role: u.role, days, met: false, active: new Set(activeDayOrder(sc.id, 500 + u.idx, weekIdx).slice(0, days)), last: getOtherLastActive(sc.id, u.idx) }
+    }))
+    return [...staff, ...others]
+  }, [list, latest, weekIdx, role])
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -97,7 +109,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
   // Export CSV (2026-10-21): the users the table shows after search and sort, across every page.
   function exportUsers() {
     const q = v => `"${String(v).replace(/"/g, '""')}"`
-    const header = ['User', allSites && 'Site', roleColumn && 'Role', 'Last Active'].filter(Boolean).join(',')
+    const header = ['User', allSites && 'Site', roleColumn && 'Role', 'Last active'].filter(Boolean).join(',')
     const body = rows.map(r => [r.name, allSites && r.sc.name, roleColumn && r.role, r.last].filter(v => v !== false).map(q).join(',')).join('\n')
     const url = URL.createObjectURL(new Blob([`${header}\n${body}`], { type: 'text/csv' }))
     const a = document.createElement('a')
@@ -108,7 +120,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
   }
 
   return (
-    <div className={`bg-white rounded-xl border border-brand-border overflow-hidden ${fStyle ? '[&_td]:text-[13px]' : ''}`}>
+    <div className={`bg-white rounded-lg border border-brand-border overflow-hidden ${fStyle ? '[&_td]:text-[13px]' : ''}`}>
       <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-brand-border">
         <div className="flex-1 min-w-0">
           <SearchField value={query} onChange={v => { setQuery(v); setPage(0) }} placeholder="Search users" bg="bg-brand-bg/60" />
@@ -144,7 +156,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
             </TableHead>}
             {showDays && <TableHead className={`text-[13px] font-medium ${showDots ? '' : 'w-40 text-right'}`}><SortButton label="Days this week" col="days" sort={sort} onSort={k => { setSort(s => nextSort(s, k, 'desc')); setPage(0) }} align={showDots ? undefined : 'right'} /></TableHead>}
             {goalColumn && <TableHead className="text-[13px] font-medium w-40 text-right"><SortButton label="Weekly goal" col="goal" sort={sort} onSort={k => { setSort(s => nextSort(s, k, 'desc')); setPage(0) }} align="right" /></TableHead>}
-            <TableHead className={`text-[13px] font-medium text-right ${showDots ? '' : 'w-40'}`}><SortButton label="Last Active" col="last" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} align="right" /></TableHead>
+            <TableHead className={`text-[13px] font-medium text-right ${showDots ? '' : 'w-40'}`}><SortButton label="Last active" col="last" sort={sort} onSort={k => { setSort(s => nextSort(s, k)); setPage(0) }} align="right" /></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -155,7 +167,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
                 <TableRow onClick={drilldown ? () => setOpenKey(open ? null : r.key) : undefined} className={drilldown ? 'cursor-pointer' : 'hover:bg-transparent'}>
                   <TableCell className="font-medium">
                     {drilldown ? (
-                      <button type="button" aria-expanded={open} className={`flex items-center gap-2 text-left ${fStyle ? 'text-[13px] text-[#134fb2] hover:underline' : ''}`}>
+                      <button type="button" aria-expanded={open} className={`flex items-center gap-2 text-left ${fStyle ? 'text-[13px] text-dessa-teal hover:underline' : ''}`}>
                         <ChevronRight size={14} className={`shrink-0 text-brand-subtext transition-transform ${open ? 'rotate-90' : ''}`} />
                         {r.name}
                       </button>
@@ -196,8 +208,8 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={cols} className="pl-10 py-3 bg-brand-bg/50">
                       {/* F uses the standard EducatorCalendar (2026-10-13, manager's call). The GitHub-style version is saved in components/engagement/ContributionGraph.jsx; swap it back in here. */}
-                      {fStyle
-                        ? <EducatorCalendar dayMap={educatorDayMap(r.sc.id, r.i)} />
+                      {fStyle || r.other
+                        ? <EducatorCalendar dayMap={r.other ? otherDayMap(r.sc.id, r.i) : educatorDayMap(r.sc.id, r.i)} />
                         : <EducatorActivityGrid schoolId={r.sc.id} teacherIndex={r.i} weeks={weeks} />}
                     </TableCell>
                   </TableRow>
@@ -207,7 +219,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
           })}
           {rows.length === 0 && (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={cols} className="text-center text-brand-subtext py-8">No users match your search.</TableCell>
+              <TableCell colSpan={cols} className="text-center text-brand-subtext py-8">{query.trim() ? 'No users match your search.' : 'No users for these filters yet. Try another site or role.'}</TableCell>
             </TableRow>
           )}
         </TableBody>
@@ -381,6 +393,22 @@ export default function ReportEngagement() {
   }
 
   function exportCsv() {
+    // F (2026-10-26) exports what the Trend chart shows: one row per week for the sites in view.
+    if (isF) {
+      if (!isGoalRole(roleFilter)) {
+        toast('These users don\'t have a weekly goal', { description: 'Export them from the users table below.' })
+        return
+      }
+      const scope = selectedSite ? selectedSite.id : dSiteIds.length ? dSiteIds : null
+      const body = weeks.map(w => weekBands(scope, w, roleFilter)).map(b => `${format(parseISO(b.week), 'MMM d yyyy')},${b.total},${b.met},${b.pct}%`).join('\n')
+      const url = URL.createObjectURL(new Blob([`Week of,Users with a goal,Users who met the goal,Percent who met the goal\n${body}`], { type: 'text/csv' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `engagement-trend-${selectedSite ? selectedSite.name.toLowerCase().replace(/\s+/g, '-') : 'district'}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      return
+    }
     if (isF && selectedSite && graphView === 'table') {
       const { sites } = siteGoalRows(selectedSite ? [selectedSite.id] : dSiteIds, weeks, roleFilter)
       const body = sites.map(r => `"${r.name}",${r.users},${r.met},${r.pct}%`).join('\n')
@@ -484,7 +512,7 @@ export default function ReportEngagement() {
 
   // Print (2026-10-08, Concept A): the page prints through PrintReport. The PDF's file name comes from document.title.
   // F prints the site shown on screen: the one picked in the sites panel, or a Site Leader's own site.
-  const printSiteId = isF ? (isSiteLeaderView ? schools[0].id : dSiteIds.length ? dSiteIds : null) : siteFilter
+  const printSiteId = isF ? (isSiteLeaderView ? schools[0].id : routeSite ? routeSite.id : dSiteIds.length ? dSiteIds : null) : siteFilter
   const printRows = printSiteId == null ? siteRows : siteRows.filter(r => matchesSite(printSiteId, r.school.id))
   const printLatest = weekBands(printSiteId, weeks[weeks.length - 1], roleFilter)
   const printTitle = `Engagement, ${rangeLabel(weeks)}`
@@ -526,7 +554,8 @@ export default function ReportEngagement() {
   // draws them under its own Filters panel.
   // The Users table under the report (2026-10-19 also under the Table tab's YTD table).
   const usersTable = (
-    <SiteEducators siteList={isF && dSiteIds.length ? schools.filter(sc => dSiteIds.includes(sc.id)) : null} school={!isF ? schools.find(sc => dSiteIds.length === 1 && sc.id === dSiteIds[0]) ?? null : null} weeks={endOfYear ? YEAR_WEEKS : weeks} showDots={false} showDays={false} drilldown={isF} goalColumn={false} fStyle={isF} rangeBadge={isE ? rangeLabel(weeks) : null} role={roleFilter} roleColumn={isF} stateKey={isF ? 'overviewUsers' : null} exportable={isF} />
+    // A Site Leader only ever sees their own site (2026-10-26), on every tab.
+    <SiteEducators siteList={isF && isSiteLeaderView ? [schools[0]] : isF && dSiteIds.length ? schools.filter(sc => dSiteIds.includes(sc.id)) : null} school={!isF ? schools.find(sc => dSiteIds.length === 1 && sc.id === dSiteIds[0]) ?? null : null} weeks={endOfYear ? YEAR_WEEKS : weeks} showDots={false} showDays={false} drilldown={isF} goalColumn={false} fStyle={isF} rangeBadge={isE && !isF ? rangeLabel(weeks) : null} role={roleFilter} roleColumn={isF} stateKey={isF ? 'overviewUsers' : null} exportable={isF} />
   )
   const viewTabs = showTabs && (
     <div role="tablist" aria-label="Engagement views" className="flex gap-4 border-b border-brand-border mb-6">
@@ -557,7 +586,7 @@ export default function ReportEngagement() {
           <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { exportCsv(); setMenuOpen(false) }}>
             <Download size={13} className="text-brand-subtext" /> Export CSV
           </button>
-          <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { printReport(); setMenuOpen(false) }}>
+          <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-brand-text hover:bg-brand-bg transition-colors" onClick={() => { if (isF && !isGoalRole(roleFilter)) toast('These users don\'t have a weekly goal', { description: 'Export them from the users table below.' }); else printReport(); setMenuOpen(false) }}>
             <Printer size={13} className="text-brand-subtext" /> Print
           </button>
         </div>
@@ -585,7 +614,7 @@ export default function ReportEngagement() {
             </button>
           )}
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <h2 className="text-2xl font-semibold text-brand-text">{selectedSite ? selectedSite.name : 'Engagement'}</h2>
+            <h1 className="text-[28px] font-bold leading-tight text-brand-text">{selectedSite ? selectedSite.name : 'Engagement'}</h1>
             {goalBadge && (
               <Tooltip.Provider delayDuration={150}>
                 <Tooltip.Root>
@@ -655,7 +684,7 @@ export default function ReportEngagement() {
 
       {/* Weekly goal callout (2026-10-13): a rounded callout under the page title so the goal is on screen in screenshots.
           Back on 2026-10-16 after trying it as page subtext; the Year to date report shows it too. */}
-      {isF && <GoalBanner />}
+      {isF && isGoalRole(roleFilter) && <GoalBanner siteLevel={isSiteLeaderView} />}
 
       {isAFilters && !showTable && (
         <FiltersPanel
@@ -693,15 +722,16 @@ export default function ReportEngagement() {
         <>
           <motion.div
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
-            className="bg-white rounded-xl border border-brand-border p-5 mb-6"
+            className="bg-white rounded-lg border border-brand-border p-5 mb-6"
           >
             <div className="flex items-center justify-between gap-4 mb-4">
-              <p className="text-base font-semibold text-brand-text">{stacked || graph === 'b' ? 'Users who met their weekly goal' : isAFilters ? 'Users completing 3 lessons a week' : '% of users meeting goal'}</p>
-              {graph === 'b' ? monthControls : rangeControls}
+              <p className="text-base font-semibold text-brand-text">{stacked || graph === 'b' ? 'Users who met their weekly goal' : isAFilters ? `Users completing ${GOAL} lessons a week` : '% of users meeting goal'}</p>
+              {/* F drops the Chart | Table switch (2026-10-26): Weekly detail is the table. */}
+              {graph === 'b' ? monthControls : isF ? null : rangeControls}
             </div>
-            {isF && graphView === 'table' ? <SitesGoalTable siteIds={[selectedSite.id]} weeks={weeks} role={roleFilter} /> : graph === 'b' ? <MonthBarChart schoolId={selectedSite.id} weeks={month.weeks} role={roleFilter} /> : stacked ? <StackedGoalChart schoolId={selectedSite.id} weeks={weeks} /> : <SiteWeeklyChart schoolId={selectedSite.id} weeks={weeks} role={roleFilter} />}
+            {!isGoalRole(roleFilter) ? <NoGoalNotice role={roleFilter} /> : isF && graphView === 'table' ? <SitesGoalTable siteIds={[selectedSite.id]} weeks={weeks} role={roleFilter} /> : graph === 'b' ? <MonthBarChart schoolId={selectedSite.id} weeks={month.weeks} role={roleFilter} /> : stacked ? <StackedGoalChart schoolId={selectedSite.id} weeks={weeks} /> : <SiteWeeklyChart schoolId={selectedSite.id} weeks={weeks} role={roleFilter} />}
           </motion.div>
-          <SiteEducators school={selectedSite} weeks={weeks} role={roleFilter} showDots={engagementConcept !== 'c' && !isSiteLeaderView && !isF} showDays={!isSiteLeaderView && !isF} drilldown={!isSiteLeaderView || isF} goalColumn={isSiteLeaderView && engagementConcept === 'a'} fStyle={isF} roleColumn={isF} />
+          <SiteEducators school={selectedSite} weeks={weeks} role={roleFilter} showDots={engagementConcept !== 'c' && !isSiteLeaderView && !isF} showDays={!isSiteLeaderView && !isF} drilldown={!isSiteLeaderView || isF} goalColumn={isSiteLeaderView && engagementConcept === 'a'} fStyle={isF} roleColumn={isF} exportable={isF} stateKey={isF ? 'siteUsers' : null} />
         </>
       ) : (
         <>
@@ -828,7 +858,7 @@ export default function ReportEngagement() {
             { label: 'Share on goal', value: `${printLatest.pct}%`, note: 'Latest week' },
             { label: 'Sites', value: printSiteId == null ? schools.length : Array.isArray(printSiteId) ? printSiteId.length : 1, note: printSiteId == null ? 'In your district' : 'Filtered' },
           ]}
-          chartTitle={graph === 'b' ? 'Users who met their weekly goal' : 'Users completing 3 lessons a week'}
+          chartTitle={graph === 'b' ? 'Users who met their weekly goal' : `Users completing ${GOAL} lessons a week`}
           chart={graph === 'b' ? <MonthBarChart schoolId={siteFilter} weeks={month.weeks} role={roleFilter} /> : <SiteGoalLineChart weeks={weeks} metric="educators" siteId={printSiteId} role={roleFilter} />}
           columns={['Site', 'Users meeting goal']}
           rows={printRows.map(r => ({ name: r.school.name, value: `${r.meetingGoal} of ${r.totalTeachers} (${r.pct}%)` }))}

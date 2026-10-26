@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { schools, getWeekData } from '../../lib/report2Data'
+import { schools, getWeekData, isGoalRole } from '../../lib/report2Data'
+import NoGoalNotice from './NoGoalNotice'
 import { GOAL, SearchField } from '../../pages/Report2ConceptE'
 import { weekBands } from './StackedGoalChart'
 import WeeklyBarChart from './WeeklyBarChart'
@@ -115,10 +116,13 @@ export default function EngagementOverviewD({ weeks, selectedId, selectedIds = n
 
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.08 }}
-        className="rounded-xl border border-brand-border bg-white p-5 mb-6"
+        className="rounded-lg border border-brand-border bg-white p-5 mb-6"
       >
         <div className="flex items-center justify-between gap-4 mb-4">
-          <h3 className="text-lg font-semibold text-brand-text">{showSiteList ? 'Engagement by site' : scopeTitle}</h3>
+          {/* F (2026-10-26) is one card with one title: the goal, then the scope. */}
+          <h3 className="text-base font-semibold text-brand-text">
+            {showSiteList ? 'Engagement by site' : <>Users completing {GOAL} lessons a week<span className="font-normal text-brand-subtext"> · {scopeTitle}</span></>}
+          </h3>
           {viewSwitch}
         </div>
         {/* Concept F hides the sites list (2026-10-14): the site is chosen in the Filters panel, so the graph and table keep the full width. */}
@@ -154,15 +158,15 @@ export default function EngagementOverviewD({ weeks, selectedId, selectedIds = n
             initial={false}
             animate={{ height: panelH }}
             transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-            className="min-w-0 rounded-lg border border-brand-border overflow-hidden"
+            className={`min-w-0 overflow-hidden ${showSiteList ? 'rounded-lg border border-brand-border' : ''}`}
           >
-          <div ref={innerRef} className="p-5">
+          <div ref={innerRef} className={showSiteList ? 'p-5' : ''}>
             {/* One heading line: the graph title, plus the site name when a site is picked (no "All sites" heading). */}
-            <p className="text-[15px] font-semibold text-brand-text mb-4">
-              Users completing 3 lessons a week
-              {showSiteList && selectedSchool && <span className="font-normal text-brand-subtext"> · {selectedSchool.name}</span>}
-            </p>
-            {viewSwitch && view === 'table'
+            {showSiteList && <p className="text-[15px] font-semibold text-brand-text mb-4">
+              Users completing {GOAL} lessons a week
+              {selectedSchool && <span className="font-normal text-brand-subtext"> · {selectedSchool.name}</span>}
+            </p>}
+            {!isGoalRole(role) ? <NoGoalNotice role={role} /> : viewSwitch && view === 'table'
               ? <SitesGoalTable siteIds={scopeIds} weeks={weeks} role={role} onOpenSite={onOpenSite} />
               : <WeeklyBarChart label="Users who met the goal each week" kind="line" percent points={scope.points} />}
           </div>

@@ -16,7 +16,7 @@ export default function PrintReport({ title, rangeText, goalText, generated, sta
         </div>
         <div className="text-right text-xs text-brand-subtext leading-5">
           <p><span className="font-semibold text-brand-text">{rangeText}</span></p>
-          <p>{goalText}</p>
+          {goalText && <p>{goalText}</p>}
           <p>Generated {generated}</p>
         </div>
       </header>
@@ -24,17 +24,18 @@ export default function PrintReport({ title, rangeText, goalText, generated, sta
       <section className="grid grid-cols-3 gap-4 mb-8 print-avoid-break">
         {stats.map(s => (
           <div key={s.label} className="rounded-lg border border-brand-border px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-brand-subtext">{s.label}</p>
+            <p className="text-xs font-medium text-brand-subtext">{s.label}</p>
             <p className="text-2xl font-semibold mt-1 leading-tight">{s.value}</p>
             {s.note && <p className="text-xs text-brand-subtext mt-0.5">{s.note}</p>}
           </div>
         ))}
       </section>
 
-      <section className="mb-8 print-avoid-break">
+      {/* Content and Students (2026-10-26) print a simple chart, or none. */}
+      {chart && <section className="mb-8 print-avoid-break">
         <h2 className="text-base font-semibold mb-3">{chartTitle}</h2>
         {chart}
-      </section>
+      </section>}
 
       <table className="w-full text-sm border-collapse">
         <thead>

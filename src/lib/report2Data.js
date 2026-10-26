@@ -79,10 +79,44 @@ function det(a, b, c) {
 
 // User roles (2026-10-09), a mock field so the report's User Role filter has something to filter on.
 // Stable per user: mostly educators, a few site leaders.
-export const USER_ROLES = ['Educator', 'Site Leader']
+// User types (2026-10-26), from the legacy MTW User Sessions report: GOAL_ROLES are the staff the weekly lesson
+// goal applies to, and every goal number (charts, Weekly detail, site counts) counts only them. OTHER_ROLES use
+// the platform without a goal. They're a separate list (getOtherUsers) that only the users table reads, so adding
+// them leaves every goal percentage unchanged. Which types carry the goal is an assumption still to confirm.
+export const GOAL_ROLES = ['Educator', 'Site Leader']
+export const OTHER_ROLES = ['School Support', 'District Admin', 'Family User']
+export const USER_ROLES = [...GOAL_ROLES, ...OTHER_ROLES]
+export const isGoalRole = role => role === 'all' || GOAL_ROLES.includes(role)
 export function getRole(schoolId, teacherIndex) {
   const h = det(schoolId + 30, teacherIndex, 0)
   return h < 88 ? 'Educator' : 'Site Leader'
+}
+
+// District admins don't belong to a site, so they sit under the district office and only show when no site is
+// picked. Families connect to a site through its registration link, so they belong to that site.
+export const DISTRICT_OFFICE = { id: 0, name: 'District office' }
+const otherCache = {}
+export function getOtherUsers(siteId) {
+  if (otherCache[siteId]) return otherCache[siteId]
+  const roles = siteId === DISTRICT_OFFICE.id
+    ? ['District Admin', 'District Admin', 'District Admin']
+    : [
+        ...Array(1 + (det(siteId, 5, 9) % 2)).fill('School Support'),
+        ...Array(Math.round(TEACHER_COUNTS[siteId] * 0.35)).fill('Family User'),
+      ]
+  otherCache[siteId] = roles.map((role, idx) => ({
+    idx,
+    role,
+    name: `${FIRST_NAMES[det(siteId * 5 + 1, idx, 3) % FIRST_NAMES.length]} ${SURNAMES[det(siteId * 5 + 2, idx, 4) % SURNAMES.length]}`,
+  }))
+  return otherCache[siteId]
+}
+
+// Days active in a week for a user without a goal: families drop in a day or two some weeks, staff a bit more.
+export function getOtherDays(siteId, idx, weekIdx) {
+  if (WINTER_BREAK_WEEKS.includes(weekIdx)) return 0
+  const h = det(siteId + 200, idx, weekIdx)
+  return getOtherUsers(siteId)[idx].role === 'Family User' ? (h < 55 ? 0 : h % 3) : h % 4
 }
 
 function getRoster(schoolId) {

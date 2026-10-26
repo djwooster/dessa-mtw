@@ -6,8 +6,13 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 // completed a lesson, weekends muted. Three months in a single row (two rows
 // took too much scrolling in the modal); the arrows page one month at a time.
 // `dayMap` is { 'yyyy-MM-dd': true } for active days (see educatorDayMap).
-const FIRST_MONTH = new Date(2026, 8, 1) // Sep 2026, the start of the data (moved a year on 2026-10-19)
-const MONTH_COUNT = 9 // Sep 2026 to May 2027
+const FIRST_MONTH = new Date(2026, 7, 1) // Aug 2026: the first school week starts Mon Aug 31
+const MONTH_COUNT = 10 // Aug 2026 to May 2027
+// Every month of the school year shows (2026-10-26); days after today are greyed out, and it opens with the
+// current month last so the latest activity is in view.
+const TODAY = new Date()
+const TODAY_KEY = `${TODAY.getFullYear()}-${String(TODAY.getMonth() + 1).padStart(2, '0')}-${String(TODAY.getDate()).padStart(2, '0')}`
+const LAST_MONTH_IDX = Math.min(MONTH_COUNT - 1, Math.max(0, (TODAY.getFullYear() - FIRST_MONTH.getFullYear()) * 12 + TODAY.getMonth() - FIRST_MONTH.getMonth()))
 const MIN_WINDOW = 3 // never fewer than three months
 const MONTH_W = 174 // one month grid: 7 cells of 24px plus gaps
 const MONTH_GAP = 24
@@ -26,24 +31,27 @@ function MonthGrid({ date, dayMap }) {
 
   return (
     <div>
-      <p className="text-sm font-medium text-brand-text mb-2">{monthName(date, { month: 'long', year: 'numeric' })}</p>
+      <p className={`text-sm font-medium mb-2 ${date > TODAY ? 'text-brand-subtext/60' : 'text-brand-text'}`}>{monthName(date, { month: 'long', year: 'numeric' })}</p>
       <div className="grid grid-cols-7 gap-px w-fit">
         {WEEKDAY_HEADS.map(d => <div key={d} className="w-6 text-xs text-brand-subtext text-center py-0.5">{d}</div>)}
         {cells.map((day, i) => {
           if (!day) return <div key={`e-${i}`} />
           const key = `${year}-${pad(month + 1)}-${pad(day)}`
           const weekend = (firstDay + day - 1) % 7 === 0 || (firstDay + day - 1) % 7 === 6
-          const on = !weekend && dayMap[key]
+          const future = key > TODAY_KEY
+          const on = !weekend && !future && dayMap[key]
+          const label = date.toLocaleDateString('en-US', { month: 'long' }) + ` ${day}: ${weekend ? 'weekend' : future ? 'coming up' : on ? 'lesson completed' : 'no lesson'}`
           return (
             <div
               key={day}
-              title={`${key}${on ? ': lesson completed' : ''}`}
-              aria-label={`${key}: ${weekend ? 'weekend' : on ? 'lesson completed' : 'no lesson'}`}
+              role="img"
+              title={label}
+              aria-label={label}
               className={`w-6 h-6 flex items-center justify-center rounded text-xs ${
-                weekend ? 'text-brand-subtext/30'
+                weekend || future ? 'text-brand-subtext/40'
                 : on ? 'bg-dessa-teal text-white font-semibold'
-                : 'bg-brand-border text-brand-subtext'
-              }`}
+                : 'bg-brand-bg text-brand-text'
+              } ${key === TODAY_KEY ? 'ring-1 ring-dessa-teal' : ''}`}
             >
               {day}
             </div>
@@ -68,8 +76,8 @@ export default function EducatorCalendar({ dayMap }) {
   }, [])
   const count = Math.min(MONTH_COUNT, Math.max(MIN_WINDOW, fit))
   const maxStart = MONTH_COUNT - count
-  const [rawStart, setStart] = useState(MONTH_COUNT) // opens on the most recent months
-  const start = Math.min(rawStart, maxStart)
+  const [rawStart, setStart] = useState(null) // null opens with the current month last
+  const start = Math.min(maxStart, Math.max(0, rawStart ?? LAST_MONTH_IDX + 1 - count))
   const months = Array.from({ length: count }, (_, i) => monthAt(start + i))
   const first = months[0]
   const last = months[count - 1]
@@ -94,7 +102,7 @@ export default function EducatorCalendar({ dayMap }) {
         </div>
         <div className="flex justify-end items-center gap-x-5 mt-3 text-xs text-brand-subtext">
           <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-dessa-teal" /> Lesson completed</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-brand-border" /> No lesson</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-brand-bg border border-brand-border" /> No lesson</span>
         </div>
       </div>
       <button

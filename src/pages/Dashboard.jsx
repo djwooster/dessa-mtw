@@ -659,7 +659,7 @@ function ProductionEmptyDashboard({ invite = false }) {
   const navigate = useNavigate()
   const simulateRating = useSimulateRating()
   // Concept C's image: clicking it swaps the rating mark and the icon tiles (2026-10-20, replaced the Nav subtab).
-  const [inviteArt, setInviteArt] = useState('mark')
+  const [inviteArt, setInviteArt] = useState('tiles')  // Tiles show first (2026-10-22); clicking swaps to the rating mark
 
   return (
     <div className="px-6 pt-10 pb-7 min-h-[calc(100vh-3.5rem)] bg-org-gray-50">
@@ -1180,7 +1180,7 @@ function AfterRatingsProduction() {
   const card = 'bg-white rounded p-6'
   return (
     <div className="px-6 pt-10 pb-10 min-h-[calc(100vh-3.5rem)] bg-org-gray-50">
-      <motion.h1 {...stagger(0)} className="text-[32px] font-bold leading-tight text-org-gray-900 mb-7">Welcome back, Tara!</motion.h1>
+      <motion.h1 {...stagger(0)} className="text-[28px] font-bold leading-tight text-org-gray-900 mb-7">Welcome back, Tara!</motion.h1>
       <motion.div {...stagger(1)} className="mb-4"><CurriculumBanner /></motion.div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <motion.div {...stagger(2)} className={card}>
