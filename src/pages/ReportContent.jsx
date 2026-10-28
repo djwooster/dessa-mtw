@@ -1,14 +1,17 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import { parseISO, addDays, format } from 'date-fns'
 import { ChevronRight, Download, MoreHorizontal, Printer } from 'lucide-react'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import { schools, PAST_WEEKS, USER_ROLES } from '../lib/report2Data'
-import { COMPETENCIES, COURSE_TYPES, contentData } from '../lib/contentReportData'
+import { COMPETENCIES, COURSE_TYPES, BANDS_ORDER, bandOf, pace, contentData } from '../lib/contentReportData'
+import { useContentConcept } from '../lib/contentConceptContext'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { PaginationBar } from '../components/ui/pagination'
 import FiltersPanel, { Select } from '../components/engagement/FiltersPanel'
 import PrintReport from '../components/engagement/PrintReport'
+import CompetencyMix from '../components/content/CompetencyMix'
 import { useRole } from '../lib/roleContext'
 import { FIRST_DATE, LAST_DATE, rangeLabel, weeksForDates, SortButton, nextSort, SearchField, agoRank } from './Report2ConceptE'
 
@@ -20,11 +23,11 @@ import { FIRST_DATE, LAST_DATE, rangeLabel, weeksForDates, SortButton, nextSort,
 const toKey = d => format(d, 'yyyy-MM-dd')
 const FILTER_MIN = toKey(FIRST_DATE)
 const FILTER_MAX = toKey(LAST_DATE)
-const DEFAULT_FILTERS = { site: [], role: 'all', type: 'all', start: PAST_WEEKS[Math.max(0, PAST_WEEKS.length - 4)], end: FILTER_MAX }
+export const DEFAULT_FILTERS = { site: [], role: 'all', type: 'all', start: PAST_WEEKS[Math.max(0, PAST_WEEKS.length - 4)], end: FILTER_MAX }
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0)
-const LESSON_DEFINITION = 'A lesson counts once it is marked complete or 60% of its video is watched.'
+export const LESSON_DEFINITION = 'A lesson counts once it is marked complete or 60% of its video is watched.'
 
-function download(name, header, rows) {
+export function download(name, header, rows) {
   const q = v => `"${String(v).replace(/"/g, '""')}"`
   const url = URL.createObjectURL(new Blob([[header, ...rows].map(r => r.map(q).join(',')).join('\n')], { type: 'text/csv' }))
   const a = document.createElement('a')
@@ -35,7 +38,7 @@ function download(name, header, rows) {
 }
 
 // A metric name with its definition on hover and focus (2026-10-26), instead of a caption under it.
-function Defined({ children, definition }) {
+export function Defined({ children, definition }) {
   return (
     <Tooltip.Provider delayDuration={150}>
       <Tooltip.Root>
@@ -52,7 +55,7 @@ function Defined({ children, definition }) {
   )
 }
 
-function Stat({ label, value, note }) {
+export function Stat({ label, value, note }) {
   return (
     <div className="rounded-lg border border-brand-border bg-white p-4">
       <p className="text-sm text-brand-subtext">{label}</p>
@@ -62,7 +65,7 @@ function Stat({ label, value, note }) {
   )
 }
 
-function EmptyState() {
+export function EmptyState() {
   return (
     <div className="py-12 text-center">
       <p className="text-sm font-semibold text-brand-text">No lessons in these dates yet</p>
@@ -147,6 +150,114 @@ function CoursesTable({ rows, sort, onSortChange, oneSite }) {
   )
 }
 
+// ─── Courses tab, concept B: grade band cards ────────────────────────────────
+
+// Where a course's classes are (2026-10-27): a track for the whole course, a light band for the middle half of its
+// classes, and a dot at the typical class. Read only, no pacing target.
+function PaceTrack({ low, typical, high, total }) {
+  const at = u => ((u - 0.5) / total) * 100
+  return (
+    <span className="relative block h-1.5 rounded-full bg-brand-bg" aria-hidden="true">
+      <span className="absolute inset-y-0 rounded-full bg-dessa-teal/25" style={{ left: `${((low - 1) / total) * 100}%`, width: `${((high - low + 1) / total) * 100}%` }} />
+      <span className="absolute top-1/2 w-2.5 h-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-dessa-teal ring-2 ring-white" style={{ left: `${at(typical)}%` }} />
+    </span>
+  )
+}
+
+const courseGrade = c => (c.type === 'adult' ? 'Adults' : c.type === 'core' ? c.grade : c.grade.replace('Elementary', 'elementary').replace('School', 'school'))
+
+// One card per grade band (Elementary, Middle school, High school, Tier 2, Adult wellness, Family), each leading with
+// where its classes typically are, then every course in grade order with its own pace.
+function BandCards({ rows }) {
+  const bands = BANDS_ORDER
+    .map(name => {
+      const courses = rows.filter(r => bandOf(r.course) === name).sort((a, b) => a.course.id - b.course.id)
+      const users = courses.flatMap(r => r.users)
+      return { name, courses, users, lessons: courses.reduce((sum, r) => sum + r.lessons, 0), total: courses[0]?.course.lessons, ...pace(users) }
+    })
+    .filter(b => b.courses.length)
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+      {bands.map(b => (
+        <section key={b.name} aria-label={b.name} className="bg-white rounded-lg border border-brand-border p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-brand-text">{b.name}</h3>
+              <p className="text-sm text-brand-subtext mt-0.5 tabular-nums">
+                {b.courses.length} {b.courses.length === 1 ? 'course' : 'courses'} · {b.users.length.toLocaleString()} users · {b.lessons.toLocaleString()} lessons
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-xs font-medium text-brand-subtext">Typical class</p>
+              <p className="text-lg font-semibold text-brand-text tabular-nums leading-tight">Unit {b.unitTypical} <span className="text-sm font-normal text-brand-subtext">of {b.total}</span></p>
+            </div>
+          </div>
+          <ul className="mt-4 pt-4 border-t border-brand-border flex flex-col gap-4">
+            {b.courses.map(r => (
+              <li key={r.course.id} className="min-w-0">
+                <div className="flex items-baseline justify-between gap-3 mb-2 text-sm">
+                  <span className="min-w-0 truncate">
+                    <span className="text-brand-subtext">{courseGrade(r.course)}</span>
+                    {/* Only core courses add a title; Tier 2 and Family titles just repeat the band and grade. */}
+                    {r.course.type === 'core' && <span className="font-medium text-brand-text"> · {r.course.title}</span>}
+                  </span>
+                  <span className="shrink-0 tabular-nums text-brand-text">
+                    Unit {r.unitTypical} <span className="text-brand-subtext">of {r.course.lessons}</span>
+                  </span>
+                </div>
+                <PaceTrack low={r.unitLow} typical={r.unitTypical} high={r.unitHigh} total={r.course.lessons} />
+                <span className="sr-only">Most classes are on units {r.unitLow} to {r.unitHigh}. {r.users.length} users, {r.lessons} lessons.</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  )
+}
+
+// ─── Courses tab, concept C: one row per grade, opening its course page ─────
+
+// Grade names (2026-10-28): "Kindergarten", then "1st grade" through "12th grade".
+const gradeNo = c => (c.grade === 'Kindergarten' ? 0 : Number(c.grade.replace('Grade ', '')))
+const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
+export const gradeName = c => (gradeNo(c) === 0 ? 'Kindergarten' : `${ordinal(gradeNo(c))} grade`)
+
+// Every row is a grade (2026-10-28), with its lessons completed. Styled like the Engagement users table: edge to
+// edge in its card, one line per row, and the name is the link, like a user's name.
+function GradeTable({ rows }) {
+  const [sort, setSort] = useState({ key: 'grade', dir: 'asc' })
+  const sorted = useMemo(() => rows.filter(r => r.course.type === 'core').sort((a, b) => {
+    const dir = sort.dir === 'asc' ? 1 : -1
+    if (sort.key === 'lessons') return dir * (a.lessons - b.lessons) || gradeNo(a.course) - gradeNo(b.course)
+    return dir * (gradeNo(a.course) - gradeNo(b.course))
+  }), [rows, sort])
+  return (
+    <div className="bg-white rounded-lg border border-brand-border overflow-hidden [&_td]:text-[13px]">
+      {sorted.length ? (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-[13px] font-medium"><SortButton label="Grade" col="grade" sort={sort} onSort={k => setSort(s => nextSort(s, k))} /></TableHead>
+              <TableHead className="text-[13px] font-medium w-48 text-right"><SortButton label="Lessons completed" col="lessons" sort={sort} onSort={k => setSort(s => nextSort(s, k, 'desc'))} align="right" /></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sorted.map(r => (
+              <TableRow key={r.course.id} className="hover:bg-transparent">
+                <TableCell className="font-medium">
+                  <Link to={`/reports/content/courses/${r.course.id}`} className="text-dessa-teal hover:underline underline-offset-4">{gradeName(r.course)}</Link>
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{r.lessons.toLocaleString()}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      ) : <EmptyState />}
+    </div>
+  )
+}
+
 // ─── Competencies tab ─────────────────────────────────────────────────────────
 
 const weekLabel = w => {
@@ -217,9 +328,51 @@ function CompetencyChart({ weekly, totals, range }) {
   )
 }
 
+// Competencies over time (2026-10-28), in place of the stacked weekly chart: one small card per competency with its
+// share, its lessons and a weekly bar chart in its own color. Every card shares one scale, so a taller bar means
+// more lessons wherever it is. Cards run in the same order as the 100% bar above them, largest share first.
+function CompetencyTrends({ weekly, totals }) {
+  const sum = Object.values(totals).reduce((a, b) => a + b, 0)
+  const max = Math.max(1, ...weekly.flatMap(w => COMPETENCIES.map(c => w.comps[c.key])))
+  const cards = COMPETENCIES.map(c => ({ ...c, n: totals[c.key] })).filter(c => c.n > 0).sort((a, b) => b.n - a.n)
+  const many = weekly.length > 12
+  // Name every week up to six weeks; past that, the first week and each new month, so labels never crowd.
+  const tick = (w, i) => (weekly.length <= 6 || i === 0 || parseISO(w.week).getDate() <= 7 ? format(parseISO(w.week), 'MMM d') : '')
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      {cards.map(c => (
+        <section key={c.key} aria-label={c.label} className="bg-white rounded-lg border border-brand-border p-4 min-w-0">
+          <div className="flex items-baseline justify-between gap-3">
+            <h4 className="text-sm font-medium text-brand-text truncate">{c.label}</h4>
+            <span className="text-lg font-semibold text-brand-text tabular-nums">{pct(c.n, sum)}%</span>
+          </div>
+          <p className="text-xs text-brand-subtext tabular-nums">{c.n.toLocaleString()} lessons</p>
+          <div
+            role="img"
+            aria-label={`${c.label} lessons by week: ${weekly.map(w => `week of ${weekLabel(w.week)}, ${w.comps[c.key]}`).join('; ')}`}
+            className={`flex items-end h-20 mt-4 border-b border-brand-border ${many ? 'gap-px' : 'gap-1.5'}`}
+          >
+            {weekly.map(w => (
+              <span
+                key={w.week}
+                title={`Week of ${weekLabel(w.week)}: ${w.comps[c.key].toLocaleString()} lessons`}
+                className="flex-1 rounded-t-sm"
+                style={{ height: `${(w.comps[c.key] / max) * 100}%`, background: c.color }}
+              />
+            ))}
+          </div>
+          <div className={`flex mt-1.5 text-xs text-brand-subtext ${many ? 'gap-px' : 'gap-1.5'}`} aria-hidden="true">
+            {weekly.map((w, i) => <span key={w.week} className="flex-1 min-w-0 text-center whitespace-nowrap overflow-visible">{tick(w, i)}</span>)}
+          </div>
+        </section>
+      ))}
+    </div>
+  )
+}
+
 // Each competency's share of the lessons in the range, most covered first. No "least covered" call out
 // (2026-10-26): the ranked list already shows it, and naming a last place reads like a grade.
-function Coverage({ totals }) {
+export function Coverage({ totals }) {
   const sum = Object.values(totals).reduce((a, b) => a + b, 0)
   const rows = COMPETENCIES.map(c => ({ ...c, n: totals[c.key] })).sort((a, b) => b.n - a.n)
   return (
@@ -241,7 +394,8 @@ function Coverage({ totals }) {
 
 // ─── Users table ──────────────────────────────────────────────────────────────
 
-function UsersTable({ users, oneSite }) {
+// `linkState` rides along to the user page, so its breadcrumb can lead back to the course it was opened from.
+export function UsersTable({ users, oneSite, linked = false, showCourse = true, linkState }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState({ key: 'lessons', dir: 'desc' })
   const [page, setPage] = useState(1)
@@ -263,7 +417,7 @@ function UsersTable({ users, oneSite }) {
   useEffect(() => { setPage(1) }, [users, query, sort, pageSize])
   const shown = rows.slice((page - 1) * pageSize, page * pageSize)
   const onSort = (k, first = 'asc') => setSort(s => nextSort(s, k, first))
-  const cols = oneSite ? 6 : 7
+  const cols = 5 + !oneSite + showCourse
 
   function exportUsers() {
     download('content-users.csv', ['User', !oneSite && 'Site', 'Role', 'Course', 'Lessons completed', 'Power of Pause lessons', 'Most covered', 'Last active'].filter(Boolean),
@@ -286,7 +440,7 @@ function UsersTable({ users, oneSite }) {
             <TableHead><SortButton label="User" col="name" sort={sort} onSort={onSort} /></TableHead>
             {!oneSite && <TableHead><SortButton label="Site" col="site" sort={sort} onSort={onSort} /></TableHead>}
             <TableHead><SortButton label="Role" col="role" sort={sort} onSort={onSort} /></TableHead>
-            <TableHead><SortButton label="Course" col="course" sort={sort} onSort={onSort} /></TableHead>
+            {showCourse && <TableHead><SortButton label="Course" col="course" sort={sort} onSort={onSort} /></TableHead>}
             <TableHead className="text-right"><SortButton label="Lessons" col="lessons" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
             <TableHead>Most covered</TableHead>
             <TableHead className="text-right"><SortButton label="Last active" col="last" sort={sort} onSort={onSort} align="right" /></TableHead>
@@ -295,10 +449,12 @@ function UsersTable({ users, oneSite }) {
         <TableBody>
           {shown.map(u => (
             <TableRow key={u.key} className="hover:bg-transparent">
-              <TableCell className="font-medium">{u.name}</TableCell>
+              <TableCell className="font-medium">
+                {linked ? <Link to={`/reports/content/users/${u.key}`} state={linkState} className="text-dessa-teal hover:underline underline-offset-4">{u.name}</Link> : u.name}
+              </TableCell>
               {!oneSite && <TableCell className="text-brand-subtext">{u.sc.name}</TableCell>}
               <TableCell className="text-brand-subtext">{u.role}</TableCell>
-              <TableCell className="text-brand-subtext">{u.course.title}</TableCell>
+              {showCourse && <TableCell className="text-brand-subtext">{u.course.title}</TableCell>}
               <TableCell className="text-right tabular-nums">{u.lessons}</TableCell>
               <TableCell>
                 {u.top ? (
@@ -324,14 +480,32 @@ function UsersTable({ users, oneSite }) {
   )
 }
 
+// The weeks and sites the applied filters cover, shared with the course and user pages (concept C, 2026-10-27).
+// `allSites` ignores the Site filter, for a user page, which should find a user wherever they are. `weeks` overrides
+// the dates, for a user page opened from the Engagement report with its own range.
+export function useContentScope({ allSites = false, weeks: override = null } = {}) {
+  const { isSiteLeaderView } = useRole()
+  const { contentFilters } = useContentConcept()
+  const applied = contentFilters ?? DEFAULT_FILTERS
+  const weeks = useMemo(() => {
+    if (override?.length) return override
+    const ws = weeksForDates(parseISO(applied.start), parseISO(applied.end))
+    return ws.length ? ws : PAST_WEEKS.slice(-1)
+  }, [applied, override?.join()])
+  const siteIds = isSiteLeaderView ? [schools[0].id] : allSites ? [] : applied.site.map(Number)
+  return { weeks, siteIds, range: rangeLabel(weeks) }
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const TABS = [['courses', 'Courses'], ['competencies', 'Competencies']]
 
 export default function ReportContent() {
   const { isSiteLeaderView } = useRole()
-  const [draft, setDraft] = useState(DEFAULT_FILTERS)
-  const [applied, setApplied] = useState(DEFAULT_FILTERS)
+  const { contentConcept, contentFilters, setContentFilters } = useContentConcept()
+  const applied = contentFilters ?? DEFAULT_FILTERS
+  const setApplied = setContentFilters
+  const [draft, setDraft] = useState(applied)
   const [tab, setTab] = useState('courses')
   const [courseSort, setCourseSort] = useState({ key: 'lessons', dir: 'desc' })
   const [menuOpen, setMenuOpen] = useState(false)
@@ -360,8 +534,8 @@ export default function ReportContent() {
 
   function exportCsv() {
     if (tab === 'courses') {
-      download('content-courses.csv', ['Course', 'Course type', 'Grade', 'Lessons completed', 'Users', 'Course progress percent'],
-        sortCourses(data.courseRows, courseSort).map(r => [r.course.title, r.course.typeLabel, r.course.grade, r.lessons, r.users.length, r.progress]))
+      download('content-courses.csv', ['Course', 'Course type', 'Grade', 'Lessons completed', 'Users', 'Course progress percent', 'Typical unit', 'Units in course'],
+        sortCourses(data.courseRows, courseSort).map(r => [r.course.title, r.course.typeLabel, r.course.grade, r.lessons, r.users.length, r.progress, r.unitTypical, r.course.lessons]))
     } else {
       download('content-competencies.csv', ['Week of', ...COMPETENCIES.map(c => c.label), 'Total'],
         data.weekly.map(w => [format(parseISO(w.week), 'MMM d yyyy'), ...COMPETENCIES.map(c => w.comps[c.key]), w.total]))
@@ -456,28 +630,38 @@ export default function ReportContent() {
         key={tab} id={`content-panel-${tab}`} role="tabpanel" aria-labelledby={`content-tab-${tab}`}
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="mb-6"
       >
-        {tab === 'courses' ? (
-          <section className={card}>
-            <h3 className="text-base font-semibold text-brand-text mb-4">Lessons completed by course</h3>
-            {empty ? <EmptyState /> : <CoursesTable rows={data.courseRows} sort={courseSort} onSortChange={setCourseSort} oneSite={oneSite} />}
-          </section>
+        {tab === 'courses' && contentConcept === 'c' ? (
+          <GradeTable rows={data.courseRows} />
+        ) : tab === 'courses' ? (
+          // Concept A (the ranked course table) commented out 2026-10-28; any concept other than C shows B's cards.
+          // <section className={card}>
+          //   <h3 className="text-base font-semibold text-brand-text mb-4">Lessons completed by course</h3>
+          //   {empty ? <EmptyState /> : <CoursesTable rows={data.courseRows} sort={courseSort} onSortChange={setCourseSort} oneSite={oneSite} />}
+          // </section>
+          empty ? <section className={card}><EmptyState /></section> : <BandCards rows={data.courseRows} />
         ) : empty ? (
           <section className={card}><EmptyState /></section>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-            <section className={card}>
-              <h3 className="text-base font-semibold text-brand-text mb-4">Lessons by competency each week</h3>
-              <CompetencyChart weekly={data.weekly} totals={data.compTotals} range={range} />
-            </section>
-            <section className={card}>
-              <h3 className="text-base font-semibold text-brand-text mb-4">Coverage</h3>
-              <Coverage totals={data.compTotals} />
-            </section>
+          // The whole on top, then each competency over time (2026-10-28). The stacked weekly chart and the Coverage
+          // panel it replaces are commented out below.
+          <div className="flex flex-col gap-4">
+            <CompetencyMix totals={data.compTotals} />
+            <CompetencyTrends weekly={data.weekly} totals={data.compTotals} />
           </div>
+          // <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+          //   <section className={card}>
+          //     <h3 className="text-base font-semibold text-brand-text mb-4">Lessons by competency each week</h3>
+          //     <CompetencyChart weekly={data.weekly} totals={data.compTotals} range={range} />
+          //   </section>
+          //   <section className={card}>
+          //     <h3 className="text-base font-semibold text-brand-text mb-4">Coverage</h3>
+          //     <Coverage totals={data.compTotals} />
+          //   </section>
+          // </div>
         )}
       </motion.div>
 
-      <UsersTable users={data.users} oneSite={oneSite} />
+      <UsersTable users={data.users} oneSite={oneSite} linked={contentConcept === 'c'} />
 
       <PrintReport
         title="Content"

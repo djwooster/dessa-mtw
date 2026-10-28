@@ -36,6 +36,8 @@ const CORE = tidy(courses.filter(c => c.grade === 'Kindergarten' || c.grade.star
 const TIER2 = tidy(tier2Courses, 'tier2')
 const ADULT = tidy(adultWellnessCourses, 'adult')
 const FAMILY = tidy(familyCourses, 'family')
+// Every course the report can show, for the course page (Content concept C, 2026-10-27).
+export const ALL_COURSES = [...CORE, ...TIER2, ...ADULT, ...FAMILY]
 
 const gradeNum = c => (c.grade === 'Kindergarten' ? 0 : Number(c.grade.split(' ')[1]))
 const BANDS = {
@@ -116,6 +118,21 @@ function people(siteIds) {
   return [...staff, ...others]
 }
 
+// Where a group of users is in their course: the typical (median) unit and the middle half's spread.
+const quantile = (sorted, q) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(q * (sorted.length - 1))))]
+export function pace(users) {
+  const units = users.map(u => u.unit).sort((a, b) => a - b)
+  return units.length ? { unitTypical: quantile(units, 0.5), unitLow: quantile(units, 0.25), unitHigh: quantile(units, 0.75) } : { unitTypical: 1, unitLow: 1, unitHigh: 1 }
+}
+
+// Grade bands for the Content B concept (2026-10-27): core courses by grade, the other course types as their own band.
+export const BANDS_ORDER = ['Elementary', 'Middle school', 'High school', 'Tier 2', 'Adult wellness', 'Family']
+export function bandOf(course) {
+  if (course.type !== 'core') return course.typeLabel
+  const g = gradeNum(course)
+  return g <= 5 ? 'Elementary' : g <= 8 ? 'Middle school' : 'High school'
+}
+
 // Everything the report shows for a site scope, role, course type and list of weeks.
 export function contentData({ siteIds, role = 'all', type = 'all', weeks }) {
   const weekly = weeks.map(week => ({ week, comps: emptyComps(), total: 0 }))
@@ -148,7 +165,12 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks }) {
     const best = Math.max(...Object.values(user.comps))
     const tops = COMPETENCIES.filter(c => best > 0 && user.comps[c.key] === best)
     user.top = tops.length === 1 ? tops[0] : tops.length > 1 ? { key: 'mixed', label: 'Mixed', color: null } : null
-    user.progress = endIdx < 0 ? 0 : Math.min(1, lessonsToDate(p.key, p.daysFor, endIdx) / (course.lessons * LESSONS_PER_UNIT))
+    // Not every lesson moves a class forward (repeats, extra practice, a late start), so each user's place in the
+    // course runs at 50 to 110% of their lessons completed. Mock spread, so classes aren't all on the same unit.
+    const done = endIdx < 0 ? 0 : Math.round(lessonsToDate(p.key, p.daysFor, endIdx) * (0.5 + hash(p.seed, p.ti, 'pace') * 0.006))
+    user.progress = Math.min(1, done / (course.lessons * LESSONS_PER_UNIT))
+    // Pace (2026-10-27): the unit the user is on by the end of the range, 1 to the course's unit count.
+    user.unit = Math.min(course.lessons, Math.floor(done / LESSONS_PER_UNIT) + 1)
     users.push(user)
 
     const row = byCourse.get(course.id) ?? { course, lessons: 0, users: [], pop: 0 }
@@ -160,7 +182,7 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks }) {
 
   const courseRows = [...byCourse.values()]
     .filter(r => r.lessons > 0)
-    .map(r => ({ ...r, progress: Math.round((r.users.reduce((sum, u) => sum + u.progress, 0) / r.users.length) * 100) }))
+    .map(r => ({ ...r, progress: Math.round((r.users.reduce((sum, u) => sum + u.progress, 0) / r.users.length) * 100), ...pace(r.users) }))
 
   return { lessons, pop, activeUsers: users.filter(u => u.lessons > 0).length, users, courseRows, weekly, compTotals }
 }

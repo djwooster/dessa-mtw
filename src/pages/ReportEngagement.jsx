@@ -103,6 +103,10 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
   const shown = allSites || fStyle ? rows.slice(safePage * size, (safePage + 1) * size) : rows
   const cols = (allSites ? 5 : 4) - (showDots ? 0 : 1) - (showDays ? 0 : 1) + (goalColumn ? 1 : 0) + (roleColumn ? 1 : 0)
 
+  // Concept F (2026-10-27): a user's name opens their user page (the Content report's) in place of the row's
+  // calendar drill down. It carries the Engagement dates along, so the page shows the same range.
+  const expandable = drilldown && !fStyle
+
   const weekStart = parseISO(latest)
   const dayLetters = ['M', 'T', 'W', 'T', 'F']
 
@@ -164,9 +168,11 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
             const open = openKey === r.key
             return (
               <Fragment key={r.key}>
-                <TableRow onClick={drilldown ? () => setOpenKey(open ? null : r.key) : undefined} className={drilldown ? 'cursor-pointer' : 'hover:bg-transparent'}>
+                <TableRow onClick={expandable ? () => setOpenKey(open ? null : r.key) : undefined} className={expandable ? 'cursor-pointer' : 'hover:bg-transparent'}>
                   <TableCell className="font-medium">
-                    {drilldown ? (
+                    {fStyle ? (
+                      <Link to={`/reports/content/users/${r.key}`} state={{ from: 'engagement', weeks }} className="text-[13px] text-dessa-teal hover:underline underline-offset-4">{r.name}</Link>
+                    ) : drilldown ? (
                       <button type="button" aria-expanded={open} className={`flex items-center gap-2 text-left ${fStyle ? 'text-[13px] text-dessa-teal hover:underline' : ''}`}>
                         <ChevronRight size={14} className={`shrink-0 text-brand-subtext transition-transform ${open ? 'rotate-90' : ''}`} />
                         {r.name}
@@ -204,7 +210,7 @@ function SiteEducators({ school, weeks, showDots = true, showDays = true, drilld
                     {r.last}
                   </TableCell>
                 </TableRow>
-                {drilldown && open && (
+                {expandable && open && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={cols} className="pl-10 py-3 bg-brand-bg/50">
                       {/* F uses the standard EducatorCalendar (2026-10-13, manager's call). The GitHub-style version is saved in components/engagement/ContributionGraph.jsx; swap it back in here. */}
