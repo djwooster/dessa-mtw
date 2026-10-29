@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ChevronRight, School, User } from 'lucide-react'
-import { ALL_COURSES, contentData } from '../lib/contentReportData'
+import { contentData, gradeLabel, gradeMark, gradeCourse, gradePath } from '../lib/contentReportData'
 import CompetencyMix from '../components/content/CompetencyMix'
 import ProfileCard, { ProfileSection, TopCompetencies, CourseTile, initials } from '../components/content/ProfileCard'
 import { educatorDayMap, otherDayMap } from './Report2ConceptE'
@@ -18,8 +18,25 @@ import { ContentBreadcrumb, NotFound } from './ContentCourse'
 // course sections split by dotted lines), then the Engagement drill down's lesson calendar and the full competency
 // mix. Read only.
 
+// One link row in the card: a tile, a name and a line under it.
+function PageLink({ to, tile, name, sub }) {
+  return (
+    <Link to={to} className="group flex items-center gap-3 min-w-0 -mx-2 px-2 py-1.5 rounded-md hover:bg-brand-bg transition-colors">
+      {tile}
+      <span className="flex-1 min-w-0">
+        <span className="block text-sm font-medium text-brand-text truncate group-hover:text-dessa-teal">{name}</span>
+        <span className="block text-xs text-brand-subtext truncate">{sub}</span>
+      </span>
+      <ChevronRight size={14} className="shrink-0 text-brand-subtext transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+    </Link>
+  )
+}
+
 function IdentityCard({ user, range }) {
   const c = user.course
+  // Tier 1 and Tier 2 users link to their grade pages (2026-10-29): a Tier 1 user's one grade, or each grade a
+  // Tier 2 user's small groups had lessons in. Adult wellness and Family users link to their course page.
+  const grades = user.tier === 1 ? user.grades : Object.keys(user.byGrade).map(Number).sort((a, b) => a - b)
   return (
     <ProfileCard
       avatar={
@@ -40,16 +57,21 @@ function IdentityCard({ user, range }) {
         <TopCompetencies comps={user.comps} />
       </ProfileSection>
 
-      <ProfileSection title="Course">
-        <Link to={`/reports/content/courses/${c.id}`} className="group flex items-center gap-3 min-w-0 -mx-2 px-2 py-1.5 rounded-md hover:bg-brand-bg transition-colors">
-          <CourseTile course={c} />
-          <span className="flex-1 min-w-0">
-            <span className="block text-sm font-medium text-brand-text truncate group-hover:text-dessa-teal">{c.title}</span>
-            <span className="block text-xs text-brand-subtext truncate">{c.typeLabel} · {c.grade}</span>
-          </span>
-          <ChevronRight size={14} className="shrink-0 text-brand-subtext transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-        </Link>
-      </ProfileSection>
+      {user.tier ? (
+        <ProfileSection title={grades.length > 1 ? 'Grades' : 'Grade'}>
+          {grades.length ? (
+            <div className="flex flex-col gap-1">
+              {grades.map(g => (
+                <PageLink key={g} to={gradePath(g, user.tier)} tile={<CourseTile course={gradeCourse(g, user.tier)} mark={gradeMark(g)} />} name={gradeLabel(g)} sub={`Tier ${user.tier}`} />
+              ))}
+            </div>
+          ) : <p className="text-sm text-brand-subtext">No lessons in these dates yet.</p>}
+        </ProfileSection>
+      ) : (
+        <ProfileSection title="Course">
+          <PageLink to={`/reports/content/courses/${c.id}`} tile={<CourseTile course={c} />} name={c.title} sub={c.typeLabel} />
+        </ProfileSection>
+      )}
     </ProfileCard>
   )
 }
@@ -66,14 +88,14 @@ export default function ContentUser() {
   const dayMap = useMemo(() => (!user ? {} : user.other ? otherDayMap(user.sc.id, user.i) : educatorDayMap(user.sc.id, user.i)), [user])
   if (!user) return <NotFound what="User" />
 
-  const fromCourse = ALL_COURSES.find(c => c.id === state?.fromCourse)
+  const back = state?.back // the grade or course page the user was opened from
   const card = 'bg-white rounded-lg border border-brand-border p-5'
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
       <ContentBreadcrumb trail={[
         fromEngagement ? { label: 'Engagement', to: '/reports/engagement' } : { label: 'Content', to: '/reports/content' },
-        ...(fromCourse ? [{ label: fromCourse.title, to: `/reports/content/courses/${fromCourse.id}` }] : []),
+        ...(back ? [back] : []),
         { label: user.name },
       ]} />
       <div className="flex flex-col gap-4">

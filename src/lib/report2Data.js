@@ -84,7 +84,7 @@ function det(a, b, c) {
 // the platform without a goal. They're a separate list (getOtherUsers) that only the users table reads, so adding
 // them leaves every goal percentage unchanged. Which types carry the goal is an assumption still to confirm.
 export const GOAL_ROLES = ['Educator', 'Site Leader']
-export const OTHER_ROLES = ['School Support', 'District Admin', 'Family User']
+export const OTHER_ROLES = ['School Support', 'Program Admin', 'Family User']
 export const USER_ROLES = [...GOAL_ROLES, ...OTHER_ROLES]
 export const isGoalRole = role => role === 'all' || GOAL_ROLES.includes(role)
 export function getRole(schoolId, teacherIndex) {
@@ -92,14 +92,14 @@ export function getRole(schoolId, teacherIndex) {
   return h < 88 ? 'Educator' : 'Site Leader'
 }
 
-// District admins don't belong to a site, so they sit under the district office and only show when no site is
+// Program admins (renamed from District admins 2026-10-29) don't belong to a site, so they sit under the district office and only show when no site is
 // picked. Families connect to a site through its registration link, so they belong to that site.
 export const DISTRICT_OFFICE = { id: 0, name: 'District office' }
 const otherCache = {}
 export function getOtherUsers(siteId) {
   if (otherCache[siteId]) return otherCache[siteId]
   const roles = siteId === DISTRICT_OFFICE.id
-    ? ['District Admin', 'District Admin', 'District Admin']
+    ? ['Program Admin', 'Program Admin', 'Program Admin']
     : [
         ...Array(1 + (det(siteId, 5, 9) % 2)).fill('School Support'),
         ...Array(Math.round(TEACHER_COUNTS[siteId] * 0.35)).fill('Family User'),

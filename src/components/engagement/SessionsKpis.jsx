@@ -47,7 +47,7 @@ function Sparkline({ values }) {
   )
 }
 
-const LABELS = { 'School Support': 'School support', 'Family User': 'Family user', 'District Admin': 'District admin' }
+const LABELS = { 'School Support': 'School support', 'Family User': 'Family user', 'Program Admin': 'Program admin' }
 
 // `siteIds` follows the Site filter (or a Site Leader's own site); `role` keeps only that role's box.
 export default function SessionsKpis({ weeks, siteIds = [], role = 'all' }) {

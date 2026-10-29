@@ -5,7 +5,7 @@ import { parseISO, addDays, format } from 'date-fns'
 import { ChevronRight, Download, MoreHorizontal, Printer } from 'lucide-react'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import { schools, PAST_WEEKS, USER_ROLES } from '../lib/report2Data'
-import { COMPETENCIES, COURSE_TYPES, BANDS_ORDER, bandOf, pace, contentData } from '../lib/contentReportData'
+import { COMPETENCIES, COURSE_TYPES, BANDS_ORDER, bandOf, pace, contentData, gradeLabel, gradePath } from '../lib/contentReportData'
 import { useContentConcept } from '../lib/contentConceptContext'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { PaginationBar } from '../components/ui/pagination'
@@ -216,21 +216,18 @@ function BandCards({ rows }) {
   )
 }
 
-// ─── Courses tab, concept C: one row per grade, opening its course page ─────
+// ─── Courses tab, concept C: one row per grade, opening its grade page ──────
 
-// Grade names (2026-10-28): "Kindergarten", then "1st grade" through "12th grade".
-const gradeNo = c => (c.grade === 'Kindergarten' ? 0 : Number(c.grade.replace('Grade ', '')))
-const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
-export const gradeName = c => (gradeNo(c) === 0 ? 'Kindergarten' : `${ordinal(gradeNo(c))} grade`)
-
-// Every row is a grade (2026-10-28), with its lessons completed. Styled like the Engagement users table: edge to
-// edge in its card, one line per row, and the name is the link, like a user's name.
+// Two rows per grade (2026-10-29), Tier 1 and Tier 2, each with its lessons completed. Styled like the Engagement
+// users table: edge to edge in its card, one line per row, and the grade is the link, like a user's name.
 function GradeTable({ rows }) {
   const [sort, setSort] = useState({ key: 'grade', dir: 'asc' })
-  const sorted = useMemo(() => rows.filter(r => r.course.type === 'core').sort((a, b) => {
+  const onSort = (k, first = 'asc') => setSort(s => nextSort(s, k, first))
+  const sorted = useMemo(() => [...rows].sort((a, b) => {
     const dir = sort.dir === 'asc' ? 1 : -1
-    if (sort.key === 'lessons') return dir * (a.lessons - b.lessons) || gradeNo(a.course) - gradeNo(b.course)
-    return dir * (gradeNo(a.course) - gradeNo(b.course))
+    if (sort.key === 'lessons') return dir * (a.lessons - b.lessons) || a.g - b.g || a.tier - b.tier
+    if (sort.key === 'tier') return dir * (a.tier - b.tier) || a.g - b.g
+    return dir * (a.g - b.g) || a.tier - b.tier
   }), [rows, sort])
   return (
     <div className="bg-white rounded-lg border border-brand-border overflow-hidden [&_td]:text-[13px]">
@@ -238,16 +235,18 @@ function GradeTable({ rows }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-[13px] font-medium"><SortButton label="Grade" col="grade" sort={sort} onSort={k => setSort(s => nextSort(s, k))} /></TableHead>
-              <TableHead className="text-[13px] font-medium w-48 text-right"><SortButton label="Lessons completed" col="lessons" sort={sort} onSort={k => setSort(s => nextSort(s, k, 'desc'))} align="right" /></TableHead>
+              <TableHead className="text-[13px] font-medium"><SortButton label="Grade" col="grade" sort={sort} onSort={onSort} /></TableHead>
+              <TableHead className="text-[13px] font-medium w-40"><SortButton label="Tier" col="tier" sort={sort} onSort={onSort} /></TableHead>
+              <TableHead className="text-[13px] font-medium w-48 text-right"><SortButton label="Lessons completed" col="lessons" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sorted.map(r => (
-              <TableRow key={r.course.id} className="hover:bg-transparent">
+              <TableRow key={r.key} className="hover:bg-transparent">
                 <TableCell className="font-medium">
-                  <Link to={`/reports/content/courses/${r.course.id}`} className="text-dessa-teal hover:underline underline-offset-4">{gradeName(r.course)}</Link>
+                  <Link to={gradePath(r.g, r.tier)} className="text-dessa-teal hover:underline underline-offset-4">{gradeLabel(r.g)}</Link>
                 </TableCell>
+                <TableCell className="text-brand-subtext">Tier {r.tier}</TableCell>
                 <TableCell className="text-right tabular-nums">{r.lessons.toLocaleString()}</TableCell>
               </TableRow>
             ))}
@@ -394,34 +393,35 @@ export function Coverage({ totals }) {
 
 // ─── Users table ──────────────────────────────────────────────────────────────
 
-// `linkState` rides along to the user page, so its breadcrumb can lead back to the course it was opened from.
+// `linkState` rides along to the user page, so its breadcrumb can lead back to the page it was opened from.
+// Lessons and Most covered columns removed 2026-10-29; the user page has both.
 export function UsersTable({ users, oneSite, linked = false, showCourse = true, linkState }) {
   const [query, setQuery] = useState('')
-  const [sort, setSort] = useState({ key: 'lessons', dir: 'desc' })
+  const [sort, setSort] = useState({ key: 'name', dir: 'asc' })
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return users
-      .filter(u => !q || u.name.toLowerCase().includes(q) || u.sc.name.toLowerCase().includes(q) || u.course.title.toLowerCase().includes(q))
+      .filter(u => !q || u.name.toLowerCase().includes(q) || u.sc.name.toLowerCase().includes(q) || u.courseLabel.toLowerCase().includes(q))
       .sort((a, b) => {
         const dir = sort.dir === 'asc' ? 1 : -1
         if (sort.key === 'name') return dir * a.name.localeCompare(b.name)
         if (sort.key === 'site') return dir * a.sc.name.localeCompare(b.sc.name) || a.name.localeCompare(b.name)
         if (sort.key === 'role') return dir * a.role.localeCompare(b.role) || a.name.localeCompare(b.name)
-        if (sort.key === 'course') return dir * a.course.title.localeCompare(b.course.title) || a.name.localeCompare(b.name)
+        if (sort.key === 'course') return dir * a.courseLabel.localeCompare(b.courseLabel) || a.name.localeCompare(b.name)
         if (sort.key === 'last') return dir * (agoRank(a.last) - agoRank(b.last) || 0) || a.name.localeCompare(b.name)
-        return dir * (a.lessons - b.lessons) || a.name.localeCompare(b.name)
+        return dir * a.name.localeCompare(b.name)
       })
   }, [users, query, sort])
   useEffect(() => { setPage(1) }, [users, query, sort, pageSize])
   const shown = rows.slice((page - 1) * pageSize, page * pageSize)
   const onSort = (k, first = 'asc') => setSort(s => nextSort(s, k, first))
-  const cols = 5 + !oneSite + showCourse
+  const cols = 3 + !oneSite + showCourse
 
   function exportUsers() {
-    download('content-users.csv', ['User', !oneSite && 'Site', 'Role', 'Course', 'Lessons completed', 'Power of Pause lessons', 'Most covered', 'Last active'].filter(Boolean),
-      rows.map(u => [u.name, !oneSite && u.sc.name, u.role, u.course.title, u.lessons, u.pop, u.top?.label ?? '', u.last].filter(v => v !== false)))
+    download('content-users.csv', ['User', !oneSite && 'Site', 'Role', 'Course', 'Last active'].filter(Boolean),
+      rows.map(u => [u.name, !oneSite && u.sc.name, u.role, u.courseLabel, u.last].filter(v => v !== false)))
   }
 
   return (
@@ -441,8 +441,6 @@ export function UsersTable({ users, oneSite, linked = false, showCourse = true, 
             {!oneSite && <TableHead><SortButton label="Site" col="site" sort={sort} onSort={onSort} /></TableHead>}
             <TableHead><SortButton label="Role" col="role" sort={sort} onSort={onSort} /></TableHead>
             {showCourse && <TableHead><SortButton label="Course" col="course" sort={sort} onSort={onSort} /></TableHead>}
-            <TableHead className="text-right"><SortButton label="Lessons" col="lessons" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
-            <TableHead>Most covered</TableHead>
             <TableHead className="text-right"><SortButton label="Last active" col="last" sort={sort} onSort={onSort} align="right" /></TableHead>
           </TableRow>
         </TableHeader>
@@ -454,15 +452,7 @@ export function UsersTable({ users, oneSite, linked = false, showCourse = true, 
               </TableCell>
               {!oneSite && <TableCell className="text-brand-subtext">{u.sc.name}</TableCell>}
               <TableCell className="text-brand-subtext">{u.role}</TableCell>
-              {showCourse && <TableCell className="text-brand-subtext">{u.course.title}</TableCell>}
-              <TableCell className="text-right tabular-nums">{u.lessons}</TableCell>
-              <TableCell>
-                {u.top ? (
-                  <span className="inline-flex items-center gap-1.5 text-brand-text">
-                    {u.top.color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: u.top.color }} aria-hidden="true" />}{u.top.label}
-                  </span>
-                ) : <span className="text-brand-subtext">None yet</span>}
-              </TableCell>
+              {showCourse && <TableCell className="text-brand-subtext">{u.courseLabel}</TableCell>}
               <TableCell className="text-right text-brand-subtext">{u.last}</TableCell>
             </TableRow>
           ))}
@@ -612,7 +602,7 @@ export default function ReportContent() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <Stat label={<Defined definition={LESSON_DEFINITION}>Lessons completed</Defined>} value={data.lessons.toLocaleString()} note={range} />
-        <Stat label="Users who completed a lesson" value={`${data.activeUsers.toLocaleString()} of ${data.users.length.toLocaleString()}`} />
+        <Stat label="Users who completed a lesson" value={`${data.activeUsers.toLocaleString()} of ${data.users.length.toLocaleString()}`} note={`${pct(data.activeUsers, data.users.length)}% of users`} />
         <Stat label="Power of Pause lessons" value={data.pop.toLocaleString()} note={`${pct(data.pop, data.lessons)}% of all lessons`} />
       </div>
 
@@ -631,7 +621,7 @@ export default function ReportContent() {
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="mb-6"
       >
         {tab === 'courses' && contentConcept === 'c' ? (
-          <GradeTable rows={data.courseRows} />
+          <GradeTable rows={data.gradeRows} />
         ) : tab === 'courses' ? (
           // Concept A (the ranked course table) commented out 2026-10-28; any concept other than C shows B's cards.
           // <section className={card}>
@@ -670,7 +660,7 @@ export default function ReportContent() {
         generated={format(new Date(), 'MMM d, yyyy')}
         stats={[
           { label: 'Lessons completed', value: data.lessons.toLocaleString() },
-          { label: 'Users who completed a lesson', value: `${data.activeUsers} of ${data.users.length}` },
+          { label: 'Users who completed a lesson', value: `${data.activeUsers} of ${data.users.length}`, note: `${pct(data.activeUsers, data.users.length)}% of users` },
           { label: 'Power of Pause lessons', value: data.pop.toLocaleString(), note: `${pct(data.pop, data.lessons)}% of all lessons` },
         ]}
         chartTitle="Coverage by competency"

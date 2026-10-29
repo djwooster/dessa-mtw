@@ -24,7 +24,7 @@ import ReportEngagement from './pages/ReportEngagement'
 import ReportsLayout from './pages/ReportsLayout'
 import SettingsLayout from './pages/settings/SettingsLayout'
 import ReportContent from './pages/ReportContent'
-import ContentCourse from './pages/ContentCourse'
+import ContentCourse, { ContentGrade } from './pages/ContentCourse'
 import ContentUser from './pages/ContentUser'
 import ReportStudents from './pages/ReportStudents'
 import SettingsPlaceholder from './pages/settings/SettingsPlaceholder'
@@ -118,6 +118,7 @@ function AppShell({ handleBookmark }) {
           {/* engagement/* keeps one page mounted for the report and a site page (engagement/site/:id), so filters survive the trip. */}
           <Route path="engagement/*" element={<ReportEngagement />} />
           <Route path="content" element={<ReportContent />} />
+          <Route path="content/grades/:grade/:tier" element={<ContentGrade />} />
           <Route path="content/courses/:courseId" element={<ContentCourse />} />
           <Route path="content/users/:userKey" element={<ContentUser />} />
           <Route path="students" element={<ReportStudents />} />

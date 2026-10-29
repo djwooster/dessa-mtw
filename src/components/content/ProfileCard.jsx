@@ -14,11 +14,12 @@ export const isLight = hex => {
 }
 
 // A course's colored tile with its grade mark (K, 4, T2, AW, F). `size` 'lg' is the avatar on a course page.
-export function CourseTile({ course, size = 'sm' }) {
+// `mark` overrides the letters, so a Tier 2 grade page shows its grade, not T2.
+export function CourseTile({ course, size = 'sm', mark }) {
   const box = size === 'lg' ? 'w-20 h-20 rounded-lg text-2xl ring-4 ring-white' : 'w-10 h-10 rounded-md text-sm'
   return (
     <span className={`${box} shrink-0 flex items-center justify-center font-semibold ${isLight(course.color) ? 'text-brand-text' : 'text-white'}`} style={{ background: course.color }} aria-hidden="true">
-      {courseMark(course)}
+      {mark ?? courseMark(course)}
     </span>
   )
 }

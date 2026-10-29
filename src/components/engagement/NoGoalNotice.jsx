@@ -2,7 +2,7 @@
 // apply to (report2Data's OTHER_ROLES), so the report shows no goal data rather than a misleading 0%.
 const PLURALS = {
   'School Support': 'School support staff',
-  'District Admin': 'District admins',
+  'Program Admin': 'Program admins',
   'Family User': 'Family users',
 }
 

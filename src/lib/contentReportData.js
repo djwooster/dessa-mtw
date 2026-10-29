@@ -7,7 +7,7 @@ import { getLastActive, getOtherLastActive } from '../pages/Report2ConceptE'
 // course, picked by their role and their site's grade band, and every lesson is tagged with one competency
 // (usually the course's own) and whether it was a Power of Pause lesson. Mock only.
 // All user types count (2026-10-26): Educators teach core courses, School Support runs Tier 2, families take the
-// Family series, and Site Leaders and District Admins take Adult wellness. This folds the legacy Extra Courses tab in.
+// Family series, and Site Leaders and Program Admins take Adult wellness. This folds the legacy Extra Courses tab in.
 
 // The legacy Content report's six competencies. Colors are org and MTW tokens that each clear 3:1 on white
 // (2026-10-26, the first pass's yellow and light coral did not), with no red.
@@ -23,7 +23,7 @@ export const COMPETENCIES = [
 const COMPETENCY_ALIASES = { 'Goal-Directed Behavior': 'Self-Management' }
 
 export const COURSE_TYPES = [
-  { value: 'core', label: 'Core' },
+  { value: 'core', label: 'Tier 1' }, // "Core" until 2026-10-29
   { value: 'tier2', label: 'Tier 2' },
   { value: 'adult', label: 'Adult wellness' },
   { value: 'family', label: 'Family' },
@@ -53,6 +53,21 @@ const LEVELS = {
   High: ['High School'],
   Academy: ['Late Elementary', 'Middle School'],
 }
+// Grade pages (2026-10-29): two rows per grade in the Courses table, Tier 1 and Tier 2. Tier 2 courses come in four
+// levels, not grades, so a small group's lessons land on the grades its level serves. Mock only.
+const LEVEL_GRADES = { 'Early Elementary': [0, 1, 2], 'Late Elementary': [3, 4, 5], 'Middle School': [6, 7, 8], 'High School': [9, 10, 11, 12] }
+const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
+export const gradeLabel = g => (g === 0 ? 'Kindergarten' : `${ordinal(g)} grade`)
+export const gradeMark = g => (g === 0 ? 'K' : String(g))
+export const gradePath = (g, tier) => `/reports/content/grades/${g}/${tier}`
+export const tierOf = course => (course.type === 'core' ? 1 : course.type === 'tier2' ? 2 : null)
+const gradesFor = course => (course.type === 'core' ? [gradeNum(course)] : course.type === 'tier2' ? LEVEL_GRADES[course.grade] : [])
+// The course behind a grade row, for its tile color.
+export const gradeCourse = (g, tier) => (tier === 1 ? CORE.find(c => gradeNum(c) === g) : TIER2.find(c => LEVEL_GRADES[c.grade].includes(g)))
+// What the users table shows for a course: "1st grade, Tier 1", "Early elementary, Tier 2", or the course's title.
+const sentence = t => t.charAt(0) + t.slice(1).toLowerCase()
+const courseLabel = c => (c.type === 'core' ? `${gradeLabel(gradeNum(c))}, Tier 1` : c.type === 'tier2' ? `${sentence(c.grade)}, Tier 2` : c.title)
+
 const bandFor = name => Object.keys(BANDS).find(b => name.includes(b)) ?? 'Elementary'
 
 function hash(a, b, c) {
@@ -67,7 +82,7 @@ const pick = (list, h) => list[h % list.length]
 export function courseFor(site, ti, role) {
   const band = bandFor(site.name)
   const h = hash(site.id, ti, 'course')
-  if (role === 'Site Leader' || role === 'District Admin') return ADULT[0]
+  if (role === 'Site Leader' || role === 'Program Admin') return ADULT[0]
   if (role === 'School Support') return pick(TIER2.filter(c => LEVELS[band].includes(c.grade)), h)
   if (role === 'Family User') return pick(FAMILY.filter(c => LEVELS[band].includes(c.grade)), h)
   return pick(BANDS[band], h)
@@ -78,11 +93,12 @@ const keyFor = label => COMPETENCIES.find(c => c.label === (COMPETENCY_ALIASES[l
 // One user's lessons in one week: [{ comp, pop }]. Half are the course's own competency. Optimistic Thinking, which
 // no course is built around, gets a tenth of every course (2026-10-26) as a newer strand, so it isn't last by
 // construction; the rest spread over all six.
-function userWeekLessons(seed, ti, weekIdx, days, course) {
+function userWeekLessons(seed, ti, weekIdx, days, course, grades) {
   const own = keyFor(course.competency)
   return Array.from({ length: days }, (_, j) => {
     const h = hash(seed * 31, `${ti}`, `${weekIdx}-${j}`)
     return {
+      grade: grades.length ? grades[hash(seed * 17, `${ti}`, `${weekIdx}-${j}`) % grades.length] : null,
       comp: h < 50 ? own : h < 60 ? 'ot' : COMPETENCIES[h % COMPETENCIES.length].key,
       pop: hash(seed + 7, `${ti}-${weekIdx}`, j) < 9,
     }
@@ -148,12 +164,19 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks }) {
     if (role !== 'all' && p.role !== role) return
     const course = courseFor(p.sc, p.ti, p.role)
     if (type !== 'all' && course.type !== type) return
-    const user = { key: p.key, sc: p.sc, i: p.i, name: p.name, role: p.role, other: !!p.other, course, lessons: 0, pop: 0, comps: emptyComps(), last: p.last() }
+    const grades = gradesFor(course)
+    // `byGrade` is { grade: { lessons, comps } }, for the grade pages.
+    const user = { key: p.key, sc: p.sc, i: p.i, name: p.name, role: p.role, other: !!p.other, course, courseLabel: courseLabel(course), tier: tierOf(course), grades, byGrade: {}, lessons: 0, pop: 0, comps: emptyComps(), last: p.last() }
     weeks.forEach((w, wi) => {
       const weekIdx = schoolWeeks.indexOf(w)
-      userWeekLessons(p.seed, p.ti, weekIdx, p.daysFor(w, weekIdx), course).forEach(l => {
+      userWeekLessons(p.seed, p.ti, weekIdx, p.daysFor(w, weekIdx), course, grades).forEach(l => {
         user.lessons += 1
         user.comps[l.comp] += 1
+        if (l.grade != null) {
+          const bg = (user.byGrade[l.grade] ??= { lessons: 0, comps: emptyComps() })
+          bg.lessons += 1
+          bg.comps[l.comp] += 1
+        }
         weekly[wi].comps[l.comp] += 1
         weekly[wi].total += 1
         compTotals[l.comp] += 1
@@ -184,5 +207,14 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks }) {
     .filter(r => r.lessons > 0)
     .map(r => ({ ...r, progress: Math.round((r.users.reduce((sum, u) => sum + u.progress, 0) / r.users.length) * 100), ...pace(r.users) }))
 
-  return { lessons, pop, activeUsers: users.filter(u => u.lessons > 0).length, users, courseRows, weekly, compTotals }
+  // A Tier 1 and a Tier 2 row per grade, for every grade and tier with users in scope.
+  const gradeRows = []
+  for (let g = 0; g <= 12; g++) {
+    [1, 2].forEach(tier => {
+      const eligible = users.filter(u => u.tier === tier && u.grades.includes(g))
+      if (eligible.length) gradeRows.push({ key: `${g}-${tier}`, g, tier, course: gradeCourse(g, tier), lessons: eligible.reduce((sum, u) => sum + (u.byGrade[g]?.lessons ?? 0), 0) })
+    })
+  }
+
+  return { gradeRows, lessons, pop, activeUsers: users.filter(u => u.lessons > 0).length, users, courseRows, weekly, compTotals }
 }
