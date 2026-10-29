@@ -88,16 +88,26 @@ export function courseFor(site, ti, role) {
   return pick(BANDS[band], h)
 }
 
+// A few users teach more than one course (2026-10-29), for the user page: Aisha Garcia at Heritage Elementary
+// teaches Kindergarten, 1st and 2nd grade. Same tier only, so a user's grades all sit on one tier's pages.
+const EXTRA_COURSES = { '20-11': [1, 2].map(g => CORE.find(c => gradeNum(c) === g)) }
+// "1st grade, Tier 1", or "3 grades, Tier 1" for a user who teaches several.
+const usersCourseLabel = list => (list.length > 1 ? `${list.length} grades, Tier ${tierOf(list[0])}` : courseLabel(list[0]))
+
 const keyFor = label => COMPETENCIES.find(c => c.label === (COMPETENCY_ALIASES[label] ?? label))?.key
 
 // One user's lessons in one week: [{ comp, pop }]. Half are the course's own competency. Optimistic Thinking, which
 // no course is built around, gets a tenth of every course (2026-10-26) as a newer strand, so it isn't last by
 // construction; the rest spread over all six.
-function userWeekLessons(seed, ti, weekIdx, days, course, grades) {
-  const own = keyFor(course.competency)
+// A user with several courses spreads their lessons across them.
+function userWeekLessons(seed, ti, weekIdx, days, list) {
   return Array.from({ length: days }, (_, j) => {
     const h = hash(seed * 31, `${ti}`, `${weekIdx}-${j}`)
+    const course = list[hash(seed * 13, `${ti}`, `${weekIdx}-${j}`) % list.length]
+    const own = keyFor(course.competency)
+    const grades = gradesFor(course)
     return {
+      course,
       grade: grades.length ? grades[hash(seed * 17, `${ti}`, `${weekIdx}-${j}`) % grades.length] : null,
       comp: h < 50 ? own : h < 60 ? 'ot' : COMPETENCIES[h % COMPETENCIES.length].key,
       pop: hash(seed + 7, `${ti}-${weekIdx}`, j) < 9,
@@ -164,13 +174,15 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks }) {
     if (role !== 'all' && p.role !== role) return
     const course = courseFor(p.sc, p.ti, p.role)
     if (type !== 'all' && course.type !== type) return
-    const grades = gradesFor(course)
-    // `byGrade` is { grade: { lessons, comps } }, for the grade pages.
-    const user = { key: p.key, sc: p.sc, i: p.i, name: p.name, role: p.role, other: !!p.other, course, courseLabel: courseLabel(course), tier: tierOf(course), grades, byGrade: {}, lessons: 0, pop: 0, comps: emptyComps(), last: p.last() }
+    const list = [course, ...(EXTRA_COURSES[p.key] ?? [])]
+    const grades = list.flatMap(gradesFor)
+    // `byGrade` is { grade: { lessons, comps } }, for the grade pages; `byCourseLessons` is lessons per course id.
+    const user = { key: p.key, sc: p.sc, i: p.i, name: p.name, role: p.role, other: !!p.other, course, courses: list, courseLabel: usersCourseLabel(list), tier: tierOf(course), grades, byGrade: {}, byCourseLessons: {}, lessons: 0, pop: 0, comps: emptyComps(), last: p.last() }
     weeks.forEach((w, wi) => {
       const weekIdx = schoolWeeks.indexOf(w)
-      userWeekLessons(p.seed, p.ti, weekIdx, p.daysFor(w, weekIdx), course, grades).forEach(l => {
+      userWeekLessons(p.seed, p.ti, weekIdx, p.daysFor(w, weekIdx), list).forEach(l => {
         user.lessons += 1
+        user.byCourseLessons[l.course.id] = (user.byCourseLessons[l.course.id] ?? 0) + 1
         user.comps[l.comp] += 1
         if (l.grade != null) {
           const bg = (user.byGrade[l.grade] ??= { lessons: 0, comps: emptyComps() })
@@ -196,11 +208,14 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks }) {
     user.unit = Math.min(course.lessons, Math.floor(done / LESSONS_PER_UNIT) + 1)
     users.push(user)
 
-    const row = byCourse.get(course.id) ?? { course, lessons: 0, users: [], pop: 0 }
-    row.lessons += user.lessons
-    row.pop += user.pop
-    if (user.lessons > 0) row.users.push(user)
-    byCourse.set(course.id, row)
+    list.forEach(c => {
+      const n = user.byCourseLessons[c.id] ?? 0
+      const row = byCourse.get(c.id) ?? { course: c, lessons: 0, users: [], pop: 0 }
+      row.lessons += n
+      row.pop += c === course ? user.pop : 0
+      if (n > 0) row.users.push(user)
+      byCourse.set(c.id, row)
+    })
   })
 
   const courseRows = [...byCourse.values()]

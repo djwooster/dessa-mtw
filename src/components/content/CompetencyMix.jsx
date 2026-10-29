@@ -32,14 +32,19 @@ function useWidth() {
   return [ref, w]
 }
 
-// Dot, name, share and lessons, one row per competency; used beside the donut.
+// Dot, name, a share bar, share and lessons, one row per competency; used beside the donut. The bars fill the
+// card's width (2026-10-29) instead of leaving it empty, scaled to the top competency so small shares still read.
 function Legend({ rows }) {
+  const max = Math.max(...rows.map(r => r.share))
   return (
-    <ul className="flex flex-col gap-2 text-sm min-w-0 max-w-lg">
+    <ul className="flex flex-col gap-3 text-sm min-w-0">
       {rows.map(r => (
-        <li key={r.key} className="flex items-center gap-2 min-w-0">
+        <li key={r.key} className="flex items-center gap-3 min-w-0">
           <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: r.color }} aria-hidden="true" />
-          <span className="flex-1 min-w-0 truncate text-brand-text">{r.label}</span>
+          <span className="w-52 min-w-0 shrink truncate text-brand-text">{r.label}</span>
+          <span className="flex-1 min-w-12 h-2 rounded-full bg-brand-bg overflow-hidden" aria-hidden="true">
+            <span className="block h-full rounded-full" style={{ width: `${(r.share / max) * 100}%`, background: r.color }} />
+          </span>
           <span className="w-10 shrink-0 text-right tabular-nums text-brand-text">{pctText(r.share)}</span>
           <span className="w-20 shrink-0 text-right tabular-nums whitespace-nowrap text-brand-subtext">{r.n} {r.n === 1 ? 'lesson' : 'lessons'}</span>
         </li>

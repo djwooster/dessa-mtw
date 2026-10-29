@@ -394,8 +394,8 @@ export function Coverage({ totals }) {
 // ─── Users table ──────────────────────────────────────────────────────────────
 
 // `linkState` rides along to the user page, so its breadcrumb can lead back to the page it was opened from.
-// Lessons and Most covered columns removed 2026-10-29; the user page has both.
-export function UsersTable({ users, oneSite, linked = false, showCourse = true, linkState }) {
+// Lessons and Most covered columns removed 2026-10-29, then Course; the user page has all three.
+export function UsersTable({ users, oneSite, linked = false, linkState }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState({ key: 'name', dir: 'asc' })
   const [page, setPage] = useState(1)
@@ -403,13 +403,12 @@ export function UsersTable({ users, oneSite, linked = false, showCourse = true, 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return users
-      .filter(u => !q || u.name.toLowerCase().includes(q) || u.sc.name.toLowerCase().includes(q) || u.courseLabel.toLowerCase().includes(q))
+      .filter(u => !q || u.name.toLowerCase().includes(q) || u.sc.name.toLowerCase().includes(q))
       .sort((a, b) => {
         const dir = sort.dir === 'asc' ? 1 : -1
         if (sort.key === 'name') return dir * a.name.localeCompare(b.name)
         if (sort.key === 'site') return dir * a.sc.name.localeCompare(b.sc.name) || a.name.localeCompare(b.name)
         if (sort.key === 'role') return dir * a.role.localeCompare(b.role) || a.name.localeCompare(b.name)
-        if (sort.key === 'course') return dir * a.courseLabel.localeCompare(b.courseLabel) || a.name.localeCompare(b.name)
         if (sort.key === 'last') return dir * (agoRank(a.last) - agoRank(b.last) || 0) || a.name.localeCompare(b.name)
         return dir * a.name.localeCompare(b.name)
       })
@@ -417,18 +416,18 @@ export function UsersTable({ users, oneSite, linked = false, showCourse = true, 
   useEffect(() => { setPage(1) }, [users, query, sort, pageSize])
   const shown = rows.slice((page - 1) * pageSize, page * pageSize)
   const onSort = (k, first = 'asc') => setSort(s => nextSort(s, k, first))
-  const cols = 3 + !oneSite + showCourse
+  const cols = 3 + !oneSite
 
   function exportUsers() {
-    download('content-users.csv', ['User', !oneSite && 'Site', 'Role', 'Course', 'Last active'].filter(Boolean),
-      rows.map(u => [u.name, !oneSite && u.sc.name, u.role, u.courseLabel, u.last].filter(v => v !== false)))
+    download('lessons-users.csv', ['User', !oneSite && 'Site', 'Role', 'Last active'].filter(Boolean),
+      rows.map(u => [u.name, !oneSite && u.sc.name, u.role, u.last].filter(v => v !== false)))
   }
 
   return (
     <div className="bg-white rounded-lg border border-brand-border overflow-hidden">
       <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-brand-border">
         <div className="flex-1 min-w-0">
-          <SearchField value={query} onChange={setQuery} placeholder={oneSite ? 'Search users or courses' : 'Search users, sites or courses'} bg="bg-brand-bg/60" />
+          <SearchField value={query} onChange={setQuery} placeholder={oneSite ? 'Search users' : 'Search users or sites'} bg="bg-brand-bg/60" />
         </div>
         <button type="button" onClick={exportUsers} className="inline-flex items-center gap-1.5 h-9 px-2 shrink-0 whitespace-nowrap text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4 transition-colors">
           <Download size={14} aria-hidden="true" /> Export CSV
@@ -440,7 +439,6 @@ export function UsersTable({ users, oneSite, linked = false, showCourse = true, 
             <TableHead><SortButton label="User" col="name" sort={sort} onSort={onSort} /></TableHead>
             {!oneSite && <TableHead><SortButton label="Site" col="site" sort={sort} onSort={onSort} /></TableHead>}
             <TableHead><SortButton label="Role" col="role" sort={sort} onSort={onSort} /></TableHead>
-            {showCourse && <TableHead><SortButton label="Course" col="course" sort={sort} onSort={onSort} /></TableHead>}
             <TableHead className="text-right"><SortButton label="Last active" col="last" sort={sort} onSort={onSort} align="right" /></TableHead>
           </TableRow>
         </TableHeader>
@@ -452,7 +450,6 @@ export function UsersTable({ users, oneSite, linked = false, showCourse = true, 
               </TableCell>
               {!oneSite && <TableCell className="text-brand-subtext">{u.sc.name}</TableCell>}
               <TableCell className="text-brand-subtext">{u.role}</TableCell>
-              {showCourse && <TableCell className="text-brand-subtext">{u.courseLabel}</TableCell>}
               <TableCell className="text-right text-brand-subtext">{u.last}</TableCell>
             </TableRow>
           ))}
@@ -470,6 +467,33 @@ export function UsersTable({ users, oneSite, linked = false, showCourse = true, 
   )
 }
 
+// The Filters panel on the course, grade and user pages (2026-10-29). It edits the report's own applied filters, so
+// a change here carries back to the report and on to the next page. Each page picks the fields that change it.
+// `initial` patches the draft (a user page opened from Engagement shows Engagement's dates); `onApply` runs after.
+export function ContentFilters({ showSite = true, showRole = true, initial, onApply }) {
+  const { isSiteLeaderView } = useRole()
+  const { contentFilters, setContentFilters } = useContentConcept()
+  const applied = contentFilters ?? DEFAULT_FILTERS
+  const [draft, setDraft] = useState(() => {
+    const d = { ...applied, ...initial }
+    return { ...d, end: d.end > FILTER_MAX ? FILTER_MAX : d.end }
+  })
+  return (
+    <FiltersPanel
+      draft={draft}
+      onChange={setDraft}
+      onApply={() => { setContentFilters(draft); onApply?.() }}
+      onReset={() => { setDraft(DEFAULT_FILTERS); setContentFilters(DEFAULT_FILTERS); onApply?.() }}
+      sites={schools}
+      roles={USER_ROLES}
+      showSite={showSite && !isSiteLeaderView}
+      showRole={showRole}
+      minDate={FILTER_MIN}
+      maxDate={FILTER_MAX}
+    />
+  )
+}
+
 // The weeks and sites the applied filters cover, shared with the course and user pages (concept C, 2026-10-27).
 // `allSites` ignores the Site filter, for a user page, which should find a user wherever they are. `weeks` overrides
 // the dates, for a user page opened from the Engagement report with its own range.
@@ -483,7 +507,7 @@ export function useContentScope({ allSites = false, weeks: override = null } = {
     return ws.length ? ws : PAST_WEEKS.slice(-1)
   }, [applied, override?.join()])
   const siteIds = isSiteLeaderView ? [schools[0].id] : allSites ? [] : applied.site.map(Number)
-  return { weeks, siteIds, range: rangeLabel(weeks) }
+  return { weeks, siteIds, role: applied.role, range: rangeLabel(weeks) }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -524,10 +548,10 @@ export default function ReportContent() {
 
   function exportCsv() {
     if (tab === 'courses') {
-      download('content-courses.csv', ['Course', 'Course type', 'Grade', 'Lessons completed', 'Users', 'Course progress percent', 'Typical unit', 'Units in course'],
+      download('lessons-courses.csv', ['Course', 'Course type', 'Grade', 'Lessons completed', 'Users', 'Course progress percent', 'Typical unit', 'Units in course'],
         sortCourses(data.courseRows, courseSort).map(r => [r.course.title, r.course.typeLabel, r.course.grade, r.lessons, r.users.length, r.progress, r.unitTypical, r.course.lessons]))
     } else {
-      download('content-competencies.csv', ['Week of', ...COMPETENCIES.map(c => c.label), 'Total'],
+      download('lessons-competencies.csv', ['Week of', ...COMPETENCIES.map(c => c.label), 'Total'],
         data.weekly.map(w => [format(parseISO(w.week), 'MMM d yyyy'), ...COMPETENCIES.map(c => w.comps[c.key]), w.total]))
     }
   }
@@ -579,7 +603,7 @@ export default function ReportContent() {
   const typeLabel = COURSE_TYPES.find(t => t.value === applied.type)?.label
   return (
     <div className="px-6 pt-8 pb-8">
-      <h1 className="text-[28px] font-bold leading-tight text-brand-text mb-6">Content</h1>
+      <h1 className="text-[28px] font-bold leading-tight text-brand-text mb-6">Lessons</h1>
 
       <FiltersPanel
         draft={draft}
@@ -654,7 +678,7 @@ export default function ReportContent() {
       <UsersTable users={data.users} oneSite={oneSite} linked={contentConcept === 'c'} />
 
       <PrintReport
-        title="Content"
+        title="Lessons"
         rangeText={range}
         goalText={typeLabel ? `${typeLabel} courses` : null}
         generated={format(new Date(), 'MMM d, yyyy')}

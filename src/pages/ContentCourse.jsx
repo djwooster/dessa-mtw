@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { BookOpen, ChevronRight } from 'lucide-react'
 import { ALL_COURSES, COMPETENCIES, contentData, gradeLabel, gradeMark, gradeCourse, gradePath } from '../lib/contentReportData'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
-import { Defined, EmptyState, UsersTable, LESSON_DEFINITION, useContentScope } from './ReportContent'
+import { ContentFilters, Defined, EmptyState, UsersTable, LESSON_DEFINITION, useContentScope } from './ReportContent'
 import CompetencyMix from '../components/content/CompetencyMix'
 import ProfileCard, { CourseTile } from '../components/content/ProfileCard'
 
@@ -37,25 +37,24 @@ export function ContentBreadcrumb({ trail }) {
 export function NotFound({ what }) {
   return (
     <div className="px-6 pt-8 pb-8">
-      <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, { label: `${what} not found` }]} />
+      <ContentBreadcrumb trail={[{ label: 'Lessons', to: '/reports/content' }, { label: `${what} not found` }]} />
       <div className="bg-white rounded-lg border border-brand-border py-12 text-center">
         <p className="text-sm font-semibold text-brand-text">We couldn't find that {what.toLowerCase()}</p>
         <p className="text-sm text-brand-subtext mt-1">It may be outside the sites you can see.</p>
-        <Link to="/reports/content" className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">Back to Content</Link>
+        <Link to="/reports/content" className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">Back to Lessons</Link>
       </div>
     </div>
   )
 }
 
-// Schools using the course, most lessons first, with an inline bar against the top school.
+// Schools using the course, most lessons first. The inline bar came out 2026-10-29; the numbers are enough.
 function SchoolsTable({ rows }) {
-  const max = Math.max(1, ...rows.map(r => r.lessons))
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>School</TableHead>
-          <TableHead className="w-[45%]">Lessons completed</TableHead>
+          <TableHead className="w-48 text-right">Lessons completed</TableHead>
           <TableHead className="w-24 text-right">Users</TableHead>
         </TableRow>
       </TableHeader>
@@ -63,14 +62,7 @@ function SchoolsTable({ rows }) {
         {rows.map(r => (
           <TableRow key={r.sc.id} className="hover:bg-transparent">
             <TableCell className="font-medium">{r.sc.name}</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-3">
-                <span className="w-12 shrink-0 tabular-nums text-brand-text">{r.lessons.toLocaleString()}</span>
-                <span className="flex-1 h-2 rounded-full bg-brand-bg overflow-hidden" aria-hidden="true">
-                  <span className="block h-full rounded-full bg-dessa-teal" style={{ width: `${(r.lessons / max) * 100}%` }} />
-                </span>
-              </div>
-            </TableCell>
+            <TableCell className="text-right tabular-nums">{r.lessons.toLocaleString()}</TableCell>
             <TableCell className="text-right tabular-nums">{r.users}</TableCell>
           </TableRow>
         ))}
@@ -95,7 +87,9 @@ function GroupPage({ title, avatar, meta, users, part, path }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
-      <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, { label: title }]} />
+      <ContentBreadcrumb trail={[{ label: 'Lessons', to: '/reports/content' }, { label: title }]} />
+      {/* Filters (2026-10-29): Site, User role and dates. Course type is left off, since the page is one grade or course. */}
+      <ContentFilters />
       <div className="flex flex-col gap-4">
         {/* The same profile card as a user page (2026-10-27). */}
         <ProfileCard
@@ -114,15 +108,15 @@ function GroupPage({ title, avatar, meta, users, part, path }) {
           <h3 className="text-base font-semibold text-brand-text mb-4">Lessons completed by school</h3>
           {bySchool.length ? <SchoolsTable rows={bySchool} /> : <EmptyState />}
         </section>
-        <UsersTable users={users} oneSite={siteIds.length === 1} linked showCourse={false} linkState={{ back: { label: title, to: path } }} />
+        <UsersTable users={users} oneSite={siteIds.length === 1} linked linkState={{ back: { label: title, to: path } }} />
       </div>
     </motion.div>
   )
 }
 
 function useScopedUsers() {
-  const { weeks, siteIds } = useContentScope()
-  return useMemo(() => contentData({ siteIds, weeks }).users, [siteIds.join(), weeks])
+  const { weeks, siteIds, role } = useContentScope()
+  return useMemo(() => contentData({ siteIds, role, weeks }).users, [siteIds.join(), role, weeks])
 }
 
 const whole = u => u

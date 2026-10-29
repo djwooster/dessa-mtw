@@ -1,13 +1,14 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ChevronRight, School, User } from 'lucide-react'
 import { contentData, gradeLabel, gradeMark, gradeCourse, gradePath } from '../lib/contentReportData'
 import CompetencyMix from '../components/content/CompetencyMix'
-import ProfileCard, { ProfileSection, TopCompetencies, CourseTile, initials } from '../components/content/ProfileCard'
+import ProfileCard, { ProfileSection, CourseTile, initials } from '../components/content/ProfileCard'
 import { educatorDayMap, otherDayMap } from './Report2ConceptE'
 import EducatorCalendar from '../components/engagement/EducatorCalendar'
-import { Defined, LESSON_DEFINITION, useContentScope } from './ReportContent'
+import { addDays, format, parseISO } from 'date-fns'
+import { ContentFilters, Defined, LESSON_DEFINITION, useContentScope } from './ReportContent'
 import { ContentBreadcrumb, NotFound } from './ContentCourse'
 
 // User page (Content concept C, 2026-10-27): a user's name in the Content report or on a course page opens here.
@@ -34,7 +35,7 @@ function PageLink({ to, tile, name, sub }) {
 
 function IdentityCard({ user, range }) {
   const c = user.course
-  // Tier 1 and Tier 2 users link to their grade pages (2026-10-29): a Tier 1 user's one grade, or each grade a
+  // Tier 1 and Tier 2 users link to their grade pages (2026-10-29): a Tier 1 user's grades, or each grade a
   // Tier 2 user's small groups had lessons in. Adult wellness and Family users link to their course page.
   const grades = user.tier === 1 ? user.grades : Object.keys(user.byGrade).map(Number).sort((a, b) => a - b)
   return (
@@ -53,12 +54,9 @@ function IdentityCard({ user, range }) {
       ]}
       range={range}
     >
-      <ProfileSection title="Top competencies">
-        <TopCompetencies comps={user.comps} />
-      </ProfileSection>
-
+      {/* Top competencies removed 2026-10-29; the competency chart below covers it. */}
       {user.tier ? (
-        <ProfileSection title={grades.length > 1 ? 'Grades' : 'Grade'}>
+        <ProfileSection title={grades.length > 1 ? 'Courses' : 'Course'}>
           {grades.length ? (
             <div className="flex flex-col gap-1">
               {grades.map(g => (
@@ -82,7 +80,9 @@ export default function ContentUser() {
   useEffect(() => { window.scrollTo(0, 0) }, [userKey])
   const { state } = useLocation()
   const fromEngagement = state?.from === 'engagement'
-  const { weeks, siteIds, range } = useContentScope({ allSites: true, weeks: fromEngagement ? state.weeks : null })
+  // Engagement's dates hold until the viewer applies their own in the Filters panel.
+  const [engWeeks, setEngWeeks] = useState(fromEngagement ? state.weeks : null)
+  const { weeks, siteIds, range } = useContentScope({ allSites: true, weeks: engWeeks })
   const data = useMemo(() => contentData({ siteIds, weeks }), [siteIds.join(), weeks])
   const user = data.users.find(u => u.key === userKey)
   const dayMap = useMemo(() => (!user ? {} : user.other ? otherDayMap(user.sc.id, user.i) : educatorDayMap(user.sc.id, user.i)), [user])
@@ -94,10 +94,18 @@ export default function ContentUser() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
       <ContentBreadcrumb trail={[
-        fromEngagement ? { label: 'Engagement', to: '/reports/engagement' } : { label: 'Content', to: '/reports/content' },
+        fromEngagement ? { label: 'Engagement', to: '/reports/engagement' } : { label: 'Lessons', to: '/reports/content' },
         ...(back ? [back] : []),
         { label: user.name },
       ]} />
+      {/* Filters (2026-10-29): dates only. Site, role and course type are fixed for one user. */}
+      <ContentFilters
+        key={userKey}
+        showSite={false}
+        showRole={false}
+        initial={engWeeks?.length ? { start: engWeeks[0], end: format(addDays(parseISO(engWeeks[engWeeks.length - 1]), 4), 'yyyy-MM-dd') } : undefined}
+        onApply={() => setEngWeeks(null)}
+      />
       <div className="flex flex-col gap-4">
         <IdentityCard user={user} range={range} />
         <div className="flex flex-col gap-4 min-w-0">

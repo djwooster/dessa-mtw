@@ -15,7 +15,7 @@ const REPORT_GROUPS = [
       // { label: 'Daily Curriculum Engagement', to: 'dce' },
       { label: 'Engagement', to: 'engagement' },
       // Content (2026-10-26): what's being taught, by course and competency. Replaces the legacy Content Overview.
-      { label: 'Content', to: 'content' },
+      { label: 'Lessons', to: 'content' }, // "Content" until 2026-10-29; the URL stays
       // Students (2026-10-26): mood check-ins and journals that need a check-in. Replaces the legacy Students tab.
       // Hidden from the sidebar 2026-10-28; the /reports/students route still works.
       // { label: 'Students', to: 'students' },
