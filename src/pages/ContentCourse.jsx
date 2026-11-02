@@ -72,7 +72,7 @@ function SchoolsTable({ rows }) {
 }
 
 // A course or grade page. `part(u)` is the slice of a user's lessons that counts here: { lessons, comps }.
-function GroupPage({ title, avatar, meta, users, part, path }) {
+function GroupPage({ title, avatar, meta, users, part, path, action }) {
   const { siteIds, range } = useContentScope()
   const active = users.filter(u => part(u).lessons > 0)
   const lessons = active.reduce((sum, u) => sum + part(u).lessons, 0)
@@ -102,6 +102,7 @@ function GroupPage({ title, avatar, meta, users, part, path }) {
             ['Users', `${active.length.toLocaleString()} of ${users.length.toLocaleString()}`],
           ]}
           range={range}
+          action={action}
         />
         <CompetencyMix totals={comps} />
         <section className={card}>
@@ -122,26 +123,42 @@ function useScopedUsers() {
 const whole = u => u
 const NONE = { lessons: 0, comps: Object.fromEntries(COMPETENCIES.map(c => [c.key, 0])) }
 
-// "1st grade" with "Tier 1": everyone teaching that grade at that tier. A Tier 2 user counts on each grade their
-// level serves, with only that grade's lessons.
+// All tiers, Tier 1 or Tier 2 for one grade page (2026-11-02). Links, so each view has its own URL and Back works.
+function TierSwitch({ g, tier }) {
+  const opts = [[null, 'All tiers'], [1, 'Tier 1'], [2, 'Tier 2']]
+  return (
+    <nav aria-label="Tier" className="inline-flex items-center gap-0.5 p-0.5 rounded-md border border-brand-border bg-brand-bg">
+      {opts.map(([t, label]) => (
+        <Link
+          key={label} to={gradePath(g, t)} replace aria-current={t === tier ? 'page' : undefined}
+          className={`inline-flex items-center h-8 px-3 rounded text-sm whitespace-nowrap transition-colors ${t === tier ? 'bg-white border border-brand-border font-medium text-brand-text' : 'border border-transparent text-brand-subtext hover:text-brand-text'}`}
+        >{label}</Link>
+      ))}
+    </nav>
+  )
+}
+
+// "1st grade": everyone teaching that grade, at both tiers or one (`/grades/1/2` is 1st grade, Tier 2). A Tier 2
+// user counts on each grade their level serves, with only that grade's lessons.
 export function ContentGrade() {
   const { grade, tier } = useParams()
-  useEffect(() => { window.scrollTo(0, 0) }, [grade, tier])
+  useEffect(() => { window.scrollTo(0, 0) }, [grade])
   const g = Number(grade)
-  const t = Number(tier)
+  const t = tier ? Number(tier) : null
   const all = useScopedUsers()
-  const users = useMemo(() => all.filter(u => u.tier === t && u.grades.includes(g)), [all, g, t])
-  const course = gradeCourse(g, t)
-  if (!course) return <NotFound what="Grade" />
+  const users = useMemo(() => all.filter(u => (t ? u.tier === t : u.tier) && u.grades.includes(g)), [all, g, t])
+  const course = t ? gradeCourse(g, t) : gradeCourse(g, 1) ?? gradeCourse(g, 2)
+  if (!course || (t && t !== 1 && t !== 2)) return <NotFound what="Grade" />
   return (
     <GroupPage
       key={`${g}-${t}`}
       title={gradeLabel(g)}
       avatar={<CourseTile course={course} size="lg" mark={gradeMark(g)} />}
-      meta={[[BookOpen, `Tier ${t}`]]}
+      meta={[[BookOpen, t ? `Tier ${t}` : 'Tier 1 and Tier 2']]}
       users={users}
       part={u => u.byGrade[g] ?? NONE}
       path={gradePath(g, t)}
+      action={<TierSwitch g={g} tier={t} />}
     />
   )
 }

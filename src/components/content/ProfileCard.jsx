@@ -60,25 +60,48 @@ export function TopCompetencies({ comps }) {
 }
 
 // `avatar` sits over the banner's edge; `meta` is [[Icon, text]], split by thin dividers; `stats` is [[label, value]].
-export default function ProfileCard({ avatar, title, meta, stats, range, children }) {
+// `action` sits on the right, level with the avatar's bottom edge (the grade page's tier switch, 2026-11-02).
+// `banner={false}` (the user page, 2026-11-02) drops the teal banner for a light teal header with the name and meta,
+// no avatar. Its tint is dessa-teal at 17% on white, which is #DAE8EB, the color the user picked.
+export default function ProfileCard({ avatar, title, meta, stats, range, action, banner = true, children }) {
+  const heading = (
+    <div className="min-w-0">
+      <h1 className="text-lg font-semibold leading-tight text-brand-text truncate">{title}</h1>
+      <p className="flex items-center gap-2 text-sm text-brand-subtext mt-1 min-w-0">
+        {meta.map(([Icon, text], i) => (
+          <span key={i} className={`inline-flex items-center gap-2 ${i === meta.length - 1 ? 'min-w-0' : 'shrink-0'}`}>
+            {i > 0 && <span className="w-px h-3.5 bg-brand-border shrink-0" aria-hidden="true" />}
+            <span className="inline-flex items-center gap-1.5 min-w-0"><Icon size={14} className="shrink-0" aria-hidden="true" /><span className="truncate">{text}</span></span>
+          </span>
+        ))}
+      </p>
+    </div>
+  )
   return (
     <div className="bg-white rounded-lg border border-brand-border overflow-hidden">
-      <div className="relative h-24 bg-dessa-teal overflow-hidden">
-        <Flower className="absolute left-5 top-5 w-36 h-36 text-dessa-navy rotate-12" />
-        <Flower className="absolute right-24 top-10 w-16 h-16 text-dessa-navy -rotate-12" />
-      </div>
-      <div className="px-5 pb-4">
-        <div className="-mt-10 mb-3 w-fit relative">{avatar}</div>
-        <h1 className="text-lg font-semibold leading-tight text-brand-text">{title}</h1>
-        <p className="flex items-center gap-2 text-sm text-brand-subtext mt-1 min-w-0">
-          {meta.map(([Icon, text], i) => (
-            <span key={i} className={`inline-flex items-center gap-2 ${i === meta.length - 1 ? 'min-w-0' : 'shrink-0'}`}>
-              {i > 0 && <span className="w-px h-3.5 bg-brand-border shrink-0" aria-hidden="true" />}
-              <span className="inline-flex items-center gap-1.5 min-w-0"><Icon size={14} className="shrink-0" aria-hidden="true" /><span className="truncate">{text}</span></span>
-            </span>
-          ))}
-        </p>
-        <dl className="grid grid-cols-3 mt-4">
+      {banner && (
+        <div className="relative h-24 bg-dessa-teal overflow-hidden">
+          <Flower className="absolute left-5 top-5 w-36 h-36 text-dessa-navy rotate-12" />
+          <Flower className="absolute right-24 top-10 w-16 h-16 text-dessa-navy -rotate-12" />
+        </div>
+      )}
+      {!banner && (
+        <div className="flex items-center justify-between gap-4 px-5 py-4 bg-dessa-teal/[0.17] border-b border-brand-border">
+          {heading}
+          {action}
+        </div>
+      )}
+      <div className={banner ? 'px-5 pb-4' : 'px-5 pt-4 pb-4'}>
+        {banner && (
+          <>
+            <div className="flex items-end justify-between gap-4 -mt-10 mb-3">
+              <div className="w-fit relative">{avatar}</div>
+              {action}
+            </div>
+            {heading}
+          </>
+        )}
+        <dl className={`grid grid-cols-3 ${banner ? 'mt-4' : ''}`}>
           {stats.map(([label, value], i) => (
             <div key={i} className={i === 0 ? 'pr-3' : 'px-3'}>
               <dt className="text-xs text-brand-subtext truncate">{label}</dt>

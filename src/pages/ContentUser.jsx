@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { ChevronRight, School, User } from 'lucide-react'
 import { contentData, gradeLabel, gradeMark, gradeCourse, gradePath } from '../lib/contentReportData'
 import CompetencyMix from '../components/content/CompetencyMix'
-import ProfileCard, { ProfileSection, CourseTile, initials } from '../components/content/ProfileCard'
+import ProfileCard, { ProfileSection, CourseTile } from '../components/content/ProfileCard'
 import { educatorDayMap, otherDayMap } from './Report2ConceptE'
 import EducatorCalendar from '../components/engagement/EducatorCalendar'
 import { addDays, format, parseISO } from 'date-fns'
@@ -40,11 +40,7 @@ function IdentityCard({ user, range }) {
   const grades = user.tier === 1 ? user.grades : Object.keys(user.byGrade).map(Number).sort((a, b) => a - b)
   return (
     <ProfileCard
-      avatar={
-        <span className="w-20 h-20 rounded-full ring-4 ring-white bg-white flex items-center justify-center" aria-hidden="true">
-          <span className="w-full h-full rounded-full bg-dessa-teal/10 text-dessa-teal text-2xl font-semibold flex items-center justify-center">{initials(user.name)}</span>
-        </span>
-      }
+      banner={false}
       title={user.name}
       meta={[[User, user.role], [School, user.sc.name]]}
       stats={[
@@ -109,11 +105,12 @@ export default function ContentUser() {
       <div className="flex flex-col gap-4">
         <IdentityCard user={user} range={range} />
         <div className="flex flex-col gap-4 min-w-0">
+          {/* Competencies first (2026-11-02), then the lesson days. */}
+          <CompetencyMix totals={user.comps} />
           <section className={card}>
             <h3 className="text-base font-semibold text-brand-text mb-4">Lesson days this school year</h3>
             <EducatorCalendar dayMap={dayMap} />
           </section>
-          <CompetencyMix totals={user.comps} />
         </div>
       </div>
     </motion.div>

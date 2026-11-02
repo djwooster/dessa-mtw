@@ -59,7 +59,8 @@ const LEVEL_GRADES = { 'Early Elementary': [0, 1, 2], 'Late Elementary': [3, 4, 
 const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
 export const gradeLabel = g => (g === 0 ? 'Kindergarten' : `${ordinal(g)} grade`)
 export const gradeMark = g => (g === 0 ? 'K' : String(g))
-export const gradePath = (g, tier) => `/reports/content/grades/${g}/${tier}`
+// No tier opens the grade with both tiers (2026-11-02).
+export const gradePath = (g, tier) => (tier ? `/reports/content/grades/${g}/${tier}` : `/reports/content/grades/${g}`)
 export const tierOf = course => (course.type === 'core' ? 1 : course.type === 'tier2' ? 2 : null)
 const gradesFor = course => (course.type === 'core' ? [gradeNum(course)] : course.type === 'tier2' ? LEVEL_GRADES[course.grade] : [])
 // The course behind a grade row, for its tile color.

@@ -218,17 +218,75 @@ function BandCards({ rows }) {
 
 // ─── Courses tab, concept C: one row per grade, opening its grade page ──────
 
-// Two rows per grade (2026-10-29), Tier 1 and Tier 2, each with its lessons completed. Styled like the Engagement
-// users table: edge to edge in its card, one line per row, and the grade is the link, like a user's name.
+// The two rows per grade table, commented out 2026-11-02 for one row per grade with a column per tier (below).
+// // Two rows per grade (2026-10-29), Tier 1 and Tier 2, each with its lessons completed. Styled like the Engagement
+// // users table: edge to edge in its card, one line per row, and the grade is the link, like a user's name.
+// function GradeTable({ rows }) {
+//   const [sort, setSort] = useState({ key: 'grade', dir: 'asc' })
+//   const onSort = (k, first = 'asc') => setSort(s => nextSort(s, k, first))
+//   const sorted = useMemo(() => [...rows].sort((a, b) => {
+//     const dir = sort.dir === 'asc' ? 1 : -1
+//     if (sort.key === 'lessons') return dir * (a.lessons - b.lessons) || a.g - b.g || a.tier - b.tier
+//     if (sort.key === 'tier') return dir * (a.tier - b.tier) || a.g - b.g
+//     return dir * (a.g - b.g) || a.tier - b.tier
+//   }), [rows, sort])
+//   return (
+//     <div className="bg-white rounded-lg border border-brand-border overflow-hidden [&_td]:text-[13px]">
+//       {sorted.length ? (
+//         <Table>
+//           <TableHeader>
+//             <TableRow>
+//               <TableHead className="text-[13px] font-medium"><SortButton label="Grade" col="grade" sort={sort} onSort={onSort} /></TableHead>
+//               <TableHead className="text-[13px] font-medium w-40"><SortButton label="Tier" col="tier" sort={sort} onSort={onSort} /></TableHead>
+//               <TableHead className="text-[13px] font-medium w-48 text-right"><SortButton label="Lessons completed" col="lessons" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
+//             </TableRow>
+//           </TableHeader>
+//           <TableBody>
+//             {sorted.map(r => (
+//               <TableRow key={r.key} className="hover:bg-transparent">
+//                 <TableCell className="font-medium">
+//                   <Link to={gradePath(r.g, r.tier)} className="text-dessa-teal hover:underline underline-offset-4">{gradeLabel(r.g)}</Link>
+//                 </TableCell>
+//                 <TableCell className="text-brand-subtext">Tier {r.tier}</TableCell>
+//                 <TableCell className="text-right tabular-nums">{r.lessons.toLocaleString()}</TableCell>
+//               </TableRow>
+//             ))}
+//           </TableBody>
+//         </Table>
+//       ) : <EmptyState />}
+//     </div>
+//   )
+// }
+
+// One row per grade (2026-11-02), with a column per tier and a total, replacing two rows per grade. The columns stay
+// put whatever the filters say: a tier the filters leave out is left blank, not 0, so it can't read as
+// "none taught". The grade opens its page with both tiers, where a switch narrows it to one.
+function TierCell({ n }) {
+  return n == null
+    ? <TableCell className="text-right"><span className="sr-only">Not in these filters</span></TableCell>
+    : <TableCell className="text-right tabular-nums">{n.toLocaleString()}</TableCell>
+}
+
 function GradeTable({ rows }) {
   const [sort, setSort] = useState({ key: 'grade', dir: 'asc' })
   const onSort = (k, first = 'asc') => setSort(s => nextSort(s, k, first))
-  const sorted = useMemo(() => [...rows].sort((a, b) => {
+  const grades = useMemo(() => {
+    const byG = new Map()
+    rows.forEach(r => {
+      const row = byG.get(r.g) ?? { g: r.g, t1: null, t2: null }
+      row[`t${r.tier}`] = r.lessons
+      byG.set(r.g, row)
+    })
+    return [...byG.values()].map(r => ({ ...r, total: (r.t1 ?? 0) + (r.t2 ?? 0) }))
+  }, [rows])
+  const sorted = useMemo(() => [...grades].sort((a, b) => {
     const dir = sort.dir === 'asc' ? 1 : -1
-    if (sort.key === 'lessons') return dir * (a.lessons - b.lessons) || a.g - b.g || a.tier - b.tier
-    if (sort.key === 'tier') return dir * (a.tier - b.tier) || a.g - b.g
-    return dir * (a.g - b.g) || a.tier - b.tier
-  }), [rows, sort])
+    if (sort.key === 'grade') return dir * (a.g - b.g)
+    return dir * ((a[sort.key] ?? -1) - (b[sort.key] ?? -1)) || a.g - b.g
+  }), [grades, sort])
+  const num = (label, col) => (
+    <TableHead className="text-[13px] font-medium w-36 text-right"><SortButton label={label} col={col} sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
+  )
   return (
     <div className="bg-white rounded-lg border border-brand-border overflow-hidden [&_td]:text-[13px]">
       {sorted.length ? (
@@ -236,18 +294,20 @@ function GradeTable({ rows }) {
           <TableHeader>
             <TableRow>
               <TableHead className="text-[13px] font-medium"><SortButton label="Grade" col="grade" sort={sort} onSort={onSort} /></TableHead>
-              <TableHead className="text-[13px] font-medium w-40"><SortButton label="Tier" col="tier" sort={sort} onSort={onSort} /></TableHead>
-              <TableHead className="text-[13px] font-medium w-48 text-right"><SortButton label="Lessons completed" col="lessons" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
+              {num('Tier 1', 't1')}
+              {num('Tier 2', 't2')}
+              {num('Total', 'total')}
             </TableRow>
           </TableHeader>
           <TableBody>
             {sorted.map(r => (
-              <TableRow key={r.key} className="hover:bg-transparent">
+              <TableRow key={r.g} className="hover:bg-transparent">
                 <TableCell className="font-medium">
-                  <Link to={gradePath(r.g, r.tier)} className="text-dessa-teal hover:underline underline-offset-4">{gradeLabel(r.g)}</Link>
+                  <Link to={gradePath(r.g)} className="text-dessa-teal hover:underline underline-offset-4">{gradeLabel(r.g)}</Link>
                 </TableCell>
-                <TableCell className="text-brand-subtext">Tier {r.tier}</TableCell>
-                <TableCell className="text-right tabular-nums">{r.lessons.toLocaleString()}</TableCell>
+                <TierCell n={r.t1} />
+                <TierCell n={r.t2} />
+                <TableCell className="text-right tabular-nums font-medium">{r.total.toLocaleString()}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -427,7 +487,7 @@ export function UsersTable({ users, oneSite, linked = false, linkState }) {
     <div className="bg-white rounded-lg border border-brand-border overflow-hidden">
       <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-brand-border">
         <div className="flex-1 min-w-0">
-          <SearchField value={query} onChange={setQuery} placeholder={oneSite ? 'Search users' : 'Search users or sites'} bg="bg-brand-bg/60" />
+          <SearchField value={query} onChange={setQuery} placeholder="Search users" bg="bg-brand-bg/60" />
         </div>
         <button type="button" onClick={exportUsers} className="inline-flex items-center gap-1.5 h-9 px-2 shrink-0 whitespace-nowrap text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4 transition-colors">
           <Download size={14} aria-hidden="true" /> Export CSV
@@ -625,8 +685,9 @@ export default function ReportContent() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <Stat label={<Defined definition={LESSON_DEFINITION}>Lessons completed</Defined>} value={data.lessons.toLocaleString()} note={range} />
-        <Stat label="Users who completed a lesson" value={`${data.activeUsers.toLocaleString()} of ${data.users.length.toLocaleString()}`} note={`${pct(data.activeUsers, data.users.length)}% of users`} />
+        <Stat label={<Defined definition={LESSON_DEFINITION}>Lessons completed</Defined>} value={data.lessons.toLocaleString()} />
+        {/* KPI cards refined 2026-11-02: no note under Lessons completed, and the percent leads for users. */}
+        <Stat label="Users who completed a lesson" value={`${pct(data.activeUsers, data.users.length)}%`} note={`${data.activeUsers.toLocaleString()} of ${data.users.length.toLocaleString()} users`} />
         <Stat label="Power of Pause lessons" value={data.pop.toLocaleString()} note={`${pct(data.pop, data.lessons)}% of all lessons`} />
       </div>
 
@@ -660,7 +721,8 @@ export default function ReportContent() {
           // panel it replaces are commented out below.
           <div className="flex flex-col gap-4">
             <CompetencyMix totals={data.compTotals} />
-            <CompetencyTrends weekly={data.weekly} totals={data.compTotals} />
+            {/* Weekly bar charts per competency commented out 2026-11-02; they restated the mix above. Kept for later. */}
+            {/* <CompetencyTrends weekly={data.weekly} totals={data.compTotals} /> */}
           </div>
           // <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
           //   <section className={card}>

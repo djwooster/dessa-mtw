@@ -118,6 +118,7 @@ function AppShell({ handleBookmark }) {
           {/* engagement/* keeps one page mounted for the report and a site page (engagement/site/:id), so filters survive the trip. */}
           <Route path="engagement/*" element={<ReportEngagement />} />
           <Route path="content" element={<ReportContent />} />
+          <Route path="content/grades/:grade" element={<ContentGrade />} />
           <Route path="content/grades/:grade/:tier" element={<ContentGrade />} />
           <Route path="content/courses/:courseId" element={<ContentCourse />} />
           <Route path="content/users/:userKey" element={<ContentUser />} />
