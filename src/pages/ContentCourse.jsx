@@ -1,10 +1,10 @@
 import { Fragment, useEffect, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { BookOpen, ChevronRight } from 'lucide-react'
+import { BookOpen, ChevronRight, Download } from 'lucide-react'
 import { ALL_COURSES, COMPETENCIES, contentData, gradeLabel, gradeMark, gradeCourse, gradePath } from '../lib/contentReportData'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
-import { ContentFilters, Defined, EmptyState, UsersTable, LESSON_DEFINITION, useContentScope } from './ReportContent'
+import { ContentFilters, Defined, EmptyState, MoreMenu, UsersTable, LESSON_DEFINITION, download, useContentScope } from './ReportContent'
 import CompetencyMix from '../components/content/CompetencyMix'
 import ProfileCard, { CourseTile } from '../components/content/ProfileCard'
 
@@ -73,7 +73,7 @@ function SchoolsTable({ rows }) {
 
 // A course or grade page. `part(u)` is the slice of a user's lessons that counts here: { lessons, comps }.
 function GroupPage({ title, avatar, meta, users, part, path, action }) {
-  const { siteIds, range } = useContentScope()
+  const { siteIds } = useContentScope()
   const active = users.filter(u => part(u).lessons > 0)
   const lessons = active.reduce((sum, u) => sum + part(u).lessons, 0)
   const comps = Object.fromEntries(COMPETENCIES.map(c => [c.key, active.reduce((sum, u) => sum + part(u).comps[c.key], 0)]))
@@ -83,13 +83,17 @@ function GroupPage({ title, avatar, meta, users, part, path, action }) {
     r.users += 1
     return m.set(u.sc.id, r)
   }, new Map()).values()].sort((a, b) => b.lessons - a.lessons)
-  const card = 'bg-white rounded-lg border border-brand-border p-5'
+  function exportCsv() {
+    const name = `${title}${meta[0]?.[1] ? ` ${meta[0][1]}` : ''}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    download(`${name}-schools.csv`, ['School', 'Lessons completed', 'Users'], bySchool.map(r => [r.sc.name, r.lessons, r.users]))
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
       <ContentBreadcrumb trail={[{ label: 'Lessons', to: '/reports/content' }, { label: title }]} />
       {/* Filters (2026-10-29): Site, User role and dates. Course type is left off, since the page is one grade or course. */}
-      <ContentFilters />
+      {/* 3-dot menu (2026-11-02): Export CSV of the page's schools, like the report's own menu. */}
+      <ContentFilters action={<MoreMenu items={[{ icon: Download, label: 'Export CSV', onSelect: exportCsv }]} />} />
       <div className="flex flex-col gap-4">
         {/* The same profile card as a user page (2026-10-27). */}
         <ProfileCard
@@ -101,12 +105,16 @@ function GroupPage({ title, avatar, meta, users, part, path, action }) {
             ['Schools', bySchool.length.toLocaleString()],
             ['Users', `${active.length.toLocaleString()} of ${users.length.toLocaleString()}`],
           ]}
-          range={range}
+          // No date range here (2026-11-02); the Filters panel above shows it.
           action={action}
+          banner={false}
         />
         <CompetencyMix totals={comps} />
-        <section className={card}>
-          <h3 className="text-base font-semibold text-brand-text mb-4">Lessons completed by school</h3>
+        {/* The standard table (2026-11-02): edge to edge in its card, like the users table, not inset. */}
+        <section className="bg-white rounded-lg border border-brand-border overflow-hidden">
+          <div className="px-4 py-3 border-b border-brand-border">
+            <h3 className="text-base font-semibold text-brand-text">Lessons completed by school</h3>
+          </div>
           {bySchool.length ? <SchoolsTable rows={bySchool} /> : <EmptyState />}
         </section>
         <UsersTable users={users} oneSite={siteIds.length === 1} linked linkState={{ back: { label: title, to: path } }} />
@@ -158,7 +166,8 @@ export function ContentGrade() {
       users={users}
       part={u => u.byGrade[g] ?? NONE}
       path={gradePath(g, t)}
-      action={<TierSwitch g={g} tier={t} />}
+      // The tier switch came off 2026-11-02; grade links open Tier 1. Kept below for later.
+      // action={<TierSwitch g={g} tier={t} />}
     />
   )
 }

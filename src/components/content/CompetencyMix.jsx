@@ -13,7 +13,7 @@ const CONCEPTS = [
   { value: 'donut', label: 'Donut' },
 ]
 const STORE_KEY = 'content.competencyMix'
-const readConcept = () => { try { return localStorage.getItem(STORE_KEY) ?? 'bar' } catch { return 'bar' } }
+// const readConcept = () => { try { return localStorage.getItem(STORE_KEY) ?? 'bar' } catch { return 'bar' } }
 
 const pctText = n => `${Math.round(n * 100)}%`
 const describe = rows => rows.map(r => `${r.label} ${pctText(r.share)}`).join(', ')
@@ -37,16 +37,21 @@ function useWidth() {
 function Legend({ rows }) {
   const max = Math.max(...rows.map(r => r.share))
   return (
+    // Two lines per competency (2026-11-02): the name and lessons, then its bar and percent under the name.
     <ul className="flex flex-col gap-3 text-sm min-w-0">
       {rows.map(r => (
-        <li key={r.key} className="flex items-center gap-3 min-w-0">
-          <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: r.color }} aria-hidden="true" />
-          <span className="w-52 min-w-0 shrink truncate text-brand-text">{r.label}</span>
-          <span className="flex-1 min-w-12 h-2 rounded-full bg-brand-bg overflow-hidden" aria-hidden="true">
-            <span className="block h-full rounded-full" style={{ width: `${(r.share / max) * 100}%`, background: r.color }} />
+        <li key={r.key} className="min-w-0">
+          <span className="flex items-center gap-1.5 min-w-0">
+            <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: r.color }} aria-hidden="true" />
+            <span className="flex-1 min-w-0 truncate text-brand-text">{r.label}</span>
+            <span className="shrink-0 tabular-nums whitespace-nowrap text-brand-subtext">{r.n.toLocaleString()} {r.n === 1 ? 'lesson' : 'lessons'}</span>
           </span>
-          <span className="w-10 shrink-0 text-right tabular-nums text-brand-text">{pctText(r.share)}</span>
-          <span className="w-20 shrink-0 text-right tabular-nums whitespace-nowrap text-brand-subtext">{r.n} {r.n === 1 ? 'lesson' : 'lessons'}</span>
+          <span className="flex items-center gap-3 mt-1.5 pl-4 min-w-0">
+            <span className="flex-1 min-w-12 h-2 rounded-full bg-brand-bg overflow-hidden" aria-hidden="true">
+              <span className="block h-full rounded-full" style={{ width: `${(r.share / max) * 100}%`, background: r.color }} />
+            </span>
+            <span className="w-10 shrink-0 text-right tabular-nums text-brand-text">{pctText(r.share)}</span>
+          </span>
         </li>
       ))}
     </ul>
@@ -99,13 +104,14 @@ function StackedBar({ rows }) {
 
 // ─── Donut ───────────────────────────────────────────────────────────────────
 
-function Donut({ rows, total }) {
+// `stacked` puts the legend under the donut, for a narrow column (concept C's shared card, 2026-11-02).
+function Donut({ rows, total, stacked }) {
   const r = 60
   const c = 2 * Math.PI * r
   const gap = rows.length > 1 ? 2 : 0
   let offset = 0
   return (
-    <div className="flex flex-col sm:flex-row items-center gap-8">
+    <div className={`flex flex-col items-center ${stacked ? 'gap-6' : 'sm:flex-row gap-8'}`}>
       <div className="relative w-44 h-44 shrink-0">
         <svg viewBox="0 0 160 160" className="w-full h-full -rotate-90" role="img" aria-label={`Share of lessons: ${describe(rows)}`}>
           {rows.map(row => {
@@ -159,25 +165,33 @@ function ConceptSelect({ value, onChange }) {
 }
 
 // `totals` is { competencyKey: lessons }.
-export default function CompetencyMix({ totals, title = 'Competencies covered' }) {
-  const [concept, setConcept] = useState(readConcept)
-  const choose = v => { setConcept(v); try { localStorage.setItem(STORE_KEY, v) } catch { /* private window */ } }
+// The donut is the pick (2026-11-02): the 100% bar and the concept dropdown are commented out, and a remembered
+// "bar" choice is ignored.
+// `bare` drops the card's own border, for sitting inside another card; `stacked` is the donut's narrow layout.
+// `divided` runs a line under the header, edge to edge, level with the list card beside it (concept C, 2026-11-02).
+export default function CompetencyMix({ totals, title = 'Competencies covered', bare = false, stacked = false, divided = false }) {
+  // const [concept, setConcept] = useState(readConcept)
+  // const choose = v => { setConcept(v); try { localStorage.setItem(STORE_KEY, v) } catch { /* private window */ } }
   const total = Object.values(totals).reduce((a, b) => a + b, 0)
   const all = COMPETENCIES.map(c => ({ ...c, n: totals[c.key] ?? 0, share: total ? (totals[c.key] ?? 0) / total : 0 }))
   const rows = all.filter(r => r.n > 0).sort((a, b) => b.n - a.n)
-  const View = concept === 'donut' ? Donut : StackedBar
+  // const View = concept === 'donut' ? Donut : StackedBar
+  const View = Donut
 
   return (
-    <section className="bg-white rounded-lg border border-brand-border p-5">
-      <div className="flex items-center justify-between gap-4 mb-4">
-        <h3 className="text-base font-semibold text-brand-text">{title}</h3>
-        <ConceptSelect value={concept} onChange={choose} />
+    <section className={`${bare ? '' : 'bg-white rounded-lg border border-brand-border '}${divided ? '' : 'p-5'}`}>
+      {/* min-h-9 keeps the title level with a card header that has a control (concept C's list card, 2026-11-02). */}
+      <div className={divided ? 'px-5 pt-5 pb-4 border-b border-brand-border' : 'mb-4'}>
+        <div className="flex items-center justify-between gap-4 min-h-9">
+          <h3 className="text-base font-semibold text-brand-text">{title}</h3>
+          {/* <ConceptSelect value={concept} onChange={choose} /> */}
+        </div>
       </div>
-      {total ? (
-        <>
-          <View rows={rows} total={total} />
-        </>
-      ) : <p className="text-sm text-brand-subtext">No lessons in these dates yet.</p>}
+      <div className={divided ? 'p-5' : ''}>
+        {total ? (
+          <View rows={rows} total={total} stacked={stacked} />
+        ) : <p className="text-sm text-brand-subtext">No lessons in these dates yet.</p>}
+      </div>
     </section>
   )
 }

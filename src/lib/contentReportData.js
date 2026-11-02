@@ -57,6 +57,8 @@ const LEVELS = {
 // levels, not grades, so a small group's lessons land on the grades its level serves. Mock only.
 const LEVEL_GRADES = { 'Early Elementary': [0, 1, 2], 'Late Elementary': [3, 4, 5], 'Middle School': [6, 7, 8], 'High School': [9, 10, 11, 12] }
 const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
+// The four Tier 2 bands with the grades in each and their Tier 2 course, for concept E (2026-11-02).
+export const TIER2_BANDS = TIER2.map(c => ({ label: c.grade.charAt(0) + c.grade.slice(1).toLowerCase(), grades: LEVEL_GRADES[c.grade], course: c }))
 export const gradeLabel = g => (g === 0 ? 'Kindergarten' : `${ordinal(g)} grade`)
 export const gradeMark = g => (g === 0 ? 'K' : String(g))
 // No tier opens the grade with both tiers (2026-11-02).
@@ -177,7 +179,7 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks }) {
     if (type !== 'all' && course.type !== type) return
     const list = [course, ...(EXTRA_COURSES[p.key] ?? [])]
     const grades = list.flatMap(gradesFor)
-    // `byGrade` is { grade: { lessons, comps } }, for the grade pages; `byCourseLessons` is lessons per course id.
+    // `byGrade` is { grade: { lessons, pop, comps } }, for the grade pages and cards; `byCourseLessons` is lessons per course id.
     const user = { key: p.key, sc: p.sc, i: p.i, name: p.name, role: p.role, other: !!p.other, course, courses: list, courseLabel: usersCourseLabel(list), tier: tierOf(course), grades, byGrade: {}, byCourseLessons: {}, lessons: 0, pop: 0, comps: emptyComps(), last: p.last() }
     weeks.forEach((w, wi) => {
       const weekIdx = schoolWeeks.indexOf(w)
@@ -186,8 +188,9 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks }) {
         user.byCourseLessons[l.course.id] = (user.byCourseLessons[l.course.id] ?? 0) + 1
         user.comps[l.comp] += 1
         if (l.grade != null) {
-          const bg = (user.byGrade[l.grade] ??= { lessons: 0, comps: emptyComps() })
+          const bg = (user.byGrade[l.grade] ??= { lessons: 0, pop: 0, comps: emptyComps() })
           bg.lessons += 1
+          if (l.pop) bg.pop += 1
           bg.comps[l.comp] += 1
         }
         weekly[wi].comps[l.comp] += 1

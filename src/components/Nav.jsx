@@ -77,6 +77,9 @@ const CONTENT_CONCEPTS = [
   // { value: 'a', label: 'A', title: 'A, A table of courses ranked by lessons completed' },
   { value: 'b', label: 'B', title: 'B, Grade band cards with where classes are in each course' },
   { value: 'c', label: 'C', title: 'C, One row per grade that opens its course page, and user pages' },
+  { value: 'd', label: 'D', title: 'D, A card per grade with its lessons, competencies, users and schools' },
+  { value: 'e', label: 'E', title: 'E, Quiet grade cards grouped by band, with each band\'s Tier 2 card' },
+  { value: 'f', label: 'F', title: 'F, Tier 1, Tier 2, Adult wellness and Family buttons over cards with user tiles' },
 ]
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────

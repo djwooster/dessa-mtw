@@ -2,10 +2,11 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { parseISO, addDays, format } from 'date-fns'
-import { ChevronRight, Download, MoreHorizontal, Printer } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, ChevronRight, Download, MoreHorizontal, Printer } from 'lucide-react'
 import * as Tooltip from '@radix-ui/react-tooltip'
+import * as Popover from '@radix-ui/react-popover'
 import { schools, PAST_WEEKS, USER_ROLES } from '../lib/report2Data'
-import { COMPETENCIES, COURSE_TYPES, BANDS_ORDER, bandOf, pace, contentData, gradeLabel, gradePath } from '../lib/contentReportData'
+import { ALL_COURSES, COMPETENCIES, COURSE_TYPES, BANDS_ORDER, TIER2_BANDS, bandOf, pace, contentData, gradeLabel, gradePath } from '../lib/contentReportData'
 import { useContentConcept } from '../lib/contentConceptContext'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { PaginationBar } from '../components/ui/pagination'
@@ -13,6 +14,7 @@ import FiltersPanel, { Select } from '../components/engagement/FiltersPanel'
 import PrintReport from '../components/engagement/PrintReport'
 import CompetencyMix from '../components/content/CompetencyMix'
 import { useRole } from '../lib/roleContext'
+import { initials } from '../components/content/ProfileCard'
 import { FIRST_DATE, LAST_DATE, rangeLabel, weeksForDates, SortButton, nextSort, SearchField, agoRank } from './Report2ConceptE'
 
 // Content report (2026-10-26): "What are we teaching?" Replaces the legacy Content Overview's four charts
@@ -267,7 +269,8 @@ function TierCell({ n }) {
     : <TableCell className="text-right tabular-nums">{n.toLocaleString()}</TableCell>
 }
 
-function GradeTable({ rows }) {
+// `bare` drops the table's own card, for concept C's shared card with the competency donut (2026-11-02).
+function GradeTable({ rows, bare = false }) {
   const [sort, setSort] = useState({ key: 'grade', dir: 'asc' })
   const onSort = (k, first = 'asc') => setSort(s => nextSort(s, k, first))
   const grades = useMemo(() => {
@@ -277,7 +280,7 @@ function GradeTable({ rows }) {
       row[`t${r.tier}`] = r.lessons
       byG.set(r.g, row)
     })
-    return [...byG.values()].map(r => ({ ...r, total: (r.t1 ?? 0) + (r.t2 ?? 0) }))
+    return [...byG.values()].filter(r => r.t1 != null).map(r => ({ ...r, total: (r.t1 ?? 0) + (r.t2 ?? 0) }))
   }, [rows])
   const sorted = useMemo(() => [...grades].sort((a, b) => {
     const dir = sort.dir === 'asc' ? 1 : -1
@@ -285,34 +288,369 @@ function GradeTable({ rows }) {
     return dir * ((a[sort.key] ?? -1) - (b[sort.key] ?? -1)) || a.g - b.g
   }), [grades, sort])
   const num = (label, col) => (
-    <TableHead className="text-[13px] font-medium w-36 text-right"><SortButton label={label} col={col} sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
+    <TableHead className="text-[13px] font-medium w-48 text-right"><SortButton label={label} col={col} sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
   )
   return (
-    <div className="bg-white rounded-lg border border-brand-border overflow-hidden [&_td]:text-[13px]">
+    <div className={`${bare ? '' : 'bg-white rounded-lg border border-brand-border overflow-hidden '}[&_td]:text-[13px]`}>
       {sorted.length ? (
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="text-[13px] font-medium"><SortButton label="Grade" col="grade" sort={sort} onSort={onSort} /></TableHead>
-              {num('Tier 1', 't1')}
-              {num('Tier 2', 't2')}
-              {num('Total', 'total')}
+              {num('Lessons completed', 't1')}
+              {/* Tier 2 out of the table (2026-11-02): it's built by band, not grade. Total went with it, since it
+                  would only repeat Tier 1. */}
+              {/* {num('Tier 2', 't2')} */}
+              {/* {num('Total', 'total')} */}
             </TableRow>
           </TableHeader>
           <TableBody>
             {sorted.map(r => (
               <TableRow key={r.g} className="hover:bg-transparent">
                 <TableCell className="font-medium">
-                  <Link to={gradePath(r.g)} className="text-dessa-teal hover:underline underline-offset-4">{gradeLabel(r.g)}</Link>
+                  <Link to={gradePath(r.g, 1)} className="text-dessa-teal hover:underline underline-offset-4">{gradeLabel(r.g)}</Link>
                 </TableCell>
                 <TierCell n={r.t1} />
-                <TierCell n={r.t2} />
-                <TableCell className="text-right tabular-nums font-medium">{r.total.toLocaleString()}</TableCell>
+                {/* <TierCell n={r.t2} /> */}
+                {/* <TableCell className="text-right tabular-nums font-medium">{r.total.toLocaleString()}</TableCell> */}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       ) : <EmptyState />}
+    </div>
+  )
+}
+
+// Concept C's Tier 2 and Adult wellness tabs (2026-11-02): one row per course, styled like the grade table. Tier 2
+// rows are its four bands. `rows` is [{ key, name, to, lessons, order }].
+function CourseTable({ label, rows }) {
+  const [sort, setSort] = useState({ key: 'name', dir: 'asc' })
+  const onSort = (k, first = 'asc') => setSort(s => nextSort(s, k, first))
+  const sorted = useMemo(() => [...rows].sort((a, b) => {
+    const dir = sort.dir === 'asc' ? 1 : -1
+    return sort.key === 'lessons' ? dir * (a.lessons - b.lessons) || a.order - b.order : dir * (a.order - b.order)
+  }), [rows, sort])
+  return (
+    <div className="bg-white rounded-lg border border-brand-border overflow-hidden [&_td]:text-[13px]">
+      {sorted.length ? (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-[13px] font-medium"><SortButton label={label} col="name" sort={sort} onSort={onSort} /></TableHead>
+              <TableHead className="text-[13px] font-medium w-48 text-right"><SortButton label="Lessons completed" col="lessons" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sorted.map(r => (
+              <TableRow key={r.key} className="hover:bg-transparent">
+                <TableCell className="font-medium"><Link to={r.to} className="text-dessa-teal hover:underline underline-offset-4">{r.name}</Link></TableCell>
+                <TableCell className="text-right tabular-nums">{r.lessons.toLocaleString()}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      ) : <EmptyState />}
+    </div>
+  )
+}
+
+const C_TABS = [['core', 'Tier 1'], ['tier2', 'Tier 2'], ['adult', 'Adult wellness']]
+
+// Concept C's list card (2026-11-02), replacing its tables so it matches the Competencies covered card beside it: a
+// title with a control on the right, then the body. Rows are a plain list, the whole row a link; sorting moves from
+// the column headers to a Sort dropdown. `rows` is [{ key, name, to, lessons, order }]; `orderLabel` names the
+// natural order (Grade, Band or Course).
+function SortSelect({ value, options, onChange }) {
+  const [open, setOpen] = useState(false)
+  const current = options.find(o => o.value === value) ?? options[0]
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button type="button" aria-label={`Sort by ${current.label}`} className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-brand-border bg-white text-sm text-brand-text whitespace-nowrap shrink-0 hover:bg-brand-bg transition-colors">
+          <span className="text-brand-subtext">Sort:</span> {current.label}
+          <ChevronDown size={16} className="text-brand-subtext" aria-hidden="true" />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content align="end" sideOffset={6} className="z-50 w-44 bg-white border border-brand-border rounded-lg shadow-lg outline-none py-1">
+          <div role="listbox" aria-label="Sort by">
+            {options.map(o => (
+              <button
+                key={o.value} type="button" role="option" aria-selected={o.value === value}
+                onClick={() => { onChange(o.value); setOpen(false) }}
+                className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors hover:bg-brand-bg ${o.value === value ? 'text-dessa-teal font-medium' : 'text-brand-text'}`}
+              >
+                {o.label}
+                {o.value === value && <Check size={14} aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}
+
+function ListCard({ title, orderLabel, rows }) {
+  const [sort, setSort] = useState('order')
+  const sorted = useMemo(() => [...rows].sort((a, b) => (sort === 'lessons' ? b.lessons - a.lessons : 0) || a.order - b.order), [rows, sort])
+  return (
+    <section className="bg-white rounded-lg border border-brand-border overflow-hidden">
+      <div className="px-5 pt-5 pb-4">
+        <div className="flex items-center justify-between gap-4 min-h-9">
+          <h3 className="text-base font-semibold text-brand-text">{title}</h3>
+          <SortSelect value={sort} onChange={setSort} options={[{ value: 'order', label: orderLabel }, { value: 'lessons', label: 'Most lessons' }]} />
+        </div>
+      </div>
+      {sorted.length ? (
+        <ul className="border-t border-brand-border divide-y divide-brand-border">
+          {sorted.map(r => (
+            <li key={r.key}>
+              <Link to={r.to} className="group flex items-center justify-between gap-4 px-5 py-2.5 text-sm hover:bg-brand-bg/60 transition-colors focus-visible:outline-none focus-visible:bg-brand-bg/60">
+                <span className="font-medium text-dessa-teal group-hover:underline underline-offset-4 truncate">{r.name}</span>
+                <span className="tabular-nums text-brand-text">{r.lessons.toLocaleString()}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : <EmptyState />}
+    </section>
+  )
+}
+
+// ─── Courses tab, concept D: a card per grade ────────────────────────────────
+
+// Concept D (2026-11-02): cards instead of a table, each grade answering the report's questions on its own: how many
+// lessons, which competencies (a 100% bar and the top two), how many users and schools, and Power of Pause. Tier 1
+// only, since Tier 2 came out of the grade view (2026-11-02). The grade name opens its Tier 1 page; the card itself
+// stays static, so the link is the one thing to click.
+function GradeCard({ g, users }) {
+  const active = users.filter(u => (u.byGrade[g]?.lessons ?? 0) > 0)
+  const lessons = active.reduce((sum, u) => sum + u.byGrade[g].lessons, 0)
+  const pop = active.reduce((sum, u) => sum + u.byGrade[g].pop, 0)
+  const schools = new Set(active.map(u => u.sc.id)).size
+  const comps = COMPETENCIES.map(c => ({ ...c, n: active.reduce((sum, u) => sum + u.byGrade[g].comps[c.key], 0) }))
+    .filter(c => c.n > 0).sort((a, b) => b.n - a.n)
+  const share = n => Math.round((n / lessons) * 100)
+  const label = gradeLabel(g)
+  return (
+    <li className="bg-white rounded-lg border border-brand-border p-4 flex flex-col min-w-0">
+      <h3 className="text-base font-semibold">
+        <Link to={gradePath(g, 1)} className="group inline-flex items-center gap-1.5 text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">
+          {label}
+          <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+        </Link>
+      </h3>
+      <p className="mt-3 flex items-baseline gap-1.5">
+        <span className="text-2xl font-semibold text-brand-text tabular-nums">{lessons.toLocaleString()}</span>
+        <span className="text-sm text-brand-subtext">{lessons === 1 ? 'lesson' : 'lessons'}</span>
+      </p>
+      {lessons ? (
+        <>
+          <div role="img" aria-label={`${label} competencies: ${comps.map(c => `${c.label} ${share(c.n)}%`).join(', ')}`} className="flex gap-0.5 h-2 mt-3 rounded-full overflow-hidden">
+            {comps.map(c => <span key={c.key} title={`${c.label}, ${share(c.n)}%`} className="h-full" style={{ width: `${(c.n / lessons) * 100}%`, background: c.color }} />)}
+          </div>
+          <ul className="mt-2 flex flex-col gap-1 text-xs" aria-hidden="true">
+            {comps.slice(0, 2).map(c => (
+              <li key={c.key} className="flex items-center gap-1.5 min-w-0">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
+                <span className="flex-1 min-w-0 truncate text-brand-text">{c.label}</span>
+                <span className="tabular-nums text-brand-subtext">{share(c.n)}%</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : <p className="mt-3 text-sm text-brand-subtext">No lessons in these dates yet.</p>}
+      {/* Pushes the numbers to the bottom, so they line up across a row of cards. */}
+      <div className="flex-1 min-h-4" aria-hidden="true" />
+      <dl className="grid grid-cols-3 gap-3 pt-3 border-t border-brand-border [&>div]:min-w-0">
+        <div><dt className="text-xs text-brand-subtext truncate">Users</dt><dd className="text-sm font-semibold text-brand-text tabular-nums truncate">{active.length} of {users.length}</dd></div>
+        <div><dt className="text-xs text-brand-subtext truncate">Schools</dt><dd className="text-sm font-semibold text-brand-text tabular-nums">{schools}</dd></div>
+        <div><dt className="text-xs text-brand-subtext truncate">Power of Pause</dt><dd className="text-sm font-semibold text-brand-text tabular-nums">{pop.toLocaleString()}</dd></div>
+      </dl>
+    </li>
+  )
+}
+
+function GradeCards({ users }) {
+  const tier1 = users.filter(u => u.tier === 1)
+  const grades = [...new Set(tier1.flatMap(u => u.grades))].sort((a, b) => a - b)
+  if (!grades.length) return <section className="bg-white rounded-lg border border-brand-border p-5"><EmptyState /></section>
+  return (
+    <ul className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      {grades.map(g => <GradeCard key={g} g={g} users={tier1.filter(u => u.grades.includes(g))} />)}
+    </ul>
+  )
+}
+
+// ─── Courses tab, concept E: quiet cards grouped by band ─────────────────────
+
+// Concept E (2026-11-02): Tier 2 courses come in four bands, not grades, so the cards group by those bands. Each band
+// is its grades' Tier 1 cards, then its Tier 2 card, tinted teal so it reads as a different kind of card. Cards are
+// quiet: a name, lessons and the top competency, with one more line only when some users haven't started yet. The
+// rest is a click away: the whole card opens the Tier 1 grade page or the band's Tier 2 course page.
+// `parts` is each user's slice that counts here: [{ user, lessons, comps }].
+function QuietCard({ to, name, parts, eligible, tinted }) {
+  const lessons = parts.reduce((sum, p) => sum + p.lessons, 0)
+  const notStarted = eligible - parts.filter(p => p.lessons > 0).length
+  const top = lessons ? COMPETENCIES.map(c => ({ ...c, n: parts.reduce((sum, p) => sum + p.comps[c.key], 0) })).sort((a, b) => b.n - a.n)[0] : null
+  return (
+    <li className="min-w-0">
+      <Link
+        to={to}
+        className={`group h-full flex flex-col rounded-lg border border-brand-border p-4 transition-colors hover:border-dessa-teal/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dessa-teal ${tinted ? 'bg-dessa-teal/[0.17]' : 'bg-white'}`}
+      >
+        <span className="flex items-center justify-between gap-2 min-w-0">
+          <span className="text-sm font-semibold text-brand-text truncate">{name}</span>
+          <ArrowRight size={14} className="shrink-0 text-brand-subtext transition-transform group-hover:translate-x-0.5 group-hover:text-brand-text" aria-hidden="true" />
+        </span>
+        <span className="mt-2 flex items-baseline gap-1.5">
+          <span className="text-2xl font-semibold text-brand-text tabular-nums">{lessons.toLocaleString()}</span>
+          <span className="text-sm text-brand-subtext">{lessons === 1 ? 'lesson' : 'lessons'}</span>
+        </span>
+        {top ? (
+          <span className="mt-2 flex items-center gap-1.5 min-w-0 text-xs">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: top.color }} aria-hidden="true" />
+            <span className="flex-1 min-w-0 truncate text-brand-text">{top.label}</span>
+            <span className="tabular-nums text-brand-subtext">{Math.round((top.n / lessons) * 100)}%</span>
+          </span>
+        ) : <span className="mt-2 text-xs text-brand-subtext">No lessons in these dates yet</span>}
+        {notStarted > 0 && lessons > 0 && (
+          <span className="mt-1 text-xs text-brand-subtext">{notStarted} {notStarted === 1 ? "user hasn't" : "users haven't"} started yet</span>
+        )}
+      </Link>
+    </li>
+  )
+}
+
+const NO_COMPS = Object.fromEntries(COMPETENCIES.map(c => [c.key, 0]))
+
+function BandSections({ users }) {
+  const bands = TIER2_BANDS.map(b => {
+    const grades = b.grades.map(g => {
+      const eligible = users.filter(u => u.tier === 1 && u.grades.includes(g))
+      return { g, eligible, parts: eligible.map(u => ({ lessons: u.byGrade[g]?.lessons ?? 0, comps: u.byGrade[g]?.comps ?? NO_COMPS })) }
+    }).filter(r => r.eligible.length)
+    const t2 = users.filter(u => u.course.id === b.course.id)
+    return { ...b, grades, t2 }
+  }).filter(b => b.grades.length || b.t2.length)
+  if (!bands.length) return <section className="bg-white rounded-lg border border-brand-border p-5"><EmptyState /></section>
+  return (
+    <div className="flex flex-col gap-6">
+      {bands.map(b => (
+        <section key={b.label} aria-label={b.label}>
+          <h3 className="text-base font-semibold text-brand-text mb-3">{b.label}</h3>
+          <ul className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-4">
+            {b.grades.map(r => <QuietCard key={r.g} to={gradePath(r.g, 1)} name={gradeLabel(r.g)} parts={r.parts} eligible={r.eligible.length} />)}
+            {b.t2.length > 0 && <QuietCard tinted to={`/reports/content/courses/${b.course.id}`} name="Tier 2" parts={b.t2.map(u => ({ lessons: u.lessons, comps: u.comps }))} eligible={b.t2.length} />}
+          </ul>
+        </section>
+      ))}
+    </div>
+  )
+}
+
+// ─── Courses tab, concept F: course type buttons over cards with a tile footer ─
+
+// Concept F (2026-11-02, from a Gumloop agent card the user shared): a row of buttons picks Tier 1, Tier 2, Adult
+// wellness or Family, so each kind of course shows at its own size (Tier 1 by grade, the rest by course). Cards
+// end in Gumloop's two zone footer: tiles on the left for the users with the most lessons (three, then a "+N"
+// tile), and quiet meta text on the right. No competency icons (the user's call); the top competency keeps its line.
+const F_TYPES = [
+  { value: 'core', label: 'Tier 1' },
+  { value: 'tier2', label: 'Tier 2' },
+  { value: 'adult', label: 'Adult wellness' },
+  { value: 'family', label: 'Family' },
+]
+const levelName = t => t.charAt(0) + t.slice(1).toLowerCase()
+
+// `parts` is [{ user, lessons, comps }] for everyone the card counts.
+function TileCard({ to, name, parts }) {
+  const active = parts.filter(p => p.lessons > 0).sort((a, b) => b.lessons - a.lessons || a.user.name.localeCompare(b.user.name))
+  const lessons = active.reduce((sum, p) => sum + p.lessons, 0)
+  const schools = new Set(active.map(p => p.user.sc.id)).size
+  const top = lessons ? COMPETENCIES.map(c => ({ ...c, n: active.reduce((sum, p) => sum + p.comps[c.key], 0) })).sort((a, b) => b.n - a.n)[0] : null
+  const shown = active.slice(0, 3)
+  const more = active.length - shown.length
+  const tile = 'w-7 h-7 shrink-0 rounded-md border border-brand-border bg-white flex items-center justify-center text-xs font-semibold'
+  return (
+    <li className="min-w-0">
+      <Link to={to} className="group h-full flex flex-col rounded-lg border border-brand-border bg-white p-5 transition-colors hover:border-dessa-teal/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dessa-teal">
+        <span className="flex items-center justify-between gap-2 min-w-0">
+          <span className="text-sm font-semibold text-brand-text truncate">{name}</span>
+          <ArrowRight size={14} className="shrink-0 text-brand-subtext transition-transform group-hover:translate-x-0.5 group-hover:text-brand-text" aria-hidden="true" />
+        </span>
+        <span className="mt-3 flex items-baseline gap-1.5">
+          <span className="text-2xl font-semibold text-brand-text tabular-nums">{lessons.toLocaleString()}</span>
+          <span className="text-sm text-brand-subtext">{lessons === 1 ? 'lesson' : 'lessons'}</span>
+        </span>
+        {top ? (
+          <span className="mt-1.5 flex items-center gap-1.5 min-w-0 text-xs">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: top.color }} aria-hidden="true" />
+            <span className="min-w-0 truncate text-brand-text">{top.label}</span>
+            <span className="tabular-nums text-brand-subtext">{Math.round((top.n / lessons) * 100)}%</span>
+          </span>
+        ) : <span className="mt-1.5 text-xs text-brand-subtext">No lessons in these dates yet</span>}
+        <span className="flex-1 min-h-6" aria-hidden="true" />
+        {active.length > 0 && (
+          <span className="flex items-center justify-between gap-3 min-w-0">
+            <span className="flex items-center gap-1.5 shrink-0" aria-label={`${active.length} ${active.length === 1 ? 'user' : 'users'}`}>
+              {shown.map(p => <span key={p.user.key} title={p.user.name} className={`${tile} text-dessa-teal`} aria-hidden="true">{initials(p.user.name)}</span>)}
+              {more > 0 && <span className={`${tile} text-brand-subtext`} aria-hidden="true">+{more}</span>}
+            </span>
+            <span className="text-xs text-brand-subtext truncate">{schools} {schools === 1 ? 'school' : 'schools'}</span>
+          </span>
+        )}
+      </Link>
+    </li>
+  )
+}
+
+const F_GRID = 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4' // three across at most (2026-11-02), for bigger cards
+
+function TypeCards({ users }) {
+  const [type, setType] = useState('core')
+  const whole = u => ({ user: u, lessons: u.lessons, comps: u.comps })
+  let body
+  if (type === 'core') {
+    // Tier 1 by grade, in the same bands as Tier 2, so the two tabs line up.
+    const bands = TIER2_BANDS.map(b => ({
+      label: b.label,
+      grades: b.grades.map(g => ({ g, parts: users.filter(u => u.tier === 1 && u.grades.includes(g)).map(u => ({ user: u, lessons: u.byGrade[g]?.lessons ?? 0, comps: u.byGrade[g]?.comps ?? NO_COMPS })) }))
+        .filter(r => r.parts.length),
+    })).filter(b => b.grades.length)
+    body = bands.length ? (
+      <div className="flex flex-col gap-6">
+        {bands.map(b => (
+          <section key={b.label} aria-label={b.label}>
+            <h3 className="text-base font-semibold text-brand-text mb-3">{b.label}</h3>
+            <ul className={F_GRID}>{b.grades.map(r => <TileCard key={r.g} to={gradePath(r.g, 1)} name={gradeLabel(r.g)} parts={r.parts} />)}</ul>
+          </section>
+        ))}
+      </div>
+    ) : null
+  } else {
+    const cards = ALL_COURSES.filter(c => c.type === type)
+      .map(c => ({ c, parts: users.filter(u => u.course.id === c.id).map(whole) }))
+      .filter(r => r.parts.length)
+    body = cards.length ? (
+      <ul className={F_GRID}>
+        {cards.map(({ c, parts }) => <TileCard key={c.id} to={`/reports/content/courses/${c.id}`} name={type === 'adult' ? 'Adult wellness' : levelName(c.grade)} parts={parts} />)}
+      </ul>
+    ) : null
+  }
+  return (
+    <div>
+      <div role="group" aria-label="Course type" className="inline-flex items-center gap-0.5 p-0.5 mb-4 rounded-md border border-brand-border bg-white">
+        {F_TYPES.map(t => (
+          <button
+            key={t.value} type="button" aria-pressed={type === t.value} onClick={() => setType(t.value)}
+            className={`inline-flex items-center h-8 px-3 rounded text-sm whitespace-nowrap transition-colors ${type === t.value ? 'bg-brand-bg font-medium text-brand-text' : 'text-brand-subtext hover:text-brand-text'}`}
+          >{t.label}</button>
+        ))}
+      </div>
+      {body ?? <section className="bg-white rounded-lg border border-brand-border p-5"><EmptyState /></section>}
     </div>
   )
 }
@@ -527,10 +865,49 @@ export function UsersTable({ users, oneSite, linked = false, linkState }) {
   )
 }
 
+// The Filters panel's 3-dot menu (2026-11-02, shared by the report and the grade and course pages). `items` is
+// [{ icon, label, onSelect }].
+export function MoreMenu({ items }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    const k = e => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', h)
+    document.addEventListener('keydown', k)
+    return () => { document.removeEventListener('mousedown', h); document.removeEventListener('keydown', k) }
+  }, [open])
+  const menuItem = 'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-brand-text hover:bg-brand-bg transition-colors'
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        className="flex items-center justify-center w-9 h-9 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
+        onClick={() => setOpen(o => !o)}
+        aria-label="More options"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <MoreHorizontal size={16} aria-hidden="true" />
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 top-full mt-1.5 w-56 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
+          {items.map(({ icon: Icon, label, onSelect }) => (
+            <button key={label} role="menuitem" className={menuItem} onClick={() => { setOpen(false); onSelect() }}>
+              <Icon size={14} className="text-brand-subtext" aria-hidden="true" /> {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // The Filters panel on the course, grade and user pages (2026-10-29). It edits the report's own applied filters, so
 // a change here carries back to the report and on to the next page. Each page picks the fields that change it.
 // `initial` patches the draft (a user page opened from Engagement shows Engagement's dates); `onApply` runs after.
-export function ContentFilters({ showSite = true, showRole = true, initial, onApply }) {
+export function ContentFilters({ showSite = true, showRole = true, initial, onApply, action }) {
   const { isSiteLeaderView } = useRole()
   const { contentFilters, setContentFilters } = useContentConcept()
   const applied = contentFilters ?? DEFAULT_FILTERS
@@ -550,6 +927,7 @@ export function ContentFilters({ showSite = true, showRole = true, initial, onAp
       showRole={showRole}
       minDate={FILTER_MIN}
       maxDate={FILTER_MAX}
+      action={action}
     />
   )
 }
@@ -581,18 +959,11 @@ export default function ReportContent() {
   const setApplied = setContentFilters
   const [draft, setDraft] = useState(applied)
   const [tab, setTab] = useState('courses')
+  // Concept C's course type tabs (2026-11-02): everything under them follows the tab; the KPI cards above don't.
+  const [cTab, setCTab] = useState('core')
+  const cTabRefs = useRef({})
   const [courseSort, setCourseSort] = useState({ key: 'lessons', dir: 'desc' })
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef(null)
   const tabRefs = useRef({})
-  useEffect(() => {
-    if (!menuOpen) return
-    const h = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
-    const k = e => { if (e.key === 'Escape') setMenuOpen(false) }
-    document.addEventListener('mousedown', h)
-    document.addEventListener('keydown', k)
-    return () => { document.removeEventListener('mousedown', h); document.removeEventListener('keydown', k) }
-  }, [menuOpen])
 
   // The date pickers only allow school days, so a range always holds a week; the fallback is a safety net.
   const weeks = useMemo(() => {
@@ -606,8 +977,8 @@ export default function ReportContent() {
   const range = rangeLabel(weeks)
   const empty = data.lessons === 0
 
-  function exportCsv() {
-    if (tab === 'courses') {
+  function exportCsv(which) {
+    if (which === 'courses') {
       download('lessons-courses.csv', ['Course', 'Course type', 'Grade', 'Lessons completed', 'Users', 'Course progress percent', 'Typical unit', 'Units in course'],
         sortCourses(data.courseRows, courseSort).map(r => [r.course.title, r.course.typeLabel, r.course.grade, r.lessons, r.users.length, r.progress, r.unitTypical, r.course.lessons]))
     } else {
@@ -623,6 +994,22 @@ export default function ReportContent() {
     window.print()
   }
 
+  const cUsers = useMemo(() => data.users.filter(u => u.course.type === cTab), [data, cTab])
+  const cComps = useMemo(() => Object.fromEntries(COMPETENCIES.map(c => [c.key, cUsers.reduce((sum, u) => sum + u.comps[c.key], 0)])), [cUsers])
+  const cEmpty = !cUsers.some(u => u.lessons > 0)
+  const cRows = cTab === 'core' ? null : ALL_COURSES.filter(c => c.type === cTab).map((c, i) => {
+    const us = cUsers.filter(u => u.course.id === c.id)
+    return us.length ? { key: c.id, order: i, name: cTab === 'adult' ? 'Adult wellness' : levelName(c.grade), to: `/reports/content/courses/${c.id}`, lessons: us.reduce((sum, u) => sum + u.lessons, 0) } : null
+  }).filter(Boolean)
+  function onCTabKey(e) {
+    const i = C_TABS.findIndex(([k]) => k === cTab)
+    const next = e.key === 'ArrowRight' ? (i + 1) % C_TABS.length : e.key === 'ArrowLeft' ? (i - 1 + C_TABS.length) % C_TABS.length : null
+    if (next == null) return
+    e.preventDefault()
+    setCTab(C_TABS[next][0])
+    cTabRefs.current[C_TABS[next][0]]?.focus()
+  }
+
   // Tabs follow the ARIA tabs pattern (2026-10-26): arrow keys move between them.
   function onTabKey(e) {
     const i = TABS.findIndex(([k]) => k === tab)
@@ -633,30 +1020,13 @@ export default function ReportContent() {
     tabRefs.current[TABS[next][0]]?.focus()
   }
 
-  const menuItem = 'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-brand-text hover:bg-brand-bg transition-colors'
   const menu = (
-    <div className="relative shrink-0" ref={menuRef}>
-      <button
-        type="button"
-        className="flex items-center justify-center w-9 h-9 rounded-md bg-white text-brand-text hover:bg-brand-bg transition-all"
-        onClick={() => setMenuOpen(o => !o)}
-        aria-label="More options"
-        aria-haspopup="menu"
-        aria-expanded={menuOpen}
-      >
-        <MoreHorizontal size={16} aria-hidden="true" />
-      </button>
-      {menuOpen && (
-        <div role="menu" className="absolute right-0 top-full mt-1.5 w-56 bg-white border border-brand-border rounded-lg shadow-lg z-20 overflow-hidden py-1">
-          <button role="menuitem" className={menuItem} onClick={() => { exportCsv(); setMenuOpen(false) }}>
-            <Download size={14} className="text-brand-subtext" aria-hidden="true" /> Export {tab === 'courses' ? 'courses' : 'competencies'} CSV
-          </button>
-          <button role="menuitem" className={menuItem} onClick={() => { setMenuOpen(false); printReport() }}>
-            <Printer size={14} className="text-brand-subtext" aria-hidden="true" /> Print
-          </button>
-        </div>
-      )}
-    </div>
+    <MoreMenu items={[
+      ...(contentConcept === 'c'
+        ? [{ icon: Download, label: 'Export courses CSV', onSelect: () => exportCsv('courses') }, { icon: Download, label: 'Export competencies CSV', onSelect: () => exportCsv('competencies') }]
+        : [{ icon: Download, label: `Export ${tab === 'courses' ? 'courses' : 'competencies'} CSV`, onSelect: () => exportCsv(tab) }]),
+      { icon: Printer, label: 'Print', onSelect: printReport },
+    ]} />
   )
 
   const card = 'bg-white rounded-lg border border-brand-border p-5'
@@ -685,12 +1055,38 @@ export default function ReportContent() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <Stat label={<Defined definition={LESSON_DEFINITION}>Lessons completed</Defined>} value={data.lessons.toLocaleString()} />
-        {/* KPI cards refined 2026-11-02: no note under Lessons completed, and the percent leads for users. */}
+        <Stat label={<Defined definition={LESSON_DEFINITION}>Lessons completed</Defined>} value={data.lessons.toLocaleString()} note={range} />
+        {/* KPI cards refined 2026-11-02: the percent leads for users. Lessons completed keeps its date range. */}
         <Stat label="Users who completed a lesson" value={`${pct(data.activeUsers, data.users.length)}%`} note={`${data.activeUsers.toLocaleString()} of ${data.users.length.toLocaleString()} users`} />
         <Stat label="Power of Pause lessons" value={data.pop.toLocaleString()} note={`${pct(data.pop, data.lessons)}% of all lessons`} />
       </div>
 
+      {/* Concept C has no tabs (2026-11-02): its grades and competencies sit side by side. */}
+      {contentConcept === 'c' ? (
+        <>
+          <div role="tablist" aria-label="Course type" className="flex gap-4 border-b border-brand-border mb-6" onKeyDown={onCTabKey}>
+            {C_TABS.map(([k, label]) => (
+              <button
+                key={k} ref={el => { cTabRefs.current[k] = el }} type="button" role="tab" id={`content-ctab-${k}`} aria-selected={cTab === k} aria-controls="content-cpanel" tabIndex={cTab === k ? 0 : -1}
+                onClick={() => setCTab(k)}
+                className={`pb-2 -mb-px text-sm font-medium border-b-2 transition-colors ${cTab === k ? 'border-dessa-teal text-brand-text' : 'border-transparent text-brand-subtext hover:text-brand-text'}`}
+              >{label}</button>
+            ))}
+          </div>
+          <motion.div key={cTab} id="content-cpanel" role="tabpanel" aria-labelledby={`content-ctab-${cTab}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+            {/* Side by side in their own cards (2026-11-02), not one shared card. */}
+            <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* List cards (2026-11-02) in place of the tables, which are kept:
+                  {cTab === 'core' ? <GradeTable rows={data.gradeRows} /> : <CourseTable label={cTab === 'tier2' ? 'Band' : 'Course'} rows={cRows} />} */}
+              {cTab === 'core'
+                ? <ListCard title="Lessons by grade" orderLabel="Grade" rows={data.gradeRows.filter(r => r.tier === 1).map(r => ({ key: r.key, order: r.g, name: gradeLabel(r.g), to: gradePath(r.g, 1), lessons: r.lessons }))} />
+                : <ListCard title={cTab === 'tier2' ? 'Lessons by band' : 'Lessons by course'} orderLabel={cTab === 'tier2' ? 'Band' : 'Course'} rows={cRows} />}
+              {cEmpty ? <section className={card}><EmptyState /></section> : <CompetencyMix totals={cComps} stacked divided />}
+            </div>
+            <UsersTable users={cUsers} oneSite={oneSite} linked />
+          </motion.div>
+        </>
+      ) : (<>
       <div role="tablist" aria-label="Content views" className="flex gap-4 border-b border-brand-border mb-6" onKeyDown={onTabKey}>
         {TABS.map(([k, label]) => (
           <button
@@ -707,6 +1103,12 @@ export default function ReportContent() {
       >
         {tab === 'courses' && contentConcept === 'c' ? (
           <GradeTable rows={data.gradeRows} />
+        ) : tab === 'courses' && contentConcept === 'd' ? (
+          <GradeCards users={data.users} />
+        ) : tab === 'courses' && contentConcept === 'e' ? (
+          <BandSections users={data.users} />
+        ) : tab === 'courses' && contentConcept === 'f' ? (
+          <TypeCards users={data.users} />
         ) : tab === 'courses' ? (
           // Concept A (the ranked course table) commented out 2026-10-28; any concept other than C shows B's cards.
           // <section className={card}>
@@ -736,8 +1138,9 @@ export default function ReportContent() {
           // </div>
         )}
       </motion.div>
+      </>)}
 
-      <UsersTable users={data.users} oneSite={oneSite} linked={contentConcept === 'c'} />
+      {contentConcept !== 'c' && <UsersTable users={data.users} oneSite={oneSite} linked={['d', 'e', 'f'].includes(contentConcept)} />}
 
       <PrintReport
         title="Lessons"

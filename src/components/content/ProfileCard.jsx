@@ -109,9 +109,11 @@ export default function ProfileCard({ avatar, title, meta, stats, range, action,
             </div>
           ))}
         </dl>
-        <p className="flex items-center gap-1.5 text-xs text-brand-subtext mt-3">
-          <Calendar size={12} aria-hidden="true" /> {range}
-        </p>
+        {range && (
+          <p className="flex items-center gap-1.5 text-xs text-brand-subtext mt-3">
+            <Calendar size={12} aria-hidden="true" /> {range}
+          </p>
+        )}
       </div>
       {children}
     </div>
