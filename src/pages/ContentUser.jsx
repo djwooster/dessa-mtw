@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ChevronRight, School, User } from 'lucide-react'
-import { contentData, gradeLabel, gradeMark, gradeCourse, gradePath } from '../lib/contentReportData'
+import { contentData, gradeLabel, gradeMark } from '../lib/contentReportData'
 import CompetencyMix from '../components/content/CompetencyMix'
 import ProfileCard, { ProfileSection, CourseTile } from '../components/content/ProfileCard'
 import { educatorDayMap, otherDayMap } from './Report2ConceptE'
@@ -20,52 +20,46 @@ import { ContentBreadcrumb, NotFound } from './ContentCourse'
 // mix. Read only.
 
 // One link row in the card: a tile, a name and a line under it.
-function PageLink({ to, tile, name, sub }) {
+// Display only (2026-11-02): the course rows were links, now they just say what the user teaches.
+function PageLink({ tile, name, sub }) {
   return (
-    <Link to={to} className="group flex items-center gap-3 min-w-0 -mx-2 px-2 py-1.5 rounded-md hover:bg-brand-bg transition-colors">
+    <div className="flex items-center gap-3 min-w-0 py-1.5">
       {tile}
       <span className="flex-1 min-w-0">
-        <span className="block text-sm font-medium text-brand-text truncate group-hover:text-dessa-teal">{name}</span>
+        <span className="block text-sm font-medium text-brand-text truncate">{name}</span>
         <span className="block text-xs text-brand-subtext truncate">{sub}</span>
       </span>
-      <ChevronRight size={14} className="shrink-0 text-brand-subtext transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-    </Link>
+    </div>
   )
 }
 
-function IdentityCard({ user, range }) {
-  const c = user.course
-  // Tier 1 and Tier 2 users link to their grade pages (2026-10-29): a Tier 1 user's grades, or each grade a
-  // Tier 2 user's small groups had lessons in. Adult wellness and Family users link to their course page.
-  const grades = user.tier === 1 ? user.grades : Object.keys(user.byGrade).map(Number).sort((a, b) => a - b)
+const gradeNum = c => (c.grade === 'Kindergarten' ? 0 : Number(c.grade.replace('Grade ', '')))
+const levelName = t => t.charAt(0) + t.slice(1).toLowerCase()
+
+function IdentityCard({ user }) {
+  // Every course the user teaches (2026-11-02), Tier 1 by its grade, Tier 2 and Family by band, Adult wellness by
+  // name. Display only.
+  const items = user.courses.map(c => (c.type === 'core'
+    ? { key: c.id, tile: <CourseTile course={c} mark={gradeMark(gradeNum(c))} />, name: gradeLabel(gradeNum(c)), sub: 'Tier 1' }
+    : { key: c.id, tile: <CourseTile course={c} />, name: c.type === 'adult' ? 'Adult wellness' : levelName(c.grade), sub: c.typeLabel }))
   return (
     <ProfileCard
       banner={false}
       title={user.name}
       meta={[[User, user.role], [School, user.sc.name]]}
       stats={[
-        [<Defined key="l" definition={LESSON_DEFINITION}>Lessons</Defined>, user.lessons.toLocaleString()],
+        [<Defined key="l" definition={LESSON_DEFINITION}>Lessons completed</Defined>, user.lessons.toLocaleString()],
         ['Power of Pause', user.pop.toLocaleString()],
         ['Last active', user.last],
       ]}
-      range={range}
+      // No date range (2026-11-02); the Filters panel above shows it.
     >
       {/* Top competencies removed 2026-10-29; the competency chart below covers it. */}
-      {user.tier ? (
-        <ProfileSection title={grades.length > 1 ? 'Courses' : 'Course'}>
-          {grades.length ? (
-            <div className="flex flex-col gap-1">
-              {grades.map(g => (
-                <PageLink key={g} to={gradePath(g, user.tier)} tile={<CourseTile course={gradeCourse(g, user.tier)} mark={gradeMark(g)} />} name={gradeLabel(g)} sub={`Tier ${user.tier}`} />
-              ))}
-            </div>
-          ) : <p className="text-sm text-brand-subtext">No lessons in these dates yet.</p>}
-        </ProfileSection>
-      ) : (
-        <ProfileSection title="Course">
-          <PageLink to={`/reports/content/courses/${c.id}`} tile={<CourseTile course={c} />} name={c.title} sub={c.typeLabel} />
-        </ProfileSection>
-      )}
+      <ProfileSection title={items.length > 1 ? 'Courses' : 'Course'}>
+        <div className="flex flex-col gap-1">
+          {items.map(it => <PageLink key={it.key} tile={it.tile} name={it.name} sub={it.sub} />)}
+        </div>
+      </ProfileSection>
     </ProfileCard>
   )
 }
@@ -78,8 +72,8 @@ export default function ContentUser() {
   const fromEngagement = state?.from === 'engagement'
   // Engagement's dates hold until the viewer applies their own in the Filters panel.
   const [engWeeks, setEngWeeks] = useState(fromEngagement ? state.weeks : null)
-  const { weeks, siteIds, range } = useContentScope({ allSites: true, weeks: engWeeks })
-  const data = useMemo(() => contentData({ siteIds, weeks }), [siteIds.join(), weeks])
+  const { weeks, siteIds } = useContentScope({ allSites: true, weeks: engWeeks })
+  const data = useMemo(() => contentData({ siteIds, weeks, family: fromEngagement }), [siteIds.join(), weeks, fromEngagement])
   const user = data.users.find(u => u.key === userKey)
   const dayMap = useMemo(() => (!user ? {} : user.other ? otherDayMap(user.sc.id, user.i) : educatorDayMap(user.sc.id, user.i)), [user])
   if (!user) return <NotFound what="User" />
@@ -103,7 +97,7 @@ export default function ContentUser() {
         onApply={() => setEngWeeks(null)}
       />
       <div className="flex flex-col gap-4">
-        <IdentityCard user={user} range={range} />
+        <IdentityCard user={user} />
         <div className="flex flex-col gap-4 min-w-0">
           {/* Competencies first (2026-11-02), then the lesson days. */}
           <CompetencyMix totals={user.comps} />

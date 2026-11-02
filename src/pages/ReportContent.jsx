@@ -6,13 +6,14 @@ import { ArrowRight, Check, ChevronDown, ChevronRight, Download, MoreHorizontal,
 import * as Tooltip from '@radix-ui/react-tooltip'
 import * as Popover from '@radix-ui/react-popover'
 import { schools, PAST_WEEKS, USER_ROLES } from '../lib/report2Data'
-import { ALL_COURSES, COMPETENCIES, COURSE_TYPES, BANDS_ORDER, TIER2_BANDS, bandOf, pace, contentData, gradeLabel, gradePath } from '../lib/contentReportData'
+import { ALL_COURSES, COMPETENCIES, COURSE_TYPES, BANDS_ORDER, TIER2_BANDS, bandOf, pace, contentData, gradeLabel, gradePath, teachesGrade, gradePart, teachesCourse, coursePart, teachesType, typePart } from '../lib/contentReportData'
 import { useContentConcept } from '../lib/contentConceptContext'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { PaginationBar } from '../components/ui/pagination'
 import FiltersPanel, { Select } from '../components/engagement/FiltersPanel'
 import PrintReport from '../components/engagement/PrintReport'
 import CompetencyMix from '../components/content/CompetencyMix'
+import CompetencyMixOriginal from '../components/content/CompetencyMixOriginal'
 import { useRole } from '../lib/roleContext'
 import { initials } from '../components/content/ProfileCard'
 import { FIRST_DATE, LAST_DATE, rangeLabel, weeksForDates, SortButton, nextSort, SearchField, agoRank } from './Report2ConceptE'
@@ -25,6 +26,8 @@ import { FIRST_DATE, LAST_DATE, rangeLabel, weeksForDates, SortButton, nextSort,
 const toKey = d => format(d, 'yyyy-MM-dd')
 const FILTER_MIN = toKey(FIRST_DATE)
 const FILTER_MAX = toKey(LAST_DATE)
+// No Family users on this report (2026-11-02), so no Family user role in its filter.
+const CONTENT_ROLES = USER_ROLES.filter(r => r !== 'Family User')
 export const DEFAULT_FILTERS = { site: [], role: 'all', type: 'all', start: PAST_WEEKS[Math.max(0, PAST_WEEKS.length - 4)], end: FILTER_MAX }
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0)
 export const LESSON_DEFINITION = 'A lesson counts once it is marked complete or 60% of its video is watched.'
@@ -392,9 +395,21 @@ function SortSelect({ value, options, onChange }) {
   )
 }
 
-function ListCard({ title, orderLabel, rows }) {
+// `groups` (2026-11-02) is [{ label, rows }] for one list split by course type, each sorted on its own; a label shows
+// only when there's more than one group.
+function ListCard({ title, orderLabel, rows, groups }) {
   const [sort, setSort] = useState('order')
-  const sorted = useMemo(() => [...rows].sort((a, b) => (sort === 'lessons' ? b.lessons - a.lessons : 0) || a.order - b.order), [rows, sort])
+  const sets = useMemo(() => (groups ?? [{ label: null, rows }]).filter(g => g.rows.length)
+    .map(g => ({ ...g, rows: [...g.rows].sort((a, b) => (sort === 'lessons' ? b.lessons - a.lessons : 0) || a.order - b.order) })), [groups, rows, sort])
+  const labelled = sets.length > 1
+  const row = r => (
+    <li key={r.key}>
+      <Link to={r.to} className="group flex items-center justify-between gap-4 px-5 py-2.5 text-sm hover:bg-brand-bg/60 transition-colors focus-visible:outline-none focus-visible:bg-brand-bg/60">
+        <span className="font-medium text-dessa-teal group-hover:underline underline-offset-4 truncate">{r.name}</span>
+        <span className="tabular-nums text-brand-text">{r.lessons.toLocaleString()}</span>
+      </Link>
+    </li>
+  )
   return (
     <section className="bg-white rounded-lg border border-brand-border overflow-hidden">
       <div className="px-5 pt-5 pb-4">
@@ -403,34 +418,33 @@ function ListCard({ title, orderLabel, rows }) {
           <SortSelect value={sort} onChange={setSort} options={[{ value: 'order', label: orderLabel }, { value: 'lessons', label: 'Most lessons' }]} />
         </div>
       </div>
-      {sorted.length ? (
-        <ul className="border-t border-brand-border divide-y divide-brand-border">
-          {sorted.map(r => (
-            <li key={r.key}>
-              <Link to={r.to} className="group flex items-center justify-between gap-4 px-5 py-2.5 text-sm hover:bg-brand-bg/60 transition-colors focus-visible:outline-none focus-visible:bg-brand-bg/60">
-                <span className="font-medium text-dessa-teal group-hover:underline underline-offset-4 truncate">{r.name}</span>
-                <span className="tabular-nums text-brand-text">{r.lessons.toLocaleString()}</span>
-              </Link>
-            </li>
+      {sets.length ? (
+        <div className="border-t border-brand-border divide-y divide-brand-border">
+          {sets.map(g => (
+            <section key={g.label ?? 'all'} aria-label={g.label ?? undefined}>
+              {labelled && <h4 className="px-5 py-2 bg-brand-bg/[0.44] border-b border-brand-border text-xs font-medium text-brand-subtext">{g.label}</h4>}
+              <ul className="divide-y divide-brand-border">{g.rows.map(row)}</ul>
+            </section>
           ))}
-        </ul>
+        </div>
       ) : <EmptyState />}
     </section>
   )
 }
 
-// ─── Courses tab, concept D: a card per grade ────────────────────────────────
+// ─── Courses tab, concept G: a card per grade ────────────────────────────────
 
-// Concept D (2026-11-02): cards instead of a table, each grade answering the report's questions on its own: how many
+// Concept G (was D, 2026-11-02): cards instead of a table, each grade answering the report's questions on its own: how many
 // lessons, which competencies (a 100% bar and the top two), how many users and schools, and Power of Pause. Tier 1
 // only, since Tier 2 came out of the grade view (2026-11-02). The grade name opens its Tier 1 page; the card itself
 // stays static, so the link is the one thing to click.
 function GradeCard({ g, users }) {
-  const active = users.filter(u => (u.byGrade[g]?.lessons ?? 0) > 0)
-  const lessons = active.reduce((sum, u) => sum + u.byGrade[g].lessons, 0)
-  const pop = active.reduce((sum, u) => sum + u.byGrade[g].pop, 0)
+  const part = u => gradePart(u, g, 1)
+  const active = users.filter(u => part(u).lessons > 0)
+  const lessons = active.reduce((sum, u) => sum + part(u).lessons, 0)
+  const pop = active.reduce((sum, u) => sum + part(u).pop, 0)
   const schools = new Set(active.map(u => u.sc.id)).size
-  const comps = COMPETENCIES.map(c => ({ ...c, n: active.reduce((sum, u) => sum + u.byGrade[g].comps[c.key], 0) }))
+  const comps = COMPETENCIES.map(c => ({ ...c, n: active.reduce((sum, u) => sum + part(u).comps[c.key], 0) }))
     .filter(c => c.n > 0).sort((a, b) => b.n - a.n)
   const share = n => Math.round((n / lessons) * 100)
   const label = gradeLabel(g)
@@ -474,12 +488,12 @@ function GradeCard({ g, users }) {
 }
 
 function GradeCards({ users }) {
-  const tier1 = users.filter(u => u.tier === 1)
-  const grades = [...new Set(tier1.flatMap(u => u.grades))].sort((a, b) => a - b)
+  const tier1 = users.filter(u => u.tierGrades[1])
+  const grades = [...new Set(tier1.flatMap(u => u.tierGrades[1]))].sort((a, b) => a - b)
   if (!grades.length) return <section className="bg-white rounded-lg border border-brand-border p-5"><EmptyState /></section>
   return (
     <ul className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-      {grades.map(g => <GradeCard key={g} g={g} users={tier1.filter(u => u.grades.includes(g))} />)}
+      {grades.map(g => <GradeCard key={g} g={g} users={tier1.filter(u => teachesGrade(u, g, 1))} />)}
     </ul>
   )
 }
@@ -524,15 +538,13 @@ function QuietCard({ to, name, parts, eligible, tinted }) {
   )
 }
 
-const NO_COMPS = Object.fromEntries(COMPETENCIES.map(c => [c.key, 0]))
-
 function BandSections({ users }) {
   const bands = TIER2_BANDS.map(b => {
     const grades = b.grades.map(g => {
-      const eligible = users.filter(u => u.tier === 1 && u.grades.includes(g))
-      return { g, eligible, parts: eligible.map(u => ({ lessons: u.byGrade[g]?.lessons ?? 0, comps: u.byGrade[g]?.comps ?? NO_COMPS })) }
+      const eligible = users.filter(u => teachesGrade(u, g, 1))
+      return { g, eligible, parts: eligible.map(u => gradePart(u, g, 1)) }
     }).filter(r => r.eligible.length)
-    const t2 = users.filter(u => u.course.id === b.course.id)
+    const t2 = users.filter(u => teachesCourse(u, b.course.id))
     return { ...b, grades, t2 }
   }).filter(b => b.grades.length || b.t2.length)
   if (!bands.length) return <section className="bg-white rounded-lg border border-brand-border p-5"><EmptyState /></section>
@@ -543,7 +555,7 @@ function BandSections({ users }) {
           <h3 className="text-base font-semibold text-brand-text mb-3">{b.label}</h3>
           <ul className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-4">
             {b.grades.map(r => <QuietCard key={r.g} to={gradePath(r.g, 1)} name={gradeLabel(r.g)} parts={r.parts} eligible={r.eligible.length} />)}
-            {b.t2.length > 0 && <QuietCard tinted to={`/reports/content/courses/${b.course.id}`} name="Tier 2" parts={b.t2.map(u => ({ lessons: u.lessons, comps: u.comps }))} eligible={b.t2.length} />}
+            {b.t2.length > 0 && <QuietCard tinted to={`/reports/content/courses/${b.course.id}`} name="Tier 2" parts={b.t2.map(u => coursePart(u, b.course.id))} eligible={b.t2.length} />}
           </ul>
         </section>
       ))}
@@ -611,13 +623,12 @@ const F_GRID = 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4' // three a
 
 function TypeCards({ users }) {
   const [type, setType] = useState('core')
-  const whole = u => ({ user: u, lessons: u.lessons, comps: u.comps })
   let body
   if (type === 'core') {
     // Tier 1 by grade, in the same bands as Tier 2, so the two tabs line up.
     const bands = TIER2_BANDS.map(b => ({
       label: b.label,
-      grades: b.grades.map(g => ({ g, parts: users.filter(u => u.tier === 1 && u.grades.includes(g)).map(u => ({ user: u, lessons: u.byGrade[g]?.lessons ?? 0, comps: u.byGrade[g]?.comps ?? NO_COMPS })) }))
+      grades: b.grades.map(g => ({ g, parts: users.filter(u => teachesGrade(u, g, 1)).map(u => ({ user: u, ...gradePart(u, g, 1) })) }))
         .filter(r => r.parts.length),
     })).filter(b => b.grades.length)
     body = bands.length ? (
@@ -632,7 +643,7 @@ function TypeCards({ users }) {
     ) : null
   } else {
     const cards = ALL_COURSES.filter(c => c.type === type)
-      .map(c => ({ c, parts: users.filter(u => u.course.id === c.id).map(whole) }))
+      .map(c => ({ c, parts: users.filter(u => teachesCourse(u, c.id)).map(u => ({ user: u, ...coursePart(u, c.id) })) }))
       .filter(r => r.parts.length)
     body = cards.length ? (
       <ul className={F_GRID}>
@@ -922,7 +933,7 @@ export function ContentFilters({ showSite = true, showRole = true, initial, onAp
       onApply={() => { setContentFilters(draft); onApply?.() }}
       onReset={() => { setDraft(DEFAULT_FILTERS); setContentFilters(DEFAULT_FILTERS); onApply?.() }}
       sites={schools}
-      roles={USER_ROLES}
+      roles={CONTENT_ROLES}
       showSite={showSite && !isSiteLeaderView}
       showRole={showRole}
       minDate={FILTER_MIN}
@@ -994,13 +1005,27 @@ export default function ReportContent() {
     window.print()
   }
 
-  const cUsers = useMemo(() => data.users.filter(u => u.course.type === cTab), [data, cTab])
-  const cComps = useMemo(() => Object.fromEntries(COMPETENCIES.map(c => [c.key, cUsers.reduce((sum, u) => sum + u.comps[c.key], 0)])), [cUsers])
-  const cEmpty = !cUsers.some(u => u.lessons > 0)
+  const cUsers = useMemo(() => data.users.filter(u => teachesType(u, cTab)), [data, cTab])
+  const cComps = useMemo(() => Object.fromEntries(COMPETENCIES.map(c => [c.key, cUsers.reduce((sum, u) => sum + typePart(u, cTab).comps[c.key], 0)])), [cUsers, cTab])
+  const cEmpty = !cUsers.some(u => typePart(u, cTab).lessons > 0)
   const cRows = cTab === 'core' ? null : ALL_COURSES.filter(c => c.type === cTab).map((c, i) => {
-    const us = cUsers.filter(u => u.course.id === c.id)
-    return us.length ? { key: c.id, order: i, name: cTab === 'adult' ? 'Adult wellness' : levelName(c.grade), to: `/reports/content/courses/${c.id}`, lessons: us.reduce((sum, u) => sum + u.lessons, 0) } : null
+    const us = cUsers.filter(u => teachesCourse(u, c.id))
+    return us.length ? { key: c.id, order: i, name: cTab === 'adult' ? 'Adult wellness' : levelName(c.grade), to: `/reports/content/courses/${c.id}`, lessons: us.reduce((sum, u) => sum + coursePart(u, c.id).lessons, 0) } : null
   }).filter(Boolean)
+  // Concept C's grouped list (2026-11-02): every course type in the filtered data, Tier 1 by grade, the rest by course.
+  const cGroups = [
+    { type: 'core', label: 'Tier 1', rows: data.gradeRows.filter(r => r.tier === 1).map(r => ({ key: r.key, order: r.g, name: gradeLabel(r.g), to: gradePath(r.g, 1), lessons: r.lessons })) },
+    // Family out of the list (2026-11-02), as it is out of the filter.
+    ...['tier2', 'adult'].map(type => ({
+      type,
+      label: COURSE_TYPES.find(t => t.value === type).label,
+      rows: ALL_COURSES.filter(c => c.type === type).map((c, i) => {
+        const us = data.users.filter(u => teachesCourse(u, c.id))
+        return us.length ? { key: c.id, order: i, name: type === 'adult' ? 'Adult wellness' : levelName(c.grade), to: `/reports/content/courses/${c.id}`, lessons: us.reduce((sum, u) => sum + coursePart(u, c.id).lessons, 0) } : null
+      }).filter(Boolean),
+    })),
+  ].filter(g => g.rows.length)
+
   function onCTabKey(e) {
     const i = C_TABS.findIndex(([k]) => k === cTab)
     const next = e.key === 'ArrowRight' ? (i + 1) % C_TABS.length : e.key === 'ArrowLeft' ? (i - 1 + C_TABS.length) % C_TABS.length : null
@@ -1022,7 +1047,7 @@ export default function ReportContent() {
 
   const menu = (
     <MoreMenu items={[
-      ...(contentConcept === 'c'
+      ...(contentConcept === 'd'
         ? [{ icon: Download, label: 'Export courses CSV', onSelect: () => exportCsv('courses') }, { icon: Download, label: 'Export competencies CSV', onSelect: () => exportCsv('competencies') }]
         : [{ icon: Download, label: `Export ${tab === 'courses' ? 'courses' : 'competencies'} CSV`, onSelect: () => exportCsv(tab) }]),
       { icon: Printer, label: 'Print', onSelect: printReport },
@@ -1041,7 +1066,7 @@ export default function ReportContent() {
         onApply={() => setApplied(draft)}
         onReset={() => { setDraft(DEFAULT_FILTERS); setApplied(DEFAULT_FILTERS) }}
         sites={schools}
-        roles={USER_ROLES}
+        roles={CONTENT_ROLES}
         showSite={!isSiteLeaderView}
         minDate={FILTER_MIN}
         maxDate={FILTER_MAX}
@@ -1049,7 +1074,8 @@ export default function ReportContent() {
         extraFields={
           <Select label="Course type" value={draft.type} onChange={v => setDraft(d => ({ ...d, type: v }))} className="flex-1 min-w-36">
             <option value="all">All</option>
-            {COURSE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            {/* Family out of the filter (2026-11-02). */}
+            {COURSE_TYPES.filter(t => t.value !== 'family').map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </Select>
         }
       />
@@ -1062,7 +1088,24 @@ export default function ReportContent() {
       </div>
 
       {/* Concept C has no tabs (2026-11-02): its grades and competencies sit side by side. */}
-      {contentConcept === 'c' ? (
+      {contentConcept === 'd' ? (
+        // Concept D (2026-11-02, was C until the user brought C's first table back): no tabs; the Course type filter
+        // does their job, and All shows every type in one grouped list.
+        // The Tier 1, Tier 2 and Adult wellness tabs are kept below, commented out.
+        <>
+          {/* The measure said once (2026-11-02): one heading over both cards, each card titled by how it splits it. */}
+          <h2 className="text-lg font-semibold text-brand-text mb-3">Lessons completed</h2>
+          <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <ListCard
+              title="By course"
+              orderLabel={cGroups.length === 1 && cGroups[0].type === 'core' ? 'Grade' : cGroups.length === 1 && cGroups[0].type !== 'adult' ? 'Band' : 'Course'}
+              groups={cGroups}
+            />
+            {empty ? <section className={card}><EmptyState /></section> : <CompetencyMix totals={data.compTotals} title="By competency" stacked divided />}
+          </div>
+          <UsersTable users={data.users} oneSite={oneSite} linked />
+        </>
+      ) : contentConcept === 'c-tabs' ? (
         <>
           <div role="tablist" aria-label="Course type" className="flex gap-4 border-b border-brand-border mb-6" onKeyDown={onCTabKey}>
             {C_TABS.map(([k, label]) => (
@@ -1103,7 +1146,7 @@ export default function ReportContent() {
       >
         {tab === 'courses' && contentConcept === 'c' ? (
           <GradeTable rows={data.gradeRows} />
-        ) : tab === 'courses' && contentConcept === 'd' ? (
+        ) : tab === 'courses' && contentConcept === 'g' ? (
           <GradeCards users={data.users} />
         ) : tab === 'courses' && contentConcept === 'e' ? (
           <BandSections users={data.users} />
@@ -1122,9 +1165,10 @@ export default function ReportContent() {
           // The whole on top, then each competency over time (2026-10-28). The stacked weekly chart and the Coverage
           // panel it replaces are commented out below.
           <div className="flex flex-col gap-4">
-            <CompetencyMix totals={data.compTotals} />
-            {/* Weekly bar charts per competency commented out 2026-11-02; they restated the mix above. Kept for later. */}
-            {/* <CompetencyTrends weekly={data.weekly} totals={data.compTotals} /> */}
+            {/* Concept C keeps its original charts (2026-11-02): the first card with its 100% bar, and the weekly bars. */}
+            {contentConcept === 'c' ? <CompetencyMixOriginal totals={data.compTotals} /> : <CompetencyMix totals={data.compTotals} />}
+            {/* Weekly bar charts per competency commented out 2026-11-02 for the other concepts; they restated the mix above. */}
+            {contentConcept === 'c' && <CompetencyTrends weekly={data.weekly} totals={data.compTotals} />}
           </div>
           // <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
           //   <section className={card}>
@@ -1140,7 +1184,7 @@ export default function ReportContent() {
       </motion.div>
       </>)}
 
-      {contentConcept !== 'c' && <UsersTable users={data.users} oneSite={oneSite} linked={['d', 'e', 'f'].includes(contentConcept)} />}
+      {contentConcept !== 'd' && <UsersTable users={data.users} oneSite={oneSite} linked={['c', 'e', 'f', 'g'].includes(contentConcept)} />}
 
       <PrintReport
         title="Lessons"

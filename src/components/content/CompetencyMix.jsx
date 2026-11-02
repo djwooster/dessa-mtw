@@ -4,16 +4,23 @@ import { Check, ChevronDown } from 'lucide-react'
 import { COMPETENCIES } from '../../lib/contentReportData'
 
 // "Competencies covered" card for the Content course and user pages (2026-10-27): how the whole 100% of a group's
-// lessons splits across the six competencies. The 100% stacked bar is the pick; a concept dropdown in the card
-// header switches to a donut for comparison (waffle, treemap, radar and the original ranked bars were cut 2026-10-27).
-// The choice is remembered per browser. Competencies with no lessons are left out (no "Not yet" line, 2026-10-27).
+// lessons splits across the six competencies. The donut is the pick (2026-11-02); a concept dropdown in the card
+// header switches to ranked bars for comparison (the 100% bar, waffle, treemap and radar were cut). The choice is
+// remembered per browser. Competencies with no lessons are left out (no "Not yet" line, 2026-10-27).
 
+// Concepts (2026-11-02): the donut with a one line legend, and ranked bars with no donut (easier to compare
+// lengths than angles). A new storage key, so an old "100% bar" choice doesn't carry over.
+// const CONCEPTS = [
+//   { value: 'bar', label: '100% bar' },
+//   { value: 'donut', label: 'Donut' },
+// ]
+// const STORE_KEY = 'content.competencyMix'
 const CONCEPTS = [
-  { value: 'bar', label: '100% bar' },
   { value: 'donut', label: 'Donut' },
+  { value: 'bars', label: 'Bars' },
 ]
-const STORE_KEY = 'content.competencyMix'
-// const readConcept = () => { try { return localStorage.getItem(STORE_KEY) ?? 'bar' } catch { return 'bar' } }
+const STORE_KEY = 'content.competencyView'
+const readConcept = () => { try { const v = localStorage.getItem(STORE_KEY); return CONCEPTS.some(c => c.value === v) ? v : 'donut' } catch { return 'donut' } }
 
 const pctText = n => `${Math.round(n * 100)}%`
 const describe = rows => rows.map(r => `${r.label} ${pctText(r.share)}`).join(', ')
@@ -32,6 +39,7 @@ function useWidth() {
   return [ref, w]
 }
 
+/* The two line legend with share bars (2026-10-29 to 2026-11-02), kept for later:
 // Dot, name, a share bar, share and lessons, one row per competency; used beside the donut. The bars fill the
 // card's width (2026-10-29) instead of leaving it empty, scaled to the top competency so small shares still read.
 function Legend({ rows }) {
@@ -44,7 +52,7 @@ function Legend({ rows }) {
           <span className="flex items-center gap-1.5 min-w-0">
             <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: r.color }} aria-hidden="true" />
             <span className="flex-1 min-w-0 truncate text-brand-text">{r.label}</span>
-            <span className="shrink-0 tabular-nums whitespace-nowrap text-brand-subtext">{r.n.toLocaleString()} {r.n === 1 ? 'lesson' : 'lessons'}</span>
+            <span className="shrink-0 tabular-nums whitespace-nowrap text-brand-subtext">{r.n.toLocaleString()} {r.n === 1 ? 'lesson' : 'lessons'} completed</span>
           </span>
           <span className="flex items-center gap-3 mt-1.5 pl-4 min-w-0">
             <span className="flex-1 min-w-12 h-2 rounded-full bg-brand-bg overflow-hidden" aria-hidden="true">
@@ -55,6 +63,53 @@ function Legend({ rows }) {
         </li>
       ))}
     </ul>
+  )
+}
+
+*/
+
+// One line per competency, used under the donut (2026-11-02, more minimal): color, name, lessons and share. The
+// donut already shows each share, so the bars came out, and "lessons completed" is said once, in the donut's center.
+function Legend({ rows }) {
+  return (
+    <ul className="flex flex-col gap-2.5 text-sm min-w-0">
+      {rows.map(r => (
+        <li key={r.key} className="flex items-center gap-2 min-w-0">
+          <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: r.color }} aria-hidden="true" />
+          <span className="flex-1 min-w-0 truncate text-brand-text">{r.label}</span>
+          <span className="w-14 shrink-0 text-right tabular-nums text-brand-subtext">{r.n.toLocaleString()}</span>
+          <span className="w-10 shrink-0 text-right tabular-nums text-brand-text">{pctText(r.share)}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+// ─── Bars ────────────────────────────────────────────────────────────────────
+
+// Ranked bars, no donut (2026-11-02): the total once at the top, then a line per competency (name, lessons, share)
+// over a bar in its color. Bars run against the top competency, so small differences still show.
+function Bars({ rows }) {
+  const max = Math.max(...rows.map(r => r.share))
+  return (
+    <div>
+      {/* No total here (2026-11-02): the Lessons completed numbers above the card already say it. */}
+      <ul className="flex flex-col gap-5 text-sm min-w-0" aria-label={`Share of lessons: ${describe(rows)}`}>
+        {rows.map(r => (
+          <li key={r.key} className="min-w-0">
+            <span className="flex items-center gap-2 min-w-0">
+              <span className="flex-1 min-w-0 truncate text-brand-text">{r.label}</span>
+              {/* Lesson count commented out 2026-11-02; the percent carries the row. */}
+              {/* <span className="w-14 shrink-0 text-right tabular-nums text-brand-subtext">{r.n.toLocaleString()}</span> */}
+              <span className="w-10 shrink-0 text-right tabular-nums text-brand-text">{pctText(r.share)}</span>
+            </span>
+            <span className="block mt-2 h-2 rounded-full bg-brand-bg overflow-hidden" aria-hidden="true">
+              <span className="block h-full rounded-full" style={{ width: `${(r.share / max) * 100}%`, background: r.color }} />
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -121,9 +176,10 @@ function Donut({ rows, total, stacked }) {
             return el
           })}
         </svg>
+        {/* The center names the top competency (2026-11-02) rather than repeating the lesson total shown above. */}
         <div className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
-          <span className="text-2xl font-semibold text-brand-text tabular-nums">{total.toLocaleString()}</span>
-          <span className="text-xs text-brand-subtext">lessons</span>
+          <span className="text-2xl font-semibold text-brand-text tabular-nums">{pctText(rows[0].share)}</span>
+          <span className="w-24 text-xs text-brand-subtext text-center leading-tight">{rows[0].label}</span>
         </div>
       </div>
       <div className="flex-1 min-w-0 w-full"><Legend rows={rows} /></div>
@@ -170,13 +226,13 @@ function ConceptSelect({ value, onChange }) {
 // `bare` drops the card's own border, for sitting inside another card; `stacked` is the donut's narrow layout.
 // `divided` runs a line under the header, edge to edge, level with the list card beside it (concept C, 2026-11-02).
 export default function CompetencyMix({ totals, title = 'Competencies covered', bare = false, stacked = false, divided = false }) {
-  // const [concept, setConcept] = useState(readConcept)
-  // const choose = v => { setConcept(v); try { localStorage.setItem(STORE_KEY, v) } catch { /* private window */ } }
+  const [concept, setConcept] = useState(readConcept)
+  const choose = v => { setConcept(v); try { localStorage.setItem(STORE_KEY, v) } catch { /* private window */ } }
   const total = Object.values(totals).reduce((a, b) => a + b, 0)
   const all = COMPETENCIES.map(c => ({ ...c, n: totals[c.key] ?? 0, share: total ? (totals[c.key] ?? 0) / total : 0 }))
   const rows = all.filter(r => r.n > 0).sort((a, b) => b.n - a.n)
   // const View = concept === 'donut' ? Donut : StackedBar
-  const View = Donut
+  const View = concept === 'bars' ? Bars : Donut
 
   return (
     <section className={`${bare ? '' : 'bg-white rounded-lg border border-brand-border '}${divided ? '' : 'p-5'}`}>
@@ -184,7 +240,7 @@ export default function CompetencyMix({ totals, title = 'Competencies covered', 
       <div className={divided ? 'px-5 pt-5 pb-4 border-b border-brand-border' : 'mb-4'}>
         <div className="flex items-center justify-between gap-4 min-h-9">
           <h3 className="text-base font-semibold text-brand-text">{title}</h3>
-          {/* <ConceptSelect value={concept} onChange={choose} /> */}
+          <ConceptSelect value={concept} onChange={choose} />
         </div>
       </div>
       <div className={divided ? 'p-5' : ''}>

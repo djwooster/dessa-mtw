@@ -92,10 +92,32 @@ export function courseFor(site, ti, role) {
 }
 
 // A few users teach more than one course (2026-10-29), for the user page: Aisha Garcia at Heritage Elementary
-// teaches Kindergarten, 1st and 2nd grade. Same tier only, so a user's grades all sit on one tier's pages.
-const EXTRA_COURSES = { '20-11': [1, 2].map(g => CORE.find(c => gradeNum(c) === g)) }
-// "1st grade, Tier 1", or "3 grades, Tier 1" for a user who teaches several.
-const usersCourseLabel = list => (list.length > 1 ? `${list.length} grades, Tier ${tierOf(list[0])}` : courseLabel(list[0]))
+// teaches Kindergarten, 1st and 2nd grade. Courses can mix types (2026-11-02): some teachers run Tier 2 Early
+// elementary on top of their own grade, so Aisha Edwards at Creekside Elementary teaches 1st grade Tier 1, Tier 2
+// Early elementary and Adult wellness. Each lesson belongs to one of a user's courses.
+const EXTRA_COURSES = {
+  '20-11': [1, 2].map(g => CORE.find(c => gradeNum(c) === g)),
+  '18-13': [TIER2.find(c => c.grade === 'Early Elementary'), ADULT[0]],
+}
+// "1st grade, Tier 1", or "3 courses" for a user who teaches several.
+const usersCourseLabel = list => (list.length > 1 ? `${list.length} courses` : courseLabel(list[0]))
+
+// A user's share of one grade at one tier, or of one course (2026-11-02), now that a user can teach several of each.
+const NONE = { lessons: 0, pop: 0, comps: Object.fromEntries(COMPETENCIES.map(c => [c.key, 0])) }
+export const teachesGrade = (u, g, tier) => (u.tierGrades[tier] ?? []).includes(g)
+export const gradePart = (u, g, tier) => u.byTierGrade[`${tier}-${g}`] ?? NONE
+export const teachesCourse = (u, id) => u.courses.some(c => c.id === id)
+export const coursePart = (u, id) => u.byCourse[id] ?? NONE
+export const teachesType = (u, type) => u.courses.some(c => c.type === type)
+// The lessons, Power of Pause and competencies from a user's courses of one type.
+export function typePart(u, type) {
+  const parts = u.courses.filter(c => c.type === type).map(c => coursePart(u, c.id))
+  return {
+    lessons: parts.reduce((sum, p) => sum + p.lessons, 0),
+    pop: parts.reduce((sum, p) => sum + p.pop, 0),
+    comps: Object.fromEntries(COMPETENCIES.map(c => [c.key, parts.reduce((sum, p) => sum + p.comps[c.key], 0)])),
+  }
+}
 
 const keyFor = label => COMPETENCIES.find(c => c.label === (COMPETENCY_ALIASES[label] ?? label))?.key
 
@@ -163,7 +185,9 @@ export function bandOf(course) {
 }
 
 // Everything the report shows for a site scope, role, course type and list of weeks.
-export function contentData({ siteIds, role = 'all', type = 'all', weeks }) {
+// No Family users or Family courses on this report (2026-11-02). `family` lets them back in, for a Family user's
+// page opened from the Engagement report, which still lists them.
+export function contentData({ siteIds, role = 'all', type = 'all', weeks, family = false }) {
   const weekly = weeks.map(week => ({ week, comps: emptyComps(), total: 0 }))
   const compTotals = emptyComps()
   const byCourse = new Map()
@@ -175,23 +199,33 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks }) {
 
   people(siteIds).forEach(p => {
     if (role !== 'all' && p.role !== role) return
-    const course = courseFor(p.sc, p.ti, p.role)
-    if (type !== 'all' && course.type !== type) return
-    const list = [course, ...(EXTRA_COURSES[p.key] ?? [])]
-    const grades = list.flatMap(gradesFor)
-    // `byGrade` is { grade: { lessons, pop, comps } }, for the grade pages and cards; `byCourseLessons` is lessons per course id.
-    const user = { key: p.key, sc: p.sc, i: p.i, name: p.name, role: p.role, other: !!p.other, course, courses: list, courseLabel: usersCourseLabel(list), tier: tierOf(course), grades, byGrade: {}, byCourseLessons: {}, lessons: 0, pop: 0, comps: emptyComps(), last: p.last() }
+    if (!family && p.role === 'Family User') return
+    const all = [courseFor(p.sc, p.ti, p.role), ...(EXTRA_COURSES[p.key] ?? [])].filter(c => family || c.type !== 'family')
+    if (!all.length) return
+    // The Course type filter keeps a user's courses of that type; lessons in their other courses don't count.
+    const list = type === 'all' ? all : all.filter(c => c.type === type)
+    if (!list.length) return
+    const course = list[0]
+    // `tierGrades` is { tier: [grades] } and `byTierGrade` is { 'tier-grade': part }, for the grade pages and cards;
+    // `byCourse` is { courseId: part }. A part is { lessons, pop, comps }. `tier`, `grades` and `byGrade` are the
+    // first course's tier, kept for older readers.
+    const tierGrades = {}
+    list.forEach(c => { const t = tierOf(c); if (t) tierGrades[t] = [...new Set([...(tierGrades[t] ?? []), ...gradesFor(c)])].sort((a, b) => a - b) })
+    const user = { key: p.key, sc: p.sc, i: p.i, name: p.name, role: p.role, other: !!p.other, course, courses: list, courseLabel: usersCourseLabel(list), tier: tierOf(course), tierGrades, grades: tierGrades[tierOf(course)] ?? [], byGrade: {}, byTierGrade: {}, byCourse: {}, byCourseLessons: {}, lessons: 0, pop: 0, comps: emptyComps(), last: p.last() }
+    const add = (part, l) => { part.lessons += 1; if (l.pop) part.pop += 1; part.comps[l.comp] += 1 }
+    const fresh = () => ({ lessons: 0, pop: 0, comps: emptyComps() })
     weeks.forEach((w, wi) => {
       const weekIdx = schoolWeeks.indexOf(w)
-      userWeekLessons(p.seed, p.ti, weekIdx, p.daysFor(w, weekIdx), list).forEach(l => {
+      userWeekLessons(p.seed, p.ti, weekIdx, p.daysFor(w, weekIdx), all).forEach(l => {
+        if (!list.includes(l.course)) return
         user.lessons += 1
         user.byCourseLessons[l.course.id] = (user.byCourseLessons[l.course.id] ?? 0) + 1
+        add((user.byCourse[l.course.id] ??= fresh()), l)
         user.comps[l.comp] += 1
-        if (l.grade != null) {
-          const bg = (user.byGrade[l.grade] ??= { lessons: 0, pop: 0, comps: emptyComps() })
-          bg.lessons += 1
-          if (l.pop) bg.pop += 1
-          bg.comps[l.comp] += 1
+        const t = tierOf(l.course)
+        if (l.grade != null && t) {
+          add((user.byTierGrade[`${t}-${l.grade}`] ??= fresh()), l)
+          if (t === user.tier) add((user.byGrade[l.grade] ??= fresh()), l)
         }
         weekly[wi].comps[l.comp] += 1
         weekly[wi].total += 1
@@ -230,8 +264,8 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks }) {
   const gradeRows = []
   for (let g = 0; g <= 12; g++) {
     [1, 2].forEach(tier => {
-      const eligible = users.filter(u => u.tier === tier && u.grades.includes(g))
-      if (eligible.length) gradeRows.push({ key: `${g}-${tier}`, g, tier, course: gradeCourse(g, tier), lessons: eligible.reduce((sum, u) => sum + (u.byGrade[g]?.lessons ?? 0), 0) })
+      const eligible = users.filter(u => teachesGrade(u, g, tier))
+      if (eligible.length) gradeRows.push({ key: `${g}-${tier}`, g, tier, course: gradeCourse(g, tier), lessons: eligible.reduce((sum, u) => sum + gradePart(u, g, tier).lessons, 0) })
     })
   }
 

@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { BookOpen, ChevronRight, Download } from 'lucide-react'
-import { ALL_COURSES, COMPETENCIES, contentData, gradeLabel, gradeMark, gradeCourse, gradePath } from '../lib/contentReportData'
+import { ALL_COURSES, COMPETENCIES, contentData, gradeLabel, gradeMark, gradeCourse, gradePath, teachesGrade, gradePart, teachesCourse, coursePart } from '../lib/contentReportData'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { ContentFilters, Defined, EmptyState, MoreMenu, UsersTable, LESSON_DEFINITION, download, useContentScope } from './ReportContent'
 import CompetencyMix from '../components/content/CompetencyMix'
@@ -128,8 +128,8 @@ function useScopedUsers() {
   return useMemo(() => contentData({ siteIds, role, weeks }).users, [siteIds.join(), role, weeks])
 }
 
-const whole = u => u
-const NONE = { lessons: 0, comps: Object.fromEntries(COMPETENCIES.map(c => [c.key, 0])) }
+// Both tiers of a grade, for the All tiers view (no longer linked to, 2026-11-02).
+const sumParts = (a, b) => ({ lessons: a.lessons + b.lessons, comps: Object.fromEntries(COMPETENCIES.map(c => [c.key, a.comps[c.key] + b.comps[c.key]])) })
 
 // All tiers, Tier 1 or Tier 2 for one grade page (2026-11-02). Links, so each view has its own URL and Back works.
 function TierSwitch({ g, tier }) {
@@ -154,7 +154,7 @@ export function ContentGrade() {
   const g = Number(grade)
   const t = tier ? Number(tier) : null
   const all = useScopedUsers()
-  const users = useMemo(() => all.filter(u => (t ? u.tier === t : u.tier) && u.grades.includes(g)), [all, g, t])
+  const users = useMemo(() => all.filter(u => (t ? teachesGrade(u, g, t) : teachesGrade(u, g, 1) || teachesGrade(u, g, 2))), [all, g, t])
   const course = t ? gradeCourse(g, t) : gradeCourse(g, 1) ?? gradeCourse(g, 2)
   if (!course || (t && t !== 1 && t !== 2)) return <NotFound what="Grade" />
   return (
@@ -164,7 +164,7 @@ export function ContentGrade() {
       avatar={<CourseTile course={course} size="lg" mark={gradeMark(g)} />}
       meta={[[BookOpen, t ? `Tier ${t}` : 'Tier 1 and Tier 2']]}
       users={users}
-      part={u => u.byGrade[g] ?? NONE}
+      part={u => (t ? gradePart(u, g, t) : sumParts(gradePart(u, g, 1), gradePart(u, g, 2)))}
       path={gradePath(g, t)}
       // The tier switch came off 2026-11-02; grade links open Tier 1. Kept below for later.
       // action={<TierSwitch g={g} tier={t} />}
@@ -178,7 +178,7 @@ export default function ContentCourse() {
   useEffect(() => { window.scrollTo(0, 0) }, [courseId])
   const course = ALL_COURSES.find(c => String(c.id) === courseId)
   const all = useScopedUsers()
-  const users = useMemo(() => all.filter(u => u.course.id === course?.id), [all, course])
+  const users = useMemo(() => all.filter(u => course && teachesCourse(u, course.id)), [all, course])
   if (!course) return <NotFound what="Course" />
   return (
     <GroupPage
@@ -187,7 +187,7 @@ export default function ContentCourse() {
       avatar={<CourseTile course={course} size="lg" />}
       meta={[[BookOpen, course.typeLabel]]}
       users={users}
-      part={whole}
+      part={u => coursePart(u, course.id)}
       path={`/reports/content/courses/${course.id}`}
     />
   )
