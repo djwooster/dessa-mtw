@@ -8,7 +8,7 @@ import { createContext, useContext, useState } from 'react'
 const ContentConceptContext = createContext(null)
 
 export function ContentConceptProvider({ children }) {
-  const [contentConcept, setContentConcept] = useState('c') // C opens first (2026-10-28); A is commented out
+  const [contentConcept, setContentConcept] = useState('e') // E is the pick (2026-11-03), its switcher in Nav commented out; C opened first from 2026-10-28
   const [contentFilters, setContentFilters] = useState(null) // null = the report's defaults
   // The user page's header concept (2026-11-03), picked in a switcher above that page's Filters.
   const [userHeader, setUserHeader] = useState('a')

@@ -512,6 +512,7 @@ export default function Nav() {
               </Popover.Portal>
             </Popover.Root>
           )}
+          {/* Content concept switcher commented out 2026-11-03: E is the pick.
           {location.pathname.startsWith('/reports/content') && (
             <Popover.Root>
               <Popover.Trigger asChild>
@@ -545,7 +546,7 @@ export default function Nav() {
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>
-          )}
+          )} */}
           {/* Concept B's illustration subtab (2026-10-19), same Tabs as the Engagement Today | End of year preview. */}
           {/* Before | After ratings (2026-10-20): resets or skips the simulated rating flow on the Dashboard. */}
           {location.pathname === '/' && (

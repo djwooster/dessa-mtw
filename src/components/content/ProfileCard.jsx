@@ -102,9 +102,10 @@ export default function ProfileCard({ avatar, title, meta, stats, range, action,
         </div>
       )}
       {!banner && headerStyle === 'strip' && (
-        <div className="relative h-12 bg-dessa-teal overflow-hidden" aria-hidden="true">
-          <Flower className="absolute left-5 -top-6 w-24 h-24 text-dessa-navy rotate-12" />
-          <Flower className="absolute right-24 top-3 w-12 h-12 text-dessa-navy -rotate-12" />
+        // A plain teal strip, no flowers (2026-11-03).
+        <div className="h-12 bg-dessa-teal" aria-hidden="true">
+          {/* <Flower className="absolute left-5 -top-6 w-24 h-24 text-dessa-navy rotate-12" />
+          <Flower className="absolute right-24 top-3 w-12 h-12 text-dessa-navy -rotate-12" /> */}
         </div>
       )}
       {!banner && (
@@ -118,9 +119,11 @@ export default function ProfileCard({ avatar, title, meta, stats, range, action,
           {headerStyle === 'watermark' && <Flower className="absolute -right-8 -top-14 w-48 h-48 text-dessa-teal/10 rotate-12" />}
           {heading}
           {statsInHeader ? (
-            <dl className="relative flex flex-wrap gap-x-8 gap-y-3">
+            // The numbers as even columns split by thin lines (2026-11-03), each wide enough to read as its own stat,
+            // not a run of labels.
+            <dl className="relative flex flex-wrap gap-y-3 divide-x divide-brand-border">
               {stats.map(([label, value], i) => (
-                <div key={i} className="min-w-0">
+                <div key={i} className="min-w-28 px-6 first:pl-0 last:pr-0">
                   <dt className={`text-xs ${muted} ${onTeal ? 'font-medium' : ''} truncate`}>{label}</dt>
                   <dd className={`text-lg font-semibold ${ink} tabular-nums mt-0.5 truncate`}>{value}</dd>
                 </div>

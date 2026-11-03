@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import * as Tooltip from '@radix-ui/react-tooltip'
 import { BookOpen, ChevronRight, Download } from 'lucide-react'
 import { ALL_COURSES, COMPETENCIES, contentData, gradeLabel, gradeMark, gradeCourse, gradePath, teachesGrade, gradePart, teachesCourse, coursePart } from '../lib/contentReportData'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
@@ -37,13 +38,42 @@ export function ContentBreadcrumb({ trail }) {
 export function NotFound({ what }) {
   return (
     <div className="px-6 pt-8 pb-8">
-      <ContentBreadcrumb trail={[{ label: 'Lessons', to: '/reports/content' }, { label: `${what} not found` }]} />
+      <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, { label: `${what} not found` }]} />
       <div className="bg-white rounded-lg border border-brand-border py-12 text-center">
         <p className="text-sm font-semibold text-brand-text">We couldn't find that {what.toLowerCase()}</p>
         <p className="text-sm text-brand-subtext mt-1">It may be outside the sites you can see.</p>
         <Link to="/reports/content" className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">Back to Lessons</Link>
       </div>
     </div>
+  )
+}
+
+// The users count reveals who they are on hover or focus (2026-11-03): each name with their lessons, most first.
+function SiteUsers({ row }) {
+  const list = [...row.list].sort((a, b) => b.lessons - a.lessons || a.name.localeCompare(b.name))
+  return (
+    <Tooltip.Provider delayDuration={150}>
+      <Tooltip.Root>
+        <Tooltip.Trigger asChild>
+          <button type="button" aria-label={`${row.users} ${row.users === 1 ? 'user' : 'users'} at ${row.sc.name}: ${list.map(u => u.name).join(', ')}`} className="tabular-nums underline decoration-dotted decoration-brand-subtext/60 underline-offset-4 cursor-pointer rounded-sm">
+            {row.users}
+          </button>
+        </Tooltip.Trigger>
+        <Tooltip.Portal>
+          <Tooltip.Content side="left" sideOffset={8} className="z-50 min-w-48 max-w-64 px-3 py-2 rounded-md bg-brand-text text-white text-xs leading-5 shadow-lg">
+            <ul>
+              {list.map(u => (
+                <li key={u.key} className="flex items-center justify-between gap-4">
+                  <span className="truncate">{u.name}</span>
+                  <span className="tabular-nums shrink-0">{u.lessons} {u.lessons === 1 ? 'lesson' : 'lessons'}</span>
+                </li>
+              ))}
+            </ul>
+            <Tooltip.Arrow className="fill-brand-text" />
+          </Tooltip.Content>
+        </Tooltip.Portal>
+      </Tooltip.Root>
+    </Tooltip.Provider>
   )
 }
 
@@ -63,7 +93,7 @@ function SchoolsTable({ rows }) {
           <TableRow key={r.sc.id} className="hover:bg-transparent">
             <TableCell className="font-medium">{r.sc.name}</TableCell>
             <TableCell className="text-right tabular-nums">{r.lessons.toLocaleString()}</TableCell>
-            <TableCell className="text-right tabular-nums">{r.users}</TableCell>
+            <TableCell className="text-right tabular-nums"><SiteUsers row={r} /></TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -78,9 +108,10 @@ function GroupPage({ title, avatar, meta, users, part, path, action }) {
   const lessons = active.reduce((sum, u) => sum + part(u).lessons, 0)
   const comps = Object.fromEntries(COMPETENCIES.map(c => [c.key, active.reduce((sum, u) => sum + part(u).comps[c.key], 0)]))
   const bySchool = [...active.reduce((m, u) => {
-    const r = m.get(u.sc.id) ?? { sc: u.sc, lessons: 0, users: 0 }
+    const r = m.get(u.sc.id) ?? { sc: u.sc, lessons: 0, users: 0, list: [] }
     r.lessons += part(u).lessons
     r.users += 1
+    r.list.push({ key: u.key, name: u.name, lessons: part(u).lessons })
     return m.set(u.sc.id, r)
   }, new Map()).values()].sort((a, b) => b.lessons - a.lessons)
   function exportCsv() {
@@ -90,7 +121,7 @@ function GroupPage({ title, avatar, meta, users, part, path, action }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
-      <ContentBreadcrumb trail={[{ label: 'Lessons', to: '/reports/content' }, { label: title }]} />
+      <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, { label: title }]} />
       {/* Filters (2026-10-29): Site, User role and dates. Course type is left off, since the page is one grade or course. */}
       {/* 3-dot menu (2026-11-02): Export CSV of the page's schools, like the report's own menu. */}
       <ContentFilters action={<MoreMenu items={[{ icon: Download, label: 'Export CSV', onSelect: exportCsv }]} />} />
@@ -101,15 +132,21 @@ function GroupPage({ title, avatar, meta, users, part, path, action }) {
           title={title}
           meta={meta}
           stats={[
-            [<Defined key="l" definition={LESSON_DEFINITION}>Lessons</Defined>, lessons.toLocaleString()],
-            ['Sites', bySchool.length.toLocaleString()],
-            ['Users', `${active.length.toLocaleString()} of ${users.length.toLocaleString()}`],
+            [<Defined key="l" definition={LESSON_DEFINITION}>Lessons completed</Defined>, lessons.toLocaleString()],
+            // "Completed at" and "Completed by" (2026-11-03): the label carries the verb, the value its noun, so the row
+            // reads 344 lessons completed, at 10 sites, by 27 users. The noun and total read quieter than the count.
+            ['Completed at', <>{bySchool.length.toLocaleString()} <span className="text-sm font-normal text-brand-subtext">{bySchool.length === 1 ? 'site' : 'sites'}</span></>],
+            ['Completed by', <>{active.length.toLocaleString()} <span className="text-sm font-normal text-brand-subtext">of {users.length.toLocaleString()} {users.length === 1 ? 'user' : 'users'}</span></>],
           ]}
           // No date range here (2026-11-02); the Filters panel above shows it.
           action={action}
           banner={false}
+          // The user page's header (2026-11-03): a teal strip on top, the numbers beside the name.
+          statsInHeader
+          headerStyle="strip"
         />
-        <CompetencyMix totals={comps} />
+        {/* Bars only, no dropdown (2026-11-03), like the user page. */}
+        <CompetencyMix totals={comps} view="bars" />
         {/* The standard table (2026-11-02): edge to edge in its card, like the users table, not inset. */}
         <section className="bg-white rounded-lg border border-brand-border overflow-hidden">
           <div className="px-4 py-3 border-b border-brand-border">

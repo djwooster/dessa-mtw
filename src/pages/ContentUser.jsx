@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ChevronRight, School, User } from 'lucide-react'
-import { contentData, gradeLabel, gradeMark } from '../lib/contentReportData'
-import CompetencyMix, { ConceptSelect } from '../components/content/CompetencyMix'
+import { ChevronRight, Download, School, User } from 'lucide-react'
+import { COMPETENCIES, contentData, gradeLabel, gradeMark } from '../lib/contentReportData'
+import CompetencyMix /* , { ConceptSelect } */ from '../components/content/CompetencyMix'
 import ProfileCard, { ProfileSection, CourseTile } from '../components/content/ProfileCard'
 import { educatorDayMap, otherDayMap } from './Report2ConceptE'
 import EducatorCalendar from '../components/engagement/EducatorCalendar'
 import { addDays, format, parseISO } from 'date-fns'
-import { ContentFilters, Defined, LESSON_DEFINITION, useContentScope } from './ReportContent'
+import { ContentFilters, Defined, LESSON_DEFINITION, MoreMenu, download, useContentScope } from './ReportContent'
 import { ContentBreadcrumb, NotFound } from './ContentCourse'
 import { agoRank } from './Report2ConceptE'
-import { useContentConcept } from '../lib/contentConceptContext'
+// import { useContentConcept } from '../lib/contentConceptContext' // the header switcher's, commented out 2026-11-03
 
 // User page (Content concept C, 2026-10-27): a user's name in the Content report or on a course page opens here.
 // Finds the user at any site the viewer can see (a Site Leader only their own), and follows the report's dates.
@@ -66,7 +66,7 @@ const PROGRESS_CONCEPTS = [
   { value: 'columns', label: 'Columns' },
 ]
 const PROGRESS_KEY = 'content.courseProgressView'
-const readProgress = () => { try { const v = localStorage.getItem(PROGRESS_KEY); return PROGRESS_CONCEPTS.some(c => c.value === v) ? v : 'rings' } catch { return 'rings' } }
+// const readProgress = () => { try { const v = localStorage.getItem(PROGRESS_KEY); return PROGRESS_CONCEPTS.some(c => c.value === v) ? v : 'rings' } catch { return 'rings' } }
 const shareOf = p => (p?.total ? p.done / p.total : 0)
 const pctOf = p => Math.round(shareOf(p) * 100)
 const lessonsOf = p => `${p.done} of ${p.total} lessons`
@@ -194,9 +194,12 @@ function ActiveStatus({ last }) {
 }
 
 function IdentityCard({ user }) {
-  const { userHeader } = useContentConcept()
-  const [view, setView] = useState(readProgress)
-  const choose = v => { setView(v); try { localStorage.setItem(PROGRESS_KEY, v) } catch { /* private window */ } }
+  // Header B with the banner strip and Rings are the picks (2026-11-03); both switchers are commented out.
+  // const { userHeader } = useContentConcept()
+  const userHeader = 'b-strip'
+  // const [view, setView] = useState(readProgress)
+  // const choose = v => { setView(v); try { localStorage.setItem(PROGRESS_KEY, v) } catch { /* private window */ } }
+  const view = 'rings'
   // Every course the user teaches (2026-11-02), Tier 1 by its grade, Tier 2 and Family by band, Adult wellness by
   // name. Display only.
   const items = user.courses.map(c => ({ progress: user.courseProgress?.[c.id], ...(c.type === 'core'
@@ -235,7 +238,7 @@ function IdentityCard({ user }) {
       {/* Top competencies removed 2026-10-29; the competency chart below covers it. */}
       <ProfileSection
         title="Course progress"
-        action={items.length ? <ConceptSelect value={view} onChange={choose} options={PROGRESS_CONCEPTS} name="Course progress concept" /> : null}
+        // action={items.length ? <ConceptSelect value={view} onChange={choose} options={PROGRESS_CONCEPTS} name="Course progress concept" /> : null}
       >
         {!items.length ? <p className="text-sm text-brand-subtext">No courses of this type. Try another course type.</p>
           // : view === 'cards' ? <ProgressCards items={items} />
@@ -270,21 +273,37 @@ export default function ContentUser() {
   if (!user) return <NotFound what="User" />
 
   const back = state?.back // the grade or course page the user was opened from
-  const { userHeader, setUserHeader } = useContentConcept()
+  // const { userHeader, setUserHeader } = useContentConcept()
   const card = 'bg-white rounded-lg border border-brand-border p-5'
+  // Export CSV (2026-11-03), in the Filters panel's 3-dot menu like the course page: the user's course progress, then
+  // their lessons completed by competency, in one file.
+  function exportCsv() {
+    const courseName = c => (c.type === 'core' ? `${gradeLabel(gradeNum(c))}, Tier 1` : c.type === 'adult' ? 'Adult wellness' : `${levelName(c.grade)}, ${c.typeLabel}`)
+    const compTotal = COMPETENCIES.reduce((sum, c) => sum + user.comps[c.key], 0)
+    const name = user.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    download(`${name}.csv`, ['Section', 'Name', 'Lessons completed', 'Lessons in course', 'Percent'], [
+      ...user.courses.map(c => {
+        const pr = user.courseProgress?.[c.id] ?? { done: 0, total: c.lessons }
+        return ['Course progress', courseName(c), pr.done, pr.total, pr.total ? Math.round((pr.done / pr.total) * 100) : 0]
+      }),
+      ...COMPETENCIES.map(c => ['Competency', c.label, user.comps[c.key], '', compTotal ? Math.round((user.comps[c.key] / compTotal) * 100) : 0])
+        .sort((a, b) => b[2] - a[2]),
+    ])
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
       <ContentBreadcrumb trail={[
-        fromEngagement ? { label: 'Engagement', to: '/reports/engagement' } : { label: 'Lessons', to: '/reports/content' },
+        fromEngagement ? { label: 'Engagement', to: '/reports/engagement' } : { label: 'Content', to: '/reports/content' },
         ...(back ? [back] : []),
         { label: user.name },
       ]} />
       {/* Filters (2026-10-29): dates, and Course type since 2026-11-03 (a user can teach several types). Site and role
           are fixed for one user. */}
+      {/* Header switcher commented out 2026-11-03, Header B with the banner strip picked:
       <div className="flex justify-end mb-3">
         <ConceptSelect value={userHeader} onChange={setUserHeader} options={HEADER_CONCEPTS} name="Header concept" />
-      </div>
+      </div> */}
       <ContentFilters
         key={userKey}
         showSite={false}
@@ -292,6 +311,7 @@ export default function ContentUser() {
         showType
         initial={engWeeks?.length ? { start: engWeeks[0], end: format(addDays(parseISO(engWeeks[engWeeks.length - 1]), 4), 'yyyy-MM-dd') } : undefined}
         onApply={() => setEngWeeks(null)}
+        action={<MoreMenu items={[{ icon: Download, label: 'Export CSV', onSelect: exportCsv }]} />}
       />
       <div className="flex flex-col gap-4">
         <IdentityCard user={user} />
