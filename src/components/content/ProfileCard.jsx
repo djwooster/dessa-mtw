@@ -34,10 +34,16 @@ function Flower({ className }) {
   )
 }
 
-export function ProfileSection({ title, children }) {
+// `action` (2026-11-03) sits on the right of the title, for the user page's course progress concept switcher.
+export function ProfileSection({ title, action, children }) {
   return (
     <section className="px-5 py-4 border-t border-dashed border-brand-border">
-      <h2 className="text-sm font-semibold text-brand-text mb-3">{title}</h2>
+      {action ? (
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <h2 className="text-sm font-semibold text-brand-text">{title}</h2>
+          {action}
+        </div>
+      ) : <h2 className="text-sm font-semibold text-brand-text mb-3">{title}</h2>}
       {children}
     </section>
   )
@@ -63,14 +69,24 @@ export function TopCompetencies({ comps }) {
 // `action` sits on the right, level with the avatar's bottom edge (the grade page's tier switch, 2026-11-02).
 // `banner={false}` (the user page, 2026-11-02) drops the teal banner for a light teal header with the name and meta,
 // no avatar. Its tint is dessa-teal at 17% on white, which is #DAE8EB, the color the user picked.
-export default function ProfileCard({ avatar, title, meta, stats, range, action, banner = true, children }) {
+// Header concepts on the user page (2026-11-03), with `banner={false}` only: `statsInHeader` moves the numbers into the
+// header beside the name and drops the row under it; `aside` sits on the header's right, in place of `action`.
+// `headerStyle` (2026-11-03, header B's visual variants): 'tint' the light teal, 'banner' the old teal banner with
+// its navy flowers and white text, 'strip' a short banner strip over a white header, 'watermark' a white header with
+// a faint teal flower off its right edge.
+export default function ProfileCard({ avatar, title, meta, stats, range, action, banner = true, statsInHeader = false, aside, headerStyle = 'tint', children }) {
+  // On the teal banner every line is white (2026-11-03): muted white fails contrast at 12px, so weight carries the
+  // difference instead of a second color.
+  const onTeal = headerStyle === 'banner'
+  const ink = onTeal ? 'text-white' : 'text-brand-text'
+  const muted = onTeal ? 'text-white' : 'text-brand-subtext'
   const heading = (
-    <div className="min-w-0">
-      <h1 className="text-lg font-semibold leading-tight text-brand-text truncate">{title}</h1>
-      <p className="flex items-center gap-2 text-sm text-brand-subtext mt-1 min-w-0">
+    <div className="relative min-w-0">
+      <h1 className={`text-lg font-semibold leading-tight ${ink} truncate`}>{title}</h1>
+      <p className={`flex items-center gap-2 text-sm ${muted} mt-1 min-w-0`}>
         {meta.map(([Icon, text], i) => (
           <span key={i} className={`inline-flex items-center gap-2 ${i === meta.length - 1 ? 'min-w-0' : 'shrink-0'}`}>
-            {i > 0 && <span className="w-px h-3.5 bg-brand-border shrink-0" aria-hidden="true" />}
+            {i > 0 && <span className={`w-px h-3.5 ${onTeal ? 'bg-white/40' : 'bg-brand-border'} shrink-0`} aria-hidden="true" />}
             <span className="inline-flex items-center gap-1.5 min-w-0"><Icon size={14} className="shrink-0" aria-hidden="true" /><span className="truncate">{text}</span></span>
           </span>
         ))}
@@ -85,13 +101,35 @@ export default function ProfileCard({ avatar, title, meta, stats, range, action,
           <Flower className="absolute right-24 top-10 w-16 h-16 text-dessa-navy -rotate-12" />
         </div>
       )}
-      {!banner && (
-        <div className="flex items-center justify-between gap-4 px-5 py-4 bg-dessa-teal/[0.17] border-b border-brand-border">
-          {heading}
-          {action}
+      {!banner && headerStyle === 'strip' && (
+        <div className="relative h-12 bg-dessa-teal overflow-hidden" aria-hidden="true">
+          <Flower className="absolute left-5 -top-6 w-24 h-24 text-dessa-navy rotate-12" />
+          <Flower className="absolute right-24 top-3 w-12 h-12 text-dessa-navy -rotate-12" />
         </div>
       )}
-      <div className={banner ? 'px-5 pb-4' : 'px-5 pt-4 pb-4'}>
+      {!banner && (
+        // With the numbers in the header there's no row under it, so the first section's dashed line is the only
+        // divider (2026-11-03); a border here would double it.
+        <div className={`relative overflow-hidden flex flex-wrap items-center justify-between gap-x-8 gap-y-4 px-5 py-4 ${{ tint: 'bg-dessa-teal/[0.17]', banner: 'bg-dessa-teal', strip: 'bg-white', watermark: 'bg-white' }[headerStyle]} ${statsInHeader ? '' : 'border-b border-brand-border'}`}>
+          {headerStyle === 'banner' && <>
+            <Flower className="absolute left-1/3 -top-8 w-32 h-32 text-dessa-navy rotate-12" />
+            <Flower className="absolute right-1/3 top-12 w-14 h-14 text-dessa-navy -rotate-12" />
+          </>}
+          {headerStyle === 'watermark' && <Flower className="absolute -right-8 -top-14 w-48 h-48 text-dessa-teal/10 rotate-12" />}
+          {heading}
+          {statsInHeader ? (
+            <dl className="relative flex flex-wrap gap-x-8 gap-y-3">
+              {stats.map(([label, value], i) => (
+                <div key={i} className="min-w-0">
+                  <dt className={`text-xs ${muted} ${onTeal ? 'font-medium' : ''} truncate`}>{label}</dt>
+                  <dd className={`text-lg font-semibold ${ink} tabular-nums mt-0.5 truncate`}>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : <div className="relative">{aside ?? action}</div>}
+        </div>
+      )}
+      {!statsInHeader && <div className={banner ? 'px-5 pb-4' : 'px-5 pt-4 pb-4'}>
         {banner && (
           <>
             <div className="flex items-end justify-between gap-4 -mt-10 mb-3">
@@ -114,7 +152,7 @@ export default function ProfileCard({ avatar, title, meta, stats, range, action,
             <Calendar size={12} aria-hidden="true" /> {range}
           </p>
         )}
-      </div>
+      </div>}
       {children}
     </div>
   )

@@ -33,8 +33,8 @@ export function Select({ label, value, onChange, children, className = '', disab
 }
 
 // Multi-select with a checkbox per option (2026-10-15). An empty list means all; the trigger
-// shows "All", the one name, or a count.
-function MultiSelect({ label, value, onChange, options, allLabel = 'All', noun = 'selected', className = '', disabled = false }) {
+// shows "All", the one name, or a count. Exported 2026-11-03 for the Content report's Course type.
+export function MultiSelect({ label, value, onChange, options, allLabel = 'All', noun = 'selected', className = '', disabled = false }) {
   const summary = value.length === 0 ? allLabel : value.length === 1 ? options.find(o => o.value === value[0])?.label : `${value.length} ${noun}`
   const toggle = v => onChange(value.includes(v) ? value.filter(x => x !== v) : [...value, v])
   const labelId = useId()
@@ -79,7 +79,9 @@ function MultiSelect({ label, value, onChange, options, allLabel = 'All', noun =
 // `showDates` off (2026-10-16, Year to date page) drops the date fields for views with a fixed period.
 // `action` (2026-10-16) sits at the right of the Filters title row, for a page's 3-dot menu.
 // `disabled` (2026-10-19, End of year preview) shows the values read only; the action stays usable.
-export default function FiltersPanel({ draft, onChange, onApply, onReset, sites, roles, showSite = true, showRole = true, extraFields = null, minDate, maxDate, weekMode = null, showDates = true, action = null, disabled = false }) {
+// `multiRole` (2026-11-03, Content report) makes User role a multi select like Site; `draft.role` is then a list,
+// empty for all.
+export default function FiltersPanel({ draft, onChange, onApply, onReset, sites, roles, showSite = true, showRole = true, multiRole = false, extraFields = null, minDate, maxDate, weekMode = null, showDates = true, action = null, disabled = false }) {
   const [open, setOpen] = useState(true)
   const uid = useId()
   const set = patch => onChange({ ...draft, ...patch })
@@ -112,7 +114,13 @@ export default function FiltersPanel({ draft, onChange, onApply, onReset, sites,
               options={sites.map(s => ({ value: String(s.id), label: s.name }))}
             />
           )}
-          {showRole && <Select label="User role" value={draft.role} onChange={v => set({ role: v })} className="flex-1 min-w-36" disabled={disabled}>
+          {showRole && multiRole && (
+            <MultiSelect
+              label="User role" value={draft.role} onChange={v => set({ role: v })} noun="roles" className="flex-1 min-w-36" disabled={disabled}
+              options={roles.map(r => ({ value: r, label: r }))}
+            />
+          )}
+          {showRole && !multiRole && <Select label="User role" value={draft.role} onChange={v => set({ role: v })} className="flex-1 min-w-36" disabled={disabled}>
             <option value="all">All</option>
             {roles.map(r => <option key={r} value={r}>{r}</option>)}
           </Select>}

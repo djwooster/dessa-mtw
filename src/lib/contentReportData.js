@@ -185,6 +185,7 @@ export function bandOf(course) {
 }
 
 // Everything the report shows for a site scope, role, course type and list of weeks.
+// `role` and `type` take a list too (2026-11-03, multi select filters); 'all' or an empty list means all.
 // No Family users or Family courses on this report (2026-11-02). `family` lets them back in, for a Family user's
 // page opened from the Engagement report, which still lists them.
 export function contentData({ siteIds, role = 'all', type = 'all', weeks, family = false }) {
@@ -197,13 +198,15 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks, family
   // Course progress runs through the end of the selected range (2026-10-26), like every other column.
   const endIdx = Math.min(PAST_WEEKS.length - 1, schoolWeeks.indexOf(weeks[weeks.length - 1]))
 
+  const roles = role === 'all' ? [] : [].concat(role)
+  const types = type === 'all' ? [] : [].concat(type)
   people(siteIds).forEach(p => {
-    if (role !== 'all' && p.role !== role) return
+    if (roles.length && !roles.includes(p.role)) return
     if (!family && p.role === 'Family User') return
     const all = [courseFor(p.sc, p.ti, p.role), ...(EXTRA_COURSES[p.key] ?? [])].filter(c => family || c.type !== 'family')
     if (!all.length) return
-    // The Course type filter keeps a user's courses of that type; lessons in their other courses don't count.
-    const list = type === 'all' ? all : all.filter(c => c.type === type)
+    // The Course type filter keeps a user's courses of those types; lessons in their other courses don't count.
+    const list = types.length ? all.filter(c => types.includes(c.type)) : all
     if (!list.length) return
     const course = list[0]
     // `tierGrades` is { tier: [grades] } and `byTierGrade` is { 'tier-grade': part }, for the grade pages and cards;
@@ -244,6 +247,16 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks, family
     user.progress = Math.min(1, done / (course.lessons * LESSONS_PER_UNIT))
     // Pace (2026-10-27): the unit the user is on by the end of the range, 1 to the course's unit count.
     user.unit = Math.min(course.lessons, Math.floor(done / LESSONS_PER_UNIT) + 1)
+    // Progress per course (2026-11-03, user page): how far into each course the user is by the end of the range, as
+    // { done, total } lessons. Mock split: the year's lessons to date shared across all their courses (filtered out
+    // or not, so a course reads the same under any Course type), each at its own pace (35 to 80% of its share, so few courses are done by fall).
+    const toDate = endIdx < 0 ? 0 : lessonsToDate(p.key, p.daysFor, endIdx)
+    const weight = c => 1 + hash(p.seed, p.ti, `w${c.id}`) / 100
+    const weights = all.reduce((sum, c) => sum + weight(c), 0)
+    user.courseProgress = Object.fromEntries(list.map(c => [c.id, {
+      done: Math.min(c.lessons, Math.round(toDate * (weight(c) / weights) * (0.35 + hash(p.seed, p.ti, `pace${c.id}`) * 0.0045))),
+      total: c.lessons,
+    }]))
     users.push(user)
 
     list.forEach(c => {

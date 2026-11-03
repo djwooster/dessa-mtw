@@ -53,7 +53,7 @@ function SchoolsTable({ rows }) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>School</TableHead>
+          <TableHead>Site</TableHead>
           <TableHead className="w-48 text-right">Lessons completed</TableHead>
           <TableHead className="w-24 text-right">Users</TableHead>
         </TableRow>
@@ -85,7 +85,7 @@ function GroupPage({ title, avatar, meta, users, part, path, action }) {
   }, new Map()).values()].sort((a, b) => b.lessons - a.lessons)
   function exportCsv() {
     const name = `${title}${meta[0]?.[1] ? ` ${meta[0][1]}` : ''}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-    download(`${name}-schools.csv`, ['School', 'Lessons completed', 'Users'], bySchool.map(r => [r.sc.name, r.lessons, r.users]))
+    download(`${name}-sites.csv`, ['Site', 'Lessons completed', 'Users'], bySchool.map(r => [r.sc.name, r.lessons, r.users]))
   }
 
   return (
@@ -102,7 +102,7 @@ function GroupPage({ title, avatar, meta, users, part, path, action }) {
           meta={meta}
           stats={[
             [<Defined key="l" definition={LESSON_DEFINITION}>Lessons</Defined>, lessons.toLocaleString()],
-            ['Schools', bySchool.length.toLocaleString()],
+            ['Sites', bySchool.length.toLocaleString()],
             ['Users', `${active.length.toLocaleString()} of ${users.length.toLocaleString()}`],
           ]}
           // No date range here (2026-11-02); the Filters panel above shows it.
@@ -113,7 +113,7 @@ function GroupPage({ title, avatar, meta, users, part, path, action }) {
         {/* The standard table (2026-11-02): edge to edge in its card, like the users table, not inset. */}
         <section className="bg-white rounded-lg border border-brand-border overflow-hidden">
           <div className="px-4 py-3 border-b border-brand-border">
-            <h3 className="text-base font-semibold text-brand-text">Lessons completed by school</h3>
+            <h3 className="text-base font-semibold text-brand-text">Lessons completed by site</h3>
           </div>
           {bySchool.length ? <SchoolsTable rows={bySchool} /> : <EmptyState />}
         </section>
@@ -125,7 +125,7 @@ function GroupPage({ title, avatar, meta, users, part, path, action }) {
 
 function useScopedUsers() {
   const { weeks, siteIds, role } = useContentScope()
-  return useMemo(() => contentData({ siteIds, role, weeks }).users, [siteIds.join(), role, weeks])
+  return useMemo(() => contentData({ siteIds, role, weeks }).users, [siteIds.join(), role.join(), weeks])
 }
 
 // Both tiers of a grade, for the All tiers view (no longer linked to, 2026-11-02).

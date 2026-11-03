@@ -10,8 +10,10 @@ const ContentConceptContext = createContext(null)
 export function ContentConceptProvider({ children }) {
   const [contentConcept, setContentConcept] = useState('c') // C opens first (2026-10-28); A is commented out
   const [contentFilters, setContentFilters] = useState(null) // null = the report's defaults
+  // The user page's header concept (2026-11-03), picked in a switcher above that page's Filters.
+  const [userHeader, setUserHeader] = useState('a')
   return (
-    <ContentConceptContext.Provider value={{ contentConcept, setContentConcept, contentFilters, setContentFilters }}>
+    <ContentConceptContext.Provider value={{ contentConcept, setContentConcept, contentFilters, setContentFilters, userHeader, setUserHeader }}>
       {children}
     </ContentConceptContext.Provider>
   )
