@@ -56,9 +56,11 @@ function IdentityCard({ user }) {
     >
       {/* Top competencies removed 2026-10-29; the competency chart below covers it. */}
       <ProfileSection title={items.length > 1 ? 'Courses' : 'Course'}>
-        <div className="flex flex-col gap-1">
-          {items.map(it => <PageLink key={it.key} tile={it.tile} name={it.name} sub={it.sub} />)}
-        </div>
+        {items.length ? (
+          <div className="flex flex-col gap-1">
+            {items.map(it => <PageLink key={it.key} tile={it.tile} name={it.name} sub={it.sub} />)}
+          </div>
+        ) : <p className="text-sm text-brand-subtext">No courses of this type. Try another course type.</p>}
       </ProfileSection>
     </ProfileCard>
   )
@@ -72,9 +74,13 @@ export default function ContentUser() {
   const fromEngagement = state?.from === 'engagement'
   // Engagement's dates hold until the viewer applies their own in the Filters panel.
   const [engWeeks, setEngWeeks] = useState(fromEngagement ? state.weeks : null)
-  const { weeks, siteIds } = useContentScope({ allSites: true, weeks: engWeeks })
+  const { weeks, siteIds, type } = useContentScope({ allSites: true, weeks: engWeeks })
+  // Course type (2026-11-03) narrows the page to the user's courses of that type. The user is found without it, so
+  // a type they don't teach shows their page with nothing in it rather than "not found".
   const data = useMemo(() => contentData({ siteIds, weeks, family: fromEngagement }), [siteIds.join(), weeks, fromEngagement])
-  const user = data.users.find(u => u.key === userKey)
+  const typed = useMemo(() => (type === 'all' ? data : contentData({ siteIds, weeks, type, family: fromEngagement })), [data, siteIds.join(), weeks, type, fromEngagement])
+  const base = data.users.find(u => u.key === userKey)
+  const user = typed.users.find(u => u.key === userKey) ?? (base && { ...base, courses: [], lessons: 0, pop: 0, comps: Object.fromEntries(Object.keys(base.comps).map(k => [k, 0])) })
   const dayMap = useMemo(() => (!user ? {} : user.other ? otherDayMap(user.sc.id, user.i) : educatorDayMap(user.sc.id, user.i)), [user])
   if (!user) return <NotFound what="User" />
 
@@ -88,11 +94,13 @@ export default function ContentUser() {
         ...(back ? [back] : []),
         { label: user.name },
       ]} />
-      {/* Filters (2026-10-29): dates only. Site, role and course type are fixed for one user. */}
+      {/* Filters (2026-10-29): dates, and Course type since 2026-11-03 (a user can teach several types). Site and role
+          are fixed for one user. */}
       <ContentFilters
         key={userKey}
         showSite={false}
         showRole={false}
+        showType
         initial={engWeeks?.length ? { start: engWeeks[0], end: format(addDays(parseISO(engWeeks[engWeeks.length - 1]), 4), 'yyyy-MM-dd') } : undefined}
         onApply={() => setEngWeeks(null)}
       />

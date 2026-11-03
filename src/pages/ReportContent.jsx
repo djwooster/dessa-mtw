@@ -918,7 +918,8 @@ export function MoreMenu({ items }) {
 // The Filters panel on the course, grade and user pages (2026-10-29). It edits the report's own applied filters, so
 // a change here carries back to the report and on to the next page. Each page picks the fields that change it.
 // `initial` patches the draft (a user page opened from Engagement shows Engagement's dates); `onApply` runs after.
-export function ContentFilters({ showSite = true, showRole = true, initial, onApply, action }) {
+// `showType` adds the Course type field (the user page, 2026-11-03).
+export function ContentFilters({ showSite = true, showRole = true, showType = false, initial, onApply, action }) {
   const { isSiteLeaderView } = useRole()
   const { contentFilters, setContentFilters } = useContentConcept()
   const applied = contentFilters ?? DEFAULT_FILTERS
@@ -939,7 +940,18 @@ export function ContentFilters({ showSite = true, showRole = true, initial, onAp
       minDate={FILTER_MIN}
       maxDate={FILTER_MAX}
       action={action}
+      extraFields={showType ? <CourseTypeSelect value={draft.type} onChange={v => setDraft(d => ({ ...d, type: v }))} /> : null}
     />
+  )
+}
+
+// The Course type field, shared by the report and the user page. Family out of the filter (2026-11-02).
+function CourseTypeSelect({ value, onChange }) {
+  return (
+    <Select label="Course type" value={value} onChange={onChange} className="flex-1 min-w-36">
+      <option value="all">All</option>
+      {COURSE_TYPES.filter(t => t.value !== 'family').map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+    </Select>
   )
 }
 
@@ -956,7 +968,7 @@ export function useContentScope({ allSites = false, weeks: override = null } = {
     return ws.length ? ws : PAST_WEEKS.slice(-1)
   }, [applied, override?.join()])
   const siteIds = isSiteLeaderView ? [schools[0].id] : allSites ? [] : applied.site.map(Number)
-  return { weeks, siteIds, role: applied.role, range: rangeLabel(weeks) }
+  return { weeks, siteIds, role: applied.role, type: applied.type, range: rangeLabel(weeks) }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -1058,7 +1070,7 @@ export default function ReportContent() {
   const typeLabel = COURSE_TYPES.find(t => t.value === applied.type)?.label
   return (
     <div className="px-6 pt-8 pb-8">
-      <h1 className="text-[28px] font-bold leading-tight text-brand-text mb-6">Lessons</h1>
+      <h1 className="text-[28px] font-bold leading-tight text-brand-text mb-6">Content</h1>
 
       <FiltersPanel
         draft={draft}
@@ -1071,13 +1083,7 @@ export default function ReportContent() {
         minDate={FILTER_MIN}
         maxDate={FILTER_MAX}
         action={menu}
-        extraFields={
-          <Select label="Course type" value={draft.type} onChange={v => setDraft(d => ({ ...d, type: v }))} className="flex-1 min-w-36">
-            <option value="all">All</option>
-            {/* Family out of the filter (2026-11-02). */}
-            {COURSE_TYPES.filter(t => t.value !== 'family').map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </Select>
-        }
+        extraFields={<CourseTypeSelect value={draft.type} onChange={v => setDraft(d => ({ ...d, type: v }))} />}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
