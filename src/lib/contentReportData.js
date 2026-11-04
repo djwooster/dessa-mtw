@@ -98,6 +98,8 @@ export function courseFor(site, ti, role) {
 const EXTRA_COURSES = {
   '20-11': [1, 2].map(g => CORE.find(c => gradeNum(c) === g)),
   '18-13': [TIER2.find(c => c.grade === 'Early Elementary'), ADULT[0]],
+  // Aisha Stewart at Eastgate High (2026-11-04): 12th grade Tier 1, plus 11th grade and Tier 2 High school.
+  '17-10': [CORE.find(c => gradeNum(c) === 11), TIER2.find(c => c.grade === 'High School')],
 }
 // "1st grade, Tier 1", or "3 courses" for a user who teaches several.
 const usersCourseLabel = list => (list.length > 1 ? `${list.length} courses` : courseLabel(list[0]))
@@ -201,7 +203,10 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks, family
   const roles = role === 'all' ? [] : [].concat(role)
   const types = type === 'all' ? [] : [].concat(type)
   people(siteIds).forEach(p => {
-    if (roles.length && !roles.includes(p.role)) return
+    // No School Support role on this report (2026-11-03): those users read as Educators, still running Tier 2. A
+    // page opened from Engagement (`family`) keeps the role Engagement shows.
+    const shownRole = !family && p.role === 'School Support' ? 'Educator' : p.role
+    if (roles.length && !roles.includes(shownRole)) return
     if (!family && p.role === 'Family User') return
     const all = [courseFor(p.sc, p.ti, p.role), ...(EXTRA_COURSES[p.key] ?? [])].filter(c => family || c.type !== 'family')
     if (!all.length) return
@@ -214,11 +219,15 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks, family
     // first course's tier, kept for older readers.
     const tierGrades = {}
     list.forEach(c => { const t = tierOf(c); if (t) tierGrades[t] = [...new Set([...(tierGrades[t] ?? []), ...gradesFor(c)])].sort((a, b) => a - b) })
-    const user = { key: p.key, sc: p.sc, i: p.i, name: p.name, role: p.role, other: !!p.other, course, courses: list, courseLabel: usersCourseLabel(list), tier: tierOf(course), tierGrades, grades: tierGrades[tierOf(course)] ?? [], byGrade: {}, byTierGrade: {}, byCourse: {}, byCourseLessons: {}, lessons: 0, pop: 0, comps: emptyComps(), last: p.last() }
+    // About 15% of users haven't completed a lesson yet this year (2026-11-03), so "Users who completed a lesson"
+    // isn't 100%. Mock: they sign in but haven't started. The users with several courses always have lessons.
+    const quiet = !EXTRA_COURSES[p.key] && hash(p.seed, p.ti, 'quiet') < 15
+    const user = { key: p.key, sc: p.sc, i: p.i, name: p.name, role: shownRole, quiet, other: !!p.other, course, courses: list, courseLabel: usersCourseLabel(list), tier: tierOf(course), tierGrades, grades: tierGrades[tierOf(course)] ?? [], byGrade: {}, byTierGrade: {}, byCourse: {}, byCourseLessons: {}, lessons: 0, pop: 0, comps: emptyComps(), last: p.last() }
     const add = (part, l) => { part.lessons += 1; if (l.pop) part.pop += 1; part.comps[l.comp] += 1 }
     const fresh = () => ({ lessons: 0, pop: 0, comps: emptyComps() })
     weeks.forEach((w, wi) => {
       const weekIdx = schoolWeeks.indexOf(w)
+      if (quiet) return
       userWeekLessons(p.seed, p.ti, weekIdx, p.daysFor(w, weekIdx), all).forEach(l => {
         if (!list.includes(l.course)) return
         user.lessons += 1
@@ -250,7 +259,7 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks, family
     // Progress per course (2026-11-03, user page): how far into each course the user is by the end of the range, as
     // { done, total } lessons. Mock split: the year's lessons to date shared across all their courses (filtered out
     // or not, so a course reads the same under any Course type), each at its own pace (35 to 80% of its share, so few courses are done by fall).
-    const toDate = endIdx < 0 ? 0 : lessonsToDate(p.key, p.daysFor, endIdx)
+    const toDate = endIdx < 0 || quiet ? 0 : lessonsToDate(p.key, p.daysFor, endIdx)
     const weight = c => 1 + hash(p.seed, p.ti, `w${c.id}`) / 100
     const weights = all.reduce((sum, c) => sum + weight(c), 0)
     user.courseProgress = Object.fromEntries(list.map(c => [c.id, {

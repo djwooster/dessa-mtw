@@ -5,7 +5,7 @@ import { parseISO, addDays, format } from 'date-fns'
 import { ArrowRight, Check, ChevronDown, ChevronRight, Download, MoreHorizontal, Printer } from 'lucide-react'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import * as Popover from '@radix-ui/react-popover'
-import { schools, PAST_WEEKS, USER_ROLES } from '../lib/report2Data'
+import { schools, PAST_WEEKS } from '../lib/report2Data'
 import { ALL_COURSES, COMPETENCIES, COURSE_TYPES, BANDS_ORDER, TIER2_BANDS, bandOf, pace, contentData, gradeLabel, gradePath, teachesCourse, coursePart, teachesType, typePart } from '../lib/contentReportData'
 import { useContentConcept } from '../lib/contentConceptContext'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
@@ -26,7 +26,9 @@ const toKey = d => format(d, 'yyyy-MM-dd')
 const FILTER_MIN = toKey(FIRST_DATE)
 const FILTER_MAX = toKey(LAST_DATE)
 // No Family users on this report (2026-11-02), so no Family user role in its filter.
-const CONTENT_ROLES = USER_ROLES.filter(r => r !== 'Family User')
+// Three roles, in this order (2026-11-03): no Family users, and School Support reads as Educator.
+// Was USER_ROLES (report2Data.js) without Family User.
+const CONTENT_ROLES = ['Program Admin', 'Site Leader', 'Educator']
 // Role and Course type are lists (2026-11-03), multi select like Site; empty means all.
 export const DEFAULT_FILTERS = { site: [], role: [], type: [], start: PAST_WEEKS[Math.max(0, PAST_WEEKS.length - 4)], end: FILTER_MAX }
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0)

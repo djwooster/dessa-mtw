@@ -269,7 +269,8 @@ export default function ContentUser() {
   const typed = useMemo(() => (!type.length ? data : contentData({ siteIds, weeks, type, family: fromEngagement })), [data, siteIds.join(), weeks, type.join(), fromEngagement])
   const base = data.users.find(u => u.key === userKey)
   const user = typed.users.find(u => u.key === userKey) ?? (base && { ...base, courses: [], lessons: 0, pop: 0, comps: Object.fromEntries(Object.keys(base.comps).map(k => [k, 0])) })
-  const dayMap = useMemo(() => (!user ? {} : user.other ? otherDayMap(user.sc.id, user.i) : educatorDayMap(user.sc.id, user.i)), [user])
+  // A user with no lessons yet has no lesson days (2026-11-03).
+  const dayMap = useMemo(() => (!user || user.quiet ? {} : user.other ? otherDayMap(user.sc.id, user.i) : educatorDayMap(user.sc.id, user.i)), [user])
   if (!user) return <NotFound what="User" />
 
   const back = state?.back // the grade or course page the user was opened from

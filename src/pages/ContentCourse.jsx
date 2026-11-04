@@ -1,11 +1,12 @@
-import { Fragment, useEffect, useMemo } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import { BookOpen, ChevronRight, Download } from 'lucide-react'
 import { ALL_COURSES, COMPETENCIES, contentData, gradeLabel, gradeMark, gradeCourse, gradePath, teachesGrade, gradePart, teachesCourse, coursePart } from '../lib/contentReportData'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
-import { ContentFilters, Defined, EmptyState, MoreMenu, UsersTable, LESSON_DEFINITION, download, useContentScope } from './ReportContent'
+import { ContentFilters, Defined, EmptyState, ExportButton, MoreMenu, UsersTable, LESSON_DEFINITION, download, useContentScope } from './ReportContent'
+import { SortButton, nextSort } from './Report2ConceptE'
 import CompetencyMix from '../components/content/CompetencyMix'
 import ProfileCard, { CourseTile } from '../components/content/ProfileCard'
 
@@ -78,18 +79,24 @@ function SiteUsers({ row }) {
 }
 
 // Schools using the course, most lessons first. The inline bar came out 2026-10-29; the numbers are enough.
-function SchoolsTable({ rows }) {
+// Sortable columns (2026-11-03), like the users table: Site A to Z first, the numbers most first.
+function SchoolsTable({ rows, sort, onSort }) {
+  const sorted = useMemo(() => [...rows].sort((a, b) => {
+    const dir = sort.dir === 'asc' ? 1 : -1
+    if (sort.key === 'site') return dir * a.sc.name.localeCompare(b.sc.name)
+    return dir * (a[sort.key] - b[sort.key]) || a.sc.name.localeCompare(b.sc.name)
+  }), [rows, sort])
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Site</TableHead>
-          <TableHead className="w-48 text-right">Lessons completed</TableHead>
-          <TableHead className="w-24 text-right">Users</TableHead>
+          <TableHead><SortButton label="Site" col="site" sort={sort} onSort={k => onSort(k, 'asc')} /></TableHead>
+          <TableHead className="w-48 text-right"><SortButton label="Lessons completed" col="lessons" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
+          <TableHead className="w-24 text-right"><SortButton label="Users" col="users" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map(r => (
+        {sorted.map(r => (
           <TableRow key={r.sc.id} className="hover:bg-transparent">
             <TableCell className="font-medium">{r.sc.name}</TableCell>
             <TableCell className="text-right tabular-nums">{r.lessons.toLocaleString()}</TableCell>
@@ -114,9 +121,16 @@ function GroupPage({ title, avatar, meta, users, part, path, action }) {
     r.list.push({ key: u.key, name: u.name, lessons: part(u).lessons })
     return m.set(u.sc.id, r)
   }, new Map()).values()].sort((a, b) => b.lessons - a.lessons)
+  const siteTotal = new Set(users.map(u => u.sc.id)).size
+  // Most lessons first, as before sorting came in (2026-11-03).
+  const [siteSort, setSiteSort] = useState({ key: 'lessons', dir: 'desc' })
+  const onSiteSort = (k, first) => setSiteSort(st => nextSort(st, k, first))
+  // The export follows the table's sort.
   function exportCsv() {
     const name = `${title}${meta[0]?.[1] ? ` ${meta[0][1]}` : ''}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-    download(`${name}-sites.csv`, ['Site', 'Lessons completed', 'Users'], bySchool.map(r => [r.sc.name, r.lessons, r.users]))
+    const dir = siteSort.dir === 'asc' ? 1 : -1
+    const rows = [...bySchool].sort((a, b) => (siteSort.key === 'site' ? dir * a.sc.name.localeCompare(b.sc.name) : dir * (a[siteSort.key] - b[siteSort.key]) || a.sc.name.localeCompare(b.sc.name)))
+    download(`${name}-sites.csv`, ['Site', 'Lessons completed', 'Users'], rows.map(r => [r.sc.name, r.lessons, r.users]))
   }
 
   return (
@@ -135,7 +149,8 @@ function GroupPage({ title, avatar, meta, users, part, path, action }) {
             [<Defined key="l" definition={LESSON_DEFINITION}>Lessons completed</Defined>, lessons.toLocaleString()],
             // "Completed at" and "Completed by" (2026-11-03): the label carries the verb, the value its noun, so the row
             // reads 344 lessons completed, at 10 sites, by 27 users. The noun and total read quieter than the count.
-            ['Completed at', <>{bySchool.length.toLocaleString()} <span className="text-sm font-normal text-brand-subtext">{bySchool.length === 1 ? 'site' : 'sites'}</span></>],
+            // Out of every site with a user taking it (2026-11-03), like Completed by.
+            ['Completed at', <>{bySchool.length.toLocaleString()} <span className="text-sm font-normal text-brand-subtext">of {siteTotal.toLocaleString()} {siteTotal === 1 ? 'site' : 'sites'}</span></>],
             ['Completed by', <>{active.length.toLocaleString()} <span className="text-sm font-normal text-brand-subtext">of {users.length.toLocaleString()} {users.length === 1 ? 'user' : 'users'}</span></>],
           ]}
           // No date range here (2026-11-02); the Filters panel above shows it.
@@ -149,10 +164,12 @@ function GroupPage({ title, avatar, meta, users, part, path, action }) {
         <CompetencyMix totals={comps} view="bars" />
         {/* The standard table (2026-11-02): edge to edge in its card, like the users table, not inset. */}
         <section className="bg-white rounded-lg border border-brand-border overflow-hidden">
-          <div className="px-4 py-3 border-b border-brand-border">
+          {/* Its own Export CSV (2026-11-03), like the users table. */}
+          <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-brand-border">
             <h3 className="text-base font-semibold text-brand-text">Lessons completed by site</h3>
+            {bySchool.length > 0 && <ExportButton onClick={exportCsv} />}
           </div>
-          {bySchool.length ? <SchoolsTable rows={bySchool} /> : <EmptyState />}
+          {bySchool.length ? <SchoolsTable rows={bySchool} sort={siteSort} onSort={onSiteSort} /> : <EmptyState />}
         </section>
         <UsersTable users={users} oneSite={siteIds.length === 1} linked linkState={{ back: { label: title, to: path } }} />
       </div>
