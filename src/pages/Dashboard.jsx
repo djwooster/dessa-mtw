@@ -659,7 +659,7 @@ function ProductionEmptyDashboard({ invite = false }) {
   const navigate = useNavigate()
   const simulateRating = useSimulateRating()
   // Concept C's image: clicking it swaps the rating mark and the icon tiles (2026-10-20, replaced the Nav subtab).
-  const [inviteArt, setInviteArt] = useState('mark')
+  const [inviteArt, setInviteArt] = useState('tiles')  // Tiles show first (2026-11-04); clicking swaps to the rating mark
 
   return (
     <div className="px-6 pt-10 pb-7 min-h-[calc(100vh-3.5rem)] bg-org-gray-50">
