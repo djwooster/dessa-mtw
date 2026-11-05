@@ -909,12 +909,12 @@ export default function ReportContent() {
         extraFields={<CourseTypeSelect value={draft.type} onChange={v => setDraft(d => ({ ...d, type: v }))} />}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <Stat label={<Defined definition={LESSON_DEFINITION}>Lessons completed</Defined>} value={data.lessons.toLocaleString()} note={range} />
         {/* KPI cards refined 2026-11-02: the percent leads for users. Lessons completed keeps its date range. */}
         <Stat label="Users who completed a lesson" value={`${pct(data.activeUsers, data.users.length)}%`} note={`${data.activeUsers.toLocaleString()} of ${data.users.length.toLocaleString()} users`} />
-        {/* Power of Pause card removed 2026-11-04:
-        <Stat label="Power of Pause lessons" value={data.pop.toLocaleString()} note={`${pct(data.pop, data.lessons)}% of all lessons`} /> */}
+        {/* Power of Pause card back 2026-11-05 */}
+        <Stat label="Power of Pause lessons" value={data.pop.toLocaleString()} note={`${pct(data.pop, data.lessons)}% of all lessons`} />
       </div>
 
       {/* Concept C has no tabs (2026-11-02): its grades and competencies sit side by side. */}

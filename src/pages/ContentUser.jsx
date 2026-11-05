@@ -188,7 +188,7 @@ function ActiveStatus({ last }) {
   return (
     <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-brand-border bg-white text-xs font-medium text-brand-text whitespace-nowrap">
       <span className={`w-2 h-2 rounded-full ${recent ? 'bg-state-success' : 'bg-brand-subtext/50'}`} aria-hidden="true" />
-      {last === 'Never' ? 'Not active yet' : `Last active ${last}`}
+      {last === 'Not yet' ? 'Not active yet' : `Last active ${last}`}
     </span>
   )
 }

@@ -222,7 +222,7 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks, family
     // About 15% of users haven't completed a lesson yet this year (2026-11-03), so "Users who completed a lesson"
     // isn't 100%. Mock: they sign in but haven't started. The users with several courses always have lessons.
     const quiet = !EXTRA_COURSES[p.key] && hash(p.seed, p.ti, 'quiet') < 15
-    const user = { key: p.key, sc: p.sc, i: p.i, name: p.name, role: shownRole, quiet, other: !!p.other, course, courses: list, courseLabel: usersCourseLabel(list), tier: tierOf(course), tierGrades, grades: tierGrades[tierOf(course)] ?? [], byGrade: {}, byTierGrade: {}, byCourse: {}, byCourseLessons: {}, lessons: 0, pop: 0, comps: emptyComps(), last: p.last() }
+    const user = { key: p.key, sc: p.sc, i: p.i, name: p.name, role: shownRole, quiet, other: !!p.other, course, courses: list, courseLabel: usersCourseLabel(list), tier: tierOf(course), tierGrades, grades: tierGrades[tierOf(course)] ?? [], byGrade: {}, byTierGrade: {}, byCourse: {}, byCourseLessons: {}, lessons: 0, pop: 0, comps: emptyComps(), last: p.last() === 'Never' ? 'Not yet' : p.last() }
     const add = (part, l) => { part.lessons += 1; if (l.pop) part.pop += 1; part.comps[l.comp] += 1 }
     const fresh = () => ({ lessons: 0, pop: 0, comps: emptyComps() })
     weeks.forEach((w, wi) => {

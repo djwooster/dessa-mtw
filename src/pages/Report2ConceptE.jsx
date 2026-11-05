@@ -74,7 +74,7 @@ export function previousWeeks(weeks) {
 
 // Last Active labels as minutes, so the column can sort by recency.
 export function agoRank(label) {
-  if (label === 'Never') return Infinity
+  if (label === 'Never' || label === 'Not yet') return Infinity
   if (label === 'Yesterday') return 1440
   const m = /^(\d+)(m|h|d|w) ago$/.exec(label)
   return Number(m[1]) * { m: 1, h: 60, d: 1440, w: 10080 }[m[2]]
