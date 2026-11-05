@@ -26,6 +26,7 @@ import SettingsLayout from './pages/settings/SettingsLayout'
 import ReportContent from './pages/ReportContent'
 import ContentCourse, { ContentGrade } from './pages/ContentCourse'
 import ContentUser from './pages/ContentUser'
+import ContentSite from './pages/ContentSite'
 import ReportStudents from './pages/ReportStudents'
 import SettingsPlaceholder from './pages/settings/SettingsPlaceholder'
 import CurriculumSetup from './pages/settings/CurriculumSetup'
@@ -122,6 +123,7 @@ function AppShell({ handleBookmark }) {
           <Route path="content/grades/:grade/:tier" element={<ContentGrade />} />
           <Route path="content/courses/:courseId" element={<ContentCourse />} />
           <Route path="content/users/:userKey" element={<ContentUser />} />
+          <Route path="content/sites/:siteId" element={<ContentSite />} />
           <Route path="students" element={<ReportStudents />} />
           {/* Old links to the retired reports land here. */}
           <Route path="*" element={<Navigate to="engagement" replace />} />

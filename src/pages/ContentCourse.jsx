@@ -98,7 +98,8 @@ function SchoolsTable({ rows, sort, onSort }) {
       <TableBody>
         {sorted.map(r => (
           <TableRow key={r.sc.id} className="hover:bg-transparent">
-            <TableCell className="font-medium">{r.sc.name}</TableCell>
+            {/* Site names open the site page (2026-11-05). */}
+            <TableCell className="font-medium"><Link to={`/reports/content/sites/${r.sc.id}`} className="text-dessa-teal hover:underline underline-offset-4">{r.sc.name}</Link></TableCell>
             <TableCell className="text-right tabular-nums">{r.lessons.toLocaleString()}</TableCell>
             {/* Users on hover removed 2026-11-05, most sites have 20+ users: <SiteUsers row={r} /> */}
             <TableCell className="text-right tabular-nums">{r.users}</TableCell>

@@ -22,7 +22,12 @@ const pad = n => String(n).padStart(2, '0')
 const monthAt = i => new Date(FIRST_MONTH.getFullYear(), FIRST_MONTH.getMonth() + i, 1)
 const monthName = (d, opts) => d.toLocaleDateString('en-US', opts)
 
-function MonthGrid({ date, dayMap }) {
+// `max` (the site page, 2026-11-05) reads dayMap's values as user counts, { 'yyyy-MM-dd': n }, and shades each day
+// in four steps of teal by its share of the busiest day. Letters stay dark until the full teal, for contrast.
+const STEPS = ['bg-dessa-teal/25 text-brand-text', 'bg-dessa-teal/50 text-brand-text', 'bg-dessa-teal/75 text-brand-text font-semibold', 'bg-dessa-teal text-white font-semibold']
+const stepOf = (n, max) => STEPS[Math.min(STEPS.length - 1, Math.ceil((n / max) * STEPS.length) - 1)]
+
+function MonthGrid({ date, dayMap, max }) {
   const year = date.getFullYear()
   const month = date.getMonth()
   const firstDay = new Date(year, month, 1).getDay()
@@ -40,7 +45,8 @@ function MonthGrid({ date, dayMap }) {
           const weekend = (firstDay + day - 1) % 7 === 0 || (firstDay + day - 1) % 7 === 6
           const future = key > TODAY_KEY
           const on = !weekend && !future && dayMap[key]
-          const label = date.toLocaleDateString('en-US', { month: 'long' }) + ` ${day}: ${weekend ? 'weekend' : future ? 'coming up' : on ? 'lesson completed' : 'no lesson'}`
+          const done = max ? `${on} ${on === 1 ? 'user' : 'users'} completed a lesson` : 'lesson completed'
+          const label = date.toLocaleDateString('en-US', { month: 'long' }) + ` ${day}: ${weekend ? 'weekend' : future ? 'coming up' : on ? done : 'no lesson'}`
           return (
             <div
               key={day}
@@ -49,7 +55,7 @@ function MonthGrid({ date, dayMap }) {
               aria-label={label}
               className={`w-6 h-6 flex items-center justify-center rounded text-xs ${
                 weekend || future ? 'text-brand-subtext/40'
-                : on ? 'bg-dessa-teal text-white font-semibold'
+                : on ? (max ? stepOf(on, max) : 'bg-dessa-teal text-white font-semibold')
                 : 'bg-brand-bg text-brand-text'
               } ${key === TODAY_KEY ? 'ring-1 ring-dessa-teal' : ''}`}
             >
@@ -62,7 +68,7 @@ function MonthGrid({ date, dayMap }) {
   )
 }
 
-export default function EducatorCalendar({ dayMap }) {
+export default function EducatorCalendar({ dayMap, max }) {
   // As many months as fit the width (2026-10-13), at least three, so a wide table
   // is not left with empty space; the modal stays at three.
   const bodyRef = useRef(null)
@@ -98,10 +104,16 @@ export default function EducatorCalendar({ dayMap }) {
           {monthName(first, { month: 'short' })} to {monthName(last, { month: 'short', year: 'numeric' })}
         </span>
         <div className="flex justify-between gap-x-6">
-          {months.map(m => <MonthGrid key={m.toISOString()} date={m} dayMap={dayMap} />)}
+          {months.map(m => <MonthGrid key={m.toISOString()} date={m} dayMap={dayMap} max={max} />)}
         </div>
         <div className="flex justify-end items-center gap-x-5 mt-3 text-xs text-brand-subtext">
-          <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-dessa-teal" /> Lesson completed</span>
+          {max ? (
+            <span className="flex items-center gap-1.5">
+              Fewer users
+              {STEPS.map(c => <span key={c} className={`inline-block w-3.5 h-3.5 rounded-sm ${c.split(' ')[0]}`} />)}
+              More users
+            </span>
+          ) : <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-dessa-teal" /> Lesson completed</span>}
           <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-brand-bg border border-brand-border" /> No lesson</span>
         </div>
       </div>

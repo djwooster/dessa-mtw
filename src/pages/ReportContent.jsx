@@ -402,7 +402,7 @@ function SortSelect({ value, options, onChange }) {
 // `columns` (concept E, 2026-11-03) swaps the Sort dropdown for a header row naming both columns; each header sorts,
 // within each group, like a table's.
 // `action` (2026-11-03) sits at the header's right, for the card's own Export CSV.
-function ListCard({ title, orderLabel, rows, groups, columns, action }) {
+export function ListCard({ title, orderLabel, rows, groups, columns, action }) {
   const [sort, setSort] = useState('order')
   const [colSort, setColSort] = useState({ key: 'order', dir: 'asc' })
   const sets = useMemo(() => (groups ?? [{ label: null, rows }]).filter(g => g.rows.length)
@@ -450,6 +450,24 @@ function ListCard({ title, orderLabel, rows, groups, columns, action }) {
     </section>
   )
 }
+
+// The grouped course list from contentData (2026-11-02): Tier 1 by grade, then Tier 2 and Adult wellness by course.
+// Shared by the report's concept E and the site page (2026-11-05).
+export function courseGroups(data) {
+  return [
+    { type: 'core', label: 'Tier 1', rows: data.gradeRows.filter(r => r.tier === 1).map(r => ({ key: r.key, order: r.g, name: gradeLabel(r.g), to: gradePath(r.g, 1), lessons: r.lessons })) },
+    // Family out of the list (2026-11-02), as it is out of the filter.
+    ...['tier2', 'adult'].map(type => ({
+      type,
+      label: COURSE_TYPES.find(t => t.value === type).label,
+      rows: ALL_COURSES.filter(c => c.type === type).map((c, i) => {
+        const us = data.users.filter(u => teachesCourse(u, c.id))
+        return us.length ? { key: c.id, order: i, name: type === 'adult' ? 'Adult wellness' : levelName(c.grade), to: `/reports/content/courses/${c.id}`, lessons: us.reduce((sum, u) => sum + coursePart(u, c.id).lessons, 0) } : null
+      }).filter(Boolean),
+    })),
+  ].filter(g => g.rows.length)
+}
+export const groupsOrderLabel = groups => (groups.length === 1 && groups[0].type === 'core' ? 'Grade' : groups.length === 1 && groups[0].type !== 'adult' ? 'Band' : 'Course')
 
 // Concepts F, G and H (band sections, course type buttons over tile cards, and a card per grade) deleted 2026-11-03.
 // Tier 2 bands and courses read in sentence case: "Early elementary".
@@ -646,7 +664,8 @@ export function UsersTable({ users, oneSite, linked = false, linkState }) {
               <TableCell className="font-medium">
                 {linked ? <Link to={`/reports/content/users/${u.key}`} state={linkState} className="text-dessa-teal hover:underline underline-offset-4">{u.name}</Link> : u.name}
               </TableCell>
-              {!oneSite && <TableCell className="text-brand-subtext">{u.sc.name}</TableCell>}
+              {/* Site names open the site page (2026-11-05). */}
+              {!oneSite && <TableCell className="text-brand-subtext">{linked ? <Link to={`/reports/content/sites/${u.sc.id}`} className="font-medium text-dessa-teal hover:underline underline-offset-4">{u.sc.name}</Link> : u.sc.name}</TableCell>}
               <TableCell className="text-brand-subtext">{u.role}</TableCell>
               <TableCell className="text-right text-brand-subtext">{u.last}</TableCell>
             </TableRow>
@@ -842,20 +861,9 @@ export default function ReportContent() {
     return us.length ? { key: c.id, order: i, name: cTab === 'adult' ? 'Adult wellness' : levelName(c.grade), to: `/reports/content/courses/${c.id}`, lessons: us.reduce((sum, u) => sum + coursePart(u, c.id).lessons, 0) } : null
   }).filter(Boolean)
   // Concept C's grouped list (2026-11-02): every course type in the filtered data, Tier 1 by grade, the rest by course.
-  const cGroups = [
-    { type: 'core', label: 'Tier 1', rows: data.gradeRows.filter(r => r.tier === 1).map(r => ({ key: r.key, order: r.g, name: gradeLabel(r.g), to: gradePath(r.g, 1), lessons: r.lessons })) },
-    // Family out of the list (2026-11-02), as it is out of the filter.
-    ...['tier2', 'adult'].map(type => ({
-      type,
-      label: COURSE_TYPES.find(t => t.value === type).label,
-      rows: ALL_COURSES.filter(c => c.type === type).map((c, i) => {
-        const us = data.users.filter(u => teachesCourse(u, c.id))
-        return us.length ? { key: c.id, order: i, name: type === 'adult' ? 'Adult wellness' : levelName(c.grade), to: `/reports/content/courses/${c.id}`, lessons: us.reduce((sum, u) => sum + coursePart(u, c.id).lessons, 0) } : null
-      }).filter(Boolean),
-    })),
-  ].filter(g => g.rows.length)
-
-  const cOrderLabel = cGroups.length === 1 && cGroups[0].type === 'core' ? 'Grade' : cGroups.length === 1 && cGroups[0].type !== 'adult' ? 'Band' : 'Course'
+  // Shared with the site page (2026-11-05).
+  const cGroups = courseGroups(data)
+  const cOrderLabel = groupsOrderLabel(cGroups)
 
   function onCTabKey(e) {
     const i = C_TABS.findIndex(([k]) => k === cTab)
