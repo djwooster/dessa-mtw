@@ -100,6 +100,8 @@ const EXTRA_COURSES = {
   '18-13': [TIER2.find(c => c.grade === 'Early Elementary'), ADULT[0]],
   // Aisha Stewart at Eastgate High (2026-11-04): 12th grade Tier 1, plus 11th grade and Tier 2 High school.
   '17-10': [CORE.find(c => gradeNum(c) === 11), TIER2.find(c => c.grade === 'High School')],
+  // Aisha Allen at Pine Ridge High (2026-11-06): 10th grade Tier 1, plus 9th grade and Tier 2 High school.
+  '9-13': [CORE.find(c => gradeNum(c) === 9), TIER2.find(c => c.grade === 'High School')],
 }
 // "1st grade, Tier 1", or "3 courses" for a user who teaches several.
 const usersCourseLabel = list => (list.length > 1 ? `${list.length} courses` : courseLabel(list[0]))

@@ -848,7 +848,7 @@ export default function ReportContent() {
 
   function printReport() {
     const prevTitle = document.title
-    document.title = `Content, ${range}`
+    document.title = `Lesson completion, ${range}`
     window.addEventListener('afterprint', () => { document.title = prevTitle }, { once: true })
     window.print()
   }
@@ -900,7 +900,8 @@ export default function ReportContent() {
   const typeLabel = applied.type.length ? COURSE_TYPES.filter(t => applied.type.includes(t.value)).map(t => t.label).join(' and ') : null
   return (
     <div className="px-6 pt-8 pb-8">
-      <h1 className="text-[28px] font-bold leading-tight text-brand-text mb-6">Content</h1>
+      {/* Retitled 2026-11-06, was Content. */}
+      <h1 className="text-[28px] font-bold leading-tight text-brand-text mb-6">Lesson completion</h1>
 
       <FiltersPanel
         draft={draft}
@@ -1027,7 +1028,7 @@ export default function ReportContent() {
       {!sideBySide && <UsersTable users={data.users} oneSite={oneSite} linked={contentConcept === 'c'} />}
 
       <PrintReport
-        title="Lessons"
+        title="Lesson completion"
         rangeText={range}
         goalText={typeLabel ? `${typeLabel} courses` : null}
         generated={format(new Date(), 'MMM d, yyyy')}

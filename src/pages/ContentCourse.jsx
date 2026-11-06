@@ -39,11 +39,11 @@ export function ContentBreadcrumb({ trail }) {
 export function NotFound({ what }) {
   return (
     <div className="px-6 pt-8 pb-8">
-      <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, { label: `${what} not found` }]} />
+      <ContentBreadcrumb trail={[{ label: 'Lesson completion', to: '/reports/content' }, { label: `${what} not found` }]} />
       <div className="bg-white rounded-lg border border-brand-border py-12 text-center">
         <p className="text-sm font-semibold text-brand-text">We couldn't find that {what.toLowerCase()}</p>
         <p className="text-sm text-brand-subtext mt-1">It may be outside the sites you can see.</p>
-        <Link to="/reports/content" className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">Back to Lessons</Link>
+        <Link to="/reports/content" className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">Back to Lesson completion</Link>
       </div>
     </div>
   )
@@ -137,7 +137,7 @@ function GroupPage({ title, avatar, meta, users, part, path, action }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
-      <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, { label: title }]} />
+      <ContentBreadcrumb trail={[{ label: 'Lesson completion', to: '/reports/content' }, { label: title }]} />
       {/* Filters (2026-10-29): Site, User role and dates. Course type is left off, since the page is one grade or course. */}
       {/* 3-dot menu (2026-11-02): Export CSV of the page's schools, like the report's own menu. */}
       <ContentFilters action={<MoreMenu items={[{ icon: Download, label: 'Export CSV', onSelect: exportCsv }]} />} />

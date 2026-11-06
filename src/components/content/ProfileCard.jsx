@@ -74,7 +74,8 @@ export function TopCompetencies({ comps }) {
 // `headerStyle` (2026-11-03, header B's visual variants): 'tint' the light teal, 'banner' the old teal banner with
 // its navy flowers and white text, 'strip' a short banner strip over a white header, 'watermark' a white header with
 // a faint teal flower off its right edge.
-export default function ProfileCard({ avatar, title, meta, stats, range, action, banner = true, statsInHeader = false, aside, headerStyle = 'tint', children }) {
+// `titleIcon` (2026-11-06, the site page) sits before the title, the same icon the user page shows by a site.
+export default function ProfileCard({ avatar, title, titleIcon: TitleIcon, meta, stats, range, action, banner = true, statsInHeader = false, aside, headerStyle = 'tint', children }) {
   // On the teal banner every line is white (2026-11-03): muted white fails contrast at 12px, so weight carries the
   // difference instead of a second color.
   const onTeal = headerStyle === 'banner'
@@ -82,7 +83,12 @@ export default function ProfileCard({ avatar, title, meta, stats, range, action,
   const muted = onTeal ? 'text-white' : 'text-brand-subtext'
   const heading = (
     <div className="relative min-w-0">
-      <h1 className={`text-lg font-semibold leading-tight ${ink} truncate`}>{title}</h1>
+      {TitleIcon ? (
+        <h1 className={`flex items-center gap-2 text-lg font-semibold leading-tight ${ink} min-w-0`}>
+          <TitleIcon size={18} className={`shrink-0 ${muted}`} aria-hidden="true" />
+          <span className="truncate">{title}</span>
+        </h1>
+      ) : <h1 className={`text-lg font-semibold leading-tight ${ink} truncate`}>{title}</h1>}
       <p className={`flex items-center gap-2 text-sm ${muted} mt-1 min-w-0`}>
         {meta.map(([Icon, text], i) => (
           <span key={i} className={`inline-flex items-center gap-2 ${i === meta.length - 1 ? 'min-w-0' : 'shrink-0'}`}>

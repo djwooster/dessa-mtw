@@ -1,14 +1,14 @@
 import { useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Printer, Users } from 'lucide-react'
+import { Printer, School, Users } from 'lucide-react'
 import { schools } from '../lib/report2Data'
 import { COMPETENCIES, contentData, coursePart } from '../lib/contentReportData'
 import { useRole } from '../lib/roleContext'
 import CompetencyMix from '../components/content/CompetencyMix'
 import ProfileCard from '../components/content/ProfileCard'
-import EducatorCalendar from '../components/engagement/EducatorCalendar'
-import { educatorDayMap, otherDayMap } from './Report2ConceptE'
+// import EducatorCalendar from '../components/engagement/EducatorCalendar'
+// import { educatorDayMap, otherDayMap } from './Report2ConceptE'
 import { ContentFilters, Defined, EmptyState, ExportButton, ListCard, MoreMenu, UsersTable, LESSON_DEFINITION, courseGroups, download, groupsOrderLabel, useContentScope } from './ReportContent'
 import { ContentBreadcrumb, NotFound } from './ContentCourse'
 
@@ -37,15 +37,16 @@ export default function ContentSite() {
     const ids = new Set(data.users.flatMap(u => u.courses.map(c => c.id)))
     return { all: ids.size, done: [...ids].filter(id => data.users.some(u => coursePart(u, id).lessons > 0)).length }
   }, [data])
-  // The calendar counts users per day across the school year, like the user page's lesson days.
-  const dayMap = useMemo(() => {
-    const map = {}
-    data?.users.filter(u => !u.quiet).forEach(u => {
-      Object.keys(u.other ? otherDayMap(u.sc.id, u.i) : educatorDayMap(u.sc.id, u.i)).forEach(k => { map[k] = (map[k] ?? 0) + 1 })
-    })
-    return map
-  }, [data])
-  const busiest = Math.max(1, ...Object.values(dayMap))
+  // The calendar counted users per day across the school year, like the user page's lesson days. Removed 2026-11-06,
+  // with the calendar below.
+  // const dayMap = useMemo(() => {
+  //   const map = {}
+  //   data?.users.filter(u => !u.quiet).forEach(u => {
+  //     Object.keys(u.other ? otherDayMap(u.sc.id, u.i) : educatorDayMap(u.sc.id, u.i)).forEach(k => { map[k] = (map[k] ?? 0) + 1 })
+  //   })
+  //   return map
+  // }, [data])
+  // const busiest = Math.max(1, ...Object.values(dayMap))
   if (!site || (isSiteLeaderView && site.id !== schools[0].id)) return <NotFound what="Site" />
 
   const path = `/reports/content/sites/${site.id}`
@@ -72,7 +73,7 @@ export default function ContentSite() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
-      <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, { label: site.name }]} />
+      <ContentBreadcrumb trail={[{ label: 'Lesson completion', to: '/reports/content' }, { label: site.name }]} />
       {/* Filters: dates, role and course type. No Site field, since the page is one site. The cards have their own
           Export CSV, so the 3-dot menu is just Print. */}
       <ContentFilters key={siteId} showSite={false} showType action={<MoreMenu items={[{ icon: Printer, label: 'Print', onSelect: printPage }]} />} />
@@ -80,6 +81,7 @@ export default function ContentSite() {
         <ProfileCard
           banner={false}
           title={site.name}
+          titleIcon={School}
           meta={[[Users, `${data.users.length.toLocaleString()} ${data.users.length === 1 ? 'user' : 'users'}`]]}
           stats={[
             [<Defined key="l" definition={LESSON_DEFINITION}>Lessons completed</Defined>, data.lessons.toLocaleString()],
@@ -99,10 +101,11 @@ export default function ContentSite() {
         />
         {empty ? <section className={card}><EmptyState /></section>
           : <CompetencyMix totals={data.compTotals} title="Lessons completed by competency" view="bars" action={<ExportButton onClick={() => exportCard('competencies')} />} />}
+        {/* Lesson days removed 2026-11-06:
         <section className={card}>
           <h3 className="text-base font-semibold text-brand-text mb-4">Lesson days this school year</h3>
           <EducatorCalendar dayMap={dayMap} max={busiest} />
-        </section>
+        </section> */}
         <UsersTable users={data.users} oneSite linked linkState={{ back: { label: site.name, to: path } }} />
       </div>
     </motion.div>

@@ -296,7 +296,7 @@ export default function ContentUser() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
       <ContentBreadcrumb trail={[
-        fromEngagement ? { label: 'Engagement', to: '/reports/engagement' } : { label: 'Content', to: '/reports/content' },
+        fromEngagement ? { label: 'Engagement', to: '/reports/engagement' } : { label: 'Lesson completion', to: '/reports/content' },
         ...(back ? [back] : []),
         { label: user.name },
       ]} />
