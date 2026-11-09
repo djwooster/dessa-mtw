@@ -321,13 +321,13 @@ export default function ContentUser() {
       <div className="flex flex-col gap-4">
         <IdentityCard user={user} />
         <div className="flex flex-col gap-4 min-w-0">
-          {/* Competencies first (2026-11-02), then the lesson days. */}
-          {/* Bars only, with each competency's lessons under its bar (2026-11-03), like the report's concept E. */}
-          <CompetencyMix totals={user.comps} view="bars" />
+          {/* Lesson days first (2026-11-09), then the competencies. Was competencies first from 2026-11-02. */}
           <section className={card}>
             <h3 className="text-base font-semibold text-brand-text mb-4">Lesson days this school year</h3>
             <EducatorCalendar dayMap={dayMap} />
           </section>
+          {/* Bars only, with each competency's lessons under its bar (2026-11-03), like the report's concept E. */}
+          <CompetencyMix totals={user.comps} view="bars" />
         </div>
       </div>
     </motion.div>
