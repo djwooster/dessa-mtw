@@ -81,8 +81,11 @@ export function MultiSelect({ label, value, onChange, options, allLabel = 'All',
 // `disabled` (2026-10-19, End of year preview) shows the values read only; the action stays usable.
 // `multiRole` (2026-11-03, Content report) makes User role a multi select like Site; `draft.role` is then a list,
 // empty for all.
-export default function FiltersPanel({ draft, onChange, onApply, onReset, sites, roles, showSite = true, showRole = true, multiRole = false, extraFields = null, minDate, maxDate, weekMode = null, showDates = true, action = null, disabled = false }) {
+// `moreFields` (2026-11-06, the course page's concept G) adds a More filters button beside Apply, which opens a second
+// row of fields; `moreCount` is how many of them are set, shown on the button, and keeps the row open.
+export default function FiltersPanel({ draft, onChange, onApply, onReset, sites, roles, showSite = true, showRole = true, multiRole = false, extraFields = null, moreFields = null, moreCount = 0, minDate, maxDate, weekMode = null, showDates = true, action = null, disabled = false }) {
   const [open, setOpen] = useState(true)
+  const [moreOpen, setMoreOpen] = useState(moreCount > 0)
   const uid = useId()
   const set = patch => onChange({ ...draft, ...patch })
   // weekMode (2026-10-15, Engagement B) swaps Start and End date for a week cycler: { label, canPrev, canNext, onPrev, onNext, isLatest, onLatest }.
@@ -148,6 +151,16 @@ export default function FiltersPanel({ draft, onChange, onApply, onReset, sites,
           </div>
           </>}
           <div className="flex items-center gap-2 shrink-0 ml-auto">
+            {moreFields && (
+              <button
+                type="button" onClick={() => setMoreOpen(o => !o)} aria-expanded={moreOpen} aria-controls={`${uid}-more`}
+                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-brand-border bg-white text-sm text-brand-text whitespace-nowrap hover:bg-brand-bg transition-colors"
+              >
+                More filters
+                {moreCount > 0 && <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-dessa-teal text-xs font-semibold text-white tabular-nums">{moreCount}</span>}
+                <ChevronDown size={16} className={`text-brand-subtext transition-transform ${moreOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+              </button>
+            )}
             <button
               type="submit"
               disabled={!valid || disabled}
@@ -159,6 +172,9 @@ export default function FiltersPanel({ draft, onChange, onApply, onReset, sites,
               Reset filters
             </button>
           </div>
+          {moreFields && (moreOpen || moreCount > 0) && (
+            <div id={`${uid}-more`} className="basis-full flex flex-wrap items-end gap-3">{moreFields}</div>
+          )}
           {!valid && <p className="basis-full text-xs text-state-error" role="alert">Pick a start date and an end date to apply the filters.</p>}
         </form>
       )}

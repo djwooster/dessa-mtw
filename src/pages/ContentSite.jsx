@@ -30,7 +30,8 @@ export default function ContentSite() {
   const { weeks, role, type, range } = useContentScope()
   const site = schools.find(s => String(s.id) === siteId)
   const data = useMemo(() => (site ? contentData({ siteIds: [site.id], role, type, weeks }) : null), [site, role.join(), type.join(), weeks])
-  const groups = useMemo(() => (data ? courseGroups(data) : []), [data])
+  // Grades and courses open inside the site (2026-11-06): /sites/:id/grades/9, scoped to this site.
+  const groups = useMemo(() => (data ? courseGroups(data).map(g => ({ ...g, rows: g.rows.map(r => ({ ...r, to: r.to.replace('/reports/content', `/reports/content/sites/${site.id}`) })) })) : []), [data, site])
   // Every course a user here takes, and those with a lesson in these dates.
   const courses = useMemo(() => {
     if (!data) return { all: 0, done: 0 }

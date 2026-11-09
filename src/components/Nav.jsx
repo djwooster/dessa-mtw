@@ -75,12 +75,15 @@ const SETTINGS_CONCEPTS = [
 const CONTENT_CONCEPTS = [
   // A commented out 2026-10-28: B's band cards and C's grade rows replace the ranked course table.
   // { value: 'a', label: 'A', title: 'A, A table of courses ranked by lessons completed' },
-  { value: 'b', label: 'B', title: 'B, Grade band cards with where classes are in each course' },
-  { value: 'c', label: 'C', title: 'C, One row per grade that opens its course page, and user pages' },
-  { value: 'd', label: 'D', title: 'D, Lessons completed by course and by competency, side by side, no tabs' },
+  // B to D out of the switcher 2026-11-06, which is back for E against F. Their code stays.
+  // { value: 'b', label: 'B', title: 'B, Grade band cards with where classes are in each course' },
+  // { value: 'c', label: 'C', title: 'C, One row per grade that opens its course page, and user pages' },
+  // { value: 'd', label: 'D', title: 'D, Lessons completed by course and by competency, side by side, no tabs' },
   // E is D's copy (2026-11-03), with Lessons completed in each card's title and bars only.
   { value: 'e', label: 'E', title: 'E, Lessons completed by course and by competency, bars only' },
   // F, G and H (band sections, course type buttons over tile cards, a card per grade) deleted 2026-11-03.
+  // A new F (2026-11-06), from the course progress mock the user's manager shared.
+  { value: 'f', label: 'F', title: 'F, A course progress table with users started, completed and average progress' },
 ]
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
@@ -512,8 +515,9 @@ export default function Nav() {
               </Popover.Portal>
             </Popover.Root>
           )}
-          {/* Content concept switcher commented out 2026-11-03: E is the pick.
-          {location.pathname.startsWith('/reports/content') && (
+          {/* Content concept switcher, back 2026-11-06 for E against F, on the report itself only (the course page has
+              its own). Commented out 2026-11-03 when E was the pick. */}
+          {location.pathname === '/reports/content' && (
             <Popover.Root>
               <Popover.Trigger asChild>
                 <button
@@ -546,7 +550,7 @@ export default function Nav() {
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>
-          )} */}
+          )}
           {/* Concept B's illustration subtab (2026-10-19), same Tabs as the Engagement Today | End of year preview. */}
           {/* Before | After ratings (2026-10-20): resets or skips the simulated rating flow on the Dashboard. */}
           {location.pathname === '/' && (

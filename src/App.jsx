@@ -124,6 +124,10 @@ function AppShell({ handleBookmark }) {
           <Route path="content/courses/:courseId" element={<ContentCourse />} />
           <Route path="content/users/:userKey" element={<ContentUser />} />
           <Route path="content/sites/:siteId" element={<ContentSite />} />
+          {/* A grade or course inside a site (2026-11-06), scoped to that site. */}
+          <Route path="content/sites/:siteId/grades/:grade" element={<ContentGrade />} />
+          <Route path="content/sites/:siteId/grades/:grade/:tier" element={<ContentGrade />} />
+          <Route path="content/sites/:siteId/courses/:courseId" element={<ContentCourse />} />
           <Route path="students" element={<ReportStudents />} />
           {/* Old links to the retired reports land here. */}
           <Route path="*" element={<Navigate to="engagement" replace />} />

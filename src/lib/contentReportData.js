@@ -1,6 +1,9 @@
-import { schools, schoolWeeks, getWeekData, matchesSite, getOtherUsers, getOtherDays, DISTRICT_OFFICE, PAST_WEEKS } from './report2Data'
+import { schools, schoolWeeks, getWeekData, matchesSite, getOtherUsers, getOtherDays, DISTRICT_OFFICE, PAST_WEEKS, TODAY_WEEK_IDX } from './report2Data'
+import { addDays, format, parseISO } from 'date-fns'
 import { courses, tier2Courses, adultWellnessCourses, familyCourses } from './courseData'
 import { getLastActive, getOtherLastActive } from '../pages/Report2ConceptE'
+import { units as TIER1_UNITS } from './mtwData'
+import { adultWellnessUnits, tier2EarlyElementaryUnits } from './lessonUnitsData'
 
 // Content report mock data (2026-10-26). Built on the Engagement report's data so the two agree: each user's
 // lessons in a week are their days active that week (one lesson a day) from report2Data. Each user takes one
@@ -106,8 +109,19 @@ const EXTRA_COURSES = {
 // "1st grade, Tier 1", or "3 courses" for a user who teaches several.
 const usersCourseLabel = list => (list.length > 1 ? `${list.length} courses` : courseLabel(list[0]))
 
+// A unit's name in a course (2026-11-06, the unit view), "Unit 2, Naming What We Feel". Mock: every Tier 1 course
+// borrows the curriculum's 36 units, every Tier 2 course the Early elementary sessions, without their dashes.
+const TIER2_UNIT_NAMES = [...new Set(tier2EarlyElementaryUnits.map(u => u.title))]
+export function unitName(course, n) {
+  const title = course.type === 'core' ? TIER1_UNITS[n - 1]?.title.replace(/^Unit \d+ — /, '')
+    : course.type === 'tier2' ? TIER2_UNIT_NAMES[n - 1]
+    : course.type === 'adult' ? adultWellnessUnits[n - 1]?.title
+    : null
+  return title ? `Unit ${n}, ${title}` : `Unit ${n}`
+}
+
 // A user's share of one grade at one tier, or of one course (2026-11-02), now that a user can teach several of each.
-const NONE = { lessons: 0, pop: 0, comps: Object.fromEntries(COMPETENCIES.map(c => [c.key, 0])) }
+const NONE = { lessons: 0, pop: 0, comps: Object.fromEntries(COMPETENCIES.map(c => [c.key, 0])), weeks: [] }
 export const teachesGrade = (u, g, tier) => (u.tierGrades[tier] ?? []).includes(g)
 export const gradePart = (u, g, tier) => u.byTierGrade[`${tier}-${g}`] ?? NONE
 export const teachesCourse = (u, id) => u.courses.some(c => c.id === id)
@@ -145,7 +159,7 @@ function userWeekLessons(seed, ti, weekIdx, days, list) {
 }
 
 // A course is its unit count times about 4 lessons a unit (mtwData.js).
-const LESSONS_PER_UNIT = 4
+export const LESSONS_PER_UNIT = 4
 const emptyComps = () => Object.fromEntries(COMPETENCIES.map(c => [c.key, 0]))
 
 // Lessons a user has completed in their course from the first week of school through `endIdx`.
@@ -154,6 +168,50 @@ function lessonsToDate(key, daysFor, endIdx) {
   const k = `${key}|${endIdx}`
   if (toDateCache[k] == null) toDateCache[k] = PAST_WEEKS.slice(0, endIdx + 1).reduce((sum, w, i) => sum + daysFor(w, i), 0)
   return toDateCache[k]
+}
+
+// A larger district (2026-11-06): real sites have hundreds of users, so a district has thousands. On top of the
+// Engagement report's rosters (which stay as they are, so its goal story holds), each site gets 120 to 450 more
+// users, about 5,500 across the district. Random but steady: mostly Educators, some Site Leaders and School
+// Support, each with their own habit (most teach two or three days a week, some rarely).
+const MORE_FIRST = ['Maria', 'James', 'Priya', 'Daniel', 'Aisha', 'Michael', 'Sofia', 'David', 'Hannah', 'Carlos', 'Emily', 'Andre', 'Linh', 'Robert', 'Grace', 'Omar', 'Rachel', 'Kevin', 'Amara', 'Thomas', 'Elena', 'Marcus', 'Naomi', 'Samuel', 'Jessica', 'Anthony', 'Fatima', 'Brian', 'Megan', 'Luis', 'Kayla', 'Patrick',
+  'Olivia', 'Noah', 'Ava', 'Ethan', 'Mia', 'Lucas', 'Chloe', 'Mateo', 'Zoe', 'Isaiah', 'Leah', 'Caleb', 'Nora', 'Julian', 'Ruby', 'Adrian', 'Ivy', 'Elijah', 'Maya', 'Gabriel', 'Clara', 'Diego', 'Jada', 'Owen', 'Alana', 'Wyatt', 'Tess', 'Malik', 'Rosa', 'Felix', 'Dana', 'Kenji', 'Lena', 'Victor', 'Paige', 'Hector', 'Ines', 'Rhys', 'Yara', 'Tobias']
+const MORE_LAST = ['Garcia', 'Thompson', 'Lee', 'Davis', 'Patel', 'Chen', 'Nguyen', 'Rodriguez', 'Williams', 'Johnson', 'Brown', 'Taylor', 'Jackson', 'White', 'Martinez', 'Lewis', 'Thomas', 'Moore', 'Walker', 'Allen', 'Young', 'Hernandez', 'King', 'Wright', 'Scott', 'Torres', 'Hill', 'Adams', 'Baker', 'Nelson', 'Carter', 'Mitchell', 'Roberts', 'Turner', 'Phillips', 'Campbell', 'Parker', 'Evans', 'Edwards', 'Collins', 'Stewart', 'Morris', 'Murphy', 'Cook', 'Rogers',
+  'Reyes', 'Kim', 'Singh', 'Okafor', 'Silva', 'Ramos', 'Brooks', 'Price', 'Bennett', 'Wood', 'Ross', 'Foster', 'Gray', 'Hughes', 'Flores', 'Diaz', 'Sanders', 'Myers', 'Long', 'Perry', 'Powell', 'Russell', 'Sullivan', 'Bell', 'Coleman', 'Butler', 'Henderson', 'Barnes', 'Fisher', 'Vasquez', 'Simmons', 'Romero', 'Jordan', 'Patterson', 'Alexander', 'Hamilton', 'Graham', 'Reynolds', 'Griffin', 'Wallace', 'Moreno', 'West', 'Cole', 'Hayes', 'Bryant', 'Herrera', 'Gibson', 'Ellis', 'Tran', 'Medina', 'Aguilar', 'Stevens', 'Murray', 'Ford', 'Castro', 'Marshall', 'Owens', 'Harrison', 'Fernandez', 'McDonald', 'Woods', 'Washington', 'Kennedy', 'Wells', 'Vargas', 'Henry', 'Chavez', 'Sharma', 'Ali', 'Haddad', 'Novak', 'Kowalski', 'Ivanova', 'Okeke', 'Mensah', 'Yamamoto', 'Park']
+// The hash above runs 0 to 99; names need a wider spread.
+function hashWide(a, b, c) {
+  let h = 2166136261
+  const s = `${a}|${b}|${c}`
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619) >>> 0
+  return h
+}
+const moreCount = siteId => 120 + Math.round(hashWide(siteId, 'more', 'size') % 331)
+const moreRole = (siteId, i) => { const h = hash(siteId, `x${i}`, 'role'); return h < 86 ? 'Educator' : h < 92 ? 'School Support' : 'Site Leader' }
+// Days active in a week, from the user's habit: about 60% teach two to four days, 30% one or two, 10% rarely.
+function moreDays(siteId, i, weekIdx) {
+  if (weekIdx === 16 || weekIdx === 17) return 0 // winter break, as in report2Data
+  const habit = hash(siteId, `x${i}`, 'habit')
+  const h = hash(siteId * 7, `x${i}`, weekIdx)
+  return habit < 60 ? (h < 12 ? 0 : 2 + (h % 3)) : habit < 90 ? (h < 30 ? 0 : 1 + (h % 2)) : (h < 75 ? 0 : 1)
+}
+const RECENT = ['12m ago', '30m ago', '45m ago', '1h ago', '3h ago', 'Yesterday', '2d ago', '4d ago']
+function moreLast(siteId, i) {
+  for (let w = TODAY_WEEK_IDX; w >= 0; w--) {
+    if (moreDays(siteId, i, w) > 0) return w === TODAY_WEEK_IDX ? RECENT[hash(siteId, `x${i}`, 'recent') % RECENT.length] : `${TODAY_WEEK_IDX - w}w ago`
+  }
+  return 'Never'
+}
+// The user page's lesson days for one of these users, like educatorDayMap: the first days of each active week.
+export function moreDayMap(siteId, i) {
+  const map = {}
+  const today = format(new Date(), 'yyyy-MM-dd')
+  PAST_WEEKS.forEach((w, weekIdx) => {
+    for (let d = 0; d < moreDays(siteId, i, weekIdx); d++) {
+      const k = format(addDays(parseISO(w), (d + hash(siteId, `x${i}`, weekIdx)) % 5), 'yyyy-MM-dd')
+      if (k <= today) map[k] = true
+    }
+  })
+  return map
 }
 
 // Everyone the report can count at a site scope, with how to read their days active in a week.
@@ -170,7 +228,14 @@ function people(siteIds) {
     daysFor: (w, weekIdx = schoolWeeks.indexOf(w)) => getOtherDays(sc.id, u.idx, weekIdx),
     last: () => getOtherLastActive(sc.id, u.idx),
   })))
-  return [...staff, ...others]
+  const more = picked.flatMap(sc => Array.from({ length: moreCount(sc.id) }, (_, i) => ({
+    key: `${sc.id}-x${i}`, sc, i, seed: sc.id + 2000, ti: `x${i}`, extra: true,
+    name: `${MORE_FIRST[hashWide(sc.id, i, 'first') % MORE_FIRST.length]} ${MORE_LAST[hashWide(sc.id, i, 'last') % MORE_LAST.length]}`,
+    role: moreRole(sc.id, i),
+    daysFor: (w, weekIdx = schoolWeeks.indexOf(w)) => moreDays(sc.id, i, weekIdx),
+    last: () => moreLast(sc.id, i),
+  })))
+  return [...staff, ...others, ...more]
 }
 
 // Where a group of users is in their course: the typical (median) unit and the middle half's spread.
@@ -192,7 +257,21 @@ export function bandOf(course) {
 // `role` and `type` take a list too (2026-11-03, multi select filters); 'all' or an empty list means all.
 // No Family users or Family courses on this report (2026-11-02). `family` lets them back in, for a Family user's
 // page opened from the Engagement report, which still lists them.
-export function contentData({ siteIds, role = 'all', type = 'all', weeks, family = false }) {
+// `grade` (2026-11-06, concept F's Grade level filter) is a list of grade numbers, 0 for Kindergarten: it keeps the
+// Tier 1 and Tier 2 courses that serve one, and only the lessons taught at those grades. Adult wellness has no grade,
+// so it drops out while grades are picked.
+// Results are kept for the last few argument sets (2026-11-06), since a page asks for the same scope more than once
+// and the district now has thousands of users.
+const dataCache = new Map()
+export function contentData(args) {
+  const key = JSON.stringify([args.siteIds, args.role, args.type, args.grade, args.weeks, args.family])
+  if (dataCache.has(key)) return dataCache.get(key)
+  const out = buildContentData(args)
+  dataCache.set(key, out)
+  if (dataCache.size > 12) dataCache.delete(dataCache.keys().next().value)
+  return out
+}
+function buildContentData({ siteIds, role = 'all', type = 'all', grade = [], weeks, family = false }) {
   const weekly = weeks.map(week => ({ week, comps: emptyComps(), total: 0 }))
   const compTotals = emptyComps()
   const byCourse = new Map()
@@ -204,6 +283,7 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks, family
 
   const roles = role === 'all' ? [] : [].concat(role)
   const types = type === 'all' ? [] : [].concat(type)
+  const grades = [].concat(grade).map(Number)
   people(siteIds).forEach(p => {
     // No School Support role on this report (2026-11-03): those users read as Educators, still running Tier 2. A
     // page opened from Engagement (`family`) keeps the role Engagement shows.
@@ -213,7 +293,8 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks, family
     const all = [courseFor(p.sc, p.ti, p.role), ...(EXTRA_COURSES[p.key] ?? [])].filter(c => family || c.type !== 'family')
     if (!all.length) return
     // The Course type filter keeps a user's courses of those types; lessons in their other courses don't count.
-    const list = types.length ? all.filter(c => types.includes(c.type)) : all
+    const list = (types.length ? all.filter(c => types.includes(c.type)) : all)
+      .filter(c => !grades.length || gradesFor(c).some(g => grades.includes(g)))
     if (!list.length) return
     const course = list[0]
     // `tierGrades` is { tier: [grades] } and `byTierGrade` is { 'tier-grade': part }, for the grade pages and cards;
@@ -224,22 +305,24 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks, family
     // About 15% of users haven't completed a lesson yet this year (2026-11-03), so "Users who completed a lesson"
     // isn't 100%. Mock: they sign in but haven't started. The users with several courses always have lessons.
     const quiet = !EXTRA_COURSES[p.key] && hash(p.seed, p.ti, 'quiet') < 15
-    const user = { key: p.key, sc: p.sc, i: p.i, name: p.name, role: shownRole, quiet, other: !!p.other, course, courses: list, courseLabel: usersCourseLabel(list), tier: tierOf(course), tierGrades, grades: tierGrades[tierOf(course)] ?? [], byGrade: {}, byTierGrade: {}, byCourse: {}, byCourseLessons: {}, lessons: 0, pop: 0, comps: emptyComps(), last: p.last() === 'Never' ? 'Not yet' : p.last() }
-    const add = (part, l) => { part.lessons += 1; if (l.pop) part.pop += 1; part.comps[l.comp] += 1 }
-    const fresh = () => ({ lessons: 0, pop: 0, comps: emptyComps() })
+    const user = { key: p.key, sc: p.sc, i: p.i, name: p.name, role: shownRole, quiet, other: !!p.other, extra: !!p.extra, course, courses: list, courseLabel: usersCourseLabel(list), tier: tierOf(course), tierGrades, grades: tierGrades[tierOf(course)] ?? [], byGrade: {}, byTierGrade: {}, byCourse: {}, byCourseLessons: {}, lessons: 0, pop: 0, comps: emptyComps(), last: p.last() === 'Never' ? 'Not yet' : p.last() }
+    // A part's `weeks` (2026-11-06, the course page's lessons over time) is its lessons in each week of the range.
+    const add = (part, l, wi) => { part.lessons += 1; if (l.pop) part.pop += 1; part.comps[l.comp] += 1; part.weeks[wi] += 1 }
+    const fresh = () => ({ lessons: 0, pop: 0, comps: emptyComps(), weeks: weeks.map(() => 0) })
     weeks.forEach((w, wi) => {
       const weekIdx = schoolWeeks.indexOf(w)
       if (quiet) return
       userWeekLessons(p.seed, p.ti, weekIdx, p.daysFor(w, weekIdx), all).forEach(l => {
         if (!list.includes(l.course)) return
+        if (grades.length && !grades.includes(l.grade)) return
         user.lessons += 1
         user.byCourseLessons[l.course.id] = (user.byCourseLessons[l.course.id] ?? 0) + 1
-        add((user.byCourse[l.course.id] ??= fresh()), l)
+        add((user.byCourse[l.course.id] ??= fresh()), l, wi)
         user.comps[l.comp] += 1
         const t = tierOf(l.course)
         if (l.grade != null && t) {
-          add((user.byTierGrade[`${t}-${l.grade}`] ??= fresh()), l)
-          if (t === user.tier) add((user.byGrade[l.grade] ??= fresh()), l)
+          add((user.byTierGrade[`${t}-${l.grade}`] ??= fresh()), l, wi)
+          if (t === user.tier) add((user.byGrade[l.grade] ??= fresh()), l, wi)
         }
         weekly[wi].comps[l.comp] += 1
         weekly[wi].total += 1
@@ -264,10 +347,19 @@ export function contentData({ siteIds, role = 'all', type = 'all', weeks, family
     const toDate = endIdx < 0 || quiet ? 0 : lessonsToDate(p.key, p.daysFor, endIdx)
     const weight = c => 1 + hash(p.seed, p.ti, `w${c.id}`) / 100
     const weights = all.reduce((sum, c) => sum + weight(c), 0)
-    user.courseProgress = Object.fromEntries(list.map(c => [c.id, {
-      done: Math.min(c.lessons, Math.round(toDate * (weight(c) / weights) * (0.35 + hash(p.seed, p.ti, `pace${c.id}`) * 0.0045))),
-      total: c.lessons,
-    }]))
+    // Units, not lessons (2026-11-06, from the course progress mock the user's manager shared): a course's `lessons`
+    // field is its unit count, and progress is the units a user has marked complete. Tier 1 runs mostly in order,
+    // with the odd unit skipped and one or two taught ahead; Tier 2 and Adult wellness can go in any order.
+    // `units` is the sorted list of completed unit numbers, and `done` its length.
+    user.courseProgress = Object.fromEntries(list.map(c => {
+      const reach = Math.min(c.lessons, Math.round(toDate * (weight(c) / weights) * (0.35 + hash(p.seed, p.ti, `pace${c.id}`) * 0.0045)))
+      const h = n => hash(p.seed, `${p.ti}-${c.id}`, `u${n}`)
+      const all = Array.from({ length: c.lessons }, (_, i) => i + 1)
+      const units = c.type === 'core'
+        ? all.filter(n => (n <= reach && (n <= 2 || h(n) >= 8)) || (reach > 0 && n > reach && n <= reach + 2 && h(n) < 15))
+        : [...all].sort((a, b) => h(a) - h(b) || a - b).slice(0, reach).sort((a, b) => a - b)
+      return [c.id, { done: units.length, total: c.lessons, units }]
+    }))
     users.push(user)
 
     list.forEach(c => {

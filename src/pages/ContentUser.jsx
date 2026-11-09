@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ChevronRight, Download, School, User } from 'lucide-react'
-import { COMPETENCIES, contentData, gradeLabel, gradeMark } from '../lib/contentReportData'
+import { COMPETENCIES, contentData, gradeLabel, gradeMark, moreDayMap } from '../lib/contentReportData'
 import CompetencyMix /* , { ConceptSelect } */ from '../components/content/CompetencyMix'
 import ProfileCard, { ProfileSection, CourseTile } from '../components/content/ProfileCard'
 import { educatorDayMap, otherDayMap } from './Report2ConceptE'
@@ -40,12 +40,12 @@ function PageLink({ tile, name, sub, progress }) {
         // The lesson count moved from under the name to the bar (2026-11-03).
         <span className="w-40 sm:w-56 shrink-0">
           <span className="flex items-center justify-between gap-2 text-xs tabular-nums" aria-hidden="true">
-            <span className="text-brand-subtext truncate">{progress.done} of {progress.total} lessons</span>
+            <span className="text-brand-subtext truncate">{progress.done} of {progress.total} units</span>
             <span className="font-medium text-brand-text">{Math.round(share * 100)}%</span>
           </span>
           <span
             role="progressbar" aria-label={`${name} progress`} aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}
-            aria-valuetext={`${progress.done} of ${progress.total} lessons, ${Math.round(share * 100)}%`}
+            aria-valuetext={`${progress.done} of ${progress.total} units, ${Math.round(share * 100)}%`}
             className="block mt-1.5 h-2 rounded-full bg-brand-bg overflow-hidden"
           >
             <span className="block h-full rounded-full bg-dessa-teal" style={{ width: `${share * 100}%` }} />
@@ -69,7 +69,8 @@ const PROGRESS_KEY = 'content.courseProgressView'
 // const readProgress = () => { try { const v = localStorage.getItem(PROGRESS_KEY); return PROGRESS_CONCEPTS.some(c => c.value === v) ? v : 'rings' } catch { return 'rings' } }
 const shareOf = p => (p?.total ? p.done / p.total : 0)
 const pctOf = p => Math.round(shareOf(p) * 100)
-const lessonsOf = p => `${p.done} of ${p.total} lessons`
+// Units, not lessons (2026-11-06): progress is the units a user has marked complete.
+const lessonsOf = p => `${p.done} of ${p.total} units`
 
 function ProgressBar({ name, progress, className = '' }) {
   return (
@@ -271,7 +272,8 @@ export default function ContentUser() {
   const base = data.users.find(u => u.key === userKey)
   const user = typed.users.find(u => u.key === userKey) ?? (base && { ...base, courses: [], lessons: 0, pop: 0, comps: Object.fromEntries(Object.keys(base.comps).map(k => [k, 0])) })
   // A user with no lessons yet has no lesson days (2026-11-03).
-  const dayMap = useMemo(() => (!user || user.quiet ? {} : user.other ? otherDayMap(user.sc.id, user.i) : educatorDayMap(user.sc.id, user.i)), [user])
+  // The larger district's extra users (2026-11-06) have their own day maps.
+  const dayMap = useMemo(() => (!user || user.quiet ? {} : user.extra ? moreDayMap(user.sc.id, user.i) : user.other ? otherDayMap(user.sc.id, user.i) : educatorDayMap(user.sc.id, user.i)), [user])
   if (!user) return <NotFound what="User" />
 
   const back = state?.back // the grade or course page the user was opened from
@@ -283,7 +285,7 @@ export default function ContentUser() {
     const courseName = c => (c.type === 'core' ? `${gradeLabel(gradeNum(c))}, Tier 1` : c.type === 'adult' ? 'Adult wellness' : `${levelName(c.grade)}, ${c.typeLabel}`)
     const compTotal = COMPETENCIES.reduce((sum, c) => sum + user.comps[c.key], 0)
     const name = user.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-    download(`${name}.csv`, ['Section', 'Name', 'Lessons completed', 'Lessons in course', 'Percent'], [
+    download(`${name}.csv`, ['Section', 'Name', 'Completed', 'Units in course', 'Percent'], [
       ...user.courses.map(c => {
         const pr = user.courseProgress?.[c.id] ?? { done: 0, total: c.lessons }
         return ['Course progress', courseName(c), pr.done, pr.total, pr.total ? Math.round((pr.done / pr.total) * 100) : 0]
@@ -297,7 +299,8 @@ export default function ContentUser() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
       <ContentBreadcrumb trail={[
         fromEngagement ? { label: 'Engagement', to: '/reports/engagement' } : { label: 'Lesson completion', to: '/reports/content' },
-        ...(back ? [back] : []),
+        // `back` is one crumb, or two from a grade or course inside a site page (2026-11-06).
+        ...(back ? [].concat(back) : []),
         { label: user.name },
       ]} />
       {/* Filters (2026-10-29): dates, and Course type since 2026-11-03 (a user can teach several types). Site and role

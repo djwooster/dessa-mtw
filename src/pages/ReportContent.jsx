@@ -6,7 +6,7 @@ import { ArrowRight, Check, ChevronDown, ChevronRight, Download, MoreHorizontal,
 import * as Tooltip from '@radix-ui/react-tooltip'
 import * as Popover from '@radix-ui/react-popover'
 import { schools, PAST_WEEKS } from '../lib/report2Data'
-import { ALL_COURSES, COMPETENCIES, COURSE_TYPES, BANDS_ORDER, TIER2_BANDS, bandOf, pace, contentData, gradeLabel, gradePath, teachesCourse, coursePart, teachesType, typePart } from '../lib/contentReportData'
+import { ALL_COURSES, COMPETENCIES, COURSE_TYPES, BANDS_ORDER, TIER2_BANDS, bandOf, pace, contentData, gradeLabel, gradePath, gradeCourse, teachesGrade, teachesCourse, coursePart, teachesType, typePart } from '../lib/contentReportData'
 import { useContentConcept } from '../lib/contentConceptContext'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { PaginationBar } from '../components/ui/pagination'
@@ -30,7 +30,7 @@ const FILTER_MAX = toKey(LAST_DATE)
 // Was USER_ROLES (report2Data.js) without Family User.
 const CONTENT_ROLES = ['Program Admin', 'Site Leader', 'Educator']
 // Role and Course type are lists (2026-11-03), multi select like Site; empty means all.
-export const DEFAULT_FILTERS = { site: [], role: [], type: [], start: PAST_WEEKS[Math.max(0, PAST_WEEKS.length - 4)], end: FILTER_MAX }
+export const DEFAULT_FILTERS = { site: [], role: [], type: [], grade: [], start: PAST_WEEKS[Math.max(0, PAST_WEEKS.length - 4)], end: FILTER_MAX }
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0)
 export const LESSON_DEFINITION = 'A lesson counts once it is marked complete or 60% of its video is watched.'
 
@@ -469,6 +469,113 @@ export function courseGroups(data) {
 }
 export const groupsOrderLabel = groups => (groups.length === 1 && groups[0].type === 'core' ? 'Grade' : groups.length === 1 && groups[0].type !== 'adult' ? 'Band' : 'Course')
 
+// Concept F (2026-11-06, from the course progress mock the user's manager shared): one table of every grade and
+// course, grouped by type, with lessons completed and how far users are: users started, users completed, average
+// progress and last active. Rows open the grade or course page. Each column sorts, within each group.
+export function progressGroups(data) {
+  const row = (key, name, to, course, users, lessons) => {
+    const ps = users.map(u => u.courseProgress?.[course.id]).filter(Boolean)
+    const started = users.filter(u => (u.courseProgress?.[course.id]?.done ?? 0) > 0)
+    const sp = started.map(u => u.courseProgress[course.id])
+    let last = null
+    started.forEach(u => { try { if (last == null || agoRank(u.last) < agoRank(last)) last = u.last } catch { /* an odd label is skipped */ } })
+    return {
+      key, name, to, units: course.lessons, users: users.length, lessons,
+      started: started.length,
+      completed: ps.filter(p => p.done >= p.total).length,
+      avg: sp.length ? sp.reduce((sum, p) => sum + p.done / p.total, 0) / sp.length : 0,
+      avgUnits: sp.length ? Math.round(sp.reduce((sum, p) => sum + p.done, 0) / sp.length) : 0,
+      last: last ?? 'Not yet',
+    }
+  }
+  return [
+    { type: 'core', label: 'Tier 1', rows: data.gradeRows.filter(r => r.tier === 1).map(r => row(r.key, gradeLabel(r.g), gradePath(r.g, 1), gradeCourse(r.g, 1), data.users.filter(u => teachesGrade(u, r.g, 1)), r.lessons)).map((r, i) => ({ ...r, order: i })) },
+    ...['tier2', 'adult'].map(type => ({
+      type,
+      label: COURSE_TYPES.find(t => t.value === type).label,
+      rows: ALL_COURSES.filter(c => c.type === type).map((c, i) => {
+        const us = data.users.filter(u => teachesCourse(u, c.id))
+        return us.length ? { ...row(c.id, type === 'adult' ? 'Adult wellness' : levelName(c.grade), `/reports/content/courses/${c.id}`, c, us, us.reduce((sum, u) => sum + coursePart(u, c.id).lessons, 0)), order: i } : null
+      }).filter(Boolean),
+    })),
+  ].filter(g => g.rows.length)
+}
+
+const F_COLS = [
+  { key: 'order', label: 'Course', first: 'asc' },
+  { key: 'lessons', label: 'Lessons completed', first: 'desc', right: true },
+  { key: 'started', label: 'Users started', first: 'desc', right: true },
+  { key: 'completed', label: 'Users completed', first: 'desc', right: true },
+  { key: 'avg', label: 'Average progress', first: 'desc' },
+  { key: 'last', label: 'Last active', first: 'asc', right: true },
+]
+export function CourseProgressTable({ groups, action }) {
+  const [sort, setSort] = useState({ key: 'order', dir: 'asc' })
+  const sets = useMemo(() => groups.map(g => ({ ...g, rows: [...g.rows].sort((a, b) => {
+    const dir = sort.dir === 'asc' ? 1 : -1
+    if (sort.key === 'last') return dir * (agoRank(a.last) - agoRank(b.last) || 0) || a.order - b.order
+    return dir * (a[sort.key] - b[sort.key]) || a.order - b.order
+  }) })), [groups, sort])
+  const labelled = sets.length > 1
+  return (
+    <section className="bg-white rounded-lg border border-brand-border overflow-hidden">
+      <div className="flex items-center justify-between gap-4 px-5 pt-5 pb-4 min-h-9">
+        <h3 className="text-base font-semibold text-brand-text">Course progress</h3>
+        {action}
+      </div>
+      {sets.length ? (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {F_COLS.map(c => (
+                <TableHead key={c.key} className={`${c.right ? 'text-right' : ''} ${c.key === 'avg' ? 'w-56' : ''} ${c.key === 'order' ? 'pl-5' : ''} ${c.key === 'last' ? 'pr-5' : ''}`}>
+                  <SortButton label={c.label} col={c.key} sort={sort} onSort={k => setSort(st => nextSort(st, k, c.first))} align={c.right ? 'right' : 'left'} />
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sets.map(g => (
+              <Fragment key={g.label}>
+                {labelled && (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={F_COLS.length} className="pl-5 py-2 bg-brand-bg/[0.44] text-xs font-medium text-brand-subtext">{g.label}</TableCell>
+                  </TableRow>
+                )}
+                {g.rows.map(r => {
+                  const pctDone = Math.round(r.avg * 100)
+                  return (
+                    <TableRow key={r.key} className="hover:bg-transparent">
+                      <TableCell className="pl-5 font-medium"><Link to={r.to} className="text-dessa-teal hover:underline underline-offset-4">{r.name}</Link></TableCell>
+                      <TableCell className="text-right tabular-nums">{r.lessons.toLocaleString()}</TableCell>
+                      <TableCell className="text-right tabular-nums">{r.started.toLocaleString()} <span className="text-xs text-brand-subtext">of {r.users.toLocaleString()}</span></TableCell>
+                      <TableCell className="text-right tabular-nums">{r.completed.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <span className="flex items-center gap-3">
+                          <span
+                            role="progressbar" aria-label={`${r.name} average progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pctDone} aria-valuetext={`${pctDone}%, ${r.avgUnits} of ${r.units} units`}
+                            className="flex-1 min-w-16 h-2 rounded-full bg-brand-bg overflow-hidden"
+                          >
+                            <span className="block h-full rounded-full bg-dessa-teal" style={{ width: `${pctDone}%` }} />
+                          </span>
+                          <span className="shrink-0 w-24 text-right tabular-nums" aria-hidden="true">
+                            <span className="font-medium text-brand-text">{pctDone}%</span> <span className="text-xs text-brand-subtext">{r.avgUnits} of {r.units}</span>
+                          </span>
+                        </span>
+                      </TableCell>
+                      <TableCell className="pr-5 text-right text-brand-subtext whitespace-nowrap">{r.last}</TableCell>
+                    </TableRow>
+                  )
+                })}
+              </Fragment>
+            ))}
+          </TableBody>
+        </Table>
+      ) : <EmptyState />}
+    </section>
+  )
+}
+
 // Concepts F, G and H (band sections, course type buttons over tile cards, and a card per grade) deleted 2026-11-03.
 // Tier 2 bands and courses read in sentence case: "Early elementary".
 const levelName = t => t.charAt(0) + t.slice(1).toLowerCase()
@@ -611,7 +718,11 @@ export function Coverage({ totals }) {
 
 // `linkState` rides along to the user page, so its breadcrumb can lead back to the page it was opened from.
 // Lessons and Most covered columns removed 2026-10-29, then Course; the user page has all three.
-export function UsersTable({ users, oneSite, linked = false, linkState }) {
+// `progress` (2026-11-06, the course page's concepts B to D) is u => { lessons, done, total }: it adds each user's
+// lessons completed here and their course progress, both sortable.
+// `column` (2026-11-06, concept G) is one more column after the progress ones: { header, cell(u), csv(u) }, such as
+// the lessons a user has done in the unit the filters picked.
+export function UsersTable({ users, oneSite, linked = false, linkState, progress, column }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState({ key: 'name', dir: 'asc' })
   const [page, setPage] = useState(1)
@@ -626,17 +737,19 @@ export function UsersTable({ users, oneSite, linked = false, linkState }) {
         if (sort.key === 'site') return dir * a.sc.name.localeCompare(b.sc.name) || a.name.localeCompare(b.name)
         if (sort.key === 'role') return dir * a.role.localeCompare(b.role) || a.name.localeCompare(b.name)
         if (sort.key === 'last') return dir * (agoRank(a.last) - agoRank(b.last) || 0) || a.name.localeCompare(b.name)
+        if (sort.key === 'lessons') return dir * (progress(a).lessons - progress(b).lessons) || a.name.localeCompare(b.name)
+        if (sort.key === 'progress') return dir * (shareOf(progress(a)) - shareOf(progress(b))) || a.name.localeCompare(b.name)
         return dir * a.name.localeCompare(b.name)
       })
-  }, [users, query, sort])
+  }, [users, query, sort, progress])
   useEffect(() => { setPage(1) }, [users, query, sort, pageSize])
   const shown = rows.slice((page - 1) * pageSize, page * pageSize)
   const onSort = (k, first = 'asc') => setSort(s => nextSort(s, k, first))
-  const cols = 3 + !oneSite
+  const cols = 3 + !oneSite + (progress ? 2 : 0) + (column ? 1 : 0)
 
   function exportUsers() {
-    download('lessons-users.csv', ['User', !oneSite && 'Site', 'Role', 'Last active'].filter(Boolean),
-      rows.map(u => [u.name, !oneSite && u.sc.name, u.role, u.last].filter(v => v !== false)))
+    download('lessons-users.csv', ['User', !oneSite && 'Site', 'Role', ...(progress ? ['Lessons completed', 'Units completed', 'Units in course'] : []), ...(column ? [column.header] : []), 'Last active'].filter(Boolean),
+      rows.map(u => [u.name, !oneSite && u.sc.name, u.role, ...(progress ? [progress(u).lessons, progress(u).done, progress(u).total] : []), ...(column ? [column.csv(u)] : []), u.last].filter(v => v !== false)))
   }
 
   return (
@@ -655,6 +768,11 @@ export function UsersTable({ users, oneSite, linked = false, linkState }) {
             <TableHead><SortButton label="User" col="name" sort={sort} onSort={onSort} /></TableHead>
             {!oneSite && <TableHead><SortButton label="Site" col="site" sort={sort} onSort={onSort} /></TableHead>}
             <TableHead><SortButton label="Role" col="role" sort={sort} onSort={onSort} /></TableHead>
+            {progress && <>
+              <TableHead className="text-right"><SortButton label="Lessons completed" col="lessons" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
+              <TableHead className="w-56"><SortButton label="Course progress" col="progress" sort={sort} onSort={k => onSort(k, 'desc')} /></TableHead>
+            </>}
+            {column && <TableHead>{column.header}</TableHead>}
             <TableHead className="text-right"><SortButton label="Last active" col="last" sort={sort} onSort={onSort} align="right" /></TableHead>
           </TableRow>
         </TableHeader>
@@ -667,6 +785,11 @@ export function UsersTable({ users, oneSite, linked = false, linkState }) {
               {/* Site names open the site page (2026-11-05). */}
               {!oneSite && <TableCell className="text-brand-subtext">{linked ? <Link to={`/reports/content/sites/${u.sc.id}`} className="font-medium text-dessa-teal hover:underline underline-offset-4">{u.sc.name}</Link> : u.sc.name}</TableCell>}
               <TableCell className="text-brand-subtext">{u.role}</TableCell>
+              {progress && <>
+                <TableCell className="text-right tabular-nums">{progress(u).lessons.toLocaleString()}</TableCell>
+                <TableCell><ProgressCell name={u.name} p={progress(u)} /></TableCell>
+              </>}
+              {column && <TableCell>{column.cell(u)}</TableCell>}
               <TableCell className="text-right text-brand-subtext">{u.last}</TableCell>
             </TableRow>
           ))}
@@ -681,6 +804,23 @@ export function UsersTable({ users, oneSite, linked = false, linkState }) {
       </Table>
       <PaginationBar page={page} pageSize={pageSize} total={rows.length} onPage={setPage} onPageSize={setPageSize} className="px-4 py-3 border-t border-brand-border" />
     </div>
+  )
+}
+
+const shareOf = p => (p.total ? p.done / p.total : 0)
+// A user's course progress in a table cell: the bar, then lessons done of the course's total.
+function ProgressCell({ name, p }) {
+  const pctDone = Math.round(shareOf(p) * 100)
+  return (
+    <span className="flex items-center gap-3">
+      <span
+        role="progressbar" aria-label={`${name} course progress`} aria-valuemin={0} aria-valuemax={p.total} aria-valuenow={p.done} aria-valuetext={`${p.done} of ${p.total} units, ${pctDone}%`}
+        className="flex-1 min-w-16 h-2 rounded-full bg-brand-bg overflow-hidden"
+      >
+        <span className="block h-full rounded-full bg-dessa-teal" style={{ width: `${pctDone}%` }} />
+      </span>
+      <span className="shrink-0 text-xs text-brand-subtext tabular-nums" aria-hidden="true">{p.done} of {p.total} units</span>
+    </span>
   )
 }
 
@@ -736,20 +876,31 @@ export function MoreMenu({ items }) {
 // a change here carries back to the report and on to the next page. Each page picks the fields that change it.
 // `initial` patches the draft (a user page opened from Engagement shows Engagement's dates); `onApply` runs after.
 // `showType` adds the Course type field (the user page, 2026-11-03).
-export function ContentFilters({ showSite = true, showRole = true, showType = false, initial, onApply, action }) {
+// `extra` (2026-11-06, the course page's concept G) adds filters that belong to one page, not the report: { initial,
+// blank, main(draft, set), more(draft, set), moreCount(draft), apply(values) }. They ride in the draft with the rest,
+// come off before the report's own filters are saved, and go to `apply` (which writes them to the address).
+export function ContentFilters({ showSite = true, showRole = true, showType = false, initial, onApply, action, extra }) {
   const { isSiteLeaderView } = useRole()
   const { contentFilters, setContentFilters } = useContentConcept()
   const applied = contentFilters ?? DEFAULT_FILTERS
   const [draft, setDraft] = useState(() => {
-    const d = { ...applied, ...initial }
+    const d = { ...applied, ...initial, ...extra?.initial }
     return { ...d, end: d.end > FILTER_MAX ? FILTER_MAX : d.end }
   })
+  const extraKeys = Object.keys(extra?.blank ?? {})
+  const split = d => {
+    const own = {}
+    const rest = { ...d }
+    extraKeys.forEach(k => { own[k] = d[k]; delete rest[k] })
+    return [rest, own]
+  }
+  const set = patch => setDraft(d => ({ ...d, ...patch }))
   return (
     <FiltersPanel
       draft={draft}
       onChange={setDraft}
-      onApply={() => { setContentFilters(draft); onApply?.() }}
-      onReset={() => { setDraft(DEFAULT_FILTERS); setContentFilters(DEFAULT_FILTERS); onApply?.() }}
+      onApply={() => { const [rest, own] = split(draft); setContentFilters(rest); extra?.apply(own); onApply?.() }}
+      onReset={() => { setDraft({ ...DEFAULT_FILTERS, ...extra?.blank }); setContentFilters(DEFAULT_FILTERS); extra?.apply(extra.blank); onApply?.() }}
       sites={schools}
       roles={CONTENT_ROLES}
       showSite={showSite && !isSiteLeaderView}
@@ -758,7 +909,12 @@ export function ContentFilters({ showSite = true, showRole = true, showType = fa
       minDate={FILTER_MIN}
       maxDate={FILTER_MAX}
       action={action}
-      extraFields={showType ? <CourseTypeSelect value={draft.type} onChange={v => setDraft(d => ({ ...d, type: v }))} /> : null}
+      extraFields={<>
+        {showType && <CourseTypeSelect value={draft.type} onChange={v => set({ type: v })} />}
+        {extra?.main(draft, set)}
+      </>}
+      moreFields={extra ? extra.more(draft, set) : null}
+      moreCount={extra ? extra.moreCount(draft) : 0}
     />
   )
 }
@@ -778,6 +934,12 @@ function CourseTypeSelect({ value, onChange }) {
   //     {COURSE_TYPES.filter(t => t.value !== 'family').map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
   //   </Select>
   // )
+}
+
+// Grade level (2026-11-06, concept F), multi select like Site and Course type.
+const GRADE_OPTIONS = Array.from({ length: 13 }, (_, g) => ({ value: String(g), label: gradeLabel(g) }))
+function GradeSelect({ value, onChange }) {
+  return <MultiSelect label="Grade level" value={value} onChange={onChange} noun="grades" className="flex-1 min-w-36" options={GRADE_OPTIONS} />
 }
 
 // The weeks and sites the applied filters cover, shared with the course and user pages (concept C, 2026-10-27).
@@ -821,7 +983,9 @@ export default function ReportContent() {
   // A Site Leader sees only their own site (the same first site the Engagement report uses).
   const siteIds = isSiteLeaderView ? [schools[0].id] : applied.site.map(Number)
   const oneSite = siteIds.length === 1
-  const data = useMemo(() => contentData({ siteIds, role: applied.role, type: applied.type, weeks }), [siteIds.join(), applied.role.join(), applied.type.join(), weeks])
+  // Grade level (2026-11-06) is concept F's alone, so it's ignored under the other concepts.
+  const grade = contentConcept === 'f' ? applied.grade ?? [] : []
+  const data = useMemo(() => contentData({ siteIds, role: applied.role, type: applied.type, grade, weeks }), [siteIds.join(), applied.role.join(), applied.type.join(), grade.join(), weeks])
   const range = rangeLabel(weeks)
   const empty = data.lessons === 0
 
@@ -885,11 +1049,18 @@ export default function ReportContent() {
   }
 
   // D and E share the side by side layout (2026-11-03); E is D's copy with the titles carrying the measure.
-  const sideBySide = contentConcept === 'd' || contentConcept === 'e'
+  const sideBySide = contentConcept === 'd' || contentConcept === 'e' || contentConcept === 'f'
+  // E and F's cards export themselves, so the menu is just Print.
+  const cardExports = contentConcept === 'e' || contentConcept === 'f'
+  const fGroups = useMemo(() => (contentConcept === 'f' ? progressGroups(data) : []), [contentConcept, data])
+  function exportProgress() {
+    download('course-progress.csv', ['Course type', 'Course', 'Lessons completed', 'Users started', 'Users', 'Users completed', 'Average progress percent', 'Average units completed', 'Units in course', 'Last active'],
+      fGroups.flatMap(g => g.rows.map(r => [g.label, r.name, r.lessons, r.started, r.users, r.completed, Math.round(r.avg * 100), r.avgUnits, r.units, r.last])))
+  }
   const menu = (
     <MoreMenu items={[
       // Concept E's cards have their own Export CSV (2026-11-03), so its menu is just Print.
-      ...(contentConcept === 'e' ? [] : sideBySide
+      ...(cardExports ? [] : sideBySide
         ? [{ icon: Download, label: 'Export courses CSV', onSelect: () => exportCsv('courses') }, { icon: Download, label: 'Export competencies CSV', onSelect: () => exportCsv('competencies') }]
         : [{ icon: Download, label: `Export ${tab === 'courses' ? 'courses' : 'competencies'} CSV`, onSelect: () => exportCsv(tab) }]),
       { icon: Printer, label: 'Print', onSelect: printReport },
@@ -900,8 +1071,8 @@ export default function ReportContent() {
   const typeLabel = applied.type.length ? COURSE_TYPES.filter(t => applied.type.includes(t.value)).map(t => t.label).join(' and ') : null
   return (
     <div className="px-6 pt-8 pb-8">
-      {/* Retitled 2026-11-06, was Content. */}
-      <h1 className="text-[28px] font-bold leading-tight text-brand-text mb-6">Lesson completion</h1>
+      {/* Back to Content 2026-11-06, after a day as Lesson completion. */}
+      <h1 className="text-[28px] font-bold leading-tight text-brand-text mb-6">Content</h1>
 
       <FiltersPanel
         draft={draft}
@@ -915,7 +1086,10 @@ export default function ReportContent() {
         minDate={FILTER_MIN}
         maxDate={FILTER_MAX}
         action={menu}
-        extraFields={<CourseTypeSelect value={draft.type} onChange={v => setDraft(d => ({ ...d, type: v }))} />}
+        extraFields={<>
+          <CourseTypeSelect value={draft.type} onChange={v => setDraft(d => ({ ...d, type: v }))} />
+          {contentConcept === 'f' && <GradeSelect value={draft.grade ?? []} onChange={v => setDraft(d => ({ ...d, grade: v }))} />}
+        </>}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -935,6 +1109,14 @@ export default function ReportContent() {
           {/* The measure said once (2026-11-02): one heading over both cards, each card titled by how it splits it.
               Concept E (2026-11-03) drops the heading and puts the measure in each card's title. */}
           {contentConcept === 'd' && <h2 className="text-lg font-semibold text-brand-text mb-3">Lessons completed</h2>}
+          {/* Concept F (2026-11-06): the course progress table, full width, then the competencies. */}
+          {contentConcept === 'f' ? (
+            <div className="mb-6 flex flex-col gap-4">
+              <CourseProgressTable groups={fGroups} action={fGroups.length > 0 ? <ExportButton onClick={exportProgress} /> : undefined} />
+              {empty ? <section className={card}><EmptyState /></section>
+                : <CompetencyMix totals={data.compTotals} title="Lessons completed by competency" view="bars" action={<ExportButton onClick={() => exportCard('competencies')} />} />}
+            </div>
+          ) : (
           <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
             <ListCard
               title={contentConcept === 'd' ? 'By course' : 'Lessons completed by course'}
@@ -950,6 +1132,7 @@ export default function ReportContent() {
               // <CompetencyMix totals={data.compTotals} title="Lessons completed by competency" stacked divided />
               : <CompetencyMix totals={data.compTotals} title="Lessons completed by competency" view="bars" divided action={<ExportButton onClick={() => exportCard('competencies')} />} />)}
           </div>
+          )}
           <UsersTable users={data.users} oneSite={oneSite} linked />
         </>
       ) : contentConcept === 'c-tabs' ? (
