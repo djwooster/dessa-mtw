@@ -129,8 +129,9 @@ function AppShell({ handleBookmark }) {
           <Route path="content/sites/:siteId/grades/:grade/:tier" element={<ContentGrade />} />
           <Route path="content/sites/:siteId/courses/:courseId" element={<ContentCourse />} />
           <Route path="students" element={<ReportStudents />} />
-          {/* Old links to the retired reports land here. */}
-          <Route path="*" element={<Navigate to="engagement" replace />} />
+          {/* Old links to the retired reports land here. An absolute path (2026-11-09): a relative one resolved against
+              the unmatched address, so /reports/content/grades/11/1/x kept adding /engagement in a loop. */}
+          <Route path="*" element={<Navigate to="/reports/engagement" replace />} />
         </Route>
         <Route path="/settings" element={<SettingsLayout />}>
           <Route index element={<Navigate to="curriculum-setup" replace />} />
