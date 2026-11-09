@@ -45,11 +45,11 @@ export function ContentBreadcrumb({ trail }) {
 export function NotFound({ what }) {
   return (
     <div className="px-6 pt-8 pb-8">
-      <ContentBreadcrumb trail={[{ label: 'Lesson completion', to: '/reports/content' }, { label: `${what} not found` }]} />
+      <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, { label: `${what} not found` }]} />
       <div className="bg-white rounded-lg border border-brand-border py-12 text-center">
         <p className="text-sm font-semibold text-brand-text">We couldn't find that {what.toLowerCase()}</p>
         <p className="text-sm text-brand-subtext mt-1">It may be outside the sites you can see.</p>
-        <Link to="/reports/content" className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">Back to Lesson completion</Link>
+        <Link to="/reports/content" className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">Back to Content</Link>
       </div>
     </div>
   )
@@ -144,10 +144,14 @@ const D_TABS = [['units', 'Units'], ['progress', 'Course progress'], /* ['weeks'
 // `progressOf(u)` (2026-11-06) is how far the user is into the course: { done, total }.
 // `site` (2026-11-06) is set when the page opened from a site page (/sites/:id/grades/9): the page covers that site
 // only, the breadcrumb runs through it, and the Site field, the sites stat and the sites table come off.
+// For main (2026-11-09): concept A, the page as it was, with the switcher commented out. B to D and G carry on in the
+// content-concept-f branch. A browser's remembered pick is ignored.
 function GroupPage(props) {
-  const [concept, setConcept] = useState(readPage)
-  const choose = v => { setConcept(v); try { localStorage.setItem(PAGE_KEY, v) } catch { /* private window */ } }
-  const switcher = <ConceptSelect value={concept} onChange={choose} options={PAGE_CONCEPTS} name="Course page concept" />
+  // const [concept, setConcept] = useState(readPage)
+  // const choose = v => { setConcept(v); try { localStorage.setItem(PAGE_KEY, v) } catch { /* private window */ } }
+  // const switcher = <ConceptSelect value={concept} onChange={choose} options={PAGE_CONCEPTS} name="Course page concept" />
+  const concept = 'a'
+  const switcher = null
   return concept === 'g' ? <GroupPageG {...props} switcher={switcher} /> : <GroupPageClassic {...props} concept={concept} switcher={switcher} />
 }
 
@@ -232,8 +236,8 @@ function GroupPageClassic({ title, avatar, meta, users, part, progressOf, path, 
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
-      <ContentBreadcrumb trail={[{ label: 'Lesson completion', to: '/reports/content' }, ...(site ? [siteCrumb] : []), { label: title }]} />
-      <div className="flex justify-end mb-3">{switcher}</div>
+      <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, ...(site ? [siteCrumb] : []), { label: title }]} />
+      {switcher && <div className="flex justify-end mb-3">{switcher}</div>}
       {/* Filters (2026-10-29): Site, User role and dates. Course type is left off, since the page is one grade or course. */}
       {/* 3-dot menu (2026-11-02): Export CSV of the page's schools, like the report's own menu. */}
       {/* For one site (2026-11-06), no Site field and no sites export. */}
@@ -489,7 +493,7 @@ function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, s
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
-      <ContentBreadcrumb trail={[{ label: 'Lesson completion', to: '/reports/content' }, ...(site ? [siteCrumb] : []), { label: title }]} />
+      <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, ...(site ? [siteCrumb] : []), { label: title }]} />
       <div className="flex justify-end mb-3">{switcher}</div>
       <ContentFilters key={`${site?.id ?? 'all'}-${filterKey}`} showSite={!site} extra={extra} />
       <div className="flex flex-col gap-4">

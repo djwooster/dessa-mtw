@@ -1012,7 +1012,7 @@ export default function ReportContent() {
 
   function printReport() {
     const prevTitle = document.title
-    document.title = `Lesson completion, ${range}`
+    document.title = `Content, ${range}`
     window.addEventListener('afterprint', () => { document.title = prevTitle }, { once: true })
     window.print()
   }
@@ -1211,7 +1211,7 @@ export default function ReportContent() {
       {!sideBySide && <UsersTable users={data.users} oneSite={oneSite} linked={contentConcept === 'c'} />}
 
       <PrintReport
-        title="Lesson completion"
+        title="Content"
         rangeText={range}
         goalText={typeLabel ? `${typeLabel} courses` : null}
         generated={format(new Date(), 'MMM d, yyyy')}
