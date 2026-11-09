@@ -19,7 +19,7 @@ Treat every screen — including throwaway comparison concepts — as if a senio
 
 Older screens are brought in line one at a time, only when we're already working on that screen. Don't sweep the app.
 
-What to avoid, because it reads big and unruly: 48px controls, 2px outlines, 20px+ card titles, 16px body text in dense UI, wide padding inside cards, heavy shadows on resting surfaces, and controls stretched to fixed widths so labels wrap.
+What to avoid, because it reads big and unruly: 48px controls, 2px outlines, 20px+ card titles, H1s over 28px, 16px body text in dense UI, wide padding inside cards, heavy shadows on resting surfaces, and controls stretched to fixed widths so labels wrap.
 
 **Standing rules:**
 - Don't patch a confusing interaction with adjacent explainer/caption text — if a control needs a sentence next to it to be understood, redesign the control instead.
@@ -35,7 +35,7 @@ A small, reusable set of styles — not exhaustive component coverage, just enou
 **Typography** — built on the existing `brand-text`/`brand-subtext` tokens, no new colors needed for type:
 | Role | Size / weight | Color | Use |
 |---|---|---|---|
-| H1 | 32px (`text-[32px]`) bold, `leading-tight` | `brand-text` | Page headline, one per page |
+| H1 | 28px (`text-[28px]`) bold, `leading-tight` | `brand-text` | Page headline, one per page |
 | H2 | 24px (`text-2xl`) semibold | `brand-text` | Section headers |
 | H3 | 16 to 18px (`text-base` or `text-lg`) semibold | `brand-text` | Card titles. Never 20px or larger inside a card |
 | Label | 12px (`text-xs`) medium or semibold, sentence case | `brand-subtext` | Facet titles, small labels, chips. Default for any small label |

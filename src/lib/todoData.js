@@ -12,6 +12,7 @@ export const TODO_SECTIONS = [
     title: 'Engagement Reports',
     note: 'Standing priority since Sept 23: make Site Engagement and Daily Curriculum Engagement (DCE) both intuitive. Site Engagement (Concepts A–E) has been through a full rework grounded in real user feedback; DCE work is just getting started. A "combine both into one report" idea is on the table but deliberately on hold until DCE’s own metrics are solid.',
     items: [
+      { id: 'users-report-user-type', text: 'Next up: the Users report and user types in Engagement', note: 'Match the legacy MTW report\'s user types (Teacher, School Support, District Admin, Family User). Open questions: which types the 3 lessons a week goal applies to, the exact type names, how Family users fit site filters, and whether a separate Users report (sessions by type, active and non-active users, a users table) is the right split.' },
       { id: 'site-eng-daterange-dropdown', text: 'Nail down what\'s actually wrong with the Site Engagement date-range dropdown', note: 'Flagged twice, no specifics given either time.' },
       { id: 'site-eng-overlay-refine', text: 'Refine the Site Engagement per-site detail overlay (Concept E)', note: 'Layout and data both need another pass after live review.' },
       { id: 'site-eng-trend-shape', text: 'Confirm the district trend chart\'s new shape reads well', note: 'The Fall Challenge peak and winter dip haven\'t been explicitly signed off on yet.' },

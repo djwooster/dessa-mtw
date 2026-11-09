@@ -6,8 +6,13 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 // completed a lesson, weekends muted. Three months in a single row (two rows
 // took too much scrolling in the modal); the arrows page one month at a time.
 // `dayMap` is { 'yyyy-MM-dd': true } for active days (see educatorDayMap).
-const FIRST_MONTH = new Date(2026, 8, 1) // Sep 2026, the start of the data (moved a year on 2026-10-19)
-const MONTH_COUNT = 9 // Sep 2026 to May 2027
+const FIRST_MONTH = new Date(2026, 7, 1) // Aug 2026: the first school week starts Mon Aug 31
+const MONTH_COUNT = 10 // Aug 2026 to May 2027
+// Every month of the school year shows (2026-10-26); days after today are greyed out, and it opens with the
+// current month last so the latest activity is in view.
+const TODAY = new Date()
+const TODAY_KEY = `${TODAY.getFullYear()}-${String(TODAY.getMonth() + 1).padStart(2, '0')}-${String(TODAY.getDate()).padStart(2, '0')}`
+const LAST_MONTH_IDX = Math.min(MONTH_COUNT - 1, Math.max(0, (TODAY.getFullYear() - FIRST_MONTH.getFullYear()) * 12 + TODAY.getMonth() - FIRST_MONTH.getMonth()))
 const MIN_WINDOW = 3 // never fewer than three months
 const MONTH_W = 174 // one month grid: 7 cells of 24px plus gaps
 const MONTH_GAP = 24
@@ -17,7 +22,12 @@ const pad = n => String(n).padStart(2, '0')
 const monthAt = i => new Date(FIRST_MONTH.getFullYear(), FIRST_MONTH.getMonth() + i, 1)
 const monthName = (d, opts) => d.toLocaleDateString('en-US', opts)
 
-function MonthGrid({ date, dayMap }) {
+// `max` (the site page, 2026-11-05) reads dayMap's values as user counts, { 'yyyy-MM-dd': n }, and shades each day
+// in four steps of teal by its share of the busiest day. Letters stay dark until the full teal, for contrast.
+const STEPS = ['bg-dessa-teal/25 text-brand-text', 'bg-dessa-teal/50 text-brand-text', 'bg-dessa-teal/75 text-brand-text font-semibold', 'bg-dessa-teal text-white font-semibold']
+const stepOf = (n, max) => STEPS[Math.min(STEPS.length - 1, Math.ceil((n / max) * STEPS.length) - 1)]
+
+function MonthGrid({ date, dayMap, max }) {
   const year = date.getFullYear()
   const month = date.getMonth()
   const firstDay = new Date(year, month, 1).getDay()
@@ -26,24 +36,28 @@ function MonthGrid({ date, dayMap }) {
 
   return (
     <div>
-      <p className="text-sm font-medium text-brand-text mb-2">{monthName(date, { month: 'long', year: 'numeric' })}</p>
+      <p className={`text-sm font-medium mb-2 ${date > TODAY ? 'text-brand-subtext/60' : 'text-brand-text'}`}>{monthName(date, { month: 'long', year: 'numeric' })}</p>
       <div className="grid grid-cols-7 gap-px w-fit">
         {WEEKDAY_HEADS.map(d => <div key={d} className="w-6 text-xs text-brand-subtext text-center py-0.5">{d}</div>)}
         {cells.map((day, i) => {
           if (!day) return <div key={`e-${i}`} />
           const key = `${year}-${pad(month + 1)}-${pad(day)}`
           const weekend = (firstDay + day - 1) % 7 === 0 || (firstDay + day - 1) % 7 === 6
-          const on = !weekend && dayMap[key]
+          const future = key > TODAY_KEY
+          const on = !weekend && !future && dayMap[key]
+          const done = max ? `${on} ${on === 1 ? 'user' : 'users'} completed a lesson` : 'lesson completed'
+          const label = date.toLocaleDateString('en-US', { month: 'long' }) + ` ${day}: ${weekend ? 'weekend' : future ? 'coming up' : on ? done : 'no lesson'}`
           return (
             <div
               key={day}
-              title={`${key}${on ? ': lesson completed' : ''}`}
-              aria-label={`${key}: ${weekend ? 'weekend' : on ? 'lesson completed' : 'no lesson'}`}
+              role="img"
+              title={label}
+              aria-label={label}
               className={`w-6 h-6 flex items-center justify-center rounded text-xs ${
-                weekend ? 'text-brand-subtext/30'
-                : on ? 'bg-dessa-teal text-white font-semibold'
-                : 'bg-brand-border text-brand-subtext'
-              }`}
+                weekend || future ? 'text-brand-subtext/40'
+                : on ? (max ? stepOf(on, max) : 'bg-dessa-teal text-white font-semibold')
+                : 'bg-brand-bg text-brand-text'
+              } ${key === TODAY_KEY ? 'ring-1 ring-dessa-teal' : ''}`}
             >
               {day}
             </div>
@@ -54,7 +68,7 @@ function MonthGrid({ date, dayMap }) {
   )
 }
 
-export default function EducatorCalendar({ dayMap }) {
+export default function EducatorCalendar({ dayMap, max }) {
   // As many months as fit the width (2026-10-13), at least three, so a wide table
   // is not left with empty space; the modal stays at three.
   const bodyRef = useRef(null)
@@ -68,8 +82,8 @@ export default function EducatorCalendar({ dayMap }) {
   }, [])
   const count = Math.min(MONTH_COUNT, Math.max(MIN_WINDOW, fit))
   const maxStart = MONTH_COUNT - count
-  const [rawStart, setStart] = useState(MONTH_COUNT) // opens on the most recent months
-  const start = Math.min(rawStart, maxStart)
+  const [rawStart, setStart] = useState(null) // null opens with the current month last
+  const start = Math.min(maxStart, Math.max(0, rawStart ?? LAST_MONTH_IDX + 1 - count))
   const months = Array.from({ length: count }, (_, i) => monthAt(start + i))
   const first = months[0]
   const last = months[count - 1]
@@ -90,11 +104,17 @@ export default function EducatorCalendar({ dayMap }) {
           {monthName(first, { month: 'short' })} to {monthName(last, { month: 'short', year: 'numeric' })}
         </span>
         <div className="flex justify-between gap-x-6">
-          {months.map(m => <MonthGrid key={m.toISOString()} date={m} dayMap={dayMap} />)}
+          {months.map(m => <MonthGrid key={m.toISOString()} date={m} dayMap={dayMap} max={max} />)}
         </div>
         <div className="flex justify-end items-center gap-x-5 mt-3 text-xs text-brand-subtext">
-          <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-dessa-teal" /> Lesson completed</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-brand-border" /> No lesson</span>
+          {max ? (
+            <span className="flex items-center gap-1.5">
+              Fewer users
+              {STEPS.map(c => <span key={c} className={`inline-block w-3.5 h-3.5 rounded-sm ${c.split(' ')[0]}`} />)}
+              More users
+            </span>
+          ) : <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-dessa-teal" /> Lesson completed</span>}
+          <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded-sm bg-brand-bg border border-brand-border" /> No lesson</span>
         </div>
       </div>
       <button

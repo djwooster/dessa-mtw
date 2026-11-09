@@ -1,0 +1,24 @@
+import { createContext, useContext, useState } from 'react'
+
+// Which Courses view the Content report renders (2026-10-27), same convention as settingsConceptContext.jsx: the
+// switcher lives in Nav, ReportContent reads from context. 'a' = the course table, 'b' = grade band cards with
+// each course's pace (where its classes are in the course), 'c' = one row per grade, each opening its course page,
+// with user names opening a user page.
+// The applied filters live here too (2026-10-27), so they survive a trip to a course or user page and back.
+const ContentConceptContext = createContext(null)
+
+export function ContentConceptProvider({ children }) {
+  const [contentConcept, setContentConcept] = useState('e') // E is the pick (2026-11-03), its switcher in Nav commented out; C opened first from 2026-10-28
+  const [contentFilters, setContentFilters] = useState(null) // null = the report's defaults
+  // The user page's header concept (2026-11-03), picked in a switcher above that page's Filters.
+  const [userHeader, setUserHeader] = useState('a')
+  return (
+    <ContentConceptContext.Provider value={{ contentConcept, setContentConcept, contentFilters, setContentFilters, userHeader, setUserHeader }}>
+      {children}
+    </ContentConceptContext.Provider>
+  )
+}
+
+export function useContentConcept() {
+  return useContext(ContentConceptContext)
+}

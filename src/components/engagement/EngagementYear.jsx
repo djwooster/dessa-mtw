@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { parseISO, format, addDays } from 'date-fns'
 import { ChevronRight, Download, MoreHorizontal, Palette, Printer, School } from 'lucide-react'
-import { schools, schoolWeeks, NO_SCHOOL_WEEKS, matchesSite, USER_ROLES } from '../../lib/report2Data'
+import { schools, schoolWeeks, NO_SCHOOL_WEEKS, matchesSite, USER_ROLES, isGoalRole } from '../../lib/report2Data'
+import NoGoalNotice from './NoGoalNotice'
 import { weekBands } from './StackedGoalChart'
 import { GOAL, SearchField } from '../../pages/Report2ConceptE'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table'
@@ -63,14 +64,23 @@ function ytdWeeks(endOfYear, range = null) {
     .filter(w => !w.off && w.date <= today && (!range || (addDays(w.date, 4) >= from && w.date <= to)))
     .reverse()
 }
-const ytdAvg = (r, weeks, k = 'pct') => weeks.length ? Math.round(weeks.reduce((sum, w) => sum + r.cells[w.i][k], 0) / weeks.length) : 0
+// One average everywhere (2026-10-26): the % is weighted, all the users who met the goal over all the users with a
+// goal in those weeks, the same as the site page. Counts stay a plain weekly average.
+const ytdAvg = (r, weeks, k = 'pct') => {
+  if (!weeks.length) return 0
+  if (k !== 'pct') return Math.round(weeks.reduce((sum, w) => sum + r.cells[w.i][k], 0) / weeks.length)
+  const met = weeks.reduce((sum, w) => sum + r.cells[w.i].met, 0)
+  const total = weeks.reduce((sum, w) => sum + r.cells[w.i].total, 0)
+  return total ? Math.round((met / total) * 100) : 0
+}
+
 const ytdRowName = r => r.total ? `${r.allSites ? 'All sites' : 'Selected sites'} (${r.count})` : r.name
 
 // Print layout for the YTD view (2026-10-16), the same letterhead as the Engagement print (PrintReport), on a
 // landscape page. Every site prints, not just the current page. The weeks go in blocks of 12, newest first,
 // each repeating Site and YTD so a block reads on its own. With the heat map on, the bands print too.
 const PRINT_WEEKS = 12
-function YtdPrint({ rows, weeks, heat, schoolYear }) {
+function YtdPrint({ rows, weeks, heat, schoolYear, avgLabel }) {
   const blocks = []
   for (let i = 0; i < weeks.length; i += PRINT_WEEKS) blocks.push(weeks.slice(i, i + PRINT_WEEKS))
   const blockLabel = b => {
@@ -97,12 +107,12 @@ function YtdPrint({ rows, weeks, heat, schoolYear }) {
       <h2 className="text-base font-semibold mb-4">Users completing {GOAL} lessons a week</h2>
       {blocks.map((b, bi) => (
         <section key={bi} className={bi ? 'mt-8' : ''}>
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand-subtext mb-2">{blockLabel(b)}</p>
+          <p className="text-xs font-medium text-brand-subtext mb-2">{blockLabel(b)}</p>
           <table className="w-full text-[11px] tabular-nums border-collapse">
             <thead>
               <tr className="border-b border-brand-text">
                 <th className="py-1.5 pr-2 text-left font-semibold">Site</th>
-                <th className="py-1.5 px-1.5 text-right font-semibold whitespace-nowrap">YTD Average</th>
+                <th className="py-1.5 px-1.5 text-right font-semibold whitespace-nowrap">{avgLabel}</th>
                 {b.map(w => <th key={w.i} className="py-1.5 px-1.5 text-right font-semibold whitespace-nowrap">{format(w.date, 'MMM d')}</th>)}
               </tr>
             </thead>
@@ -136,7 +146,7 @@ function YtdPrint({ rows, weeks, heat, schoolYear }) {
 
 // `heat` (2026-10-16) shades every % cell in DESSA teal (STEPS_HEAT); the counts in the
 // drill down stay plain.
-function YtdTable({ rows, weeks, heat = false, searching = false }) {
+function YtdTable({ rows, weeks, heat = false, searching = false, avgLabel }) {
   const avgOf = (r, k) => ytdAvg(r, weeks, k)
   const ytd = r => avgOf(r, 'pct')
   // Drill down (2026-10-16): opening a site adds its weekly Total users and Users who met the goal rows under it (% met was removed,
@@ -149,7 +159,7 @@ function YtdTable({ rows, weeks, heat = false, searching = false }) {
     return next
   })
   const DETAILS = [
-    { label: 'Total users', ytd: r => avgOf(r, 'total'), week: c => c.total },
+    { label: 'Users with a goal', ytd: r => avgOf(r, 'total'), week: c => c.total },
     { label: 'Users who met the goal', ytd: r => avgOf(r, 'met'), week: c => c.met },
   ]
   // Pinned columns draw their right line as an inset shadow so it stays put while the weeks scroll under them.
@@ -183,12 +193,12 @@ function YtdTable({ rows, weeks, heat = false, searching = false }) {
             <TableHead className={`${site} ${TINT} ${head} ${pinLine} text-xs font-medium text-brand-subtext`}>Week of</TableHead>
             <TableHead className={`${avg} ${TINT} ${head} ${pinLine}`} aria-hidden="true" />
             {monthSpans(weeks.map(w => format(w.date, 'yyyy-MM-dd')), 'MMM yyyy').map((s, i) => (
-              <TableHead key={i} colSpan={s.n} className={`${TINT} ${head} text-xs font-semibold uppercase tracking-wide text-brand-subtext`}>{s.m}</TableHead>
+              <TableHead key={i} colSpan={s.n} className={`${TINT} ${head} text-xs font-medium text-brand-subtext`}>{s.m}</TableHead>
             ))}
           </TableRow>
           <TableRow className="hover:bg-transparent">
             <TableHead className={`${site} ${TINT} ${head} ${pinLine}`}>Site</TableHead>
-            <TableHead className={`${avg} ${TINT} ${head} ${pinLine}`}>YTD Average</TableHead>
+            <TableHead className={`${avg} ${TINT} ${head} ${pinLine}`}>{avgLabel}</TableHead>
             {weeks.map(w => (
               <TableHead key={w.i} className={`${num} ${TINT} ${head} ${weekCol}`}>{format(w.date, 'MMM d')}</TableHead>
             ))}
@@ -216,7 +226,7 @@ function YtdTable({ rows, weeks, heat = false, searching = false }) {
                       {/* Plain table text (2026-10-16): site names are no longer link blue, since the row opens the drill down. */}
                       <span className="truncate">
                         {name}
-                        {r.total && <span className="text-[11px] font-medium text-brand-subtext"> ({r.count})</span>}
+                        {r.total && <span className="text-xs font-medium text-brand-subtext"> ({r.count})</span>}
                       </span>
                     </button>
                   </TableCell>
@@ -291,6 +301,7 @@ export default function EngagementYear({ filters, lockedSiteId = null, tabs = nu
   const { ytdPreview: preview } = useEngagementVersion()
   const weeks = useMemo(() => ytdWeeks(preview === 'end', { start: applied.start, end: applied.end }), [preview, applied.start, applied.end])
   const [heat, setHeat] = useState(false)
+  const avgLabel = 'YTD Average'
   // Site search (YTD view, 2026-10-16): narrows the site rows by name; the All sites row always stays.
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
@@ -301,7 +312,7 @@ export default function EngagementYear({ filters, lockedSiteId = null, tabs = nu
   }, [rows, q])
   // Export CSV (YTD view): one row per site under All sites, with YTD then each week, as on screen.
   function exportCsv() {
-    const head = ['Site', 'YTD Average', ...weeks.map(w => format(w.date, 'MMM d yyyy'))].map(v => `"${v}"`).join(',')
+    const head = ['Site', avgLabel, ...weeks.map(w => format(w.date, 'MMM d yyyy'))].map(v => `"${v}"`).join(',')
     const lines = shownRows.map(r => {
       return [`"${ytdRowName(r)}"`, `${ytdAvg(r, weeks)}%`, ...weeks.map(w => `${r.cells[w.i].pct}%`)].join(',')
     })
@@ -363,13 +374,15 @@ export default function EngagementYear({ filters, lockedSiteId = null, tabs = nu
 
       <motion.section
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
-        className="rounded-xl border border-brand-border bg-white p-5"
+        className="rounded-lg border border-brand-border bg-white p-5"
       >
         <header className="flex items-start justify-between gap-4 mb-5">
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-brand-text">Users completing {GOAL} lessons a week</h3>
+            <h3 className="text-base font-semibold text-brand-text">Users completing {GOAL} lessons a week</h3>
           </div>
         </header>
+        {/* A User role without a weekly goal (2026-10-26) shows a notice instead of the table. */}
+        {!isGoalRole(role) ? <NoGoalNotice role={role} /> : (<>
         {/* Under the title (2026-10-16): site search on the left, Heat map and Export CSV on the right. */}
         <div className="flex items-center justify-between gap-3 -mt-2 mb-4">
           <div className="w-64">
@@ -395,16 +408,17 @@ export default function EngagementYear({ filters, lockedSiteId = null, tabs = nu
           </div>
         </div>
 
-        <YtdTable rows={shownRows} weeks={weeks} heat={heat} searching={!!q} />
+        <YtdTable rows={shownRows} weeks={weeks} heat={heat} searching={!!q} avgLabel={avgLabel} />
 
         {heat && (
           <div className="mt-5 pt-4 border-t border-brand-border">
             <Legend />
           </div>
         )}
+        </>)}
       </motion.section>
       {below && <div className="mt-6">{below}</div>}
-      <YtdPrint rows={shownRows} weeks={weeks} heat={heat} schoolYear={schoolYearText()} />
+      <YtdPrint rows={shownRows} weeks={weeks} heat={heat} schoolYear={schoolYearText()} avgLabel={avgLabel} />
     </div>
   )
 }

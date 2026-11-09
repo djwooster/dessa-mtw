@@ -23,6 +23,11 @@ import ReportEngagement from './pages/ReportEngagement'
 // import Report2 from './pages/Report2' // commented out 2026-10-08, Engagement is the only report
 import ReportsLayout from './pages/ReportsLayout'
 import SettingsLayout from './pages/settings/SettingsLayout'
+import ReportContent from './pages/ReportContent'
+import ContentCourse, { ContentGrade } from './pages/ContentCourse'
+import ContentUser from './pages/ContentUser'
+import ContentSite from './pages/ContentSite'
+import ReportStudents from './pages/ReportStudents'
 import SettingsPlaceholder from './pages/settings/SettingsPlaceholder'
 import CurriculumSetup from './pages/settings/CurriculumSetup'
 import JoinPage from './pages/JoinPage'
@@ -33,6 +38,8 @@ import { EngagementConceptProvider } from './lib/engagementConceptContext'
 import { EngagementVersionProvider } from './lib/engagementVersionContext'
 import { RoleProvider } from './lib/roleContext'
 import { DashboardConceptProvider } from './lib/dashboardConceptContext'
+import { SettingsConceptProvider } from './lib/settingsConceptContext'
+import { ContentConceptProvider } from './lib/contentConceptContext'
 
 function Placeholder({ title }) {
   return (
@@ -67,7 +74,11 @@ export default function App() {
             <EngagementVersionProvider>
             <RoleProvider>
             <DashboardConceptProvider>
+            <SettingsConceptProvider>
+            <ContentConceptProvider>
               <AppShell handleBookmark={handleBookmark} />
+            </ContentConceptProvider>
+            </SettingsConceptProvider>
             </DashboardConceptProvider>
             </RoleProvider>
             </EngagementVersionProvider>
@@ -107,6 +118,17 @@ function AppShell({ handleBookmark }) {
           */}
           {/* engagement/* keeps one page mounted for the report and a site page (engagement/site/:id), so filters survive the trip. */}
           <Route path="engagement/*" element={<ReportEngagement />} />
+          <Route path="content" element={<ReportContent />} />
+          <Route path="content/grades/:grade" element={<ContentGrade />} />
+          <Route path="content/grades/:grade/:tier" element={<ContentGrade />} />
+          <Route path="content/courses/:courseId" element={<ContentCourse />} />
+          <Route path="content/users/:userKey" element={<ContentUser />} />
+          <Route path="content/sites/:siteId" element={<ContentSite />} />
+          {/* A grade or course inside a site (2026-11-06), scoped to that site. */}
+          <Route path="content/sites/:siteId/grades/:grade" element={<ContentGrade />} />
+          <Route path="content/sites/:siteId/grades/:grade/:tier" element={<ContentGrade />} />
+          <Route path="content/sites/:siteId/courses/:courseId" element={<ContentCourse />} />
+          <Route path="students" element={<ReportStudents />} />
           {/* Old links to the retired reports land here. */}
           <Route path="*" element={<Navigate to="engagement" replace />} />
         </Route>
@@ -117,11 +139,11 @@ function AppShell({ handleBookmark }) {
           <Route path="sites" element={<SettingsPlaceholder title="Sites" />} />
           <Route path="students" element={<SettingsPlaceholder title="Students" />} />
           <Route path="staff" element={<SettingsPlaceholder title="Staff" />} />
-          <Route path="yearly-rating-setup" element={<SettingsPlaceholder title="Yearly Rating Setup" />} />
-          <Route path="assignment-review" element={<SettingsPlaceholder title="Assignment Review" />} />
-          <Route path="student-self-report" element={<SettingsPlaceholder title="Student Self-Report" />} />
-          <Route path="email-reminders" element={<SettingsPlaceholder title="Email Reminders" />} />
-          <Route path="parent-guardian-rating" element={<SettingsPlaceholder title="Parent/Guardian Rating" />} />
+          <Route path="yearly-rating-setup" element={<SettingsPlaceholder title="Yearly rating setup" />} />
+          <Route path="assignment-review" element={<SettingsPlaceholder title="Assignment review" />} />
+          <Route path="student-self-report" element={<SettingsPlaceholder title="Student self report" />} />
+          <Route path="email-reminders" element={<SettingsPlaceholder title="Email reminders" />} />
+          <Route path="parent-guardian-rating" element={<SettingsPlaceholder title="Parent and guardian rating" />} />
         </Route>
         <Route path="/join" element={<JoinPage />} />
         <Route path="/insights" element={<Placeholder title="Data & Insights" />} />

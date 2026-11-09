@@ -5,7 +5,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { Calendar } from './calendar'
 import { cn } from '../../lib/utils'
 
-export function DatePicker({ value, onChange, placeholder = 'Pick a date', min, max, className, disabled, clearable = true }) {
+export function DatePicker({ value, onChange, placeholder = 'Pick a date', min, max, className, disabled, clearable = true, disableWeekends = false, id, ...rest }) {
   const [open, setOpen] = useState(false)
 
   const selected = value ? parseISO(value) : undefined
@@ -17,7 +17,9 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', min, 
       <Popover.Trigger asChild>
         <button
           type="button"
+          id={id}
           disabled={disabled}
+          {...rest}
           className={cn(
             'w-full flex items-center gap-2 text-sm border border-brand-border rounded-lg px-3 py-2 bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-dessa-teal/25 focus:border-dessa-teal',
             value ? 'text-brand-text' : 'text-brand-subtext',
@@ -48,7 +50,9 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', min, 
             onSelect={d => { onChange(d ? format(d, 'yyyy-MM-dd') : ''); setOpen(false) }}
             disabled={d =>
               (minDate && d < minDate) ||
-              (maxDate && d > maxDate)
+              (maxDate && d > maxDate) ||
+              // Reports (2026-10-26) only allow school days, so a range can never miss every school week.
+              (disableWeekends && (d.getDay() === 0 || d.getDay() === 6))
             }
             initialFocus
           />

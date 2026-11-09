@@ -14,6 +14,11 @@ const REPORT_GROUPS = [
       // { label: 'Site Engagement', to: 'site-engagement' },
       // { label: 'Daily Curriculum Engagement', to: 'dce' },
       { label: 'Engagement', to: 'engagement' },
+      // Content (2026-10-26): what's being taught, by course and competency. Replaces the legacy Content Overview.
+      { label: 'Content', to: 'content' }, // back to Content 2026-11-06, with the page title
+      // Students (2026-10-26): mood check-ins and journals that need a check-in. Replaces the legacy Students tab.
+      // Hidden from the sidebar 2026-10-28; the /reports/students route still works.
+      // { label: 'Students', to: 'students' },
     ],
   },
   {
@@ -44,7 +49,7 @@ const REPORT_GROUPS = [
 export default function ReportsLayout() {
   const { pathname } = useLocation()
   // Only the reports that honor the role show the switcher.
-  const showRoleSwitcher = pathname.endsWith('/site-engagement') || pathname.endsWith('/engagement')
+  const showRoleSwitcher = pathname.endsWith('/site-engagement') || pathname.includes('/engagement') || pathname.includes('/reports/content') || pathname.endsWith('/students')
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)]">
       <aside className="w-72 flex-shrink-0 border-r border-brand-border bg-white flex flex-col sticky top-14 self-start h-[calc(100vh-3.5rem)]">

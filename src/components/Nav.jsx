@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { NavLink, useLocation, useSearchParams, useNavigate } from 'react-router-dom'
-import { HelpCircle, Settings, Palette, MessageSquareText, GitCompare, ScrollText, ChevronDown, Check } from 'lucide-react'
+import { HelpCircle, Settings, Palette, MessageSquareText, GitCompare, ScrollText, ChevronDown, Check, Menu } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { useSiteEngagementConcept } from '../lib/siteEngagementConceptContext'
 import { useDceConcept } from '../lib/dceConceptContext'
 import { useEngagementConcept } from '../lib/engagementConceptContext'
 import { useEngagementVersion } from '../lib/engagementVersionContext'
 import { useDashboardConcept } from '../lib/dashboardConceptContext'
+import { useSettingsConcept } from '../lib/settingsConceptContext'
+import { useContentConcept } from '../lib/contentConceptContext'
+import { useRole } from '../lib/roleContext'
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { RESOURCES_GRADE_GROUPS } from '../pages/ResourcesAltConcepts'
 
@@ -60,6 +63,29 @@ const DASHBOARD_CONCEPTS = [
   { value: 'e', label: 'E', title: 'E, New customer: an editorial layout with the two cards as ruled columns' },
 ]
 
+// Settings concept switcher (2026-10-23), same dropdown as the Dashboard's.
+const SETTINGS_CONCEPTS = [
+  { value: 'a', label: 'A', title: 'A, Tabs across the top of the page, under a Settings title' },
+  { value: 'b', label: 'B', title: 'B, Settings in a large modal over the page' },
+  { value: 'c', label: 'C', title: 'C, Tabs in a subnav directly beneath the primary nav' },
+  { value: 'd', label: 'D', title: 'D, The modal from B with a left nav inside instead of tabs' },
+]
+
+// Content report concept switcher (2026-10-27), for the Courses tab.
+const CONTENT_CONCEPTS = [
+  // A commented out 2026-10-28: B's band cards and C's grade rows replace the ranked course table.
+  // { value: 'a', label: 'A', title: 'A, A table of courses ranked by lessons completed' },
+  // B to D out of the switcher 2026-11-06, which is back for E against F. Their code stays.
+  // { value: 'b', label: 'B', title: 'B, Grade band cards with where classes are in each course' },
+  // { value: 'c', label: 'C', title: 'C, One row per grade that opens its course page, and user pages' },
+  // { value: 'd', label: 'D', title: 'D, Lessons completed by course and by competency, side by side, no tabs' },
+  // E is D's copy (2026-11-03), with Lessons completed in each card's title and bars only.
+  { value: 'e', label: 'E', title: 'E, Lessons completed by course and by competency, bars only' },
+  // F, G and H (band sections, course type buttons over tile cards, a card per grade) deleted 2026-11-03.
+  // A new F (2026-11-06), from the course progress mock the user's manager shared.
+  { value: 'f', label: 'F', title: 'F, A course progress table with users started, completed and average progress' },
+]
+
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 
 const navItems = [
@@ -102,7 +128,11 @@ export default function Nav() {
   const { engagementConcept, setEngagementConcept } = useEngagementConcept()
   const { ytdPreview, setYtdPreview, overviewTab } = useEngagementVersion()
   const { dashboardConcept, setDashboardConcept, rated, setRated } = useDashboardConcept()
+  const { settingsConcept, setSettingsConcept } = useSettingsConcept()
+  const { contentConcept, setContentConcept } = useContentConcept()
+  const { role, setRole } = useRole()
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   function goToGrade(grade) {
     setGradeMenuOpen(false)
@@ -113,6 +143,35 @@ export default function Nav() {
     <nav className="bg-white border-b border-brand-border shadow-sm sticky top-0 z-50">
       <div className="px-6 h-14 flex items-center gap-6">
 
+        {/* Hamburger (2026-10-23): below 1670px the nav links collapse into this menu. Prototype controls and the
+            help and settings icons stay in the bar. */}
+        <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
+          <Popover.Trigger asChild>
+            <button type="button" aria-label="Open menu" className="min-[1670px]:hidden -mr-2 p-1.5 rounded text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors shrink-0">
+              <Menu size={18} />
+            </button>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content align="start" sideOffset={12} className="z-50 w-56 bg-white border border-brand-border rounded-lg shadow-lg outline-none p-1.5 flex flex-col gap-0.5">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  onClick={() => setMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isActive ? 'text-dessa-teal bg-dessa-tealLight' : 'text-brand-text hover:bg-brand-bg'
+                    }`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+
         {/* Logo */}
         <NavLink to="/" className="flex items-center mr-4 flex-shrink-0">
           <img src="/dessa-mtw-logo.svg" alt="DESSA x Move This World" className="h-5 w-auto" />
@@ -120,6 +179,7 @@ export default function Nav() {
 
         {/* Nav items */}
         <div className="flex items-center gap-0.5 flex-1">
+          <div className="hidden min-[1670px]:flex items-center gap-0.5">
           {navItems.map((item) =>
             item.to === '/resource-library' ? (
               <div
@@ -131,7 +191,7 @@ export default function Nav() {
                 <NavLink
                   to={item.to}
                   className={({ isActive }) =>
-                    `flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                    `flex items-center gap-1 px-3 py-1.5 rounded text-[13px] font-medium transition-colors ${
                       isActive || gradeMenuOpen
                         ? 'text-dessa-teal bg-dessa-tealLight'
                         : 'text-brand-subtext hover:text-brand-text hover:bg-brand-bg'
@@ -181,7 +241,7 @@ export default function Nav() {
                 end={item.to === '/'}
                 title={item.title}
                 className={({ isActive }) =>
-                  `px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  `px-3 py-1.5 rounded text-[13px] font-medium transition-colors ${
                     isActive
                       ? 'text-dessa-teal bg-dessa-tealLight'
                       : 'text-brand-subtext hover:text-brand-text hover:bg-brand-bg'
@@ -192,6 +252,7 @@ export default function Nav() {
               </NavLink>
             )
           )}
+          </div>
 
           {/* Resources-only design-review toggle — retired 2026-08-28
               (manager picked Concept C, left-aligned + scrolling rows, as
@@ -410,6 +471,86 @@ export default function Nav() {
               </Popover.Portal>
             </Popover.Root>
           )}
+          {/* Settings (2026-10-23): the Program admin | Site leader role switcher (moved here from the old sidebar)
+              and the layout concept switcher. */}
+          {location.pathname.startsWith('/settings') && (
+            <Tabs value={role} onValueChange={setRole} className="shrink-0 mr-2">
+              <TabsList className="p-0.5">
+                <TabsTrigger value="program_admin" className="text-xs px-3 py-1">Program admin</TabsTrigger>
+                <TabsTrigger value="site_leader" className="text-xs px-3 py-1">Site leader</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {location.pathname.startsWith('/settings') && (
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button
+                  title={SETTINGS_CONCEPTS.find((c) => c.value === settingsConcept)?.title}
+                  className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-brand-border bg-white text-xs font-medium text-brand-text hover:bg-brand-bg transition-colors shrink-0 mr-1"
+                >
+                  {SETTINGS_CONCEPTS.find((c) => c.value === settingsConcept)?.label}
+                  <ChevronDown size={12} className="text-brand-subtext" />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  align="end"
+                  sideOffset={6}
+                  className="z-50 w-48 bg-white border border-brand-border rounded-xl shadow-lg outline-none py-1.5"
+                >
+                  {SETTINGS_CONCEPTS.map((c) => (
+                    <button
+                      key={c.value}
+                      title={c.title}
+                      onClick={() => setSettingsConcept(c.value)}
+                      className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left transition-colors ${
+                        settingsConcept === c.value ? 'text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
+                      }`}
+                    >
+                      {c.label}
+                      {settingsConcept === c.value && <Check size={13} className="text-dessa-teal" />}
+                    </button>
+                  ))}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+          )}
+          {/* Content concept switcher commented out 2026-11-09 for main: E is the pick, F carries on in the
+              content-concept-f branch. It was back 2026-11-06 for E against F.
+          {location.pathname === '/reports/content' && (
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button
+                  title={CONTENT_CONCEPTS.find((c) => c.value === contentConcept)?.title}
+                  className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-brand-border bg-white text-xs font-medium text-brand-text hover:bg-brand-bg transition-colors shrink-0 mr-1"
+                >
+                  {CONTENT_CONCEPTS.find((c) => c.value === contentConcept)?.label}
+                  <ChevronDown size={12} className="text-brand-subtext" />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  align="end"
+                  sideOffset={6}
+                  className="z-50 w-48 bg-white border border-brand-border rounded-xl shadow-lg outline-none py-1.5"
+                >
+                  {CONTENT_CONCEPTS.map((c) => (
+                    <button
+                      key={c.value}
+                      title={c.title}
+                      onClick={() => setContentConcept(c.value)}
+                      className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left transition-colors ${
+                        contentConcept === c.value ? 'text-dessa-teal font-medium' : 'text-brand-text hover:bg-brand-bg'
+                      }`}
+                    >
+                      {c.label}
+                      {contentConcept === c.value && <Check size={13} className="text-dessa-teal" />}
+                    </button>
+                  ))}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+          )} */}
           {/* Concept B's illustration subtab (2026-10-19), same Tabs as the Engagement Today | End of year preview. */}
           {/* Before | After ratings (2026-10-20): resets or skips the simulated rating flow on the Dashboard. */}
           {location.pathname === '/' && (
