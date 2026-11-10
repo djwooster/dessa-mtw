@@ -112,7 +112,10 @@ const usersCourseLabel = list => (list.length > 1 ? `${list.length} courses` : c
 // A unit's name in a course (2026-11-06, the unit view), "Unit 2, Naming What We Feel". Mock: every Tier 1 course
 // borrows the curriculum's 36 units, every Tier 2 course the Early elementary sessions, without their dashes.
 const TIER2_UNIT_NAMES = [...new Set(tier2EarlyElementaryUnits.map(u => u.title))]
+// Review units (2026-11-10, from the manager's unit view mock): Tier 1's units 17 and 36 go back over what came before.
+export const isReview = (course, n) => course?.type === 'core' && (n === 17 || n === 36)
 export function unitName(course, n) {
+  if (isReview(course, n)) return `Unit ${n}, Review`
   const title = course.type === 'core' ? TIER1_UNITS[n - 1]?.title.replace(/^Unit \d+ — /, '')
     : course.type === 'tier2' ? TIER2_UNIT_NAMES[n - 1]
     : course.type === 'adult' ? adultWellnessUnits[n - 1]?.title

@@ -16,6 +16,7 @@ import CompetencyMix from '../components/content/CompetencyMix'
 import CompetencyMixOriginal from '../components/content/CompetencyMixOriginal'
 import { useRole } from '../lib/roleContext'
 import { FIRST_DATE, LAST_DATE, rangeLabel, weeksForDates, SortButton, nextSort, SearchField, agoRank } from './Report2ConceptE'
+import { activityDate, courseInsights, UnitChart } from '../components/content/CourseInsights'
 
 // Content report (2026-10-26): "What are we teaching?" Replaces the legacy Content Overview's four charts
 // (lessons per course by school, competencies per day, competencies per user, Power of Pause) and the legacy
@@ -477,15 +478,21 @@ export function progressGroups(data) {
     const ps = users.map(u => u.courseProgress?.[course.id]).filter(Boolean)
     const started = users.filter(u => (u.courseProgress?.[course.id]?.done ?? 0) > 0)
     const sp = started.map(u => u.courseProgress[course.id])
-    let last = null
-    started.forEach(u => { try { if (last == null || agoRank(u.last) < agoRank(last)) last = u.last } catch { /* an odd label is skipped */ } })
+    let last = Infinity
+    started.forEach(u => { try { last = Math.min(last, agoRank(u.last)) } catch { /* an odd label is skipped */ } })
+    // Median furthest unit (2026-11-10, the manager's mock): the furthest unit each user who started has completed.
+    const furthest = sp.map(p => Math.max(0, ...(p.units ?? []))).sort((a, b) => a - b)
     return {
       key, name, to, units: course.lessons, users: users.length, lessons,
       started: started.length,
       completed: ps.filter(p => p.done >= p.total).length,
       avg: sp.length ? sp.reduce((sum, p) => sum + p.done / p.total, 0) / sp.length : 0,
       avgUnits: sp.length ? Math.round(sp.reduce((sum, p) => sum + p.done, 0) / sp.length) : 0,
-      last: last ?? 'Not yet',
+      median: furthest.length ? furthest[Math.floor((furthest.length - 1) / 2)] : 0,
+      // Last activity as a rank in minutes, shown as a date (2026-11-10).
+      last,
+      // For the row's unit chart, worked out when it opens.
+      course, members: users,
     }
   }
   return [
@@ -501,20 +508,37 @@ export function progressGroups(data) {
   ].filter(g => g.rows.length)
 }
 
+// Columns as in the manager's mock (2026-11-10): Units and Median furthest unit in, Lessons completed out (it's the
+// report's first stat), Last active now Last activity, as a date.
 const F_COLS = [
   { key: 'order', label: 'Course', first: 'asc' },
-  { key: 'lessons', label: 'Lessons completed', first: 'desc', right: true },
+  { key: 'units', label: 'Units', first: 'desc', right: true },
+  // { key: 'lessons', label: 'Lessons completed', first: 'desc', right: true },
   { key: 'started', label: 'Users started', first: 'desc', right: true },
   { key: 'completed', label: 'Users completed', first: 'desc', right: true },
   { key: 'avg', label: 'Average progress', first: 'desc' },
-  { key: 'last', label: 'Last active', first: 'asc', right: true },
+  { key: 'median', label: 'Median furthest unit', first: 'desc' },
+  { key: 'last', label: 'Last activity', first: 'asc', right: true },
 ]
+// A course row opens to its unit chart (2026-11-10), with a link to the course's page for the full unit view.
+function CourseUnits({ row }) {
+  const data = useMemo(() => courseInsights({ users: row.members, part: u => coursePart(u, row.course.id), progressOf: u => u.courseProgress?.[row.course.id], weeks: [], course: row.course }), [row])
+  return (
+    <div className="px-5 py-4">
+      {data.started ? <UnitChart data={data} /> : <p className="text-sm text-brand-subtext">No users have started this course yet.</p>}
+      <Link to={row.to} className="group mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">
+        Open unit view <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+      </Link>
+    </div>
+  )
+}
 export function CourseProgressTable({ groups, action }) {
   const [sort, setSort] = useState({ key: 'order', dir: 'asc' })
+  const [open, setOpen] = useState(() => new Set())
+  const toggle = key => setOpen(o => { const next = new Set(o); next.has(key) ? next.delete(key) : next.add(key); return next })
   const sets = useMemo(() => groups.map(g => ({ ...g, rows: [...g.rows].sort((a, b) => {
     const dir = sort.dir === 'asc' ? 1 : -1
-    if (sort.key === 'last') return dir * (agoRank(a.last) - agoRank(b.last) || 0) || a.order - b.order
-    return dir * (a[sort.key] - b[sort.key]) || a.order - b.order
+    return dir * (a[sort.key] - b[sort.key] || 0) || a.order - b.order
   }) })), [groups, sort])
   const labelled = sets.length > 1
   return (
@@ -528,7 +552,7 @@ export function CourseProgressTable({ groups, action }) {
           <TableHeader>
             <TableRow>
               {F_COLS.map(c => (
-                <TableHead key={c.key} className={`${c.right ? 'text-right' : ''} ${c.key === 'avg' ? 'w-56' : ''} ${c.key === 'order' ? 'pl-5' : ''} ${c.key === 'last' ? 'pr-5' : ''}`}>
+                <TableHead key={c.key} className={`${c.right ? 'text-right' : ''} ${c.key === 'avg' ? 'w-48' : ''} ${c.key === 'order' ? 'pl-5' : ''} ${c.key === 'last' ? 'pr-5' : ''}`}>
                   <SortButton label={c.label} col={c.key} sort={sort} onSort={k => setSort(st => nextSort(st, k, c.first))} align={c.right ? 'right' : 'left'} />
                 </TableHead>
               ))}
@@ -544,11 +568,21 @@ export function CourseProgressTable({ groups, action }) {
                 )}
                 {g.rows.map(r => {
                   const pctDone = Math.round(r.avg * 100)
+                  const expanded = open.has(r.key)
                   return (
-                    <TableRow key={r.key} className="hover:bg-transparent">
-                      <TableCell className="pl-5 font-medium"><Link to={r.to} className="text-dessa-teal hover:underline underline-offset-4">{r.name}</Link></TableCell>
-                      <TableCell className="text-right tabular-nums">{r.lessons.toLocaleString()}</TableCell>
-                      <TableCell className="text-right tabular-nums">{r.started.toLocaleString()} <span className="text-xs text-brand-subtext">of {r.users.toLocaleString()}</span></TableCell>
+                    <Fragment key={r.key}>
+                    {/* The whole row opens it, like the unit table's rows. The name was a link to the course page until
+                        2026-11-10; the open row's Open unit view goes there now. */}
+                    <TableRow onClick={() => toggle(r.key)} className="cursor-pointer hover:bg-brand-bg/60">
+                      <TableCell className="pl-3 py-1.5 font-medium">
+                        <button type="button" aria-expanded={expanded} aria-controls={`course-${r.key}-units`} className="flex items-center gap-2 h-8 px-2 rounded-md text-left whitespace-nowrap">
+                          <svg viewBox="0 0 8 8" className={`w-2.5 h-2.5 shrink-0 fill-dessa-teal transition-transform ${expanded ? 'rotate-90' : ''}`} aria-hidden="true"><path d="M2 0.5 L7 4 L2 7.5 Z" /></svg>
+                          {r.name}
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">{r.units.toLocaleString()}</TableCell>
+                      {/* <TableCell className="text-right tabular-nums">{r.lessons.toLocaleString()}</TableCell> */}
+                      <TableCell className="text-right tabular-nums">{r.started.toLocaleString()}</TableCell>
                       <TableCell className="text-right tabular-nums">{r.completed.toLocaleString()}</TableCell>
                       <TableCell>
                         <span className="flex items-center gap-3">
@@ -563,8 +597,15 @@ export function CourseProgressTable({ groups, action }) {
                           </span>
                         </span>
                       </TableCell>
-                      <TableCell className="pr-5 text-right text-brand-subtext whitespace-nowrap">{r.last}</TableCell>
+                      <TableCell className="whitespace-nowrap">{r.median ? `Unit ${r.median}` : <span className="text-brand-subtext">Not yet</span>}</TableCell>
+                      <TableCell className="pr-5 text-right text-brand-subtext whitespace-nowrap">{activityDate(r.last)}</TableCell>
                     </TableRow>
+                    {expanded && (
+                      <TableRow id={`course-${r.key}-units`} className="hover:bg-transparent">
+                        <TableCell colSpan={F_COLS.length} className="p-0 bg-brand-bg/40"><CourseUnits row={r} /></TableCell>
+                      </TableRow>
+                    )}
+                    </Fragment>
                   )
                 })}
               </Fragment>
@@ -911,7 +952,7 @@ export function ContentFilters({ showSite = true, showRole = true, showType = fa
       action={action}
       extraFields={<>
         {showType && <CourseTypeSelect value={draft.type} onChange={v => set({ type: v })} />}
-        {extra?.main(draft, set)}
+        {extra?.main?.(draft, set)}
       </>}
       moreFields={extra ? extra.more(draft, set) : null}
       moreCount={extra ? extra.moreCount(draft) : 0}
@@ -1054,8 +1095,8 @@ export default function ReportContent() {
   const cardExports = contentConcept === 'e' || contentConcept === 'f'
   const fGroups = useMemo(() => (contentConcept === 'f' ? progressGroups(data) : []), [contentConcept, data])
   function exportProgress() {
-    download('course-progress.csv', ['Course type', 'Course', 'Lessons completed', 'Users started', 'Users', 'Users completed', 'Average progress percent', 'Average units completed', 'Units in course', 'Last active'],
-      fGroups.flatMap(g => g.rows.map(r => [g.label, r.name, r.lessons, r.started, r.users, r.completed, Math.round(r.avg * 100), r.avgUnits, r.units, r.last])))
+    download('course-progress.csv', ['Course type', 'Course', 'Units', 'Users started', 'Users', 'Users completed', 'Average progress percent', 'Median furthest unit', 'Last activity'],
+      fGroups.flatMap(g => g.rows.map(r => [g.label, r.name, r.units, r.started, r.users, r.completed, Math.round(r.avg * 100), r.median || 'Not yet', activityDate(r.last)])))
   }
   const menu = (
     <MoreMenu items={[

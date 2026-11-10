@@ -1,8 +1,9 @@
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, subMinutes } from 'date-fns'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { LESSONS_PER_UNIT, unitName } from '../../lib/contentReportData'
+// import { TrendingDown } from 'lucide-react' // for the largest drop-off, out 2026-11-10
+import { LESSONS_PER_UNIT, isReview, unitName } from '../../lib/contentReportData'
 import { Fragment, useState } from 'react'
-import { SortButton, nextSort } from '../../pages/Report2ConceptE'
+import { SortButton, nextSort, agoRank } from '../../pages/Report2ConceptE'
 import { Defined } from '../../pages/ReportContent'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table'
 
@@ -40,6 +41,9 @@ const BUCKETS = [
 // has a few of its lessons done (mock, steady per user); the rest have none. A user has started the course once
 // they've done any lesson.
 const LESSONS_IN_UNIT = 5
+const WEEK = 7 * 1440
+// Last activity as a date (2026-11-10, the manager's mocks), from a last active rank in minutes: "Nov 5, 2026".
+export const activityDate = rank => (rank === Infinity ? 'Not yet' : format(subMinutes(new Date(), rank), 'MMM d, yyyy'))
 const steady = str => { let x = 7; for (let i = 0; i < str.length; i++) x = (x * 31 + str.charCodeAt(i)) >>> 0; return x }
 const firstMissing = p => { for (let n = 1; n <= p.total; n++) if (!p.units?.includes(n)) return n; return null }
 export function lessonsDone(u, p, unit) {
@@ -104,7 +108,26 @@ export function courseInsights({ users, part, progressOf, weeks, course }) {
     r.lessons = Array.from({ length: LESSONS_IN_UNIT }, (_, k) => ({ lesson: k + 1, users: started.filter(x => lessonsDone(x.u, x.p, r.unit) >= k + 1).length }))
   })
 
-  return { total, buckets, median, furthest, users: progress.length, started: started.length, units: units.map(x => ({ ...x, users: x.users.size })), unitUsers, unitRows, weekly }
+  // The unit view (2026-11-10, from the manager's chart and table mocks): Getting Started, then every unit, with the
+  // users who started and completed each and when it was last taught. Getting Started is unit 0. Mock: most users
+  // who started the course have marked it complete. A unit's last activity is the user's own, a week further back
+  // for each unit between it and where they are now.
+  const top = x => Math.max(0, ...(x.p.units ?? []), lessonsDone(x.u, x.p, firstMissing(x.p)) > 0 ? firstMissing(x.p) : 0)
+  const unitView = [{ unit: 0, name: 'Getting Started' }, ...unitRows.map(r => ({ unit: r.unit, name: r.name, review: isReview(course, r.unit), lessons: r.lessons }))].map(r => {
+    const touched = started.filter(x => (r.unit === 0 ? true : x.p.units?.includes(r.unit) || lessonsDone(x.u, x.p, r.unit) > 0))
+    const completed = r.unit === 0 ? started.filter(x => x.p.done > 0 || steady(`${x.u.key}|gs`) % 10 < 8).length : touched.filter(x => x.p.units?.includes(r.unit)).length
+    let last = Infinity
+    touched.forEach(x => { try { last = Math.min(last, agoRank(x.u.last) + Math.max(0, top(x) - r.unit) * WEEK) } catch { /* an odd label is skipped */ } })
+    return { ...r, started: touched.length, completed, last }
+  })
+  // The largest fall in completion from one unit to the next, Getting Started aside.
+  let dropOff = null
+  for (let i = 2; i < unitView.length; i++) {
+    const fall = unitView[i - 1].completed - unitView[i].completed
+    if (fall > 0 && (!dropOff || fall > dropOff.fall)) dropOff = { from: unitView[i - 1], to: unitView[i], fall }
+  }
+
+  return { total, buckets, median, furthest, users: progress.length, started: started.length, units: units.map(x => ({ ...x, users: x.users.size })), unitUsers, unitRows, unitView, dropOff, weekly }
 }
 
 // Horizontal bars with a label and a count on the right, the competency bars' shape in one color.
@@ -407,6 +430,218 @@ export function UnitView({ data, action, onNotYet, highlight }) {
             </button>
           </div>
         )}
+      </>)}
+    </section>
+  )
+}
+
+// ─── Unit view (2026-11-10, modelled on the manager's chart and table mocks) ────────
+// One card with Chart and Table tabs. Both cover Getting Started and every unit; review units read in coral. The
+// chart is users who completed each unit, with the largest drop-off from one unit to the next under it; the table
+// adds the users who started each unit, the share who completed it and its last activity. Completion is out of the
+// users who started the course.
+const pctOf = (n, d) => (d ? Math.round((n / d) * 100) : 0)
+const axisName = r => (r.unit === 0 ? 'Getting Started' : `Unit ${r.unit}${r.review ? ' (Review)' : ''}`)
+const tooltip = 'z-50 px-3 py-2 rounded-md bg-brand-text text-white text-xs leading-5 shadow-lg'
+
+export function UnitChart({ data }) {
+  const rows = data.unitView
+  const n = data.started
+  const max = Math.max(1, ...rows.map(r => r.completed))
+  const last = rows.length - 1
+  // Getting Started, then the units a quarter, half and three quarters through, and the last.
+  const marks = new Set([0, ...[0.25, 0.5, 0.75, 1].map(f => Math.ceil(last * f))])
+  const completedText = r => (r.completed ? `Completed by ${r.completed.toLocaleString()} of ${usersText(n)}, ${pctOf(r.completed, n)}%` : 'Nobody has completed it yet')
+  return (
+    <Tooltip.Provider delayDuration={100}>
+      <ol className="flex items-end gap-0.5 sm:gap-1 h-48" aria-label={`Users who completed each unit, of the ${usersText(n)} who started this course`}>
+        {rows.map(r => (
+          <li key={r.unit} className="flex-1 min-w-0 h-full">
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <button type="button" aria-label={`${r.name}. ${completedText(r)}. Started by ${usersText(r.started)}`} className="group w-full h-full flex flex-col justify-end cursor-pointer">
+                  <span
+                    className={`block w-full rounded-t-sm transition-colors ${!r.completed ? 'bg-brand-bg' : r.review ? 'bg-mtw-coral group-hover:bg-mtw-coral/80' : 'bg-dessa-teal group-hover:bg-dessa-navy'}`}
+                    style={{ height: r.completed ? `${(r.completed / max) * 100}%` : 4 }}
+                  />
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content side="top" sideOffset={6} className={tooltip}>
+                  <p className="font-semibold">{r.name}</p>
+                  <p>{completedText(r)}</p>
+                  <p>Started by {usersText(r.started)}</p>
+                  <Tooltip.Arrow className="fill-brand-text" />
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          </li>
+        ))}
+      </ol>
+      <div className="flex gap-0.5 sm:gap-1 mt-2 pt-1.5 border-t border-brand-border" aria-hidden="true">
+        {rows.map((r, i) => (
+          <span key={r.unit} className="relative flex-1 min-w-0 h-4">
+            {marks.has(i) && (
+              <span className={`absolute top-0 whitespace-nowrap text-xs text-brand-subtext ${i === 0 ? 'left-0' : i === last ? 'right-0' : 'left-1/2 -translate-x-1/2'}`}>{axisName(r)}</span>
+            )}
+          </span>
+        ))}
+      </div>
+      <div className="flex items-center gap-4 mt-4 text-xs text-brand-subtext" aria-hidden="true">
+        <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-dessa-teal" />Units</span>
+        {rows.some(r => r.review) && <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-mtw-coral" />Review units</span>}
+      </div>
+      {/* Largest drop-off out 2026-11-10.
+      {data.dropOff && (
+        <p className="flex items-start gap-2 mt-4 px-4 py-3 rounded-md bg-brand-bg text-sm text-brand-text">
+          <TrendingDown size={16} className="shrink-0 mt-0.5 text-mtw-coral" aria-hidden="true" />
+          <span>
+            <span className="font-semibold">Largest drop-off:</span> users completing Unit {data.dropOff.from.unit} ({pctOf(data.dropOff.from.completed, n)}%)
+            {' '}to Unit {data.dropOff.to.unit} ({pctOf(data.dropOff.to.completed, n)}%)
+          </span>
+        </p>
+      )} */}
+    </Tooltip.Provider>
+  )
+}
+
+const UV_COLS = [
+  { key: 'unit', label: 'Unit', first: 'asc' },
+  // Every user in the course (2026-11-10), the same on each row, so it doesn't sort.
+  { key: 'total', label: 'Total users', right: true, fixed: true },
+  { key: 'started', label: 'Users started', first: 'desc', right: true },
+  { key: 'completed', label: 'Users completed', first: 'desc', right: true },
+  { key: 'pct', label: 'Completion', first: 'desc' },
+  { key: 'last', label: 'Last activity', first: 'asc', right: true },
+]
+
+// Each unit row still opens its five lessons (2026-11-06), which have users completed and completion only.
+export function UnitTable({ data }) {
+  const [sort, setSort] = useState({ key: 'unit', dir: 'asc' })
+  const [all, setAll] = useState(false)
+  const [open, setOpen] = useState(() => new Set())
+  const toggle = unit => setOpen(o => { const next = new Set(o); next.has(unit) ? next.delete(unit) : next.add(unit); return next })
+  const n = data.started
+  const value = (r, k) => (k === 'pct' ? r.completed : r[k])
+  const rows = [...data.unitView].sort((a, b) => (sort.dir === 'asc' ? 1 : -1) * (value(a, sort.key) - value(b, sort.key) || 0) || a.unit - b.unit)
+  const shown = all ? rows : rows.slice(0, FIRST)
+  const completion = (users, label, sub) => (
+    <span className="flex items-center gap-3">
+      <span
+        role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pctOf(users, n)} aria-valuetext={`${pctOf(users, n)}%`}
+        className={`w-20 shrink-0 ${sub ? 'h-1.5' : 'h-2'} rounded-full bg-brand-bg overflow-hidden`}
+      >
+        <span className="block h-full rounded-full bg-dessa-teal" style={{ width: `${pctOf(users, n)}%` }} />
+      </span>
+      <span className={`tabular-nums ${sub ? 'text-brand-subtext' : ''}`} aria-hidden="true">{pctOf(users, n)}%</span>
+    </span>
+  )
+  return (
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            {UV_COLS.map(c => (
+              <TableHead key={c.key} className={`${c.right ? 'text-right' : ''} ${c.key === 'unit' ? 'pl-5' : ''} ${c.key === 'pct' ? 'w-40' : ''} ${c.key === 'last' ? 'pr-5' : ''}`}>
+                {c.fixed ? <span className="font-medium text-brand-text">{c.label}</span>
+                  : <SortButton label={c.label} col={c.key} sort={sort} onSort={k => setSort(st => nextSort(st, k, c.first))} align={c.right ? 'right' : 'left'} />}
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {shown.map(r => {
+            const expanded = open.has(r.unit)
+            const opens = !!r.lessons
+            return (
+              <Fragment key={r.unit}>
+                <TableRow onClick={opens ? () => toggle(r.unit) : undefined} className={opens ? 'cursor-pointer hover:bg-brand-bg/60' : 'hover:bg-transparent'}>
+                  <TableCell className="pl-3 py-1.5 max-w-0 w-full">
+                    {opens ? (
+                      <button type="button" aria-expanded={expanded} aria-controls={`unit-view-${r.unit}-lessons`} title={r.name} className="w-full flex items-center gap-2 min-w-0 h-8 px-2 rounded-md text-left">
+                        <svg viewBox="0 0 8 8" className={`w-2.5 h-2.5 shrink-0 fill-dessa-teal transition-transform ${expanded ? 'rotate-90' : ''}`} aria-hidden="true"><path d="M2 0.5 L7 4 L2 7.5 Z" /></svg>
+                        <span className="truncate">{r.name}</span>
+                      </button>
+                    ) : (
+                      <span className="flex items-center gap-2 min-w-0 h-8 px-2">
+                        <span className="w-2.5 shrink-0" aria-hidden="true" />
+                        <span className="truncate">{r.name}</span>
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="py-1.5 text-right tabular-nums">{data.users.toLocaleString()}</TableCell>
+                  <TableCell className="py-1.5 text-right tabular-nums">{r.started.toLocaleString()}</TableCell>
+                  <TableCell className="py-1.5 text-right tabular-nums">{r.completed.toLocaleString()}</TableCell>
+                  <TableCell className="py-1.5">{completion(r.completed, `${r.name}, completion`)}</TableCell>
+                  <TableCell className="pr-5 py-1.5 text-right whitespace-nowrap text-brand-subtext">{activityDate(r.last)}</TableCell>
+                </TableRow>
+                {expanded && r.lessons.map(l => (
+                  <TableRow key={l.lesson} id={l.lesson === 1 ? `unit-view-${r.unit}-lessons` : undefined} className="hover:bg-transparent bg-brand-bg/40">
+                    <TableCell className="pl-3 py-2 max-w-0 w-full">
+                      <span className="flex items-center gap-2 min-w-0 px-2">
+                        <span className="w-2.5 shrink-0" aria-hidden="true" />
+                        <span className="truncate text-brand-subtext">Lesson {l.lesson}</span>
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-2" />
+                    <TableCell className="py-2" />
+                    <TableCell className="py-2 text-right tabular-nums text-brand-subtext">{l.users.toLocaleString()}</TableCell>
+                    <TableCell className="py-2">{completion(l.users, `Unit ${r.unit} lesson ${l.lesson}, completion`, true)}</TableCell>
+                    <TableCell className="pr-5 py-2" />
+                  </TableRow>
+                ))}
+              </Fragment>
+            )
+          })}
+        </TableBody>
+      </Table>
+      {rows.length > FIRST && (
+        <div className="px-5 py-3 border-t border-brand-border">
+          <button type="button" onClick={() => setAll(a => !a)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">
+            {all ? 'Show fewer units' : `Show all ${rows.length} units`}
+          </button>
+        </div>
+      )}
+    </>
+  )
+}
+
+// Table first and open by default (2026-11-10).
+const UV_TABS = [['table', 'Table'], ['chart', 'Chart']]
+// "Unit view" (2026-11-10). Was "1st grade unit view" with the course type beside it; `title` and `tier` are kept
+// for that.
+export function CourseUnitView({ data, title, tier, action }) {
+  const [view, setView] = useState('table')
+  function onTabKey(e) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
+    e.preventDefault()
+    const next = view === 'chart' ? 'table' : 'chart'
+    setView(next)
+    e.currentTarget.querySelector(`[data-tab="${next}"]`)?.focus()
+  }
+  return (
+    <section className="bg-white rounded-lg border border-brand-border overflow-hidden">
+      <div className="flex items-center justify-between gap-4 min-h-9 px-5 pt-5">
+        <h3 className="flex items-center gap-2 text-base font-semibold text-brand-text">
+          Unit view
+          {/* {title} unit view
+          {tier && <span className="px-2 py-0.5 rounded-md bg-brand-bg text-xs font-medium text-brand-subtext">{tier}</span>} */}
+        </h3>
+        {action}
+      </div>
+      {!data.started ? <p className="px-5 pt-4 pb-5 text-sm text-brand-subtext">No users have started this course yet.</p> : (<>
+        <div role="tablist" aria-label="Unit view" className="flex gap-4 px-5 mt-2 border-b border-brand-border" onKeyDown={onTabKey}>
+          {UV_TABS.map(([k, label]) => (
+            <button
+              key={k} data-tab={k} type="button" role="tab" id={`unit-view-tab-${k}`} aria-selected={view === k} aria-controls="unit-view-panel" tabIndex={view === k ? 0 : -1}
+              onClick={() => setView(k)}
+              className={`pb-2 -mb-px text-sm font-medium border-b-2 transition-colors ${view === k ? 'border-dessa-teal text-brand-text' : 'border-transparent text-brand-subtext hover:text-brand-text'}`}
+            >{label}</button>
+          ))}
+        </div>
+        <div id="unit-view-panel" role="tabpanel" aria-labelledby={`unit-view-tab-${view}`}>
+          {view === 'chart' ? <div className="p-5"><UnitChart data={data} /></div> : <UnitTable data={data} />}
+        </div>
       </>)}
     </section>
   )

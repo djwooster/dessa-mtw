@@ -12,7 +12,7 @@ import { SortButton, nextSort, agoRank } from './Report2ConceptE'
 import { schools } from '../lib/report2Data'
 import { useRole } from '../lib/roleContext'
 import CompetencyMix, { ConceptSelect } from '../components/content/CompetencyMix'
-import { courseInsights, hasStarted, lessonsDone, ProgressDistribution, /* UnitLessons, UnitUsers, */ UnitView, UNIT_VIEWS, WeeklyLessons } from '../components/content/CourseInsights'
+import { activityDate, courseInsights, CourseUnitView, hasStarted, lessonsDone, ProgressDistribution, /* UnitLessons, UnitUsers, */ UnitView, UNIT_VIEWS, WeeklyLessons } from '../components/content/CourseInsights'
 import { format, parseISO } from 'date-fns'
 import ProfileCard, { CourseTile } from '../components/content/ProfileCard'
 
@@ -310,12 +310,14 @@ function GroupPageClassic({ title, avatar, meta, users, part, progressOf, path, 
 // follow you to another course). Everything narrows to the matching users, a results line says how many, and the
 // units and sites tables' counts are shortcuts that set the filters. Tabs: Units, Users, Competencies, Sites; the
 // Users tab replaces both the Course progress tab and the users table under the tabs.
-const G_TABS = [['units', 'Units'], ['users', 'Users'], ['competencies', 'Competencies'], ['sites', 'Sites']]
+// Users out of the tabs 2026-11-10: the users table sits under them, always showing.
+const G_TABS = [['units', 'Units'], /* ['users', 'Users'], */ ['competencies', 'Competencies'], ['sites', 'Sites']]
 const COURSE_BLANK = { unit: '', lesson: '', status: '', progress: [], active: '' }
 const readCourse = params => ({
   unit: params.get('unit') ?? '',
   lesson: params.get('lesson') ?? '',
-  status: params.get('status') ?? '',
+  // With the Completion filter out (2026-11-10), an old link's status is ignored.
+  status: '', // params.get('status') ?? '',
   progress: params.get('progress') ? params.get('progress').split(',') : [],
   active: params.get('active') ?? '',
 })
@@ -362,6 +364,7 @@ function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, s
   const [filterKey, setFilterKey] = useState(0)
   const [tab, setTab] = useState('units')
   const tabRefs = useRef({})
+  const usersRef = useRef(null)
   const total = course.lessons
   const bands = useMemo(() => progressBands(total), [total])
   const unitNum = Number(f.unit) || null
@@ -396,36 +399,40 @@ function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, s
   const siteTotal = new Set(all.map(u => u.sc.id)).size
   const [siteSort, setSiteSort] = useState({ key: 'lessons', dir: 'desc' })
 
-  // Shortcuts: a Not yet count picks its unit (and lesson) and Not finished; a site's users count picks that site.
-  // Both open the Users tab.
-  function showNotYet(unit, lesson) {
-    applyCourse({ ...f, unit: String(unit), lesson: lesson ? String(lesson) : '', status: 'not-finished' })
-    setFilterKey(k => k + 1)
-    setTab('users')
-  }
+  // Shortcuts: a site's users count picks that site and opens the Users tab. The units table's Not yet links, which
+  // picked their unit (and lesson) and Not finished, came off 2026-11-10 with the unit view.
+  // function showNotYet(unit, lesson) {
+  //   applyCourse({ ...f, unit: String(unit), lesson: lesson ? String(lesson) : '', status: 'not-finished' })
+  //   setFilterKey(k => k + 1)
+  //   setTab('users')
+  // }
   function showSite(r) {
     setContentFilters({ ...(contentFilters ?? DEFAULT_FILTERS), site: [String(r.sc.id)] })
     setFilterKey(k => k + 1)
-    setTab('users')
+    // setTab('users')
+    usersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   function clearCourse() { applyCourse(COURSE_BLANK); setFilterKey(k => k + 1) }
 
   const fileBase = `${title}${meta[0]?.[1] ? ` ${meta[0][1]}` : ''}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-  const exportUnits = () => download(`${fileBase}-unit-completion.csv`, ['Unit', 'Finished', 'Not yet', 'Users who started the course'], insights.unitRows.map(u => [u.name, u.users, insights.started - u.users, insights.started]))
+  // const exportUnits = () => download(`${fileBase}-unit-completion.csv`, ['Unit', 'Finished', 'Not yet', 'Users who started the course'], insights.unitRows.map(u => [u.name, u.users, insights.started - u.users, insights.started]))
+  const exportUnits = () => download(`${fileBase}-unit-view.csv`, ['Unit', 'Total users', 'Users started', 'Users completed', 'Completion percent', 'Last activity'],
+    insights.unitView.map(r => [r.name, insights.users, r.started, r.completed, insights.started ? Math.round((r.completed / insights.started) * 100) : 0, activityDate(r.last)]))
   const exportSites = () => download(`${fileBase}-sites.csv`, ['Site', 'Lessons completed', 'Users'], bySchool.map(r => [r.sc.name, r.lessons, r.users]))
 
   const unitOptions = Array.from({ length: total }, (_, i) => i + 1)
   const extra = {
     initial: f,
     blank: COURSE_BLANK,
-    main: (d, set) => (
-      <Select label="Completion" value={d.status} onChange={v => set({ status: v })} className="flex-1 min-w-36">
-        <option value="">Any</option>
-        <option value="finished">Finished</option>
-        <option value="not-finished">Not finished</option>
-        <option value="not-started">Not started course</option>
-      </Select>
-    ),
+    // Completion filter out 2026-11-10.
+    // main: (d, set) => (
+    //   <Select label="Completion" value={d.status} onChange={v => set({ status: v })} className="flex-1 min-w-36">
+    //     <option value="">Any</option>
+    //     <option value="finished">Finished</option>
+    //     <option value="not-finished">Not finished</option>
+    //     <option value="not-started">Not started course</option>
+    //   </Select>
+    // ),
     more: (d, set) => <>
       <Select label="Unit" value={d.unit} onChange={v => set({ unit: v, lesson: '' })} className="flex-[2] min-w-48">
         <option value="">All units</option>
@@ -458,7 +465,9 @@ function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, s
   const siteCrumb = site && { label: site.name, to: `/reports/content/sites/${site.id}` }
   const back = site ? [siteCrumb, { label: title, to: path }] : { label: title, to: path }
   const panels = {
-    units: <UnitView data={insights} onNotYet={showNotYet} highlight={unitNum} action={<ExportButton onClick={exportUnits} />} />,
+    // The unit view (2026-11-10) in place of Unit completion and its Not yet links.
+    // units: <UnitView data={insights} onNotYet={showNotYet} highlight={unitNum} action={<ExportButton onClick={exportUnits} />} />,
+    units: <CourseUnitView data={insights} title={title} tier={course.type === 'adult' ? null : course.typeLabel} action={<ExportButton onClick={exportUnits} />} />,
     users: (
       <UsersTable
         users={matches} oneSite={!!site} linked linkState={{ back }} progress={userProgress}
@@ -480,7 +489,7 @@ function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, s
           <SchoolsTable
             rows={bySchool} sort={siteSort} onSort={(k, first) => setSiteSort(st => nextSort(st, k, first))}
             siteTo={r => `${path.replace('/reports/content', `/reports/content/sites/${r.sc.id}`)}${query ? `?${query}` : ''}`}
-            onUsers={showSite}
+            // Users count no longer a link (2026-11-10): onUsers={showSite}
           />
         ) : <EmptyState />}
       </section>
@@ -532,6 +541,7 @@ function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, s
             {panels[tab]}
           </motion.div>
         </div>
+        <div ref={usersRef} className="scroll-mt-4">{panels.users}</div>
       </div>
     </motion.div>
   )
