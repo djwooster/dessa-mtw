@@ -1,7 +1,8 @@
 import { format, parseISO, subMinutes } from 'date-fns'
 import * as Tooltip from '@radix-ui/react-tooltip'
+import { Eye, Handshake, Scale, ScanFace, Sun, Wind } from 'lucide-react'
 // import { TrendingDown } from 'lucide-react' // for the largest drop-off, out 2026-11-10
-import { LESSONS_PER_UNIT, isReview, unitName } from '../../lib/contentReportData'
+import { LESSONS_PER_UNIT, isReview, lessonComp, unitName } from '../../lib/contentReportData'
 import { Fragment, useState } from 'react'
 import { SortButton, nextSort, agoRank } from '../../pages/Report2ConceptE'
 import { Defined } from '../../pages/ReportContent'
@@ -105,7 +106,7 @@ export function courseInsights({ users, part, progressOf, weeks, course }) {
   // the earlier lessons, fewer the later.
   // Counted from each user's lessons (2026-11-06, see lessonsDone), so lesson 5's users are the unit's.
   unitRows.forEach(r => {
-    r.lessons = Array.from({ length: LESSONS_IN_UNIT }, (_, k) => ({ lesson: k + 1, users: started.filter(x => lessonsDone(x.u, x.p, r.unit) >= k + 1).length }))
+    r.lessons = Array.from({ length: LESSONS_IN_UNIT }, (_, k) => ({ lesson: k + 1, users: started.filter(x => lessonsDone(x.u, x.p, r.unit) >= k + 1).length, comp: course ? lessonComp(course, r.unit, k + 1) : null }))
   })
 
   // The unit view (2026-11-10, from the manager's chart and table mocks): Getting Started, then every unit, with the
@@ -441,6 +442,22 @@ export function UnitView({ data, action, onNotYet, highlight }) {
 // adds the users who started each unit, the share who completed it and its last activity. Completion is out of the
 // users who started the course.
 const pctOf = (n, d) => (d ? Math.round((n / d) * 100) : 0)
+// One icon per competency (2026-11-11), for the course page's competency chips and the lessons' badges, in the
+// competency's color. Lucide icons in place of the first emoji: { sa: '🪞', soc: '👀', sm: '🧘', rs: '🤝', rd: '⚖️', ot: '🌈' }.
+export const COMP_ICON = { sa: ScanFace, soc: Eye, sm: Wind, rs: Handshake, rd: Scale, ot: Sun }
+export function CompIcon({ comp, size = 14 }) {
+  const Icon = COMP_ICON[comp.key]
+  return <Icon size={size} className="shrink-0" style={{ color: comp.color }} aria-hidden="true" />
+}
+// A lesson's competency badge (2026-11-11): the course header's chip, small, white on the lesson rows' tint.
+function CompBadge({ comp }) {
+  return (
+    <span className="inline-flex items-center gap-1 h-6 pl-1.5 pr-2 rounded-full border border-brand-border bg-white text-xs font-medium text-brand-text whitespace-nowrap">
+      <CompIcon comp={comp} size={12} />
+      {comp.label}
+    </span>
+  )
+}
 const axisName = r => (r.unit === 0 ? 'Getting Started' : `Unit ${r.unit}${r.review ? ' (Review)' : ''}`)
 const tooltip = 'z-50 px-3 py-2 rounded-md bg-brand-text text-white text-xs leading-5 shadow-lg'
 
@@ -507,12 +524,14 @@ export function UnitChart({ data }) {
 
 const UV_COLS = [
   { key: 'unit', label: 'Unit', first: 'asc' },
+  // Total users and Users started out 2026-11-10.
   // Every user in the course (2026-11-10), the same on each row, so it doesn't sort.
-  { key: 'total', label: 'Total users', right: true, fixed: true },
-  { key: 'started', label: 'Users started', first: 'desc', right: true },
+  // { key: 'total', label: 'Total users', right: true, fixed: true },
+  // { key: 'started', label: 'Users started', first: 'desc', right: true },
   { key: 'completed', label: 'Users completed', first: 'desc', right: true },
   { key: 'pct', label: 'Completion', first: 'desc' },
-  { key: 'last', label: 'Last activity', first: 'asc', right: true },
+  // Last activity out 2026-11-11; Completion is the last column.
+  // { key: 'last', label: 'Last activity', first: 'asc', right: true },
 ]
 
 // Each unit row still opens its five lessons (2026-11-06), which have users completed and completion only.
@@ -529,7 +548,7 @@ export function UnitTable({ data }) {
     <span className="flex items-center gap-3">
       <span
         role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pctOf(users, n)} aria-valuetext={`${pctOf(users, n)}%`}
-        className={`w-20 shrink-0 ${sub ? 'h-1.5' : 'h-2'} rounded-full bg-brand-bg overflow-hidden`}
+        className={`w-80 shrink-0 ${sub ? 'h-1.5' : 'h-2'} rounded-full bg-brand-bg overflow-hidden`}
       >
         <span className="block h-full rounded-full bg-dessa-teal" style={{ width: `${pctOf(users, n)}%` }} />
       </span>
@@ -542,7 +561,7 @@ export function UnitTable({ data }) {
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             {UV_COLS.map(c => (
-              <TableHead key={c.key} className={`${c.right ? 'text-right' : ''} ${c.key === 'unit' ? 'pl-5' : ''} ${c.key === 'pct' ? 'w-40' : ''} ${c.key === 'last' ? 'pr-5' : ''}`}>
+              <TableHead key={c.key} className={`${c.right ? 'text-right' : ''} ${c.key === 'unit' ? 'pl-5' : ''} ${c.key === 'pct' ? 'w-96 pr-5' : ''} ${c.key === 'last' ? 'pr-5' : ''}`}>
                 {c.fixed ? <span className="font-medium text-brand-text">{c.label}</span>
                   : <SortButton label={c.label} col={c.key} sort={sort} onSort={k => setSort(st => nextSort(st, k, c.first))} align={c.right ? 'right' : 'left'} />}
               </TableHead>
@@ -569,25 +588,27 @@ export function UnitTable({ data }) {
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="py-1.5 text-right tabular-nums">{data.users.toLocaleString()}</TableCell>
-                  <TableCell className="py-1.5 text-right tabular-nums">{r.started.toLocaleString()}</TableCell>
+                  {/* <TableCell className="py-1.5 text-right tabular-nums">{data.users.toLocaleString()}</TableCell>
+                  <TableCell className="py-1.5 text-right tabular-nums">{r.started.toLocaleString()}</TableCell> */}
                   <TableCell className="py-1.5 text-right tabular-nums">{r.completed.toLocaleString()}</TableCell>
-                  <TableCell className="py-1.5">{completion(r.completed, `${r.name}, completion`)}</TableCell>
-                  <TableCell className="pr-5 py-1.5 text-right whitespace-nowrap text-brand-subtext">{activityDate(r.last)}</TableCell>
+                  <TableCell className="py-1.5 pr-5">{completion(r.completed, `${r.name}, completion`)}</TableCell>
+                  {/* <TableCell className="pr-5 py-1.5 text-right whitespace-nowrap text-brand-subtext">{activityDate(r.last)}</TableCell> */}
                 </TableRow>
                 {expanded && r.lessons.map(l => (
                   <TableRow key={l.lesson} id={l.lesson === 1 ? `unit-view-${r.unit}-lessons` : undefined} className="hover:bg-transparent bg-brand-bg/40">
                     <TableCell className="pl-3 py-2 max-w-0 w-full">
                       <span className="flex items-center gap-2 min-w-0 px-2">
                         <span className="w-2.5 shrink-0" aria-hidden="true" />
-                        <span className="truncate text-brand-subtext">Lesson {l.lesson}</span>
+                        <span className="shrink-0 text-brand-subtext">Lesson {l.lesson}</span>
+                        {l.comp && <CompBadge comp={l.comp} />}
                       </span>
                     </TableCell>
+                    {/* Total users and Users started, out 2026-11-10:
                     <TableCell className="py-2" />
-                    <TableCell className="py-2" />
+                    <TableCell className="py-2" /> */}
                     <TableCell className="py-2 text-right tabular-nums text-brand-subtext">{l.users.toLocaleString()}</TableCell>
-                    <TableCell className="py-2">{completion(l.users, `Unit ${r.unit} lesson ${l.lesson}, completion`, true)}</TableCell>
-                    <TableCell className="pr-5 py-2" />
+                    <TableCell className="py-2 pr-5">{completion(l.users, `Unit ${r.unit} lesson ${l.lesson}, completion`, true)}</TableCell>
+                    {/* <TableCell className="pr-5 py-2" /> */}
                   </TableRow>
                 ))}
               </Fragment>
@@ -607,13 +628,14 @@ export function UnitTable({ data }) {
 }
 
 // Table first and open by default (2026-11-10).
-const UV_TABS = [['table', 'Table'], ['chart', 'Chart']]
+// Chart tab out 2026-11-11.
+const UV_TABS = [['table', 'Table'] /* , ['chart', 'Chart'] */]
 // "Unit view" (2026-11-10). Was "1st grade unit view" with the course type beside it; `title` and `tier` are kept
 // for that.
 export function CourseUnitView({ data, title, tier, action }) {
   const [view, setView] = useState('table')
   function onTabKey(e) {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
+    if (UV_TABS.length < 2 || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return
     e.preventDefault()
     const next = view === 'chart' ? 'table' : 'chart'
     setView(next)
@@ -630,6 +652,9 @@ export function CourseUnitView({ data, title, tier, action }) {
         {action}
       </div>
       {!data.started ? <p className="px-5 pt-4 pb-5 text-sm text-brand-subtext">No users have started this course yet.</p> : (<>
+        {/* The tab bar shows only with more than one tab: the Table tab went with Chart (2026-11-11), and the table sits
+            under the title. */}
+        {UV_TABS.length > 1 ? (
         <div role="tablist" aria-label="Unit view" className="flex gap-4 px-5 mt-2 border-b border-brand-border" onKeyDown={onTabKey}>
           {UV_TABS.map(([k, label]) => (
             <button
@@ -639,7 +664,8 @@ export function CourseUnitView({ data, title, tier, action }) {
             >{label}</button>
           ))}
         </div>
-        <div id="unit-view-panel" role="tabpanel" aria-labelledby={`unit-view-tab-${view}`}>
+        ) : <div className="h-4" aria-hidden="true" />}
+        <div id="unit-view-panel" {...(UV_TABS.length > 1 ? { role: 'tabpanel', 'aria-labelledby': `unit-view-tab-${view}` } : {})}>
           {view === 'chart' ? <div className="p-5"><UnitChart data={data} /></div> : <UnitTable data={data} />}
         </div>
       </>)}

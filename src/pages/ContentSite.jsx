@@ -74,7 +74,7 @@ export default function ContentSite() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
-      <ContentBreadcrumb trail={[{ label: 'Lesson completion', to: '/reports/content' }, { label: site.name }]} />
+      <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, { label: site.name }]} />
       {/* Filters: dates, role and course type. No Site field, since the page is one site. The cards have their own
           Export CSV, so the 3-dot menu is just Print. */}
       <ContentFilters key={siteId} showSite={false} showType action={<MoreMenu items={[{ icon: Printer, label: 'Print', onSelect: printPage }]} />} />
