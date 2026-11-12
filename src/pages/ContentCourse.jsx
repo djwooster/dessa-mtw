@@ -2,8 +2,8 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { BookOpen, ChevronRight, Download } from 'lucide-react'
-import { ALL_COURSES, COMPETENCIES, contentData, unitName as courseInsightsName, gradeLabel, gradeMark, gradeCourse, gradePath, teachesGrade, gradePart, teachesCourse, coursePart } from '../lib/contentReportData'
+import { BookOpen, ChevronRight, Download, GraduationCap, Layers, Printer } from 'lucide-react'
+import { ALL_COURSES, COMPETENCIES, contentData, courseGrades, courseMakeup, unitName as courseInsightsName, gradeLabel, gradeMark, gradeCourse, gradePath, teachesGrade, gradePart, teachesCourse, coursePart } from '../lib/contentReportData'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { ContentFilters, DEFAULT_FILTERS, Defined, EmptyState, ExportButton, MoreMenu, UsersTable, LESSON_DEFINITION, download, useContentScope } from './ReportContent'
 import { Select, MultiSelect } from '../components/engagement/FiltersPanel'
@@ -12,7 +12,7 @@ import { SortButton, nextSort, agoRank } from './Report2ConceptE'
 import { schools } from '../lib/report2Data'
 import { useRole } from '../lib/roleContext'
 import CompetencyMix, { ConceptSelect } from '../components/content/CompetencyMix'
-import { courseInsights, hasStarted, lessonsDone, ProgressDistribution, /* UnitLessons, UnitUsers, */ UnitView, UNIT_VIEWS, WeeklyLessons } from '../components/content/CourseInsights'
+import { activityDate, CompIcon, courseInsights, CourseUnitView, hasStarted, lessonsDone, ProgressDistribution, /* UnitLessons, UnitUsers, */ UnitView, UNIT_VIEWS, WeeklyLessons } from '../components/content/CourseInsights'
 import { format, parseISO } from 'date-fns'
 import ProfileCard, { CourseTile } from '../components/content/ProfileCard'
 
@@ -88,7 +88,9 @@ function SiteUsers({ row }) {
 // Sortable columns (2026-11-03), like the users table: Site A to Z first, the numbers most first.
 // `siteTo(r)` and `onUsers(r)` (2026-11-06, concept G): the site opens this page for that site, and the users count
 // filters the page to it.
-function SchoolsTable({ rows, sort, onSort, siteTo, onUsers }) {
+// `completion` (2026-11-12, concepts F and G): Users becomes Users completed, Total users and Completion, from rows'
+// `completed` and `pct`.
+function SchoolsTable({ rows, sort, onSort, siteTo, onUsers, completion }) {
   const sorted = useMemo(() => [...rows].sort((a, b) => {
     const dir = sort.dir === 'asc' ? 1 : -1
     if (sort.key === 'site') return dir * a.sc.name.localeCompare(b.sc.name)
@@ -100,7 +102,11 @@ function SchoolsTable({ rows, sort, onSort, siteTo, onUsers }) {
         <TableRow>
           <TableHead><SortButton label="Site" col="site" sort={sort} onSort={k => onSort(k, 'asc')} /></TableHead>
           <TableHead className="w-48 text-right"><SortButton label="Lessons completed" col="lessons" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
-          <TableHead className="w-24 text-right"><SortButton label="Users" col="users" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
+          {completion ? <>
+            <TableHead className="w-40 text-right"><SortButton label="Users completed" col="completed" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
+            <TableHead className="w-32 text-right"><SortButton label="Total users" col="users" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
+            <TableHead className="w-32 text-right"><SortButton label="Completion" col="pct" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
+          </> : <TableHead className="w-24 text-right"><SortButton label="Users" col="users" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -110,11 +116,13 @@ function SchoolsTable({ rows, sort, onSort, siteTo, onUsers }) {
             <TableCell className="font-medium"><Link to={siteTo ? siteTo(r) : `/reports/content/sites/${r.sc.id}`} className="text-dessa-teal hover:underline underline-offset-4">{r.sc.name}</Link></TableCell>
             <TableCell className="text-right tabular-nums">{r.lessons.toLocaleString()}</TableCell>
             {/* Users on hover removed 2026-11-05, most sites have 20+ users: <SiteUsers row={r} /> */}
+            {completion && <TableCell className="text-right tabular-nums">{r.completed.toLocaleString()}</TableCell>}
             <TableCell className="text-right tabular-nums">
               {onUsers
                 ? <button type="button" onClick={() => onUsers(r)} aria-label={`Show the ${r.users} users at ${r.sc.name}`} className="font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">{r.users.toLocaleString()}</button>
                 : r.users}
             </TableCell>
+            {completion && <TableCell className="text-right tabular-nums">{Math.round(r.pct * 100)}%</TableCell>}
           </TableRow>
         ))}
       </TableBody>
@@ -130,6 +138,8 @@ const PAGE_CONCEPTS = [
   { value: 'b', label: 'Concept B, stacked' },
   { value: 'c', label: 'Concept C, side by side' },
   { value: 'd', label: 'Concept D, tabs' },
+  // F (2026-11-11): G with a course summary in its header. See CourseMakeup.
+  { value: 'f', label: 'Concept F, course summary' },
   // G (2026-11-06): the filters do the work. See GroupPageG.
   { value: 'g', label: 'Concept G, filters' },
 ]
@@ -147,12 +157,13 @@ const D_TABS = [['units', 'Units'], ['progress', 'Course progress'], /* ['weeks'
 // For main (2026-11-09): concept A, the page as it was, with the switcher commented out. B to D and G carry on in the
 // content-concept-f branch. A browser's remembered pick is ignored.
 function GroupPage(props) {
+  // The switcher is commented out (2026-11-12), and the page is concept F, the course summary.
   // const [concept, setConcept] = useState(readPage)
   // const choose = v => { setConcept(v); try { localStorage.setItem(PAGE_KEY, v) } catch { /* private window */ } }
   // const switcher = <ConceptSelect value={concept} onChange={choose} options={PAGE_CONCEPTS} name="Course page concept" />
-  const concept = 'a'
+  const concept = 'f'
   const switcher = null
-  return concept === 'g' ? <GroupPageG {...props} switcher={switcher} /> : <GroupPageClassic {...props} concept={concept} switcher={switcher} />
+  return concept === 'g' || concept === 'f' ? <GroupPageG {...props} switcher={switcher} summary={concept === 'f'} /> : <GroupPageClassic {...props} concept={concept} switcher={switcher} />
 }
 
 function GroupPageClassic({ title, avatar, meta, users, part, progressOf, path, action, site, course, concept, switcher }) {
@@ -314,15 +325,22 @@ function GroupPageClassic({ title, avatar, meta, users, part, progressOf, path, 
 // follow you to another course). Everything narrows to the matching users, a results line says how many, and the
 // units and sites tables' counts are shortcuts that set the filters. Tabs: Units, Users, Competencies, Sites; the
 // Users tab replaces both the Course progress tab and the users table under the tabs.
-const G_TABS = [['units', 'Units'], ['users', 'Users'], ['competencies', 'Competencies'], ['sites', 'Sites']]
+// Users out of the tabs 2026-11-10: the users table sits under them, always showing.
+// Competencies out of the tabs 2026-11-11.
+// Sites out 2026-11-12, since the Site filter does its job. With one tab left, the tab bar comes off.
+const G_TABS = [['units', 'Units'] /* , ['users', 'Users'] */ /* , ['competencies', 'Competencies'] */ /* , ['sites', 'Sites'] */]
 const COURSE_BLANK = { unit: '', lesson: '', status: '', progress: [], active: '' }
-const readCourse = params => ({
+// With the Unit, Lesson, Progress and Last active filters out too (2026-11-12), the page's filters are all off, and an
+// old link's are ignored.
+const readCourse = () => COURSE_BLANK
+/* const readCourse = params => ({
   unit: params.get('unit') ?? '',
   lesson: params.get('lesson') ?? '',
-  status: params.get('status') ?? '',
+  // With the Completion filter out (2026-11-10), an old link's status is ignored.
+  status: '', // params.get('status') ?? '',
   progress: params.get('progress') ? params.get('progress').split(',') : [],
   active: params.get('active') ?? '',
-})
+}) */
 const writeCourse = v => Object.fromEntries(Object.entries({ ...v, progress: v.progress.join(',') }).filter(([, x]) => x))
 // Progress bands by units finished, in quarters of the course: 36 units read 1 to 9, 10 to 18, 19 to 27, 28 to 35.
 function progressBands(total) {
@@ -356,8 +374,59 @@ function LessonDots({ done, lesson }) {
   )
 }
 
-function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, site, course, switcher }) {
-  const { weeks } = useContentScope()
+// Concept F (2026-11-11, from a teammate's note): the header also says what the course is, so its numbers read in
+// context. Its units, lessons and grades join the meta line, and a row under it shows the course's lessons by
+// competency with its primary focus: a competency can look most taught only because most of the course is about it.
+function CourseMakeup({ course }) {
+  const { total, own, counts } = courseMakeup(course)
+  const rows = COMPETENCIES.map(c => ({ ...c, n: counts[c.key] })).filter(r => r.n).sort((a, b) => b.n - a.n)
+  const pctOf = n => Math.round((n / total) * 100)
+  return (
+    <div className="px-5 py-4 border-t border-brand-border">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-2.5">
+        <h2 className="text-xs font-medium text-brand-subtext">Competencies in this course</h2>
+        {/* Primary focus out 2026-11-11:
+        <p className="text-xs text-brand-subtext">Primary focus <span className="font-medium text-brand-text">{COMPETENCIES.find(c => c.key === own).label}</span></p> */}
+      </div>
+      {/* Chips (2026-11-11, from a reference the user shared): an icon, the competency and its share of the course,
+          largest first. In place of the bar and its legend, kept below. */}
+      <ul className="flex flex-wrap gap-2" aria-label="Lessons in this course by competency">
+        {rows.map(r => (
+          <li key={r.key} className="inline-flex items-center gap-1.5 h-7 pl-2 pr-2.5 rounded-full bg-brand-bg text-xs text-brand-subtext">
+            <CompIcon comp={r} size={14} />
+            <span>{r.label}</span>
+            <span className="tabular-nums">{pctOf(r.n)}%</span>
+            <span className="sr-only">, {r.n} of {total} lessons</span>
+          </li>
+        ))}
+      </ul>
+      {/* <div className="flex h-2 gap-px rounded-full overflow-hidden" role="img" aria-label={`Lessons in this course by competency: ${rows.map(r => `${r.label} ${r.n} of ${total}`).join(', ')}`}>
+        {rows.map(r => <span key={r.key} className="h-full" style={{ width: `${(r.n / total) * 100}%`, background: r.color }} />)}
+      </div>
+      <ul className="flex flex-wrap gap-x-5 gap-y-1.5 mt-3 text-sm text-brand-text" aria-hidden="true">
+        {rows.map(r => (
+          <li key={r.key} className="inline-flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: r.color }} />
+            {r.label} <span className="font-semibold tabular-nums">{pctOf(r.n)}%</span>
+          </li>
+        ))}
+      </ul> */}
+    </div>
+  )
+}
+
+// "Kindergarten to 2nd grade", or one grade.
+const gradesText = gs => (gs.length > 1 ? `${gradeLabel(gs[0])} to ${gradeLabel(gs[gs.length - 1])}` : gradeLabel(gs[0]))
+
+function GroupPageG({ title, avatar, meta: baseMeta, users: all, part, progressOf, path, site, course, switcher, summary }) {
+  // Concept F's meta line adds the course's size and grades; a grade page's title already says its grade.
+  const grades = courseGrades(course)
+  const meta = summary ? [
+    ...baseMeta,
+    [Layers, `${course.lessons} units, ${(course.lessons * 5).toLocaleString()} lessons`],
+    ...(grades.length && gradesText(grades) !== title ? [[GraduationCap, gradesText(grades)]] : []),
+  ] : baseMeta
+  const { weeks, range } = useContentScope()
   const { contentFilters, setContentFilters } = useContentConcept()
   const [params, setParams] = useSearchParams()
   const query = params.toString()
@@ -366,6 +435,18 @@ function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, s
   const [filterKey, setFilterKey] = useState(0)
   const [tab, setTab] = useState('units')
   const tabRefs = useRef({})
+  const usersRef = useRef(null)
+  // The sticky header's bottom border shows only while it's stuck (2026-11-11): a line under the page's filters that
+  // scrolls past the nav (56px) and the header's 16px top padding when the header sticks.
+  const stickRef = useRef(null)
+  const [stuck, setStuck] = useState(false)
+  useEffect(() => {
+    const el = stickRef.current
+    if (!el) return
+    const io = new IntersectionObserver(([e]) => setStuck(!e.isIntersecting && e.boundingClientRect.top < 72), { rootMargin: '-72px 0px 0px 0px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
   const total = course.lessons
   const bands = useMemo(() => progressBands(total), [total])
   const unitNum = Number(f.unit) || null
@@ -391,45 +472,60 @@ function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, s
   const active = matches.filter(u => part(u).lessons > 0)
   const lessons = active.reduce((sum, u) => sum + part(u).lessons, 0)
   const comps = Object.fromEntries(COMPETENCIES.map(c => [c.key, active.reduce((sum, u) => sum + part(u).comps[c.key], 0)]))
+  // Each site's users who completed a lesson here, of all its users, and the share (2026-11-12), like the header's
+  // Completed by.
   const bySchool = [...matches.reduce((m, u) => {
-    const r = m.get(u.sc.id) ?? { sc: u.sc, lessons: 0, users: 0 }
+    const r = m.get(u.sc.id) ?? { sc: u.sc, lessons: 0, users: 0, completed: 0 }
     r.lessons += part(u).lessons
     r.users += 1
+    if (part(u).lessons > 0) r.completed += 1
     return m.set(u.sc.id, r)
-  }, new Map()).values()]
+  }, new Map()).values()].map(r => ({ ...r, pct: r.users ? r.completed / r.users : 0 }))
   const siteTotal = new Set(all.map(u => u.sc.id)).size
   const [siteSort, setSiteSort] = useState({ key: 'lessons', dir: 'desc' })
 
-  // Shortcuts: a Not yet count picks its unit (and lesson) and Not finished; a site's users count picks that site.
-  // Both open the Users tab.
-  function showNotYet(unit, lesson) {
-    applyCourse({ ...f, unit: String(unit), lesson: lesson ? String(lesson) : '', status: 'not-finished' })
-    setFilterKey(k => k + 1)
-    setTab('users')
-  }
+  // Shortcuts: a site's users count picks that site and opens the Users tab. The units table's Not yet links, which
+  // picked their unit (and lesson) and Not finished, came off 2026-11-10 with the unit view.
+  // function showNotYet(unit, lesson) {
+  //   applyCourse({ ...f, unit: String(unit), lesson: lesson ? String(lesson) : '', status: 'not-finished' })
+  //   setFilterKey(k => k + 1)
+  //   setTab('users')
+  // }
   function showSite(r) {
     setContentFilters({ ...(contentFilters ?? DEFAULT_FILTERS), site: [String(r.sc.id)] })
     setFilterKey(k => k + 1)
-    setTab('users')
+    // setTab('users')
+    usersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  // Print in the Filters panel's 3-dot menu (2026-11-11), like the site and user pages: the page's name and dates as
+  // the file name while it prints.
+  function printPage() {
+    const prevTitle = document.title
+    document.title = `${title}${site ? `, ${site.name}` : ''}, ${range}`
+    window.addEventListener('afterprint', () => { document.title = prevTitle }, { once: true })
+    window.print()
   }
   function clearCourse() { applyCourse(COURSE_BLANK); setFilterKey(k => k + 1) }
 
   const fileBase = `${title}${meta[0]?.[1] ? ` ${meta[0][1]}` : ''}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-  const exportUnits = () => download(`${fileBase}-unit-completion.csv`, ['Unit', 'Finished', 'Not yet', 'Users who started the course'], insights.unitRows.map(u => [u.name, u.users, insights.started - u.users, insights.started]))
-  const exportSites = () => download(`${fileBase}-sites.csv`, ['Site', 'Lessons completed', 'Users'], bySchool.map(r => [r.sc.name, r.lessons, r.users]))
+  // const exportUnits = () => download(`${fileBase}-unit-completion.csv`, ['Unit', 'Finished', 'Not yet', 'Users who started the course'], insights.unitRows.map(u => [u.name, u.users, insights.started - u.users, insights.started]))
+  const exportUnits = () => download(`${fileBase}-unit-view.csv`, ['Unit', /* 'Total users', 'Users started', */ 'Users completed', 'Completion percent' /* , 'Last activity' */],
+    insights.unitView.map(r => [r.name, /* insights.users, r.started, */ r.completed, insights.started ? Math.round((r.completed / insights.started) * 100) : 0 /* , activityDate(r.last) */]))
+  const exportSites = () => download(`${fileBase}-sites.csv`, ['Site', 'Lessons completed', 'Users completed', 'Total users', 'Completion percent'], bySchool.map(r => [r.sc.name, r.lessons, r.completed, r.users, Math.round(r.pct * 100)]))
 
   const unitOptions = Array.from({ length: total }, (_, i) => i + 1)
   const extra = {
     initial: f,
     blank: COURSE_BLANK,
-    main: (d, set) => (
-      <Select label="Completion" value={d.status} onChange={v => set({ status: v })} className="flex-1 min-w-36">
-        <option value="">Any</option>
-        <option value="finished">Finished</option>
-        <option value="not-finished">Not finished</option>
-        <option value="not-started">Not started course</option>
-      </Select>
-    ),
+    // Completion filter out 2026-11-10.
+    // main: (d, set) => (
+    //   <Select label="Completion" value={d.status} onChange={v => set({ status: v })} className="flex-1 min-w-36">
+    //     <option value="">Any</option>
+    //     <option value="finished">Finished</option>
+    //     <option value="not-finished">Not finished</option>
+    //     <option value="not-started">Not started course</option>
+    //   </Select>
+    // ),
     more: (d, set) => <>
       <Select label="Unit" value={d.unit} onChange={v => set({ unit: v, lesson: '' })} className="flex-[2] min-w-48">
         <option value="">All units</option>
@@ -462,7 +558,9 @@ function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, s
   const siteCrumb = site && { label: site.name, to: `/reports/content/sites/${site.id}` }
   const back = site ? [siteCrumb, { label: title, to: path }] : { label: title, to: path }
   const panels = {
-    units: <UnitView data={insights} onNotYet={showNotYet} highlight={unitNum} action={<ExportButton onClick={exportUnits} />} />,
+    // The unit view (2026-11-10) in place of Unit completion and its Not yet links.
+    // units: <UnitView data={insights} onNotYet={showNotYet} highlight={unitNum} action={<ExportButton onClick={exportUnits} />} />,
+    units: <CourseUnitView data={insights} title={title} tier={course.type === 'adult' ? null : course.typeLabel} action={<ExportButton onClick={exportUnits} />} />,
     users: (
       <UsersTable
         users={matches} oneSite={!!site} linked linkState={{ back }} progress={userProgress}
@@ -482,9 +580,9 @@ function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, s
         </div>
         {bySchool.length ? (
           <SchoolsTable
-            rows={bySchool} sort={siteSort} onSort={(k, first) => setSiteSort(st => nextSort(st, k, first))}
+            rows={bySchool} sort={siteSort} onSort={(k, first) => setSiteSort(st => nextSort(st, k, first))} completion
             siteTo={r => `${path.replace('/reports/content', `/reports/content/sites/${r.sc.id}`)}${query ? `?${query}` : ''}`}
-            onUsers={showSite}
+            // Users count no longer a link (2026-11-10): onUsers={showSite}
           />
         ) : <EmptyState />}
       </section>
@@ -494,9 +592,15 @@ function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, s
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
       <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, ...(site ? [siteCrumb] : []), { label: title }]} />
-      <div className="flex justify-end mb-3">{switcher}</div>
-      <ContentFilters key={`${site?.id ?? 'all'}-${filterKey}`} showSite={!site} extra={extra} />
+      {switcher && <div className="flex justify-end mb-3">{switcher}</div>}
+      <ContentFilters key={`${site?.id ?? 'all'}-${filterKey}`} showSite={!site} /* extra={extra} (Unit, Lesson, Progress and Last active, out 2026-11-12) */ action={<MoreMenu items={[{ icon: Printer, label: 'Print', onSelect: printPage }]} />} />
+      <div ref={stickRef} className="h-px -mb-px" aria-hidden="true" />
       <div className="flex flex-col gap-4">
+        {/* The header sticks under the nav as the page scrolls (2026-11-11), so the grade or course stays in view. The
+            page colored band behind it covers its rounded corners and the gap under it; its bottom margin cancels
+            that band at rest. 16px above it too, from the nav (2026-11-11), cancelled the same way; it sits in the
+            filters' 24px bottom margin. */}
+        <div className={`sticky top-14 z-20 bg-brand-bg pt-4 -mt-4 pb-4 -mb-4 border-b ${stuck ? 'border-brand-border' : 'border-transparent'}`}>
         <ProfileCard
           avatar={avatar}
           title={title}
@@ -512,8 +616,12 @@ function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, s
           banner={false}
           statsInHeader
           headerStyle="strip"
-        />
+        >
+          {/* Competencies in this course out 2026-11-11: {summary && <CourseMakeup course={course} />} */}
+        </ProfileCard>
+        </div>
         <div>
+          {(G_TABS.length > 1 || filtering) && (
           <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-brand-border mb-4">
             <div role="tablist" aria-label="Course views" className="flex flex-wrap gap-x-4" onKeyDown={onTabKey}>
               {G_TABS.filter(([k]) => !site || k !== 'sites').map(([k, label]) => (
@@ -532,10 +640,12 @@ function GroupPageG({ title, avatar, meta, users: all, part, progressOf, path, s
               </p>
             )}
           </div>
-          <motion.div key={tab} id="course-g-panel" role="tabpanel" aria-labelledby={`course-g-tab-${tab}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+          )}
+          <motion.div key={tab} id="course-g-panel" {...(G_TABS.length > 1 ? { role: 'tabpanel', 'aria-labelledby': `course-g-tab-${tab}` } : {})} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
             {panels[tab]}
           </motion.div>
         </div>
+        <div ref={usersRef} className="scroll-mt-4">{panels.users}</div>
       </div>
     </motion.div>
   )

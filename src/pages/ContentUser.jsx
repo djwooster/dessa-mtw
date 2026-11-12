@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ChevronRight, Download, School, User } from 'lucide-react'
+import { ChevronRight, Download, Printer, School, User } from 'lucide-react'
 import { COMPETENCIES, contentData, gradeLabel, gradeMark, moreDayMap } from '../lib/contentReportData'
 import CompetencyMix /* , { ConceptSelect } */ from '../components/content/CompetencyMix'
 import ProfileCard, { ProfileSection, CourseTile } from '../components/content/ProfileCard'
@@ -295,6 +295,14 @@ export default function ContentUser() {
     ])
   }
 
+  // Like the report's and the site page's Print: the user's name in the file name while it prints.
+  function printPage() {
+    const prevTitle = document.title
+    document.title = user.name
+    window.addEventListener('afterprint', () => { document.title = prevTitle }, { once: true })
+    window.print()
+  }
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
       <ContentBreadcrumb trail={[
@@ -316,7 +324,9 @@ export default function ContentUser() {
         showType
         initial={engWeeks?.length ? { start: engWeeks[0], end: format(addDays(parseISO(engWeeks[engWeeks.length - 1]), 4), 'yyyy-MM-dd') } : undefined}
         onApply={() => setEngWeeks(null)}
-        action={<MoreMenu items={[{ icon: Download, label: 'Export CSV', onSelect: exportCsv }]} />}
+        // Print in place of Export CSV (2026-11-09); exportCsv is kept.
+        // action={<MoreMenu items={[{ icon: Download, label: 'Export CSV', onSelect: exportCsv }]} />}
+        action={<MoreMenu items={[{ icon: Printer, label: 'Print', onSelect: printPage }]} />}
       />
       <div className="flex flex-col gap-4">
         <IdentityCard user={user} />

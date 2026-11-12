@@ -112,7 +112,10 @@ const usersCourseLabel = list => (list.length > 1 ? `${list.length} courses` : c
 // A unit's name in a course (2026-11-06, the unit view), "Unit 2, Naming What We Feel". Mock: every Tier 1 course
 // borrows the curriculum's 36 units, every Tier 2 course the Early elementary sessions, without their dashes.
 const TIER2_UNIT_NAMES = [...new Set(tier2EarlyElementaryUnits.map(u => u.title))]
+// Review units (2026-11-10, from the manager's unit view mock): Tier 1's units 17 and 36 go back over what came before.
+export const isReview = (course, n) => course?.type === 'core' && (n === 17 || n === 36)
 export function unitName(course, n) {
+  if (isReview(course, n)) return `Unit ${n}, Review`
   const title = course.type === 'core' ? TIER1_UNITS[n - 1]?.title.replace(/^Unit \d+ — /, '')
     : course.type === 'tier2' ? TIER2_UNIT_NAMES[n - 1]
     : course.type === 'adult' ? adultWellnessUnits[n - 1]?.title
@@ -156,6 +159,36 @@ function userWeekLessons(seed, ti, weekIdx, days, list) {
       pop: hash(seed + 7, `${ti}-${weekIdx}`, j) < 9,
     }
   })
+}
+
+// A course's makeup (2026-11-11, the course page's concept F): its lessons by competency, as the curriculum has them,
+// so completed lessons can be read against what the course offers. Five lessons a unit, like the unit view. Mock,
+// steady per course and close to how completed lessons are drawn above: about half the course's own competency,
+// a little Optimistic Thinking, and the rest spread unevenly over the others.
+export const courseGrades = gradesFor
+export function courseMakeup(course) {
+  const total = course.lessons * 5
+  const own = keyFor(course.competency)
+  const ownShare = 0.45 + hash(course.id, 'mix', 'own') * 0.0015
+  const otShare = own === 'ot' ? 0 : 0.05 + hash(course.id, 'mix', 'ot') * 0.0007
+  const rest = COMPETENCIES.filter(c => c.key !== own && c.key !== 'ot')
+  const weights = rest.map(c => 1 + hash(course.id, 'mix', c.key) / 40)
+  const sum = weights.reduce((a, b) => a + b, 0)
+  const counts = { [own]: Math.round(total * ownShare) }
+  if (own !== 'ot') counts.ot = Math.round(total * otShare)
+  const left = total - Object.values(counts).reduce((a, b) => a + b, 0)
+  rest.forEach((c, i) => { counts[c.key] = Math.round(left * (weights[i] / sum)) })
+  // Rounding lands on the own competency, so the counts add up to the course.
+  counts[own] += total - Object.values(counts).reduce((a, b) => a + b, 0)
+  return { total, own, counts: Object.fromEntries(COMPETENCIES.map(c => [c.key, counts[c.key] ?? 0])) }
+}
+
+// Each lesson's competency (2026-11-11, the unit view's lesson rows), drawn steadily from the course's makeup so the
+// lessons add up to about the same mix.
+export function lessonComp(course, unit, lesson) {
+  const { total, counts } = courseMakeup(course)
+  let at = (hash(course.id, `${unit}-${lesson}`, 'a') * 100 + hash(course.id, `${unit}-${lesson}`, 'b')) % total
+  return COMPETENCIES.find(c => (at -= counts[c.key]) < 0) ?? COMPETENCIES[0]
 }
 
 // A course is its unit count times about 4 lessons a unit (mtwData.js).

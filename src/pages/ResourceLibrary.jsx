@@ -1,11 +1,15 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import {
   Search, Video, FileText, Mic, Link2, PlayCircle,
-  ChevronDown, Check, X, Plus,
+  ChevronDown, Check, X, Plus, MoreHorizontal, Target, Trash2, ChevronRight,
+  // ExternalLink, Download, Printer, // the row menu's first items, out 2026-11-11
 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
+import { schools } from '../lib/report2Data'
+import { CLASS_ROSTER } from '../lib/classRosterData'
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis, pageWindow,
 } from '../components/ui/pagination'
@@ -180,6 +184,214 @@ const FOUNDATIONAL_PRACTICES_RESOURCES = [
   { title: 'Restorative Conversation Starters', type: 'PDF', grade: 'All Grades', competency: 'Relationship Skills', courseType: 'Foundational Practices', unit: 'Foundational Practices', desc: 'Prompt cards for guiding a student conversation after a classroom conflict.' },
 ]
 
+// A 3-dot menu on DESSA rows only (2026-11-11), in a column of its own at the far right. A popover, so it isn't
+// clipped by the table, and its clicks don't reach the row, which opens the preview. One item, Track strategy, which
+// opens the Track strategy modal (2026-11-11, modelled on the production Add strategy modal).
+// The first items, each opening the preview:
+// const ROW_MENU = [
+//   { icon: ExternalLink, label: 'Open in new tab' },
+//   { icon: Download, label: 'Download PDF' },
+//   { icon: Printer, label: 'Print' },
+// ]
+function RowMenu({ title, onTrack }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`More options for ${title}`}
+          className="flex items-center justify-center w-8 h-8 rounded-md text-brand-subtext hover:bg-brand-bg hover:text-brand-text transition-colors"
+        >
+          <MoreHorizontal size={16} aria-hidden="true" />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="end" sideOffset={4} role="menu" onClick={(e) => e.stopPropagation()}
+          className="z-50 w-48 py-1 bg-white border border-brand-border rounded-lg shadow-lg"
+        >
+          <button
+            type="button" role="menuitem"
+            onClick={() => { setOpen(false); onTrack() }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-brand-text hover:bg-brand-bg transition-colors"
+          >
+            <Target size={14} className="text-brand-subtext" aria-hidden="true" /> Track strategy
+          </button>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}
+
+// ─── Track strategy modal (2026-11-11) ──────────────────────────────────────
+// Modelled on the production "Add SEL Strategy" modal, renamed since "SEL" isn't used in the product. Pick a site,
+// then add students by searching, by pasting student IDs, or all the students you rate; each can be removed. Next
+// is ready once there's at least one student.
+// Mock students: every site has the fictional class roster, with its own student IDs. Tara rates her own site's.
+const studentsAt = site => CLASS_ROSTER.map((name, i) => {
+  const [first, last] = name.split(' ')
+  return { id: String(100000 + site.id * 1000 + i), name: `${last}, ${first}`, site: site.name }
+}).sort((a, b) => a.name.localeCompare(b.name))
+const MY_SITE = schools[0]
+
+function TrackStrategyModal({ strategy, onClose }) {
+  const [siteId, setSiteId] = useState(String(MY_SITE.id))
+  const [query, setQuery] = useState('')
+  const [chosen, setChosen] = useState([])
+  const [pasted, setPasted] = useState(null)
+  const panelRef = useRef(null)
+  const searchRef = useRef(null)
+  const site = schools.find(sc => String(sc.id) === siteId)
+  const roster = useMemo(() => studentsAt(site), [site])
+  const chosenIds = new Set(chosen.map(st => st.id))
+  const q = query.trim().toLowerCase()
+  const matches = q ? roster.filter(st => !chosenIds.has(st.id) && (st.name.toLowerCase().includes(q) || st.id.includes(q))).slice(0, 8) : []
+  const add = list => setChosen(c => [...c, ...list.filter(st => !c.some(x => x.id === st.id))])
+
+  // Escape closes; focus starts in the search and goes back to the row's menu button on close.
+  useEffect(() => {
+    const before = document.activeElement
+    searchRef.current?.focus()
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('keydown', onKey); before?.focus?.() }
+  }, [onClose])
+  // Tab stays inside the modal.
+  function trap(e) {
+    if (e.key !== 'Tab') return
+    const els = panelRef.current.querySelectorAll('button:not([disabled]), input, select')
+    const first = els[0], last = els[els.length - 1]
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+  }
+  // Pasting student IDs adds every one found at the site, and says how many it found.
+  function onPaste(e) {
+    const ids = e.clipboardData.getData('text').match(/\d{6}/g)
+    if (!ids || ids.length < 2) return
+    e.preventDefault()
+    const found = roster.filter(st => ids.includes(st.id))
+    add(found)
+    setPasted({ found: found.length, missed: ids.length - found.length })
+  }
+
+  return createPortal(
+    <>
+      <div className="fixed inset-0 z-50 bg-dessa-navy/40" onClick={onClose} aria-hidden="true" />
+      <div
+        ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="track-title" aria-describedby="track-strategy" onKeyDown={trap}
+        className="fixed z-50 inset-x-4 top-1/2 -translate-y-1/2 mx-auto max-w-2xl max-h-[85vh] flex flex-col bg-white rounded-lg shadow-xl"
+      >
+        <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4">
+          <div className="min-w-0">
+            <h2 id="track-title" className="text-lg font-semibold text-brand-text">Track strategy</h2>
+            <p id="track-strategy" className="mt-0.5 text-sm text-brand-subtext truncate">{strategy.title}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="p-1.5 -mr-1.5 rounded-md text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-5 flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-brand-subtext">Site</span>
+            <span className="relative">
+              <select
+                value={siteId} onChange={e => { setSiteId(e.target.value); setQuery('') }}
+                className="w-full h-9 pl-3 pr-9 appearance-none rounded-md border border-brand-border bg-white text-sm text-brand-text hover:bg-brand-bg cursor-pointer"
+              >
+                {schools.map(sc => <option key={sc.id} value={sc.id}>{sc.name}</option>)}
+              </select>
+              <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" aria-hidden="true" />
+            </span>
+          </label>
+
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-end justify-between gap-4">
+              <label htmlFor="track-search" className="text-xs font-medium text-brand-subtext">Add students</label>
+              {site.id === MY_SITE.id && (
+                <button type="button" onClick={() => add(roster)} className="text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">
+                  Add all students I rate
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none" aria-hidden="true" />
+              <input
+                ref={searchRef} id="track-search" type="search" value={query} onChange={e => { setQuery(e.target.value); setPasted(null) }} onPaste={onPaste}
+                placeholder="Search by name, or paste student IDs"
+                role="combobox" aria-expanded={matches.length > 0} aria-controls="track-results" autoComplete="off"
+                className="w-full h-9 pl-9 pr-3 rounded-md border border-brand-border bg-white text-sm text-brand-text placeholder:text-brand-subtext/70"
+              />
+              {matches.length > 0 && (
+                <ul id="track-results" role="listbox" className="absolute z-10 left-0 right-0 top-full mt-1 py-1 bg-white border border-brand-border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                  {matches.map(st => (
+                    <li key={st.id} role="option" aria-selected="false">
+                      <button
+                        type="button" onClick={() => { add([st]); setQuery(''); searchRef.current?.focus() }}
+                        className="w-full flex items-center justify-between gap-3 px-3 py-2 text-sm text-left hover:bg-brand-bg"
+                      >
+                        <span className="truncate text-brand-text">{st.name}</span>
+                        <span className="shrink-0 text-xs text-brand-subtext tabular-nums">{st.id}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {pasted && (
+              <p className="text-xs text-brand-subtext" aria-live="polite">
+                Added {pasted.found} {pasted.found === 1 ? 'student' : 'students'}{pasted.missed > 0 ? `. ${pasted.missed} ${pasted.missed === 1 ? 'ID wasn’t' : 'IDs weren’t'} found at ${site.name}` : ''}
+              </p>
+            )}
+          </div>
+
+          <section aria-label="Students" className="rounded-lg border border-brand-border overflow-hidden">
+            <div className="flex items-center justify-between gap-4 px-4 h-9 bg-brand-bg">
+              <h3 className="text-sm font-semibold text-brand-text">Students{chosen.length > 0 && <span className="ml-1.5 font-normal text-brand-subtext tabular-nums">{chosen.length}</span>}</h3>
+              {chosen.length > 0 && (
+                <button type="button" onClick={() => setChosen([])} className="text-xs font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">Remove all</button>
+              )}
+            </div>
+            {chosen.length ? (
+              <ul className="divide-y divide-brand-border max-h-64 overflow-y-auto">
+                {chosen.map(st => (
+                  <li key={st.id} className="flex items-center justify-between gap-3 pl-4 pr-2 py-1.5 text-sm">
+                    <span className="min-w-0 flex items-baseline gap-2">
+                      <span className="truncate text-brand-text">{st.name}</span>
+                      <span className="shrink-0 text-xs text-brand-subtext tabular-nums">{st.id}</span>
+                      <span className="hidden sm:inline truncate text-xs text-brand-subtext">{st.site}</span>
+                    </span>
+                    <button
+                      type="button" onClick={() => setChosen(c => c.filter(x => x.id !== st.id))} aria-label={`Remove ${st.name}`}
+                      className="shrink-0 p-1.5 rounded-md text-brand-subtext hover:text-brand-text hover:bg-brand-bg transition-colors"
+                    >
+                      <Trash2 size={14} aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="px-4 py-8 text-sm text-center text-brand-subtext">No students added yet</p>}
+          </section>
+        </div>
+
+        <div className="flex justify-end gap-2 px-6 py-4 border-t border-brand-border">
+          <button type="button" onClick={onClose} className="inline-flex items-center h-9 px-4 rounded-md border border-brand-border bg-white text-sm font-medium text-brand-text hover:bg-brand-bg">Cancel</button>
+          {/* Next's step isn't designed yet, so it closes the modal for now. */}
+          <button
+            type="button" onClick={onClose} disabled={!chosen.length}
+            className="inline-flex items-center gap-1 h-9 px-4 rounded-md bg-dessa-teal text-sm font-semibold text-white hover:bg-dessa-teal/90 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Next <ChevronRight size={14} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    </>,
+    document.body,
+  )
+}
+
 const TABLE_PAGE_SIZE = 20
 
 function SortableHead({ label, sortKey, activeKey, dir, onSort }) {
@@ -202,6 +414,9 @@ function CondensedResultsTable({ rows }) {
   // Sorted by Title by default, per explicit request (was unsorted until a
   // column header was clicked).
   const [sortKey, setSortKey] = useState('title')
+  // The DESSA strategy whose Track strategy modal is open. Closing is stable, so the modal's focus handling runs once.
+  const [tracking, setTracking] = useState(null)
+  const closeTracking = useCallback(() => setTracking(null), [])
   const [sortDir, setSortDir] = useState('asc')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(TABLE_PAGE_SIZE)
@@ -251,6 +466,7 @@ function CondensedResultsTable({ rows }) {
           <TableHead>Description</TableHead>
           <SortableHead label="Course Type" sortKey="courseType" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
           <SortableHead label="Competency" sortKey="competency" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+          <TableHead className="w-12"><span className="sr-only">Actions</span></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -283,11 +499,13 @@ function CondensedResultsTable({ rows }) {
               <TableCell className="py-1.5 text-brand-subtext truncate max-w-xs">{r.desc}</TableCell>
               <TableCell className="py-1.5 whitespace-nowrap text-brand-subtext">{r.courseType}</TableCell>
               <TableCell className="py-1.5 whitespace-nowrap text-brand-subtext">{r.competency}</TableCell>
+              <TableCell className="py-1.5 pr-3 text-right">{r.courseType === 'DESSA' && <RowMenu title={r.title} onTrack={() => setTracking(r)} />}</TableCell>
             </TableRow>
           )
         })}
       </TableBody>
     </Table>
+    {tracking && <TrackStrategyModal strategy={tracking} onClose={closeTracking} />}
     <div className="flex items-center justify-between px-6 py-4">
       <Pagination>
         <PaginationContent>
