@@ -32,6 +32,9 @@ const FILTER_MAX = toKey(LAST_DATE)
 const CONTENT_ROLES = ['Program Admin', 'Site Leader', 'Educator']
 // Role and Course type are lists (2026-11-03), multi select like Site; empty means all.
 export const DEFAULT_FILTERS = { site: [], role: [], type: [], grade: [], start: PAST_WEEKS[Math.max(0, PAST_WEEKS.length - 4)], end: FILTER_MAX }
+// The course page opens on the school year to date (2026-11-13), so its unit view shows how far everyone has come;
+// narrowing the dates shows what happened in them. Applied filters are still shared with the report.
+export const YEAR_FILTERS = { ...DEFAULT_FILTERS, start: FILTER_MIN }
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0)
 export const LESSON_DEFINITION = 'A lesson counts once it is marked complete or 60% of its video is watched.'
 
@@ -932,10 +935,12 @@ export function MoreMenu({ items }) {
 // `extra` (2026-11-06, the course page's concept G) adds filters that belong to one page, not the report: { initial,
 // blank, main(draft, set), more(draft, set), moreCount(draft), apply(values) }. They ride in the draft with the rest,
 // come off before the report's own filters are saved, and go to `apply` (which writes them to the address).
-export function ContentFilters({ showSite = true, showRole = true, showType = false, initial, onApply, action, extra }) {
+// `defaults` (2026-11-13): the page's own starting filters. Reset goes back to them by clearing the applied filters, so
+// the report and the course page each open on their own defaults again.
+export function ContentFilters({ showSite = true, showRole = true, showType = false, initial, onApply, action, extra, defaults }) {
   const { isSiteLeaderView } = useRole()
   const { contentFilters, setContentFilters } = useContentConcept()
-  const applied = contentFilters ?? DEFAULT_FILTERS
+  const applied = contentFilters ?? defaults ?? DEFAULT_FILTERS
   const [draft, setDraft] = useState(() => {
     const d = { ...applied, ...initial, ...extra?.initial }
     return { ...d, end: d.end > FILTER_MAX ? FILTER_MAX : d.end }
@@ -953,7 +958,7 @@ export function ContentFilters({ showSite = true, showRole = true, showType = fa
       draft={draft}
       onChange={setDraft}
       onApply={() => { const [rest, own] = split(draft); setContentFilters(rest); extra?.apply(own); onApply?.() }}
-      onReset={() => { setDraft({ ...DEFAULT_FILTERS, ...extra?.blank }); setContentFilters(DEFAULT_FILTERS); extra?.apply(extra.blank); onApply?.() }}
+      onReset={() => { setDraft({ ...(defaults ?? DEFAULT_FILTERS), ...extra?.blank }); setContentFilters(defaults ? null : DEFAULT_FILTERS); extra?.apply(extra.blank); onApply?.() }}
       sites={schools}
       roles={CONTENT_ROLES}
       showSite={showSite && !isSiteLeaderView}
@@ -998,10 +1003,12 @@ function GradeSelect({ value, onChange }) {
 // The weeks and sites the applied filters cover, shared with the course and user pages (concept C, 2026-10-27).
 // `allSites` ignores the Site filter, for a user page, which should find a user wherever they are. `weeks` overrides
 // the dates, for a user page opened from the Engagement report with its own range.
-export function useContentScope({ allSites = false, weeks: override = null } = {}) {
+// `defaults` (2026-11-13): a page's own starting filters, used until filters are applied, like the course page's
+// YEAR_FILTERS.
+export function useContentScope({ allSites = false, weeks: override = null, defaults = DEFAULT_FILTERS } = {}) {
   const { isSiteLeaderView } = useRole()
   const { contentFilters } = useContentConcept()
-  const applied = contentFilters ?? DEFAULT_FILTERS
+  const applied = contentFilters ?? defaults
   const weeks = useMemo(() => {
     if (override?.length) return override
     const ws = weeksForDates(parseISO(applied.start), parseISO(applied.end))

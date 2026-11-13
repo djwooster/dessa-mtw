@@ -5,7 +5,7 @@ import * as Tooltip from '@radix-ui/react-tooltip'
 import { BookOpen, ChevronRight, Download, GraduationCap, Layers, Printer } from 'lucide-react'
 import { ALL_COURSES, COMPETENCIES, contentData, courseGrades, courseMakeup, unitName as courseInsightsName, gradeLabel, gradeMark, gradeCourse, gradePath, teachesGrade, gradePart, teachesCourse, coursePart } from '../lib/contentReportData'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
-import { ContentFilters, DEFAULT_FILTERS, Defined, EmptyState, ExportButton, MoreMenu, UsersTable, LESSON_DEFINITION, download, useContentScope } from './ReportContent'
+import { ContentFilters, DEFAULT_FILTERS, YEAR_FILTERS, Defined, EmptyState, ExportButton, MoreMenu, UsersTable, LESSON_DEFINITION, download, useContentScope } from './ReportContent'
 import { Select, MultiSelect } from '../components/engagement/FiltersPanel'
 import { useContentConcept } from '../lib/contentConceptContext'
 import { SortButton, nextSort, agoRank } from './Report2ConceptE'
@@ -427,7 +427,7 @@ function GroupPageG({ title, avatar, meta: baseMeta, users: all, part, progressO
     [Layers, `${course.lessons} units, ${(course.lessons * 5).toLocaleString()} lessons`],
     ...(grades.length && gradesText(grades) !== title ? [[GraduationCap, gradesText(grades)]] : []),
   ] : baseMeta
-  const { weeks, range } = useContentScope()
+  const { weeks, range } = useContentScope({ defaults: YEAR_FILTERS })
   const { contentFilters, setContentFilters } = useContentConcept()
   const [params, setParams] = useSearchParams()
   const query = params.toString()
@@ -610,7 +610,7 @@ function GroupPageG({ title, avatar, meta: baseMeta, users: all, part, progressO
           Tier 2 courses already say it in their title. Was a "Tier 1" crumb of its own before the grade. */}
       <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, ...(site ? [siteCrumb] : []), { label: tierCrumb }]} />
       {switcher && <div className="flex justify-end mb-3">{switcher}</div>}
-      <ContentFilters key={`${site?.id ?? 'all'}-${filterKey}`} showSite={!site} /* extra={extra} (Unit, Lesson, Progress and Last active, out 2026-11-12) */ action={<MoreMenu items={[{ icon: Printer, label: 'Print', onSelect: printPage }]} />} />
+      <ContentFilters key={`${site?.id ?? 'all'}-${filterKey}`} showSite={!site} defaults={YEAR_FILTERS} /* extra={extra} (Unit, Lesson, Progress and Last active, out 2026-11-12) */ action={<MoreMenu items={[{ icon: Printer, label: 'Print', onSelect: printPage }]} />} />
       <div ref={stickRef} className="h-px -mb-px" aria-hidden="true" />
       <div className="flex flex-col gap-4">
         {/* The header sticks under the nav as the page scrolls (2026-11-11), so the grade or course stays in view. The
@@ -629,7 +629,11 @@ function GroupPageG({ title, avatar, meta: baseMeta, users: all, part, progressO
             // With the page's filters on, the users stat counts the matches.
             filtering
               ? ['Matching users', <>{matches.length.toLocaleString()} <span className="text-sm font-normal text-brand-subtext">of {all.length.toLocaleString()} {all.length === 1 ? 'user' : 'users'}</span></>]
-              : ['Completed by', <>{active.length.toLocaleString()} <span className="text-sm font-normal text-brand-subtext">of {all.length.toLocaleString()} {all.length === 1 ? 'user' : 'users'}</span></>],
+              // Says what was completed (2026-11-13), in the report's KPI card's words, with the percent. Was "Completed by",
+              // "298 of 366 users".
+              // The percent leads (2026-11-13), like the report's card: "81%", then "298 of 366 users".
+              // Just the percent (2026-11-13); "298 of 366 users" after it came off.
+              : ['Users who completed a lesson', `${all.length ? Math.round((active.length / all.length) * 100) : 0}%`],
           ]}
           banner={false}
           statsInHeader
@@ -670,8 +674,9 @@ function GroupPageG({ title, avatar, meta: baseMeta, users: all, part, progressO
 }
 
 // `site` narrows to one site, for a grade or course opened from a site page.
+// On the course page's own defaults (2026-11-13), the school year, like its numbers.
 function useScopedUsers(site) {
-  const { weeks, siteIds: filtered, role } = useContentScope()
+  const { weeks, siteIds: filtered, role } = useContentScope({ defaults: YEAR_FILTERS })
   const siteIds = site ? [site.id] : filtered
   return useMemo(() => contentData({ siteIds, role, weeks }).users, [siteIds.join(), role.join(), weeks])
 }

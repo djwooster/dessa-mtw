@@ -115,19 +115,31 @@ export function courseInsights({ users, part, progressOf, weeks, course }) {
   // who started the course have marked it complete. A unit's last activity is the user's own, a week further back
   // for each unit between it and where they are now.
   const top = x => Math.max(0, ...(x.p.units ?? []), lessonsDone(x.u, x.p, firstMissing(x.p)) > 0 ? firstMissing(x.p) : 0)
-  const unitView = [{ unit: 0, name: 'Getting Started' }, ...unitRows.map(r => ({ unit: r.unit, name: r.name, review: isReview(course, r.unit), lessons: r.lessons }))].map(r => {
+  // Within the dates (2026-11-13): a unit counts for a user who finished it in the range, so it wasn't in their units
+  // when the range started and they taught a lesson here in it. Getting Started counts for users who had no lessons
+  // before the range. Every number then follows the filters, and no unit can pass the users who completed a lesson.
+  const inRange = x => part(x.u).lessons > 0
+  const gsLessons = x => (x.p.done > 0 || steady(`${x.u.key}|gs`) % 10 < 8 ? 2 : steady(`${x.u.key}|gs1`) % 2)
+  const gsInRange = x => inRange(x) && !x.p.activeBefore
+  const unitInRange = (x, unit) => inRange(x) && !(x.p.before ?? []).includes(unit)
+  const unitView = [{ unit: 0, name: 'Getting Started' }, ...unitRows.map(r => ({ unit: r.unit, name: r.name, review: isReview(course, r.unit) }))].map(r => {
     const touched = started.filter(x => (r.unit === 0 ? true : x.p.units?.includes(r.unit) || lessonsDone(x.u, x.p, r.unit) > 0))
-    const completed = r.unit === 0 ? started.filter(x => x.p.done > 0 || steady(`${x.u.key}|gs`) % 10 < 8).length : touched.filter(x => x.p.units?.includes(r.unit)).length
+    // Before the dates applied (2026-11-12):
+    // const completed = r.unit === 0 ? started.filter(x => x.p.done > 0 || steady(`${x.u.key}|gs`) % 10 < 8).length : touched.filter(x => x.p.units?.includes(r.unit)).length
+    const completed = r.unit === 0
+      ? started.filter(x => gsInRange(x) && gsLessons(x) >= 2).length
+      : touched.filter(x => x.p.units?.includes(r.unit) && unitInRange(x, r.unit)).length
     let last = Infinity
     touched.forEach(x => { try { last = Math.min(last, agoRank(x.u.last) + Math.max(0, top(x) - r.unit) * WEEK) } catch { /* an odd label is skipped */ } })
-    // Getting Started's two lessons (2026-11-12): a user who completed it has both; the others have the first or none.
+    // Each lesson, within the dates the same way. Getting Started has two (2026-11-12); a user who completed it has
+    // both, the others the first or none.
     const lessons = r.unit === 0
-      ? [1, 2].map(k => ({
-          lesson: k,
-          users: started.filter(x => (x.p.done > 0 || steady(`${x.u.key}|gs`) % 10 < 8 ? 2 : steady(`${x.u.key}|gs1`) % 2) >= k).length,
-          comp: course ? lessonComp(course, 0, k) : null,
+      ? [1, 2].map(k => ({ lesson: k, users: started.filter(x => gsInRange(x) && gsLessons(x) >= k).length, comp: course ? lessonComp(course, 0, k) : null }))
+      : Array.from({ length: LESSONS_IN_UNIT }, (_, k) => ({
+          lesson: k + 1,
+          users: started.filter(x => unitInRange(x, r.unit) && lessonsDone(x.u, x.p, r.unit) >= k + 1).length,
+          comp: course ? lessonComp(course, r.unit, k + 1) : null,
         }))
-      : r.lessons
     return { ...r, lessons, started: touched.length, completed, last }
   })
   // The largest fall in completion from one unit to the next, Getting Started aside.

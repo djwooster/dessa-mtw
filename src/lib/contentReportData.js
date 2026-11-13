@@ -316,6 +316,9 @@ function buildContentData({ siteIds, role = 'all', type = 'all', grade = [], wee
   let pop = 0
   // Course progress runs through the end of the selected range (2026-10-26), like every other column.
   const endIdx = Math.min(PAST_WEEKS.length - 1, schoolWeeks.indexOf(weeks[weeks.length - 1]))
+  // The week before the range (2026-11-13), for what users had already finished when it started. -1 when the range
+  // starts with the school year.
+  const beforeIdx = Math.min(PAST_WEEKS.length - 1, schoolWeeks.indexOf(weeks[0]) - 1)
 
   const roles = role === 'all' ? [] : [].concat(role)
   const types = type === 'all' ? [] : [].concat(type)
@@ -387,14 +390,21 @@ function buildContentData({ siteIds, role = 'all', type = 'all', grade = [], wee
     // field is its unit count, and progress is the units a user has marked complete. Tier 1 runs mostly in order,
     // with the odd unit skipped and one or two taught ahead; Tier 2 and Adult wellness can go in any order.
     // `units` is the sorted list of completed unit numbers, and `done` its length.
+    // `before` (2026-11-13) is the units already completed when the range started, worked out the same way from the
+    // lessons up to the week before it, so the course page can count units completed within the dates. `activeBefore`
+    // says the user had taught any lesson by then.
+    const toBefore = beforeIdx < 0 || quiet ? 0 : lessonsToDate(p.key, p.daysFor, beforeIdx)
     user.courseProgress = Object.fromEntries(list.map(c => {
-      const reach = Math.min(c.lessons, Math.round(toDate * (weight(c) / weights) * (0.35 + hash(p.seed, p.ti, `pace${c.id}`) * 0.0045)))
       const h = n => hash(p.seed, `${p.ti}-${c.id}`, `u${n}`)
       const all = Array.from({ length: c.lessons }, (_, i) => i + 1)
-      const units = c.type === 'core'
-        ? all.filter(n => (n <= reach && (n <= 2 || h(n) >= 8)) || (reach > 0 && n > reach && n <= reach + 2 && h(n) < 15))
-        : [...all].sort((a, b) => h(a) - h(b) || a - b).slice(0, reach).sort((a, b) => a - b)
-      return [c.id, { done: units.length, total: c.lessons, units }]
+      const unitsAt = lessons => {
+        const reach = Math.min(c.lessons, Math.round(lessons * (weight(c) / weights) * (0.35 + hash(p.seed, p.ti, `pace${c.id}`) * 0.0045)))
+        return c.type === 'core'
+          ? all.filter(n => (n <= reach && (n <= 2 || h(n) >= 8)) || (reach > 0 && n > reach && n <= reach + 2 && h(n) < 15))
+          : [...all].sort((a, b) => h(a) - h(b) || a - b).slice(0, reach).sort((a, b) => a - b)
+      }
+      const units = unitsAt(toDate)
+      return [c.id, { done: units.length, total: c.lessons, units, before: unitsAt(toBefore), activeBefore: toBefore > 0 }]
     }))
     users.push(user)
 
