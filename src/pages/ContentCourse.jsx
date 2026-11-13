@@ -32,8 +32,11 @@ export function ContentBreadcrumb({ trail }) {
         {trail.map((t, i) => (
           <Fragment key={i}>
             {i > 0 && <li aria-hidden="true"><ChevronRight size={12} /></li>}
+            {/* A crumb between the links and the page that isn't a page of its own (2026-11-13, Tier 1) reads as
+                plain text. */}
             {t.to
               ? <li><Link to={t.to} className="hover:text-brand-text hover:underline transition-colors">{t.label}</Link></li>
+              : i < trail.length - 1 ? <li className="whitespace-nowrap">{t.label}</li>
               : <li aria-current="page" className="text-brand-text truncate">{t.label}</li>}
           </Fragment>
         ))}
@@ -438,6 +441,17 @@ function GroupPageG({ title, avatar, meta: baseMeta, users: all, part, progressO
   // scrolls past the nav (56px) and the header's 16px top padding when the header sticks.
   const stickRef = useRef(null)
   const [stuck, setStuck] = useState(false)
+  // The unit view's header row sticks just under the sticky header (2026-11-12): the nav's 56px plus the header's
+  // band, measured, since its height changes with the window.
+  const headerRef = useRef(null)
+  const [tableTop, setTableTop] = useState(0)
+  useEffect(() => {
+    const el = headerRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setTableTop(56 + el.offsetHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   useEffect(() => {
     const el = stickRef.current
     if (!el) return
@@ -507,8 +521,8 @@ function GroupPageG({ title, avatar, meta: baseMeta, users: all, part, progressO
 
   const fileBase = `${title}${meta[0]?.[1] ? ` ${meta[0][1]}` : ''}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   // const exportUnits = () => download(`${fileBase}-unit-completion.csv`, ['Unit', 'Finished', 'Not yet', 'Users who started the course'], insights.unitRows.map(u => [u.name, u.users, insights.started - u.users, insights.started]))
-  const exportUnits = () => download(`${fileBase}-unit-view.csv`, ['Unit', /* 'Total users', 'Users started', */ 'Users completed', 'Completion percent' /* , 'Last activity' */],
-    insights.unitView.map(r => [r.name, /* insights.users, r.started, */ r.completed, insights.started ? Math.round((r.completed / insights.started) * 100) : 0 /* , activityDate(r.last) */]))
+  const exportUnits = () => download(`${fileBase}-unit-view.csv`, ['Unit', /* 'Total users', 'Users started', */ 'Completed', 'Percent of users' /* , 'Last activity' */],
+    insights.unitView.map(r => [r.name, /* insights.users, r.started, */ r.completed, insights.users ? Math.round((r.completed / insights.users) * 100) : 0 /* , activityDate(r.last) */]))
   const exportSites = () => download(`${fileBase}-sites.csv`, ['Site', 'Lessons completed', 'Users completed', 'Total users', 'Completion percent'], bySchool.map(r => [r.sc.name, r.lessons, r.completed, r.users, Math.round(r.pct * 100)]))
 
   const unitOptions = Array.from({ length: total }, (_, i) => i + 1)
@@ -554,14 +568,17 @@ function GroupPageG({ title, avatar, meta: baseMeta, users: all, part, progressO
   }
 
   const siteCrumb = site && { label: site.name, to: `/reports/content/sites/${site.id}` }
-  const back = site ? [siteCrumb, { label: title, to: path }] : { label: title, to: path }
+  const tier = course.type === 'core' || course.type === 'tier2' ? course.typeLabel : null
+  const tierCrumb = tier && !title.includes(tier) ? `${title}, ${tier}` : title
+  // A user page opened from here carries the same crumb back.
+  const back = site ? [siteCrumb, { label: tierCrumb, to: path }] : { label: tierCrumb, to: path }
   const panels = {
     // The unit view (2026-11-10) in place of Unit completion and its Not yet links.
     // units: <UnitView data={insights} onNotYet={showNotYet} highlight={unitNum} action={<ExportButton onClick={exportUnits} />} />,
-    units: <CourseUnitView data={insights} title={title} tier={course.type === 'adult' ? null : course.typeLabel} action={<ExportButton onClick={exportUnits} />} />,
+    units: <CourseUnitView data={insights} title={title} tier={course.type === 'adult' ? null : course.typeLabel} action={<ExportButton onClick={exportUnits} />} stickyTop={tableTop} />,
     users: (
       <UsersTable
-        users={matches} oneSite={!!site} linked linkState={{ back }} progress={userProgress}
+        users={matches} oneSite={!!site} linked linkState={{ back }} progress={userProgress} siteLinks={false} courseProgress={false}
         column={unitNum ? {
           header: `Unit ${unitNum}`,
           cell: u => <LessonDots done={lessonsDone(u, progressOf(u), unitNum)} lesson={f.lesson} />,
@@ -589,7 +606,9 @@ function GroupPageG({ title, avatar, meta: baseMeta, users: all, part, progressO
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="px-6 pt-8 pb-8">
-      <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, ...(site ? [siteCrumb] : []), { label: title }]} />
+      {/* The tier is part of the page's crumb (2026-11-13): "Content > 6th grade, Tier 1", the way a user's course reads.
+          Tier 2 courses already say it in their title. Was a "Tier 1" crumb of its own before the grade. */}
+      <ContentBreadcrumb trail={[{ label: 'Content', to: '/reports/content' }, ...(site ? [siteCrumb] : []), { label: tierCrumb }]} />
       {switcher && <div className="flex justify-end mb-3">{switcher}</div>}
       <ContentFilters key={`${site?.id ?? 'all'}-${filterKey}`} showSite={!site} /* extra={extra} (Unit, Lesson, Progress and Last active, out 2026-11-12) */ action={<MoreMenu items={[{ icon: Printer, label: 'Print', onSelect: printPage }]} />} />
       <div ref={stickRef} className="h-px -mb-px" aria-hidden="true" />
@@ -598,7 +617,7 @@ function GroupPageG({ title, avatar, meta: baseMeta, users: all, part, progressO
             page colored band behind it covers its rounded corners and the gap under it; its bottom margin cancels
             that band at rest. 16px above it too, from the nav (2026-11-11), cancelled the same way; it sits in the
             filters' 24px bottom margin. */}
-        <div className={`sticky top-14 z-20 bg-brand-bg pt-4 -mt-4 pb-4 -mb-4 border-b ${stuck ? 'border-brand-border' : 'border-transparent'}`}>
+        <div ref={headerRef} className={`sticky top-14 z-20 bg-brand-bg pt-4 -mt-4 pb-4 -mb-4 border-b ${stuck ? 'border-brand-border' : 'border-transparent'}`}>
         <ProfileCard
           avatar={avatar}
           title={title}

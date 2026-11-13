@@ -186,7 +186,10 @@ export function courseMakeup(course) {
 // Each lesson's competency (2026-11-11, the unit view's lesson rows), drawn steadily from the course's makeup so the
 // lessons add up to about the same mix.
 export function lessonComp(course, unit, lesson) {
-  const { total, counts } = courseMakeup(course)
+  const { total, own, counts } = courseMakeup(course)
+  // Unit 1 is the first one people open (2026-11-13), so its five lessons show five competencies, the course's own
+  // first, rather than whatever the draw lands on.
+  if (unit === 1) return COMPETENCIES[(COMPETENCIES.findIndex(c => c.key === own) + lesson - 1) % COMPETENCIES.length]
   let at = (hash(course.id, `${unit}-${lesson}`, 'a') * 100 + hash(course.id, `${unit}-${lesson}`, 'b')) % total
   return COMPETENCIES.find(c => (at -= counts[c.key]) < 0) ?? COMPETENCIES[0]
 }

@@ -763,7 +763,10 @@ export function Coverage({ totals }) {
 // lessons completed here and their course progress, both sortable.
 // `column` (2026-11-06, concept G) is one more column after the progress ones: { header, cell(u), csv(u) }, such as
 // the lessons a user has done in the unit the filters picked.
-export function UsersTable({ users, oneSite, linked = false, linkState, progress, column }) {
+// `siteLinks={false}` (2026-11-12, the course page): site names read as plain text.
+// `courseProgress={false}` (2026-11-13, the course page): with `progress`, only its Lessons column shows; Course progress
+// and Percent are on each user's page.
+export function UsersTable({ users, oneSite, linked = false, linkState, progress, column, siteLinks = true, courseProgress = true }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState({ key: 'name', dir: 'asc' })
   const [page, setPage] = useState(1)
@@ -779,18 +782,18 @@ export function UsersTable({ users, oneSite, linked = false, linkState, progress
         if (sort.key === 'role') return dir * a.role.localeCompare(b.role) || a.name.localeCompare(b.name)
         if (sort.key === 'last') return dir * (agoRank(a.last) - agoRank(b.last) || 0) || a.name.localeCompare(b.name)
         if (sort.key === 'lessons') return dir * (progress(a).lessons - progress(b).lessons) || a.name.localeCompare(b.name)
-        if (sort.key === 'progress') return dir * (shareOf(progress(a)) - shareOf(progress(b))) || a.name.localeCompare(b.name)
+        if (sort.key === 'progress' || sort.key === 'pct') return dir * (shareOf(progress(a)) - shareOf(progress(b))) || a.name.localeCompare(b.name)
         return dir * a.name.localeCompare(b.name)
       })
   }, [users, query, sort, progress])
   useEffect(() => { setPage(1) }, [users, query, sort, pageSize])
   const shown = rows.slice((page - 1) * pageSize, page * pageSize)
   const onSort = (k, first = 'asc') => setSort(s => nextSort(s, k, first))
-  const cols = 3 + !oneSite + (progress ? 2 : 0) + (column ? 1 : 0)
+  const cols = 3 + !oneSite + (progress ? (courseProgress ? 3 : 1) : 0) + (column ? 1 : 0)
 
   function exportUsers() {
-    download('lessons-users.csv', ['User', !oneSite && 'Site', 'Role', ...(progress ? ['Lessons completed', 'Units completed', 'Units in course'] : []), ...(column ? [column.header] : []), 'Last active'].filter(Boolean),
-      rows.map(u => [u.name, !oneSite && u.sc.name, u.role, ...(progress ? [progress(u).lessons, progress(u).done, progress(u).total] : []), ...(column ? [column.csv(u)] : []), u.last].filter(v => v !== false)))
+    download('lessons-users.csv', ['User', !oneSite && 'Site', 'Role', ...(progress ? ['Lessons completed', ...(courseProgress ? ['Units completed', 'Units in course', 'Course progress percent'] : [])] : []), ...(column ? [column.header] : []), 'Last active'].filter(Boolean),
+      rows.map(u => [u.name, !oneSite && u.sc.name, u.role, ...(progress ? [progress(u).lessons, ...(courseProgress ? [progress(u).done, progress(u).total, Math.round(shareOf(progress(u)) * 100)] : [])] : []), ...(column ? [column.csv(u)] : []), u.last].filter(v => v !== false)))
   }
 
   return (
@@ -810,8 +813,14 @@ export function UsersTable({ users, oneSite, linked = false, linkState, progress
             {!oneSite && <TableHead><SortButton label="Site" col="site" sort={sort} onSort={onSort} /></TableHead>}
             <TableHead><SortButton label="Role" col="role" sort={sort} onSort={onSort} /></TableHead>
             {progress && <>
-              <TableHead className="text-right"><SortButton label="Lessons completed" col="lessons" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
-              <TableHead className="w-56"><SortButton label="Course progress" col="progress" sort={sort} onSort={k => onSort(k, 'desc')} /></TableHead>
+              {/* Narrower (2026-11-12), so the column fits its header instead of taking the table's spare width. "Lessons"
+                  for a day (2026-11-13), back to "Lessons completed" once Course progress and Percent came off. */}
+              <TableHead className="w-44 text-right whitespace-nowrap"><SortButton label="Lessons completed" col="lessons" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
+              {courseProgress && <>
+                <TableHead className="w-56"><SortButton label="Course progress" col="progress" sort={sort} onSort={k => onSort(k, 'desc')} /></TableHead>
+                {/* The course progress as a percent, in its own column (2026-11-13). */}
+                <TableHead className="w-28 text-right"><SortButton label="Percent" col="pct" sort={sort} onSort={k => onSort(k, 'desc')} align="right" /></TableHead>
+              </>}
             </>}
             {column && <TableHead>{column.header}</TableHead>}
             <TableHead className="text-right"><SortButton label="Last active" col="last" sort={sort} onSort={onSort} align="right" /></TableHead>
@@ -824,11 +833,14 @@ export function UsersTable({ users, oneSite, linked = false, linkState, progress
                 {linked ? <Link to={`/reports/content/users/${u.key}`} state={linkState} className="text-dessa-teal hover:underline underline-offset-4">{u.name}</Link> : u.name}
               </TableCell>
               {/* Site names open the site page (2026-11-05). */}
-              {!oneSite && <TableCell className="text-brand-subtext">{linked ? <Link to={`/reports/content/sites/${u.sc.id}`} className="font-medium text-dessa-teal hover:underline underline-offset-4">{u.sc.name}</Link> : u.sc.name}</TableCell>}
+              {!oneSite && <TableCell className="text-brand-subtext">{linked && siteLinks ? <Link to={`/reports/content/sites/${u.sc.id}`} className="font-medium text-dessa-teal hover:underline underline-offset-4">{u.sc.name}</Link> : u.sc.name}</TableCell>}
               <TableCell className="text-brand-subtext">{u.role}</TableCell>
               {progress && <>
                 <TableCell className="text-right tabular-nums">{progress(u).lessons.toLocaleString()}</TableCell>
-                <TableCell><ProgressCell name={u.name} p={progress(u)} /></TableCell>
+                {courseProgress && <>
+                  <TableCell><ProgressCell name={u.name} p={progress(u)} /></TableCell>
+                  <TableCell className="text-right tabular-nums">{Math.round(shareOf(progress(u)) * 100)}%</TableCell>
+                </>}
               </>}
               {column && <TableCell>{column.cell(u)}</TableCell>}
               <TableCell className="text-right text-brand-subtext">{u.last}</TableCell>
