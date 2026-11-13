@@ -95,7 +95,9 @@ export function SortButton({ label, col, sort, onSort, align = 'left' }) {
       className={`inline-flex items-center gap-1 font-medium text-brand-text hover:text-dessa-teal transition-colors ${align === 'right' ? 'flex-row-reverse' : ''}`}
     >
       {label}
-      {active ? (sort.dir === 'asc' ? <ArrowUp size={13} aria-hidden="true" /> : <ArrowDown size={13} aria-hidden="true" />) : <ArrowUpDown size={13} className="text-brand-subtext/60" aria-hidden="true" />}
+      {/* A small filled triangle (2026-11-12) in place of the arrows: up or down on the sorted column, a faint down
+          triangle on the others. Was: active ? (asc ? <ArrowUp /> : <ArrowDown />) : <ArrowUpDown /> at 13px. */}
+      <svg viewBox="0 0 8 8" className={`w-2 h-2 shrink-0 transition-transform ${active ? 'fill-current' : 'fill-brand-subtext/40'} ${active && sort.dir === 'asc' ? 'rotate-180' : ''}`} aria-hidden="true"><path d="M0.5 2 L7.5 2 L4 7 Z" /></svg>
     </button>
   )
 }

@@ -1,8 +1,9 @@
 import * as React from 'react'
 import { cn } from '../../lib/utils'
 
-const Table = React.forwardRef(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
+// `containerClassName` (2026-11-12): e.g. overflow-visible, so a sticky header row can stick to the page.
+const Table = React.forwardRef(({ className, containerClassName, ...props }, ref) => (
+  <div className={cn('relative w-full overflow-auto', containerClassName)}>
     <table
       ref={ref}
       className={cn('w-full caption-bottom text-sm', className)}

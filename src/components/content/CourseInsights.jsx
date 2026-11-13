@@ -7,6 +7,7 @@ import { Fragment, useState } from 'react'
 import { SortButton, nextSort, agoRank } from '../../pages/Report2ConceptE'
 import { Defined } from '../../pages/ReportContent'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table'
+import { PaginationBar } from '../ui/pagination'
 
 // Course page sections (2026-11-06), for its concepts B to D: where users are in the course, which units are being
 // taught, and lessons week by week. Each takes rows worked out on the page (see `courseInsights`) and an `action` for
@@ -114,12 +115,32 @@ export function courseInsights({ users, part, progressOf, weeks, course }) {
   // who started the course have marked it complete. A unit's last activity is the user's own, a week further back
   // for each unit between it and where they are now.
   const top = x => Math.max(0, ...(x.p.units ?? []), lessonsDone(x.u, x.p, firstMissing(x.p)) > 0 ? firstMissing(x.p) : 0)
-  const unitView = [{ unit: 0, name: 'Getting Started' }, ...unitRows.map(r => ({ unit: r.unit, name: r.name, review: isReview(course, r.unit), lessons: r.lessons }))].map(r => {
+  // Within the dates (2026-11-13): a unit counts for a user who finished it in the range, so it wasn't in their units
+  // when the range started and they taught a lesson here in it. Getting Started counts for users who had no lessons
+  // before the range. Every number then follows the filters, and no unit can pass the users who completed a lesson.
+  const inRange = x => part(x.u).lessons > 0
+  const gsLessons = x => (x.p.done > 0 || steady(`${x.u.key}|gs`) % 10 < 8 ? 2 : steady(`${x.u.key}|gs1`) % 2)
+  const gsInRange = x => inRange(x) && !x.p.activeBefore
+  const unitInRange = (x, unit) => inRange(x) && !(x.p.before ?? []).includes(unit)
+  const unitView = [{ unit: 0, name: 'Getting Started' }, ...unitRows.map(r => ({ unit: r.unit, name: r.name, review: isReview(course, r.unit) }))].map(r => {
     const touched = started.filter(x => (r.unit === 0 ? true : x.p.units?.includes(r.unit) || lessonsDone(x.u, x.p, r.unit) > 0))
-    const completed = r.unit === 0 ? started.filter(x => x.p.done > 0 || steady(`${x.u.key}|gs`) % 10 < 8).length : touched.filter(x => x.p.units?.includes(r.unit)).length
+    // Before the dates applied (2026-11-12):
+    // const completed = r.unit === 0 ? started.filter(x => x.p.done > 0 || steady(`${x.u.key}|gs`) % 10 < 8).length : touched.filter(x => x.p.units?.includes(r.unit)).length
+    const completed = r.unit === 0
+      ? started.filter(x => gsInRange(x) && gsLessons(x) >= 2).length
+      : touched.filter(x => x.p.units?.includes(r.unit) && unitInRange(x, r.unit)).length
     let last = Infinity
     touched.forEach(x => { try { last = Math.min(last, agoRank(x.u.last) + Math.max(0, top(x) - r.unit) * WEEK) } catch { /* an odd label is skipped */ } })
-    return { ...r, started: touched.length, completed, last }
+    // Each lesson, within the dates the same way. Getting Started has two (2026-11-12); a user who completed it has
+    // both, the others the first or none.
+    const lessons = r.unit === 0
+      ? [1, 2].map(k => ({ lesson: k, users: started.filter(x => gsInRange(x) && gsLessons(x) >= k).length, comp: course ? lessonComp(course, 0, k) : null }))
+      : Array.from({ length: LESSONS_IN_UNIT }, (_, k) => ({
+          lesson: k + 1,
+          users: started.filter(x => unitInRange(x, r.unit) && lessonsDone(x.u, x.p, r.unit) >= k + 1).length,
+          comp: course ? lessonComp(course, r.unit, k + 1) : null,
+        }))
+    return { ...r, lessons, started: touched.length, completed, last }
   })
   // The largest fall in completion from one unit to the next, Getting Started aside.
   let dropOff = null
@@ -452,8 +473,8 @@ export function CompIcon({ comp, size = 14 }) {
 // A lesson's competency badge (2026-11-11): the course header's chip, small, white on the lesson rows' tint.
 function CompBadge({ comp }) {
   return (
-    <span className="inline-flex items-center gap-1 h-6 pl-1.5 pr-2 rounded-full border border-brand-border bg-white text-xs font-medium text-brand-text whitespace-nowrap">
-      <CompIcon comp={comp} size={12} />
+    <span className="inline-flex items-center gap-1 h-6 px-2 rounded-full border border-brand-border bg-white text-xs font-medium text-brand-text whitespace-nowrap">
+      {/* Icon out 2026-11-13: <CompIcon comp={comp} size={12} /> */}
       {comp.label}
     </span>
   )
@@ -528,23 +549,35 @@ const UV_COLS = [
   // Every user in the course (2026-11-10), the same on each row, so it doesn't sort.
   // { key: 'total', label: 'Total users', right: true, fixed: true },
   // { key: 'started', label: 'Users started', first: 'desc', right: true },
-  { key: 'completed', label: 'Users completed', first: 'desc', right: true },
-  { key: 'pct', label: 'Completion', first: 'desc' },
+  // Renamed 2026-11-13 so they say what they count: users who finished every lesson, as a count and a share of all users.
+  // "Completed" (2026-11-13): reads right on unit and lesson rows alike. Was "Finished the unit".
+  { key: 'completed', label: 'Completed', first: 'desc', right: true },
+  { key: 'pct', label: 'Percent of users', first: 'desc', right: true },
   // Last activity out 2026-11-11; Completion is the last column.
   // { key: 'last', label: 'Last activity', first: 'asc', right: true },
 ]
 
 // Each unit row still opens its five lessons (2026-11-06), which have users completed and completion only.
-export function UnitTable({ data }) {
+// `stickyTop` (2026-11-12): the header row sticks this far from the top of the window as the page scrolls, under the
+// course page's sticky header.
+export function UnitTable({ data, stickyTop }) {
   const [sort, setSort] = useState({ key: 'unit', dir: 'asc' })
-  const [all, setAll] = useState(false)
+  // The users table's pagination (2026-11-12) in place of Show all: 10 a page to start.
+  // const [all, setAll] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [open, setOpen] = useState(() => new Set())
   const toggle = unit => setOpen(o => { const next = new Set(o); next.has(unit) ? next.delete(unit) : next.add(unit); return next })
-  const n = data.started
+  // Out of every user in the grade or course (2026-11-13), the header's "of 434 users", not only those who started.
+  // const n = data.started
+  const n = data.users
   const value = (r, k) => (k === 'pct' ? r.completed : r[k])
   const rows = [...data.unitView].sort((a, b) => (sort.dir === 'asc' ? 1 : -1) * (value(a, sort.key) - value(b, sort.key) || 0) || a.unit - b.unit)
-  const shown = all ? rows : rows.slice(0, FIRST)
-  const completion = (users, label, sub) => (
+  // const shown = all ? rows : rows.slice(0, FIRST)
+  const shown = rows.slice((page - 1) * pageSize, page * pageSize)
+  // The percent on its own (2026-11-13), right-aligned like the counts. The bar beside it is kept below.
+  const completion = (users, label, sub) => <span className={`tabular-nums ${sub ? 'text-brand-subtext' : ''}`}>{pctOf(users, n)}%</span>
+  /* const completion = (users, label, sub) => (
     <span className="flex items-center gap-3">
       <span
         role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pctOf(users, n)} aria-valuetext={`${pctOf(users, n)}%`}
@@ -554,14 +587,14 @@ export function UnitTable({ data }) {
       </span>
       <span className={`tabular-nums ${sub ? 'text-brand-subtext' : ''}`} aria-hidden="true">{pctOf(users, n)}%</span>
     </span>
-  )
+  ) */
   return (
     <>
-      <Table>
-        <TableHeader>
+      <Table containerClassName={stickyTop != null ? 'overflow-visible' : undefined}>
+        <TableHeader className={stickyTop != null ? 'sticky z-10' : ''} style={stickyTop != null ? { top: stickyTop } : undefined}>
           <TableRow className="hover:bg-transparent">
             {UV_COLS.map(c => (
-              <TableHead key={c.key} className={`${c.right ? 'text-right' : ''} ${c.key === 'unit' ? 'pl-5' : ''} ${c.key === 'pct' ? 'w-96 pr-5' : ''} ${c.key === 'last' ? 'pr-5' : ''}`}>
+              <TableHead key={c.key} className={`${c.right ? 'text-right' : ''} ${c.key === 'unit' ? 'pl-5' : ''} ${c.key === 'pct' ? 'w-40 pr-5' : ''} ${c.key === 'last' ? 'pr-5' : ''}`}>
                 {c.fixed ? <span className="font-medium text-brand-text">{c.label}</span>
                   : <SortButton label={c.label} col={c.key} sort={sort} onSort={k => setSort(st => nextSort(st, k, c.first))} align={c.right ? 'right' : 'left'} />}
               </TableHead>
@@ -591,7 +624,7 @@ export function UnitTable({ data }) {
                   {/* <TableCell className="py-1.5 text-right tabular-nums">{data.users.toLocaleString()}</TableCell>
                   <TableCell className="py-1.5 text-right tabular-nums">{r.started.toLocaleString()}</TableCell> */}
                   <TableCell className="py-1.5 text-right tabular-nums">{r.completed.toLocaleString()}</TableCell>
-                  <TableCell className="py-1.5 pr-5">{completion(r.completed, `${r.name}, completion`)}</TableCell>
+                  <TableCell className="py-1.5 pr-5 text-right">{completion(r.completed, `${r.name}, completion`)}</TableCell>
                   {/* <TableCell className="pr-5 py-1.5 text-right whitespace-nowrap text-brand-subtext">{activityDate(r.last)}</TableCell> */}
                 </TableRow>
                 {expanded && r.lessons.map(l => (
@@ -607,7 +640,7 @@ export function UnitTable({ data }) {
                     <TableCell className="py-2" />
                     <TableCell className="py-2" /> */}
                     <TableCell className="py-2 text-right tabular-nums text-brand-subtext">{l.users.toLocaleString()}</TableCell>
-                    <TableCell className="py-2 pr-5">{completion(l.users, `Unit ${r.unit} lesson ${l.lesson}, completion`, true)}</TableCell>
+                    <TableCell className="py-2 pr-5 text-right">{completion(l.users, `Unit ${r.unit} lesson ${l.lesson}, completion`, true)}</TableCell>
                     {/* <TableCell className="pr-5 py-2" /> */}
                   </TableRow>
                 ))}
@@ -616,13 +649,14 @@ export function UnitTable({ data }) {
           })}
         </TableBody>
       </Table>
-      {rows.length > FIRST && (
+      <PaginationBar page={page} pageSize={pageSize} total={rows.length} onPage={setPage} onPageSize={n => { setPageSize(n); setPage(1) }} className="px-4 py-3 border-t border-brand-border" />
+      {/* {rows.length > FIRST && (
         <div className="px-5 py-3 border-t border-brand-border">
           <button type="button" onClick={() => setAll(a => !a)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-dessa-teal hover:text-dessa-navy hover:underline underline-offset-4">
             {all ? 'Show fewer units' : `Show all ${rows.length} units`}
           </button>
         </div>
-      )}
+      )} */}
     </>
   )
 }
@@ -632,7 +666,7 @@ export function UnitTable({ data }) {
 const UV_TABS = [['table', 'Table'] /* , ['chart', 'Chart'] */]
 // "Unit view" (2026-11-10). Was "1st grade unit view" with the course type beside it; `title` and `tier` are kept
 // for that.
-export function CourseUnitView({ data, title, tier, action }) {
+export function CourseUnitView({ data, title, tier, action, stickyTop }) {
   const [view, setView] = useState('table')
   function onTabKey(e) {
     if (UV_TABS.length < 2 || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return
@@ -642,10 +676,13 @@ export function CourseUnitView({ data, title, tier, action }) {
     e.currentTarget.querySelector(`[data-tab="${next}"]`)?.focus()
   }
   return (
-    <section className="bg-white rounded-lg border border-brand-border overflow-hidden">
+    // Not overflow-hidden (2026-11-12), so the table's header row can stick.
+    <section className="bg-white rounded-lg border border-brand-border">
       <div className="flex items-center justify-between gap-4 min-h-9 px-5 pt-5">
         <h3 className="flex items-center gap-2 text-base font-semibold text-brand-text">
           Unit view
+          {/* The base for the table's percents, said once (2026-11-13), out the same day:
+          <span className="text-sm font-normal text-brand-subtext tabular-nums">{usersText(data.users)}</span> */}
           {/* {title} unit view
           {tier && <span className="px-2 py-0.5 rounded-md bg-brand-bg text-xs font-medium text-brand-subtext">{tier}</span>} */}
         </h3>
@@ -666,7 +703,7 @@ export function CourseUnitView({ data, title, tier, action }) {
         </div>
         ) : <div className="h-4" aria-hidden="true" />}
         <div id="unit-view-panel" {...(UV_TABS.length > 1 ? { role: 'tabpanel', 'aria-labelledby': `unit-view-tab-${view}` } : {})}>
-          {view === 'chart' ? <div className="p-5"><UnitChart data={data} /></div> : <UnitTable data={data} />}
+          {view === 'chart' ? <div className="p-5"><UnitChart data={data} /></div> : <UnitTable data={data} stickyTop={stickyTop} />}
         </div>
       </>)}
     </section>
