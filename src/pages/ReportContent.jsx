@@ -1186,7 +1186,7 @@ export default function ReportContent() {
               : <CompetencyMix totals={data.compTotals} title="Lessons completed by competency" view="bars" divided action={<ExportButton onClick={() => exportCard('competencies')} />} />)}
           </div>
           )}
-          <UsersTable users={data.users} oneSite={oneSite} linked />
+          <UsersTable users={data.users} oneSite={oneSite} linked siteLinks={false} />
         </>
       ) : contentConcept === 'c-tabs' ? (
         <>
@@ -1209,7 +1209,7 @@ export default function ReportContent() {
                 : <ListCard title={cTab === 'tier2' ? 'Lessons by band' : 'Lessons by course'} orderLabel={cTab === 'tier2' ? 'Band' : 'Course'} rows={cRows} />}
               {cEmpty ? <section className={card}><EmptyState /></section> : <CompetencyMix totals={cComps} stacked divided />}
             </div>
-            <UsersTable users={cUsers} oneSite={oneSite} linked />
+            <UsersTable users={cUsers} oneSite={oneSite} linked siteLinks={false} />
           </motion.div>
         </>
       ) : (<>

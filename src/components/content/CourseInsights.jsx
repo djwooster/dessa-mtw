@@ -540,7 +540,7 @@ const UV_COLS = [
   // Renamed 2026-11-13 so they say what they count: users who finished every lesson, as a count and a share of all users.
   // "Completed" (2026-11-13): reads right on unit and lesson rows alike. Was "Finished the unit".
   { key: 'completed', label: 'Completed', first: 'desc', right: true },
-  { key: 'pct', label: 'Percent of users', first: 'desc' },
+  { key: 'pct', label: 'Percent of users', first: 'desc', right: true },
   // Last activity out 2026-11-11; Completion is the last column.
   // { key: 'last', label: 'Last activity', first: 'asc', right: true },
 ]
@@ -563,7 +563,9 @@ export function UnitTable({ data, stickyTop }) {
   const rows = [...data.unitView].sort((a, b) => (sort.dir === 'asc' ? 1 : -1) * (value(a, sort.key) - value(b, sort.key) || 0) || a.unit - b.unit)
   // const shown = all ? rows : rows.slice(0, FIRST)
   const shown = rows.slice((page - 1) * pageSize, page * pageSize)
-  const completion = (users, label, sub) => (
+  // The percent on its own (2026-11-13), right-aligned like the counts. The bar beside it is kept below.
+  const completion = (users, label, sub) => <span className={`tabular-nums ${sub ? 'text-brand-subtext' : ''}`}>{pctOf(users, n)}%</span>
+  /* const completion = (users, label, sub) => (
     <span className="flex items-center gap-3">
       <span
         role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pctOf(users, n)} aria-valuetext={`${pctOf(users, n)}%`}
@@ -573,14 +575,14 @@ export function UnitTable({ data, stickyTop }) {
       </span>
       <span className={`tabular-nums ${sub ? 'text-brand-subtext' : ''}`} aria-hidden="true">{pctOf(users, n)}%</span>
     </span>
-  )
+  ) */
   return (
     <>
       <Table containerClassName={stickyTop != null ? 'overflow-visible' : undefined}>
         <TableHeader className={stickyTop != null ? 'sticky z-10' : ''} style={stickyTop != null ? { top: stickyTop } : undefined}>
           <TableRow className="hover:bg-transparent">
             {UV_COLS.map(c => (
-              <TableHead key={c.key} className={`${c.right ? 'text-right' : ''} ${c.key === 'unit' ? 'pl-5' : ''} ${c.key === 'pct' ? 'w-96 pr-5' : ''} ${c.key === 'last' ? 'pr-5' : ''}`}>
+              <TableHead key={c.key} className={`${c.right ? 'text-right' : ''} ${c.key === 'unit' ? 'pl-5' : ''} ${c.key === 'pct' ? 'w-40 pr-5' : ''} ${c.key === 'last' ? 'pr-5' : ''}`}>
                 {c.fixed ? <span className="font-medium text-brand-text">{c.label}</span>
                   : <SortButton label={c.label} col={c.key} sort={sort} onSort={k => setSort(st => nextSort(st, k, c.first))} align={c.right ? 'right' : 'left'} />}
               </TableHead>
@@ -610,7 +612,7 @@ export function UnitTable({ data, stickyTop }) {
                   {/* <TableCell className="py-1.5 text-right tabular-nums">{data.users.toLocaleString()}</TableCell>
                   <TableCell className="py-1.5 text-right tabular-nums">{r.started.toLocaleString()}</TableCell> */}
                   <TableCell className="py-1.5 text-right tabular-nums">{r.completed.toLocaleString()}</TableCell>
-                  <TableCell className="py-1.5 pr-5">{completion(r.completed, `${r.name}, completion`)}</TableCell>
+                  <TableCell className="py-1.5 pr-5 text-right">{completion(r.completed, `${r.name}, completion`)}</TableCell>
                   {/* <TableCell className="pr-5 py-1.5 text-right whitespace-nowrap text-brand-subtext">{activityDate(r.last)}</TableCell> */}
                 </TableRow>
                 {expanded && r.lessons.map(l => (
@@ -626,7 +628,7 @@ export function UnitTable({ data, stickyTop }) {
                     <TableCell className="py-2" />
                     <TableCell className="py-2" /> */}
                     <TableCell className="py-2 text-right tabular-nums text-brand-subtext">{l.users.toLocaleString()}</TableCell>
-                    <TableCell className="py-2 pr-5">{completion(l.users, `Unit ${r.unit} lesson ${l.lesson}, completion`, true)}</TableCell>
+                    <TableCell className="py-2 pr-5 text-right">{completion(l.users, `Unit ${r.unit} lesson ${l.lesson}, completion`, true)}</TableCell>
                     {/* <TableCell className="pr-5 py-2" /> */}
                   </TableRow>
                 ))}

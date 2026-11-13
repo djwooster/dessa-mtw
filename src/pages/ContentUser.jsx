@@ -211,7 +211,9 @@ function IdentityCard({ user }) {
       banner={false}
       title={user.name}
       // The site opens its site page (2026-11-05).
-      meta={[[User, user.role], [School, <Link key="s" to={`/reports/content/sites/${user.sc.id}`} className="font-medium text-dessa-teal hover:underline underline-offset-4">{user.sc.name}</Link>]]}
+      // The site is plain text again (2026-11-13); it linked to the site page from 2026-11-05:
+      // [School, <Link key="s" to={`/reports/content/sites/${user.sc.id}`} className="font-medium text-dessa-teal hover:underline underline-offset-4">{user.sc.name}</Link>]
+      meta={[[User, user.role], [School, user.sc.name]]}
       // Header concepts (2026-11-03), picked in Nav's switcher on this page: A as it was, B the numbers in the header,
       // C lessons completed large in the header, D last active as a status chip with a course count in its place.
       stats={userHeader === 'c' ? [

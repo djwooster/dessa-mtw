@@ -624,7 +624,8 @@ function GroupPageG({ title, avatar, meta: baseMeta, users: all, part, progressO
           meta={meta}
           stats={[
             [<Defined key="l" definition={LESSON_DEFINITION}>Lessons completed</Defined>, lessons.toLocaleString()],
-            ...(site ? [] : [['Completed at', <>{bySchool.filter(r => r.lessons > 0).length.toLocaleString()} <span className="text-sm font-normal text-brand-subtext">of {siteTotal.toLocaleString()} {siteTotal === 1 ? 'site' : 'sites'}</span></>]]),
+            // Completed at out 2026-11-13:
+            // ...(site ? [] : [['Completed at', <>{bySchool.filter(r => r.lessons > 0).length.toLocaleString()} <span className="text-sm font-normal text-brand-subtext">of {siteTotal.toLocaleString()} {siteTotal === 1 ? 'site' : 'sites'}</span></>]]),
             // With the page's filters on, the users stat counts the matches.
             filtering
               ? ['Matching users', <>{matches.length.toLocaleString()} <span className="text-sm font-normal text-brand-subtext">of {all.length.toLocaleString()} {all.length === 1 ? 'user' : 'users'}</span></>]

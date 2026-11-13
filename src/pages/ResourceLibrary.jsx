@@ -202,7 +202,8 @@ function RowMenu({ title, onTrack }) {
           type="button"
           onClick={(e) => e.stopPropagation()}
           aria-label={`More options for ${title}`}
-          className="flex items-center justify-center w-8 h-8 rounded-md text-brand-subtext hover:bg-brand-bg hover:text-brand-text transition-colors"
+          // Stays in its hover state while its menu is open (2026-11-13), so it's clear which row the menu belongs to.
+          className="flex items-center justify-center w-8 h-8 rounded-md text-brand-subtext hover:bg-brand-bg hover:text-brand-text data-[state=open]:bg-brand-bg data-[state=open]:text-brand-text transition-colors"
         >
           <MoreHorizontal size={16} aria-hidden="true" />
         </button>
@@ -217,7 +218,8 @@ function RowMenu({ title, onTrack }) {
             onClick={() => { setOpen(false); onTrack() }}
             className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-brand-text hover:bg-brand-bg transition-colors"
           >
-            <Target size={14} className="text-brand-subtext" aria-hidden="true" /> Track strategy
+            {/* Icon out 2026-11-13: <Target size={14} className="text-brand-subtext" aria-hidden="true" /> */}
+            Track strategy
           </button>
         </Popover.Content>
       </Popover.Portal>
